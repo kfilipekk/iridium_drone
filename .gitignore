@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.pyc
+
+# ---- large, REGENERABLE artefacts -------------------------------------------------
+# Excluded to keep the repo clonable, not because they do not matter. Each line says
+# how to remake the thing, because "it is gitignored" and "it is lost" must not be the
+# same sentence.
+
+# 3D exports, 103 MB. Regenerate: JLC_LIB=<path> tools/export_3d.sh
+# The STEP alone is 66 MB, over GitHub's 50 MB warning threshold.
+cad/*.step
+cad/*.glb
+cad/tmp*.scad
+
+# Historical board snapshots, 72 MB across 16 files. These are point-in-time copies
+# taken before risky layout operations; git history now does that job properly.
+.backup/
+
+# SITL flight logs, 73 MB. Regenerate: bash sitl/run_scenarios.sh
+sitl/logs/*.BIN
+sitl/terrain/*.DAT
+
+# KiCad local state - per-user window layout and selection, not design data.
+*.kicad_prl
+_r.kicad_prl
+_regress.kicad_prl
+fp-info-cache
+
+# KiCad backup written next to the board by an interrupted save.
+*.kicad_pcb.bak
+
+# Bench results are MEASUREMENTS of one physical board, not a property of the design.
+# tools/check_rf.py deliberately fails until this exists; committing someone else's
+# numbers would satisfy the gate without anyone having switched a board on.
+fab/rf-bench-results.json
