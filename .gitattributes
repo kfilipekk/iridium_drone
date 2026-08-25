@@ -1,0 +1,7 @@
+#the board and its firmware are the project; scripts and CAD are tooling
+tools/** linguist-detectable=false
+sim/** linguist-detectable=false
+sitl/** linguist-detectable=false
+cad/** linguist-detectable=false
+firmware/reference/** linguist-vendored
+*.lua linguist-vendored
