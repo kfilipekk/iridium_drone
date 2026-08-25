@@ -1,0 +1,116 @@
+# Default parameters for NAVCORE-SoOP.
+
+# --- airframe -------------------------------------------------------------
+FRAME_CLASS 1
+FRAME_TYPE 1
+
+# --- motors: DShot600 into the SpeedyBee 4-in-1 ---------------------------
+MOT_PWM_TYPE 6
+
+# --- serial ---------------------------------------------------------------
+SERIAL1_PROTOCOL 2
+SERIAL1_BAUD 921
+SERIAL3_PROTOCOL 5
+SERIAL5_PROTOCOL 16
+SERIAL5_BAUD 115
+SERIAL7_PROTOCOL 23
+
+BATT_MONITOR 4
+# BATT_VOLT_MULT is the fitted divider: 10k / 1k.
+BATT_VOLT_MULT 11.000
+BATT_AMP_PERVLT 25.0
+
+RNGFND1_TYPE 0
+RNGFND1_ORIENT 25
+RNGFND1_MIN 0.20
+RNGFND1_MAX 15.00
+
+# RNGFND2 is the on-board VL53L1X, U7, I2C1 @ 0x29.
+RNGFND2_TYPE 0
+RNGFND2_ADDR 41
+RNGFND2_ORIENT 25
+RNGFND2_MIN 0.04
+RNGFND2_MAX 3.60
+
+RNGFND3_TYPE 0
+RNGFND3_ADDR 41
+RNGFND3_ORIENT 24
+RNGFND3_MIN 0.04
+RNGFND3_MAX 3.60
+
+FLOW_TYPE 5
+FLOW_ORIENT_YAW 0
+
+RC_PROTOCOLS 512
+
+# No separate telemetry radio is fitted or needed.
+
+SERVO_BLH_AUTO 1
+
+INS_HNTCH_ENABLE 1
+INS_HNTCH_MODE 1
+INS_HNTCH_REF 0.35
+INS_HNTCH_FREQ 60
+INS_HNTCH_BW 30
+INS_HNTCH_HMNCS 3
+# Bidirectional DShot on motors 1-4.
+SERVO_BLH_BDMASK 0
+
+GPS2_TYPE 0
+GPS_AUTO_SWITCH 1
+VISO_TYPE 0
+
+EK3_SRC1_POSXY 3
+EK3_SRC1_VELXY 3
+EK3_SRC1_POSZ 1
+EK3_SRC1_VELZ 3
+EK3_SRC1_YAW 1
+EK3_SRC2_POSXY 0
+EK3_SRC2_VELXY 5
+EK3_SRC2_POSZ 1
+EK3_SRC2_VELZ 0
+EK3_SRC2_YAW 1
+EK3_SRC3_POSXY 0
+EK3_SRC3_VELXY 5
+EK3_SRC3_POSZ 1
+EK3_SRC3_VELZ 0
+EK3_SRC3_YAW 1
+
+RELAY1_FUNCTION 1
+RELAY1_PIN 83
+RELAY1_DEFAULT 0
+
+FS_EKF_THRESH 1.0
+FS_EKF_ACTION 0
+
+# Radio failsafe -> RTL.
+FS_THR_ENABLE 1
+
+# GCS failsafe OFF.
+FS_GCS_ENABLE 0
+
+
+SCR_ENABLE 1
+# SCR_HEAP_SIZE 80000: the applet's own documented minimum. The default 41 KB is not
+# enough and the script aborts at load with an out-of-memory error.
+SCR_HEAP_SIZE 80000
+# DR_ENABLE 1: arm the applet.
+DR_ENABLE 1
+DR_ENABLE_DIST 30
+DR_GPS_SACC_MAX 0.8
+DR_GPS_SAT_MIN 6
+DR_GPS_TRIGG_SEC 3
+# DR_FLY_ANGLE 10 (applet default): conservative lean; most frames make max speed
+# near 22 deg. Raise only after bench/hardware evidence.
+DR_FLY_ANGLE 10
+# DR_FLY_ALT_MIN 0: return at current altitude.
+DR_FLY_ALT_MIN 0
+DR_FLY_TIMEOUT 30
+# DR_NEXT_MODE 6 (RTL): GO home and stay THERE.
+DR_NEXT_MODE 6
+
+# --- notify ---------------------------------------------------------------
+# No safety switch is fitted, so arming must not wait for one.
+BRD_SAFETY_DEFLT 0
+NTF_LED_TYPES 257
+SERVO13_FUNCTION 120
