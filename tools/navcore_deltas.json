@@ -1,0 +1,51 @@
+{
+  "_comment": "NAVCORE-SoOP deviations from MatekH743. Rev A = none (bit-identical, stock firmware runs). Rev B reassigns only pins MatekH743 spends on sensors this board does not have.",
+  "revB_reassign": {
+    "PC4": {
+      "to": "SOOP_I_ADC",
+      "was": "PRESSURE_SENS",
+      "why": "no airspeed sensor on a quad. ADC1 ch4 - I channel"
+    },
+    "PA4": {
+      "to": "SOOP_Q_ADC",
+      "was": "BATT2_VOLTAGE_SENS",
+      "why": "single battery. ADC2 ch18 - Q channel, sampled simultaneously with ADC1"
+    },
+    "PC5": {
+      "to": "SOOP_RSSI_ADC",
+      "was": "RSSI_ADC",
+      "why": "RSSI comes over CRSF telemetry. Reused for MAX2112 analogue RSSI/AGC readback"
+    },
+    "PA7": {
+      "to": "SPARE_ADC",
+      "was": "BATT2_CURRENT_SENS",
+      "why": "single battery. Left as a test point / spare ADC1 ch7"
+    },
+    "PE10": {
+      "to": "PPS_SYNC_IN",
+      "was": "UART7_CTS",
+      "why": "hardware time sync from companion; flow control unused at 921600 over 5cm"
+    }
+  },
+  "board_notes": {
+    "PB10/PB11": "I2C2 - MS5611 baro @0x77 (NOT DPS310 @0x76 - DPS310 unstocked at LCSC)",
+    "PB6/PB7": "I2C1 - VL53L1X ToF @0x29 + external compass on GPS port",
+    "PD4": "EXT_CS1 - PMW3901 flow (hwdef already declares SPIDEV pixartflow SPI3)",
+    "PE2": "EXT_CS2 - W25Q128 for TLE catalogue",
+    "PB12": "MAX7456_CS - NOT POPULATED (no analogue OSD). Keep pin reserved + pulled up.",
+    "PB13-PB15": "SPI2 - unused without OSD; broken out to test pads for future use",
+    "PE1": "UART8_TX repurposed as ESC TEL input for future BLHeli_32/AM32 RPM",
+    "PB8/PB9": "UART4 - TFmini-S rangefinder JST-GH port (outdoor altitude)",
+    "PC4": "ADC1 ch4  - I channel from OPA2374 difference amp",
+    "PA4": "ADC2 ch18 - Q channel, dual-simultaneous with PC4",
+    "PC5": "MAX2112 RSSI / AGC analogue readback (Rev B)"
+  },
+  "unpopulated_matek_features": [
+    "MAX7456 OSD",
+    "BATT2 monitor",
+    "airspeed",
+    "analogue RSSI",
+    "USART3/GPS2"
+  ],
+  "adc_design_note": "I/Q reaches the MCU as TWO SINGLE-ENDED channels, not two differential pairs. VERIFIED from ArduPilot hwdef/scripts/STM32H743xx.py: PC4=ch4, PA4=ch18, PA7=ch7, PC5=ch8, and all four exist on BOTH ADC1 and ADC2 - which is what makes dual-simultaneous sampling possible. NOT VERIFIED: the exact INP->INN pairing for differential mode (st.com refused the datasheet download). STM32H7 differential mode uses fixed INP/INN pin pairs rather than arbitrary pin choice, and those INN pins are largely consumed by SPI1 here - so the design avoids ADC differential mode entirely rather than depend on an unconfirmed detail. The OPA2374 (already required for anti-aliasing) is configured as two difference amplifiers, doing diff->single-ended conversion AND the 2nd-order LPF in one stage. Better regardless of the INN mapping: higher CMRR, half the ADC channels, frees PC5 for AGC readback. CRITICAL: sample PC4 on ADC1 and PA4 on ADC2 in DUAL REGULAR SIMULTANEOUS mode - any I/Q sampling skew becomes a phase error, which corrupts the Doppler frequency estimate directly."
+}

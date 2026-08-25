@@ -1,0 +1,30 @@
+#Python
+__pycache__/
+*.pyc
+
+#large, REGENERABLE artefacts
+#excluded to keep the repo clonable, not because they do not matter
+
+#3D exports, 103 MB
+cad/*.step
+cad/*.glb
+cad/tmp*.scad
+
+#historical board snapshots, 72 MB across 16 files
+.backup/
+
+#SITL flight logs, 73 MB
+sitl/logs/*.BIN
+sitl/terrain/*.DAT
+
+#KiCad local state - per-user window layout and selection
+*.kicad_prl
+_r.kicad_prl
+_regress.kicad_prl
+fp-info-cache
+
+#KiCad backup written next to the board by an interrupted save
+*.kicad_pcb.bak
+
+#bench results are measurements of one physical board
+fab/rf-bench-results.json
