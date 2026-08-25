@@ -1,0 +1,255 @@
+//NAVCORE-SoOP - rudimentary assembly model
+
+$fn = 48;                       //facet count; drop to 24 if preview is slow
+
+//what to show
+show_props     = true;
+show_battery   = false;         //on by default it hides the whole stack
+show_frame     = true;
+show_top_plate = true;          //off for a plan view of the stack
+show_camera    = false;         //DEFERRED OV9281 flow camera - competes for the belly slot
+show_skids     = true;          //TPU landing skids at the motor pattern
+//false, because it does not fit and is not fitted
+show_rec_cam   = true;         //XIAO ESP32S3 Sense on the nose, recording to microSD
+show_pi        = false;         //Radxa Zero 3W companion - DEFERRED, does not fit here
+explode        = 0;             //try 28 for an exploded view
+
+//airframe
+//GENERATED from tools/design.py by tools/gen_scad_frame.py
+include <frame.scad>
+//frame.scad is GENERATED from design.py and the real board
+
+plate_t        = bottom_plate_t;   //the plate this model draws
+
+//arm_w was 12 and commented "cosmetic: arm render width, no check uses it"
+arm_w          = arm_plate_w;      //[M] 31.08 mm, from frame.scad
+
+//z DATUMS
+//the stack does not sit on the bottom plate
+z_bot_plate = 0;
+z_arm       = bottom_plate_t;                   //arms sit ON the bottom plate
+z_mid_plate = z_arm + arm_t;                    //mid plate clamps the arms
+z_stack     = z_mid_plate + medium_plate_t;     //ESC starts here
+stack_h     = esc_pcb + esc_parts + gap + fc_bot_parts + fc_pcb + fc_top_parts;
+
+//where inner_h IS MEASURED FROM is not settled by a 2D DXF
+top_plate_z    = standoff_len;                  //COMPUTED, from frame.scad
+fc_top_z       = z_stack + stack_h;      //top of the FC's tallest part
+headroom       = top_plate_z - fc_top_z;
+
+motor_off = wheelbase / 2 / sqrt(2);     //offset on each axis, square X
+
+//rectangular, and a different rectangle per plate
+module plate(w, l, t) {
+    difference() {
+        linear_extrude(t) offset(r = 4) square([w - 8, l - 8], center = true);
+        //plate_hole_dia, not screw_dia
+        for (sx = [-1, 1], sy = [-1, 1])
+            translate([sx * hole_pitch/2, sy * hole_pitch/2, -1])
+                cylinder(d = plate_hole_dia, h = t + 2);
+    }
+}
+
+module arm() {
+    hull() {
+        cylinder(d = arm_w, h = arm_t);
+        translate([motor_off * sqrt(2), 0, 0]) cylinder(d = arm_w, h = arm_t);
+    }
+}
+
+module frame() {
+    color("#22252a") {
+        translate([0, 0, z_bot_plate]) plate(bot_plate_w, bot_plate_l, plate_t);
+        for (a = [45, 135, 225, 315])
+            rotate([0, 0, a]) translate([0, 0, z_arm]) arm();
+        //mid plate: the 48.50 x 106.59 strip that actually carries the stack
+        translate([0, 0, z_mid_plate])
+            plate(fc_plate_w, fc_plate_l, medium_plate_t);
+        //TOP PLATE. 42.50 x 160.26 - the long one
+        if (show_top_plate) translate([0, 0, top_plate_z])
+            plate(top_plate_w, top_plate_l, plate_t);
+        //corner posts
+        for (sx = [-1, 1], sy = [-1, 1])
+            translate([sx * hole_pitch/2, sy * hole_pitch/2, fc_top_z])
+                color("#8d949c") difference() {
+                    cylinder(d = 5, h = top_plate_z - fc_top_z);
+                    translate([0, 0, -1])
+                        cylinder(d = plate_hole_dia, h = top_plate_z - fc_top_z + 2);
+                }
+    }
+}
+
+module motors() {
+    for (sx = [-1, 1], sy = [-1, 1])
+        translate([sx * motor_off, sy * motor_off, z_arm + arm_t]) {
+            color("#9aa3ab") cylinder(d = motor_dia, h = motor_h);
+            color("#3a3f47") translate([0, 0, motor_h]) cylinder(d = 6, h = 4);
+        }
+}
+
+module props() {
+    for (sx = [-1, 1], sy = [-1, 1])
+        translate([sx * motor_off, sy * motor_off, z_arm + arm_t + motor_h + 4])
+            color("#2f3339", 0.30) cylinder(d = prop_dia, h = 1.2);
+}
+
+//ESC sits directly on the bottom plate, FC above it
+esc_z = z_stack;
+fc_z  = esc_z + esc_pcb + esc_parts + gap + fc_bot_parts + explode;
+
+module esc() {
+    translate([0, 0, esc_z + explode * 0.4]) {
+        //with its 30.5 mm mounting holes
+        color("#2b3037") difference() {
+            linear_extrude(esc_pcb)
+                offset(r = 2) square([esc_l - 4, esc_w - 4], center = true);
+            for (sx = [-1, 1], sy = [-1, 1])
+                translate([sx * hole_pitch/2, sy * hole_pitch/2, -1])
+                    cylinder(d = hole_dia, h = esc_pcb + 2);
+        }
+        color("#3d444d") translate([0, 0, esc_pcb]) difference() {
+            linear_extrude(esc_parts)
+                offset(r = 2) square([esc_l - 12, esc_w - 12], center = true);
+            for (sx = [-1, 1], sy = [-1, 1])
+                translate([sx * hole_pitch/2, sy * hole_pitch/2, -1])
+                    cylinder(d = grommet_dia, h = esc_parts + 2);
+        }
+    }
+}
+
+module fc() {
+    translate([0, 0, fc_z]) {
+        //PCB
+        color("#1e4a3c") difference() {
+            linear_extrude(fc_pcb) offset(r = 2) square([fc_l - 4, fc_w - 4], center = true);
+            for (sx = [-1, 1], sy = [-1, 1])
+                translate([sx * hole_pitch/2, sy * hole_pitch/2, -1])
+                    cylinder(d = hole_dia, h = fc_pcb + 2);
+        }
+        //component envelope, top and bottom - a blob, not real parts
+        color("#14332a") translate([0, 0, fc_pcb]) difference() {
+            linear_extrude(fc_top_parts) offset(r = 1)
+                square([fc_l - 14, fc_w - 14], center = true);
+            for (sx = [-1, 1], sy = [-1, 1])
+                translate([sx * hole_pitch/2, sy * hole_pitch/2, -1])
+                    cylinder(d = grommet_dia, h = fc_top_parts + 2);
+        }
+        color("#14332a") translate([0, 0, -fc_bot_parts]) difference() {
+            linear_extrude(fc_bot_parts) offset(r = 1)
+                square([fc_l - 16, fc_w - 16], center = true);
+            for (sx = [-1, 1], sy = [-1, 1])
+                translate([sx * hole_pitch/2, sy * hole_pitch/2, -1])
+                    cylinder(d = grommet_dia, h = fc_bot_parts + 2);
+        }
+        //USB-C, at the board edge [M] 0.80 mm inboard
+        color("#b8bcc2")
+            translate([0, fc_w/2 - 4.2, fc_pcb]) cube([9, 8, 3.2], center = false);
+    }
+}
+
+module stack_screws() {
+    //FROM the MID plate UP, not from z = 0
+    for (sx = [-1, 1], sy = [-1, 1])
+        translate([sx * hole_pitch/2, sy * hole_pitch/2, z_mid_plate])
+            color("#c0c5cb")
+                cylinder(d = screw_dia, h = top_plate_z + plate_t - z_mid_plate);
+}
+
+module battery() {
+    translate([0, 0, top_plate_z + plate_t + batt_h/2])
+        color("#5a2f2f", 0.35) cube([batt_l, batt_w, batt_h], center = true);
+}
+
+//flow camera module [A] 12 mm deep
+
+module camera() {
+    //hangs UNDER the BOTTOM plate, lens pointing straight down
+    translate([0, 0, -cam_mod_t]) {
+        color("#20242a") linear_extrude(cam_mod_t)
+            offset(r = 1) square([cam_mod_w, cam_mod_w], center = true);
+        //lens barrel poking out of the module bottom (3.5 mm, per design.CAMERA.lens_len)
+        color("#0d0f11") translate([0, 0, -3.5]) cylinder(d = 8, h = 3.5);
+    }
+}
+
+//nose recording camera: XIAO ESP32S3 Sense
+//sits on the nose, lens forward, recording to its own microSD
+module rec_cam() {
+    translate([0, -rec_cam_y, z_mid_plate + medium_plate_t]) {
+        color("#23272e") linear_extrude(rec_cam_h)
+            offset(r = 1) square([rec_cam_l - 2, rec_cam_w - 2], center = true);
+        //lens barrel, pointing forward (-Y)
+        color("#0d0f11") translate([0, -rec_cam_w/2, rec_cam_h/2])
+            rotate([90, 0, 0]) cylinder(d = 8, h = 3);
+    }
+}
+
+//belly sensor: downward rangefinder / flow module under the bottom plate
+module belly_sensor() {
+    translate([0, 18, z_bot_plate - belly_h])
+        color("#2a2f36") linear_extrude(belly_h)
+            offset(r = 1) square([belly_l - 2, belly_w - 2], center = true);
+}
+
+module lidar360() {
+    //LDROBOT LD06, mounted UPSIDE-DOWN under the bottom plate (PRX1_ORIENT 1)
+    translate([0, lidar_y, z_bot_plate - lidar_h])
+        color("#3b4048") linear_extrude(lidar_h)
+            offset(r = 2) square([lidar_l - 4, lidar_w - 4], center = true);
+}
+
+module skid() {
+    //one TPU skid leg: two plates at the MOTOR's 19x19 pattern
+    contact_z = -cam_drop - skid_t;
+    //TO the ARM underside, not the arm top
+    leg_len   = z_arm + cam_drop + skid_t;    //contact line -> arm underside
+    for (sx = [-1, 1], sy = [-1, 1])
+        translate([sx * skid_hole_pitch/2, sy * skid_hole_pitch/2, contact_z])
+            color("#c8c8c8") cylinder(d = 4, h = leg_len);
+}
+
+module skids() {
+    for (sx = [-1, 1], sy = [-1, 1])
+        translate([sx * motor_off, sy * motor_off, 0]) skid();
+}
+
+//Radxa Zero 3W companion [D] 65 x 30
+//Radxa publishes 65 x 30 mm and NOTHING about the mounting holes
+pi_hole_dia  = 2.75;            //[U] diameter assumed; pattern unpublished
+pi_y_off = 25;
+
+module pi() {
+    //pi on the top plate, long axis along X
+    translate([0, pi_y_off, top_plate_z + plate_t]) {
+        color("#1a7a4a") linear_extrude(pi_t)
+            offset(r = 1) square([pi_l, pi_w], center = true);
+        //NO mounting posts: Radxa does not publish the hole pattern
+    }
+}
+
+//assembly
+if (show_frame) { frame(); motors(); }
+if (show_props) props();
+esc();
+fc();
+stack_screws();
+if (show_rec_cam) rec_cam();
+belly_sensor();
+lidar360();
+if (show_battery && show_frame) battery();
+if (show_camera) camera();
+if (show_skids) skids();
+if (show_pi) pi();
+
+//printed sanity check
+echo(str("stack height mm = ",
+         esc_pcb + esc_parts + gap + fc_bot_parts + fc_pcb + fc_top_parts));
+echo(str("mid plate ", fc_plate_w, " x ", fc_plate_l,
+         " mm carries the board ", fc_l, " x ", fc_w));
+echo(str("prop-to-prop gap mm = ", motor_off * 2 - prop_dia));
+echo(str("standoff to buy mm = ", standoff_len, " (kit ships 30 - it does NOT fit)"));
+echo(str("clearance above FC to top plate mm = ",
+         top_plate_z - (fc_z + fc_pcb + fc_top_parts)));
+//lens margin: camera module bottom (lens tip) must stay ABOVE the skid contact line
+echo(str("camera lens above skid contact line mm = ",
+         cam_drop + skid_t - cam_mod_t - 3.5));

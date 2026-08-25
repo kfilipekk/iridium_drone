@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+
+#KiCad local state and backups
+*.kicad_prl
+fp-info-cache
+*.kicad_pcb.bak
+*.lck
+NAVCORE-SoOP-backups/
+
+#3D exports
+cad/*.step
+cad/*.glb
+
+#host builds
+firmware/soop/build/
