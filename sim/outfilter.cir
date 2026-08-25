@@ -1,0 +1,24 @@
+* NAVCORE-SoOP: +5V output filter driven as the TPS54202 switch node drives it.
+* SW is a 500 kHz square wave 0 <-> Vin at duty D = Vout/Vin, into L2 10uH and
+* C22+C23 = 44uF. Question: peak inductor current against L2's 1.6 A rating.
+.title 5V output filter, 4S worst case
+* D = 4.967/16.8 = 0.2957 -> on-time 591.4 ns of a 2 us period
+Vsw sw 0 PULSE(0 16.8 0 5n 5n 591.4n 2u)
+L2  sw  out 10u ic=1.19
+C22 out n22 22u
+R22 n22 0   0.003
+C23 out n23 22u
+R23 n23 0   0.003
+Rload out 0 4.174
+.ic v(out)=4.967 v(n22)=4.967 v(n23)=4.967
+.control
+set noaskquit
+tran 2n 8000u uic
+meas tran il_pk  MAX i(L2) from=7900u to=8000u
+meas tran il_min MIN i(L2) from=7900u to=8000u
+meas tran vo_max MAX v(out) from=7900u to=8000u
+meas tran vo_min MIN v(out) from=7900u to=8000u
+meas tran vo_avg AVG v(out) from=7900u to=8000u
+print il_pk il_min vo_max vo_min vo_avg
+.endc
+.end
