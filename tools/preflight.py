@@ -596,6 +596,21 @@ def firmware(board):
     # alive, let alone that it still sells the specified part). What is gated here is
     # RECOVERABILITY: every fragile link carries a fallback search term, and no link is
     # geo-gated to a country this project does not buy from.
+    # Footprint pad count against JLCPCB's own joint count. The class of error this
+    # catches - a footprint from the wrong package variant - is not a rework, it is a
+    # scrapped board, and check_ratings.py only dimension-checks passives. Needs the
+    # jlcparts mirror; SKIPS loudly rather than passing quietly when it is absent.
+    rc, out = run("check_footprints.py")
+    m_fp = re.search(r'(\d+) footprint\(s\) agree', out)
+    skipped = "SKIPPING" in out
+    check("assembly", "footprints match JLCPCB's pad count",
+          rc == 0 and (skipped or bool(m_fp)),
+          ("jlcparts mirror absent - NOT CHECKED (see tools/check_lcsc_stock.py)"
+           if skipped else
+           (f"{m_fp.group(1)} footprint(s) agree with JLCPCB's joint count"
+            if rc == 0 and m_fp else "MISMATCH - see tools/check_footprints.py")),
+          hard=not skipped)
+
     rc, out = run("check_links.py")
     m_frag = re.search(r'(\d+) AliExpress item link', out)
     check("assembly", "buying links are recoverable", rc == 0,
