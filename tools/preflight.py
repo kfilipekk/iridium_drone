@@ -454,6 +454,17 @@ def firmware(board):
            ("all regulators within their junction limits" if rc == 0
             else "see tools/check_thermal.py")), hard=False)
 
+    rc, out = run("check_footprints.py")
+    m_fp = re.search(r'(\d+) footprint\(s\) agree', out)
+    skipped = "SKIPPING" in out
+    check("assembly", "footprints match JLCPCB's pad count",
+          rc == 0 and (skipped or bool(m_fp)),
+          ("jlcparts mirror absent - NOT CHECKED (see tools/check_lcsc_stock.py)"
+           if skipped else
+           (f"{m_fp.group(1)} footprint(s) agree with JLCPCB's joint count"
+            if rc == 0 and m_fp else "MISMATCH - see tools/check_footprints.py")),
+          hard=not skipped)
+
     rc, out = run("check_links.py")
     m_frag = re.search(r'(\d+) AliExpress item link', out)
     check("assembly", "buying links are recoverable", rc == 0,

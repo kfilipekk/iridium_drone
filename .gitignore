@@ -18,7 +18,7 @@ cad/tmp*.scad
 .backup/
 
 # SITL flight logs, 73 MB. Regenerate: bash sitl/run_scenarios.sh
-sitl/logs/*.BIN
+sitl/logs/
 sitl/terrain/*.DAT
 
 # KiCad local state - per-user window layout and selection, not design data.
