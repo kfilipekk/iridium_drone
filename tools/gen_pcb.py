@@ -97,9 +97,12 @@ def required_rotation(ref, zname, flipped):
 
 # At 1.6 GHz the LNA -> SAW -> tuner chain must stay together; the generic fallback
 # scattered it across the board. These refs get their zone or nothing.
-RF_REFS = {"U13", "U14", "U15", "U16", "Y2", "FL1", "J9"}
+# J9 used to be the U.FL antenna connector. With INCLUDE_RF False that part is
+# stripped and the ref is reused for the I2C port, so it must NOT be treated as RF.
+RF_REFS = {"U13", "U14", "U15", "U16", "Y2", "FL1"}
 # IMUs must sit at the board centroid for clean gyro data - also no fallback.
-FIXED_REFS = RF_REFS | {"U1", "U2", "U3", "U4", "J8", "J1", "J2", "J3"}
+FIXED_REFS = RF_REFS | {"U1", "U2", "U3", "U4", "J8", "J1", "J2", "J3",
+                        "J4", "J5", "J9", "J10", "J11"}   # every edge connector
 
 
 def zone_of(ref):
@@ -107,15 +110,17 @@ def zone_of(ref):
     if ref == "U1": return "MCU"
     if ref == "J8": return "B_SD"
     if ref in ("U2","U3","U4"): return "B_MCU"                    # IMUs+baro at centroid
-    if ref in ("U6","U7"): return "B_E"                       # flow + ToF look down
     if ref in ("U8","U9","U10","L2","D1"): return "T_W"
     # One connector per edge. The top strip holds only one once the mounting hole
     # pushes it to centre, and J1 must stay clear of the microSD underneath.
     if ref == "J1": return "T_N"      # USB-C, top edge
     if ref == "J2": return "T_W"      # ESC 8-pin, left edge (rotates)
     if ref == "J3": return "T_S"      # GPS, bottom edge
+    if ref in ("J9", "J10"): return "T_W"   # I2C + servo ports, left edge
+    if ref in ("J5", "J11"): return "T_S"   # RC + lidar, bottom edge
+    if ref == "J4": return "T_E"            # companion 6P, right edge
     
-    if ref in ("U13","U14","U15","U16","Y2","FL1","J9"): return "B_W"
+    if ref in ("U13","U14","U15","U16","Y2","FL1"): return "B_W"
     if ref.startswith("TP"): return "B_ES"
     if ref.startswith("P") and ref[1:].isdigit(): return "T_S"
     return None                                                 # passives: follow their net
@@ -125,7 +130,7 @@ BLOCK_HINT = [
  (("C17","C18","C19","C20","C21","C22","C23","C24","C25","C26","C27","C28","C29",
    "R4","R5","R6","R7","R8"), "T_W"),
  (("C31","C32","C33","C34","C35","C30"), "B_MCU"),
- (("C37","C38","C39","C40","R13","R9","R10"), "B_E"),
+ (("R9","R10"), "T_S"),
  (("C45","C46","R22","R23","R24","R25","R26","R27"), "B_SD"),
  (("C42","R16","R17"), "T_N"),
  (("C41","R14","R15","R20","R21","D2","D3"), "T_S"),
