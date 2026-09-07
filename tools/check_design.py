@@ -111,6 +111,34 @@ def main():
         import pcbnew
         _b = pcbnew.LoadBoard(os.path.join(os.path.dirname(os.path.dirname(
             os.path.abspath(__file__))), "NAVCORE-SoOP.kicad_pcb"))
+        # ---- THE SET COMPARISON, which nothing did until 2026-09-07 -------------
+        # The loop below only ever compared VALUE STRINGS, and only for refs present in
+        # BOTH files: a ref design.py lacks hits `continue`, and a ref the BOARD lacks is
+        # never iterated at all. So it could not see a part added to the design, or one
+        # deleted from it, in either direction - and that is not hypothetical. The
+        # artwork sat 29 parts behind and 14 parts ahead of design.py through an entire
+        # session while this check, and every other check, returned 0. Preflight called
+        # it five blockers. Adding a $17 tuner to the design moved that number by zero.
+        #
+        # A gate that cannot see the difference between the design and the thing being
+        # fabricated is not a gate. This is a hard ERROR, not a warning: ordering a board
+        # that does not match its own netlist is the most expensive mistake available.
+        board_refs = {fp.GetReference() for fp in _b.GetFootprints()}
+        fitted = {r for r, c in design.COMPONENTS.items() if not c[4] and c[1]}
+        placed = {r for r, c in design.COMPONENTS.items() if c[1]}   # incl. DNP: DNP
+                                                                     # means no PART, the
+                                                                     # PADS still exist
+        missing_from_board = sorted(fitted - board_refs)
+        stale_on_board     = sorted(board_refs - placed)
+        if missing_from_board:
+            errors.append(f"BOARD IS BEHIND design.py: {len(missing_from_board)} fitted "
+                          f"part(s) have no footprint on the artwork - "
+                          f"{', '.join(missing_from_board)}")
+        if stale_on_board:
+            errors.append(f"BOARD IS AHEAD OF design.py: {len(stale_on_board)} footprint(s) "
+                          f"on the artwork are in no longer in the design - "
+                          f"{', '.join(stale_on_board)}")
+
         for fp in _b.GetFootprints():
             ref = fp.GetReference()
             comp = design.COMPONENTS.get(ref)
