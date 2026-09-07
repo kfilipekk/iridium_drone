@@ -22,9 +22,9 @@ DROP = [
     (r'^define OSD_ENABLED',     "no analogue OSD fitted"),
     (r'^define HAL_OSD_TYPE_DEFAULT', "no analogue OSD fitted"),
     (r'^ROMFS_WILDCARD libraries/AP_OSD', "no analogue OSD fitted"),
-    (r'^PA4 BATT2_VOLTAGE_SENS', "single battery; freed for the Rev B I/Q input"),
-    (r'^PC4 PRESSURE_SENS',      "no airspeed sensor; freed for the Rev B I/Q input"),
-    (r'^PC5 RSSI_ADC',           "RSSI arrives over CRSF; freed for the Rev B AGC readback"),
+    (r'^PA4 BATT2_VOLTAGE_SENS', "single battery; freed for the SoOP I/Q input"),
+    (r'^PC4 PRESSURE_SENS',      "no airspeed sensor; freed for the SoOP I/Q input"),
+    (r'^PC5 RSSI_ADC',           "RSSI arrives over CRSF; freed for the SoOP AGC readback"),
     (r'^define HAL_BATT2_',      "single battery"),
     (r'^define HAL_DEFAULT_AIRSPEED_PIN', "no airspeed sensor"),
     (r'^define BOARD_RSSI_ANA_PIN', "RSSI arrives over CRSF"),
@@ -37,15 +37,15 @@ DROP = [
     (r'^PE1 UART8_TX',
      "ESC telemetry is receive-only, so UART8 needs only PE0/RX. PE1 is left "
      "unwired rather than declared and unconnected"),
+    # ---- U6 (PMW3901) and U7 (VL53L1X) are deleted -------------------------
+    (r'^PD4 EXT_CS1',      "U6 (PMW3901) is deleted, the only EXT_CS1 device; PD4 freed"),
+    (r'^PD10\s+PINIO1',    "U7 (VL53L1X) is deleted; PD10 freed"),
+    (r'^PD11\s+PINIO2',    "U7 (VL53L1X) is deleted; PD11 freed"),
+    (r'^SPIDEV pixartflow', "U6 (PMW3901) is deleted; SPI3 carries only the TLE flash"),
 ]
 
 # Lines to rewrite: pins MatekH743 uses for something else, which this board wires to real hardware.
 REPLACE = [
-    (r'^PD10\s+PINIO1',
-     "PD10 VL53L1X_INT INPUT PULLUP GPIO(81)",
-     "PD10 carries the VL53L1X's GPIO1, which is the SENSOR's interrupt output - "
-     "MatekH743 has a spare user GPIO here and declares it OUTPUT, which would put the "
-     "MCU and the sensor on the same node both driving. Open-drain part, so PULLUP."),
     (r'^PA7 BATT2_CURRENT_SENS',
      "PA7 VTX_EN OUTPUT LOW GPIO(83)",
      "MatekH743 reads PA7 as BATT2_CURRENT_SENS. This board has one battery, so the pin "
@@ -53,11 +53,6 @@ REPLACE = [
      "rail enabled - R45 pulls the gate down as well - so the VTX fails safe towards "
      "powered. It is deliberately a pin MatekH743 only ever READS: a stock MatekH743 "
      "binary cannot assert it and so cannot cut video."),
-    (r'^PD11\s+PINIO2',
-     "PD11 VL53L1X_XSHUT OUTPUT HIGH GPIO(82)",
-     "PD11 drives the VL53L1X's XSHUT, and the part runs only while XSHUT is HIGH. "
-     "R13 pulls it up; MatekH743's OUTPUT ... LOW drove against that pull-up and held "
-     "the rangefinder in shutdown from the moment the firmware booted."),
 ]
 
 EXTRA = """
@@ -108,12 +103,6 @@ RNGFND1_ORIENT 25
 RNGFND1_MIN 0.20
 RNGFND1_MAX 15.00
 
-# RNGFND2 is the on-board VL53L1X, U7, I2C1 @ 0x29.
-RNGFND2_TYPE 0
-RNGFND2_ADDR 41
-RNGFND2_ORIENT 25
-RNGFND2_MIN 0.04
-RNGFND2_MAX 3.60
 
 RNGFND3_TYPE 0
 RNGFND3_ADDR 41
@@ -122,6 +111,7 @@ RNGFND3_MIN 0.04
 RNGFND3_MAX 3.60
 
 FLOW_TYPE 5
+# Whatever produces the flow, its X/Y axes are not necessarily the vehicle's.
 FLOW_ORIENT_YAW 0
 
 RC_PROTOCOLS 512

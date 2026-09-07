@@ -106,6 +106,63 @@ def main():
           else "FLOATING - the MCU may boot to the system bootloader at random",
           "[D] AN2606: BOOT0 must be driven, not left floating")
 
+    # ------------------------------------------------------------------
+    # The gate must be defined, or the board is dead with a correct battery connected.
+    print("\n=== P-FET reverse-polarity protection: is the gate defined? ===")
+    AND90146 = ('[D] ON Semi AND90146/D "Reverse Polarity Protection using a '
+                'P-Channel MOSFET" (Fig. 4): "When the battery is properly connected, '
+                'the intrinsic body diode is conductive till the MOSFET\'s channel is '
+                'turned ON... When the battery is reversely connected, the body diode '
+                'is reversed biased, gate and source have the same voltage thus turning '
+                'OFF the P-Channel MOSFET. An additional Zener diode is used to clamp '
+                'the gate of the P-Channel MOSFET and protect it in the case of a too '
+                'high voltage." docs/datasheets/AND90146-D.pdf')
+    # Do not skip when the ref is absent.
+    for ref, part in (("Q4", "WST4041"),):
+        if ref not in comps:
+            check(False, f"{ref} ({part}) is present",
+                  "ABSENT - the reverse-polarity FET is not in the netlist at all. "
+                  "Nothing else in this toolchain needs it, so nothing else will "
+                  "notice: a reversed pack forward-biases D1, which clamps at -0.7 V "
+                  "and dies shorting the rail.", AND90146)
+            continue
+        if comps[ref] != part:
+            check(False, f"{ref} is not {part}",
+                  f"found {comps[ref]} - the protection FET changed; re-verify the rule")
+            continue
+        # the gate net is whatever sits on the FET's gate pin (pin 1)
+        gate_nets = [n for n, pins in nets.items() if f"{ref}.1" in pins]
+        if not gate_nets:
+            check(False, f"{ref} gate is wired", "MISSING - the gate pin has no net",
+                  AND90146)
+            continue
+        gn = gate_nets[0]
+        src = [n for n, pins in nets.items() if f"{ref}.2" in pins]
+        drn = [n for n, pins in nets.items() if f"{ref}.3" in pins]
+        on_gn = {x.split(".")[0] for x in nets.get(gn, set())}
+        # 1. the pull-down: a resistor with its other leg on GND. A floating gate
+        #    means the FET never turns on - a correct battery, dead board.
+        gnd_refs = {x.split(".")[0] for x in nets.get("GND", set())}
+        pulls = sorted(on_gn & {r for r in gnd_refs if r.startswith("R")})
+        check(bool(pulls), f"{ref} ({part}) gate pull-down to GND",
+              f"found {pulls}" if pulls else
+              "MISSING PULL-DOWN - the gate floats and the P-FET never conducts, so "
+              "the board is dead with a CORRECT battery connected. R46 (100k) is the "
+              "gate-to-GND resistor.", AND90146)
+        # 2. the clamp: a zener with one leg on the gate net and one on the source
+        #    (cathode to source, anode to gate - AND90146 Fig. 4).
+        if src:
+            src_refs = {x.split(".")[0] for x in nets.get(src[0], set())}
+            zs = sorted(r for r in on_gn if r.startswith("D") and r in src_refs)
+            check(bool(zs), f"{ref} ({part}) gate-source zener clamp",
+                  f"found {zs}" if zs else
+                  "MISSING - nothing clamps Vgs. A 4S pack alone is -16.8 V (inside "
+                  "the WST4041's +-20 V), but a surge on the battery side can exceed "
+                  "it; DZ1 (BZT52C15) clamps at ~15 V.", AND90146)
+        check(bool(src and drn and "VBAT" in src and "VBAT_IN" in drn),
+              f"{ref} ({part}) oriented drain->battery, source->load",
+              f"source on {', '.join(src)}, drain on {', '.join(drn)}", AND90146)
+
     print("\n=== LDOs: a wrong or absent output cap makes an LDO oscillate ===")
     for ref, part, vin, vout in (("U9", "AP2112K-3.3", "+5V", "+3V3"),
                                  ("U10", "TLV75533", "+5V", "+3V3A")):

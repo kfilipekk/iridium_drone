@@ -322,9 +322,13 @@ def main():
                 warns.append(f"{worst_ref} ({worst_part}) absolute maximum input is "
                              f"{abs_v} V but that value is ASSUMED - the TVS verdict "
                              f"above rests on it. {worst_src}")
-    if not any(design.COMPONENTS[r][2].startswith(("AO34", "SI2", "IRF"))
-               and "VBAT" in (npad.get(f"{r}.1"), npad.get(f"{r}.2"), npad.get(f"{r}.3"))
-               for r in design.COMPONENTS if r.startswith("Q")):
+    # Reverse-polarity protection: a P-FET wired between VBAT_IN (battery) and VBAT (rail).
+    prot = any(
+        design.COMPONENTS[r][2] == "WST4041"
+        and npad.get(f"{r}.2") == "VBAT"      # source -> protected rail
+        and npad.get(f"{r}.3") == "VBAT_IN"   # drain  -> battery side
+        for r in design.COMPONENTS if r.startswith("Q"))
+    if not prot:
         warns.append("no reverse-polarity protection on VBAT - a TVS clamps a reversed "
                      "pack at -0.7 V and dies, taking the rail with it")
 

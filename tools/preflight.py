@@ -270,8 +270,8 @@ def project(board):
         ("IMU 1 (ICM-42688-P)",      {"U2"}),
         ("IMU 2 (ICM-42605)",        {"U3"}),
         ("barometer MS5611",         {"U4"}),
-        ("optical flow PMW3901",     {"U6"}),
-        ("ToF rangefinder VL53L1X",  {"U7"}),
+        ("dedicated I2C port",        {"J9"}),
+        ("servo port",                {"J10"}),
         ("config flash W25Q128",     {"U5"}),
         ("microSD socket",           {"J8"}),
         ("USB-C",                    {"J1"}),
@@ -307,7 +307,7 @@ def project(board):
         ("ESC current sense",      ("ESC_CUR",)),
         ("SoOP I/Q ADC inputs",    ("SOOP_I_ADC", "SOOP_Q_ADC")),
         ("SWD debug",              ("SWDIO", "SWCLK")),
-        ("power rails",            ("+3V3", "+5V", "+9V", "VBAT", "GND")),
+        ("power rails",            ("+3V3", "+5V", "+9V", "VBAT", "VBAT_IN", "GND")),
     ]
     for label, need in NETS:
         miss = [n for n in need if n not in nets]
@@ -472,6 +472,13 @@ def firmware(board):
            f"geo-gated" if rc == 0 and m_frag
            else "see tools/check_links.py"))
 
+    rc, out = run("check_module_wiring.py")
+    m = re.search(r'(\d+) module\(s\) wire cleanly, (\d+) need a cable splice', out)
+    check("firmware", "modules plug in without splicing cables", rc == 0,
+          (f"{m.group(1)} clean, {m.group(2)} splice(s)" if m and rc == 0 else
+           f"{m.group(2) if m else '?'} module(s) need a cable splice - "
+           "see tools/check_module_wiring.py"))
+
     rc, out = run("check_hwdef.py")
     check("firmware", "hwdef matches the netlist", rc == 0,
           "hwdef is consistent with the netlist" if "is consistent" in out
@@ -519,7 +526,7 @@ def unverifiable():
     print("\n  Cannot be checked offline - verify before spending money:")
     for s in (f"LCSC stock and pricing for all {_n_bom or '50+'} BOM lines "
               "(stock snapshot in docs/BUYING.md - refresh it)",
-              "the 1620 MHz SAW is NOT stocked at LCSC - Rev B / separate RF board",
+              "the 1620 MHz SAW is NOT stocked at LCSC - it is a separate, bought RF board",
               "ArduPilot board ID 9001 is unregistered - request it upstream",
               "SpeedyBee grommet flange diameter is assumed 6 mm",
               "the ESC cable pinout - J2 matches Betaflight's documented SpeedyBee "
@@ -528,7 +535,8 @@ def unverifiable():
               "the 1 oz copper assumption behind the current-capacity check - confirm "
               "the stackup you order is 1 oz outer, not 0.5 oz",
               "BATT_AMP_PERVLT - a property of the ESC's shunt, calibrate on the bench",
-              "FLOW_ORIENT_YAW - U6 is bottom-side, check the sign before position hold",
+              "FLOW_ORIENT_YAW - flow arrives as MAVLink from the companion; check the "
+              "sign against the camera's mount before position hold",
               "whether Iridium NEXT Doppler can actually produce a usable fix from this "
               "antenna - sitl/ proves what ArduPilot does with a fix of a given quality, "
               "not that the receiver can produce one",

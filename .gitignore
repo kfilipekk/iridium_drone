@@ -34,3 +34,32 @@ fp-info-cache
 # tools/check_rf.py deliberately fails until this exists; committing someone else's
 # numbers would satisfy the gate without anyone having switched a board on.
 fab/rf-bench-results.json
+
+# ---- prose docs, held back until they are ready to publish --------------------------
+# These are complete and used by the tooling locally; they are simply not polished
+# enough to be the public face of the project yet. Delete these four lines to publish.
+# docs/PARTS.csv and docs/img/ deliberately stay tracked: the CSV is DATA that
+# gen_doc_tables.py and check_links.py read, and the renders are the project's photos.
+docs/*.md
+
+# Third-party datasheets, 5.6 MB. Cited by tools/check_thermal.py and fetchable from
+# the manufacturers; no reason to redistribute them here.
+docs/datasheets/
+
+# OpenSCAD scratch file from a render run.
+cad/tmp*.scad
+
+# KiCad session lock and auto-backup directory.
+*.lck
+NAVCORE-SoOP-backups/
+
+# Application notes, kept locally.
+SPONSORSHIP.md
+
+# Every markdown file except the top-level README is held back for now.
+# They are all still on disk and the tooling reads them; they just aren't published.
+cad/README.md
+fab/ORDER.md
+fab/README.md
+sim/README.md
+sitl/README.md

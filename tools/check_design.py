@@ -93,6 +93,23 @@ def main():
         import pcbnew
         _b = pcbnew.LoadBoard(os.path.join(os.path.dirname(os.path.dirname(
             os.path.abspath(__file__))), "NAVCORE-SoOP.kicad_pcb"))
+        # ---- the set comparison -------------
+        board_refs = {fp.GetReference() for fp in _b.GetFootprints()}
+        fitted = {r for r, c in design.COMPONENTS.items() if not c[4] and c[1]}
+        placed = {r for r, c in design.COMPONENTS.items() if c[1]}   # incl. DNP: DNP
+                                                                     # means no part, the
+                                                                     # pads still exist
+        missing_from_board = sorted(fitted - board_refs)
+        stale_on_board     = sorted(board_refs - placed)
+        if missing_from_board:
+            errors.append(f"BOARD IS BEHIND design.py: {len(missing_from_board)} fitted "
+                          f"part(s) have no footprint on the artwork - "
+                          f"{', '.join(missing_from_board)}")
+        if stale_on_board:
+            errors.append(f"BOARD IS AHEAD OF design.py: {len(stale_on_board)} footprint(s) "
+                          f"on the artwork are in no longer in the design - "
+                          f"{', '.join(stale_on_board)}")
+
         for fp in _b.GetFootprints():
             ref = fp.GetReference()
             comp = design.COMPONENTS.get(ref)
