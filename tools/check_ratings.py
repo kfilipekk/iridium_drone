@@ -74,7 +74,7 @@ def pkg_of(footprint):
 def _is_dnp(ref):
     """A part that is not fitted cannot be over-rated or the wrong size for its land.
 
-    L5 sits on a 1210 land that its part does not fit, which is a real Rev B defect -
+    L5 sits on a 1210 land that its part does not fit, which is a real defect -
     but the 9 V VTX buck is DNP, so nothing is soldered there on this build. Reporting
     it as a blocking failure would stop an order over a part nobody places."""
     c = design.COMPONENTS.get(ref)

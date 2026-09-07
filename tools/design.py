@@ -41,8 +41,6 @@ COMPONENTS = {
  "U3" : ("jlc_parts:ICM-42605",             "jlc:LGA-14_L3.0-W2.5-P0.50-TL",            "ICM-42605",     "C2655099", False),
  "U4" : ("jlc_parts:MS561101BA03-50",       "jlc:SENSORS-SMD_MS5611-01BA03",            "MS5611",        "C15639",   False),
  "U5" : ("jlc_parts:W25Q128JVSIQTR",        "jlc:SOIC-8_L5.3-W5.3-P1.27-LS8.0-BL",      "W25Q128JVSIQ",  "C97521",   False),
- "U6" : ("jlc_parts:PMW3901MB-TXQT_C43496881","jlc:COB-28_L6.0-W6.0-P0.65-TL-EP",       "PMW3901",       "C43496881",False),
- "U7" : ("jlc_parts:VL53L1CXV0FY{slash}1",  "jlc:OPTO-SMD_VL53L1CXV0FY-1",              "VL53L1X",       "C190004",  False),
  # ---- power ----
  "U8" : ("jlc_parts:TPS54202DDCR",          "jlc:SOT-23-6_L2.9-W1.6-P0.95-LS2.8-BL",    "TPS54202",      "C191884",  False),
  "U9" : ("jlc_parts:AP2112K-3_3TRG1",       "jlc:SOT-25-5_L2.9-W1.6-P0.95-LS2.8-BL",    "AP2112K-3.3",   "C51118",   False),
@@ -54,7 +52,7 @@ COMPONENTS = {
  "J2" : ("jlc_parts:SM08B-SRSS-TB(LF)(SN)", "jlc:CONN-TH_SM08B-SRSS-TB-LF-SN",                "ESC 8P",        "C160407",  False),
  "J3" : ("jlc_parts:XY-SM06B-GHS-TB",       "jlc:CONN-SMD_XY-SM06B-GHS-TB",            "GPS+I2C",       "C51940119",False),
  "J4" : ("jlc_parts:XY-SM06B-GHS-TB",       "jlc:CONN-SMD_XY-SM06B-GHS-TB",            "TELEM1/COMP",   "C51940119",False),
- "J5" : ("jlc_parts:XY-SM04B-GHS-TB",       "jlc:CONN-SMD_4P-P1.25_12502-04WASMT",            "RC IN",         "C51940118",False),
+ "J5" : ("jlc_parts:SM04B-SRSS-TB_(LF)(SN)","jlc:CONN-SMD_4P-P1.00_SM04B-SRSS-TB-LF-SN","RC IN",         "C160404",  False),
  "J6" : ("jlc_parts:XY-SM04B-GHS-TB",       "jlc:CONN-SMD_4P-P1.25_12502-04WASMT",            "CAN",           "C51940118",False),
  "J7" : ("jlc_parts:XY-SM04B-GHS-TB",       "jlc:CONN-SMD_4P-P1.25_12502-04WASMT",            "RNGFND",        "C51940118",False),
  "J8" : ("jlc_parts:TF-01A",                "jlc:TF-SMD_TF-01A",                        "microSD",       "C91145",   False),
@@ -86,11 +84,17 @@ COMPONENTS = {
  # (36488 in stock) and jlcpcb.com/partdetail/C19077573 (DO-214AA(SMB), same package).
  "D1" : ("Device:D_TVS",                    "jlc:DO-214AA_L4.4-W3.6-LS5.3-RD",                          "SMBJ18A",       "C19077573",False),
  # ---- RF section (SoOP config, DNP) ----
- "U13": ("jlc_parts:MAX2112ETI+T",          "jlc:TQFN-28_L5.0-W5.0-P0.50-BL-EP3.3",      "MAX2112",       "C596391",  True),
- "U14": ("jlc_parts:OPA2374M{slash}TR",     "jlc:SOP-8_L4.9-W3.9-P1.27-LS6.0-BL",       "OPA2374",       "C444392",  True),
+ "U13": ("jlc_parts:MAX2112ETI+T",          "jlc:TQFN-28_L5.0-W5.0-P0.50-BL-EP3.3",      "MAX2112",       "C596391",  False),
+ "U14": ("jlc_parts:OPA2374M{slash}TR",     "jlc:SOP-8_L4.9-W3.9-P1.27-LS6.0-BL",       "OPA2374",       "C444392",  False),
  "U15": ("jlc_parts:PSA4-5043+",            "jlc:SOT-343-4_L2.0-W1.3-P1.30-LS2.1-BR",           "PSA4-5043+",    "C5240848", True),
  "U16": ("jlc_parts:PSA4-5043+",            "jlc:SOT-343-4_L2.0-W1.3-P1.30-LS2.1-BR",           "PSA4-5043+",    "C5240848", True),
- "Y2" : ("jlc_parts:SX3M27_000M20F30TNN",   "jlc:OSC-SMD_4P-L3.2-W2.5-BL",              "27MHz XO",      "C2901577", True),
+ # Y2 keeps the SX3M27 SYMBOL deliberately: it is the correct symbol class for this
+ # part - a 4-pad ACTIVE oscillator, pin 1 EN, 2 GND, 3 OUT, 4 VDD - and the shared
+ # symbol library lives outside this repo, so not adding a dependency to it is worth
+ # more than a name that matches the manufacturer. The VALUE and LCSC fields carry the
+ # real identity. That symbol also proves the old netlist was wrong: it labels pin 4
+ # VDD, and the netlist grounded it.
+ "Y2" : ("jlc_parts:SX3M27_000M20F30TNN",   "jlc:OSC-SMD_4P-L3.2-W2.5-BL",              "25MHz TCXO",    "C22381771",False),
  "FL1": ("jlc_parts:TA1575IG",                   "jlc:FILTER-SMD_6P-L3.0-W3.0-P1.19-TR",                       "SAW 1620MHz",   "",         True),
  "J9" : ("Connector:Conn_Coaxial",             F_UFL,                                      "U.FL ANT",      "",         True),
 }
@@ -164,6 +168,12 @@ VBAT_PART_VMAX = {
                  "[D] SLVSD26 5.1 Absolute Maximum Ratings, VIN -0.3 to 30 V; "
                  "5.3 Recommended Operating Conditions, VIN 4.5-28 V. "
                  "docs/datasheets/TPS54202-SLVSD26.pdf"),
+    # The protection FET sits between the TVS and everything else, so the TVS
+    # verdict now has to protect IT too. VDS -40 V absolute (a 4S pack is 16.8 V), and
+    # VGS +-20 V - the reason DZ1 clamps the gate at ~15 V.
+    "WST4041": (30.0, 40.0, True,
+                "[D] WST4041 WINSOK datasheet: VDS -40 V, VGS +-20 V absolute max "
+                "(docs/datasheets/WST4041_WINSOK.pdf)"),
 }
 
 # Transient-suppressor clamping voltage at the datasheet's peak pulse current. The
@@ -204,6 +214,15 @@ LOADS_3V3A = [  # through U10, TLV75533
     ("ICM-42688-P",                    0.001, 0.002, "[D] ~0.88 mA 6-axis continuous"),
     ("ICM-42605",                      0.001, 0.002, "[D] ~0.75 mA 6-axis continuous"),
     ("MS5611 barometer",               0.001, 0.002, "[D] 1.4 mA peak during conversion"),
+    # The SoOP receiver. This table is HAND-MAINTAINED and check_thermal reads it rather
+    # than the netlist, so adding a part to NETS without adding it here changes nothing
+    # the thermal check can see - which is exactly what happened when the tuner was
+    # first wired in, and is why these three lines exist.
+    ("MAX2112 tuner (U13)",            0.100, 0.100, "[D] MAX2112 Rev 3: 100 mA supply "
+                                                     "current, VCC 3.3 V"),
+    ("OPA2374 baseband amps (U14)",    0.002, 0.002, "[D] OPA2374: 585 uA per amplifier"),
+    ("25 MHz TCXO (Y2)",               0.002, 0.002, "[L] JLCPCB C22381771: 3.3 V, "
+                                                     "clipped sine, ~2 mA"),
 ]
 
 # (package, theta_JA_minimal_copper, theta_JA_good_copper, theta_src, tj_max, i_max_A, src)
@@ -311,11 +330,11 @@ CAP("C31","100n"); CAP("C32","100n")                       # IMU1 VDD/VDDIO
 CAP("C33","100n"); CAP("C34","100n")                       # IMU2
 CAP("C35","100n")                                          # baro
 CAP("C36","100n")                                          # flash
-CAP("C37","100n"); CAP("C38","100n")                       # flow
-CAP("C39","100n"); CAP("C40","4u7", F_C0805)               # ToF
 RES("R9","4k7"); RES("R10","4k7")                          # I2C1 pullups
 RES("R11","4k7"); RES("R12","4k7")                         # I2C2 pullups
-RES("R13","10k")                                           # ToF XSHUT pullup
+# U6 (PMW3901), U7 (VL53L1X) and their passives C37-C40, R13 are deleted -
+# neither sensor could see the ground through the ESC, and both freed pins for the
+# dedicated I2C port (J9) that carries the same functions OFF the board instead.
 
 # CAN
 CAP("C41","100n"); RES("R14","10k")                        # HVD230 Rs slope
@@ -339,15 +358,29 @@ add("SW1", SW, F_SW, "BOOT"); add("SW2", SW, F_SW, "RESET")
 CAP("C45","10u", F_C0805); CAP("C46","100n")
 for i,(r) in enumerate(["R22","R23","R24","R25","R26","R27"]): RES(r, "47k")  # SDMMC pullups
 
-# RF section passives (all DNP as fabricated)
-for r,v in [("C47","100n"),("C48","100n"),("C49","100n"),("C50","100n"),("C51","1u"),
-            ("C52","100p"),("C53","100p"),("C54","1n"),("C55","1n"),("C56","10n"),("C57","10n")]:
-    CAP(r, v, F_C0402, dnp=True)
-for r,v in [("R28","0R"),("R29","0R"),("R30","10k"),("R31","10k"),("R32","1k"),("R33","1k"),
+# RF section passives. The TUNER half is fitted; the LNA/SAW half is not on this board
+# at all (the Nooelec SAWbird+ IR does that job at the antenna, which is where an LNA
+# belongs and which is also why the un-sourceable 1620 MHz SAW stopped mattering).
+for r,v in [("C49","100n"),("C50","100n"),("C51","1u"),
+            ("C52","100p"),("C56","10n"),("C57","10n")]:
+    CAP(r, v, F_C0402)
+for r,v in [("R28","0R"),("R29","0R"),("R30","10k"),("R31","10k"),
             ("R34","1k"),("R35","1k"),("R36","4k7"),("R37","4k7")]:
-    RES(r, v, F_R0402, dnp=True)
-IND("L3","33nH", F_L0805, dnp=True); IND("L4","33nH", F_L0805, dnp=True)
-CAP("C58","18p", F_C0402, dnp=True); CAP("C59","18p", F_C0402, dnp=True)   # 27MHz load
+    RES(r, v, F_R0402)
+# C58 WAS an 18 pF crystal load cap. It is now the series coupling capacitor the
+# datasheet asks for by value: "[D] MAX2112 Rev 3 pin 14 XTAL - Crystal-Oscillator
+# Interface. Use with an external parallel-resonance-mode crystal through a series 1nF
+# capacitor." Y2 is an ACTIVE oscillator driving that pin, which the same datasheet
+# permits explicitly: "Input Overdrive level, AC-coupled sine-wave input, 0.5 / 1 /
+# 2.0 VP-P". A clipped-sine TCXO sits inside that window; a CMOS-output part would
+# swing 3.3 V and exceed it, which is why the output type is part of the part choice.
+CAP("C58","1n", F_C0402)      # series AC coupling, Y2 output -> U13 XTAL
+CAP("C59","100n", F_C0402)    # Y2 supply decoupling (was the second 18 pF load cap)
+# Y2 pin 1 is OE on most 4-pad oscillators and VC on some. UNCONFIRMED for this part,
+# so the pull-up is provisioned and NOT fitted: floating is correct for a VC pin and
+# for an OE with an internal pull-up, and R47 is stuffed only if the part needs OE
+# driven high. Resolve it against the Ostar datasheet before ordering.
+RES("R47","10k", F_R0402, dnp=True)
 
 # ------------------------------------------------------------- connector orientation
 #
@@ -386,6 +419,13 @@ MATING_FACE = {
     "J2": (0.0, +1.0),   # ESC JST-SH 8P
     "J3": (0.0, +1.0),   # GPS/I2C JST-GH 6P
     "J8": (0.0, +1.0),   # microSD card slot
+    # Tier-1 connectors, both JST-SH 4P on the left edge (same class as J2, so
+    # the same face convention: signal pad row at local -y, mouth at +y).
+    "J4": (0.0, +1.0),   # companion / TELEM1 JST-GH 6P
+    "J5": (0.0, +1.0),   # RC receiver JST-SH 4P
+    "J9": (0.0, +1.0),   # I2C port (VCC/SCL/SDA/GND) - the dedicated bus
+    "J10": (0.0, +1.0),  # servo port (PWM5/PWM6/VSERVO/GND)
+    "J11": (0.0, +1.0),  # SERIAL2 lidar port (5V/TX/RX/GND)
 }
 
 # How much straight, clear space the plug needs in front of the mating face, in mm.
@@ -395,6 +435,11 @@ MATING_FACE = {
 MATING_CLEARANCE = {
     "J1": 9.0,    # USB-C plug overmould
     "J2": 6.0,    # JST-SH plug plus wire bend
+    "J4": 3.6,    # JST-GH pigtail, same derivation as J3 - see the note above
+    "J5": 6.0,    # JST-SH class, same as J2
+    "J9": 6.0,    # JST-SH class, same as J2 (the dedicated I2C port)
+    "J10": 6.0,   # JST-SH class, same as J2 (servo port)
+    "J11": 6.0,   # JST-SH class, same as J2 (SERIAL2 lidar port)
     # J3 was 6.0, a JST-GH class nominal - it warned, because the measured clear run to
     # R21 is 5.30 mm. DERIVED 2026-09-05 and the class figure retired: the GPS pigtail
     # is a pre-wired GH shell whose wires exit the REAR at roughly the shell's
@@ -422,10 +467,10 @@ MATING_CLEARANCE = {
 # direction is the surface normal the sensor looks along, in board coordinates, with
 # +z out of the TOP face. A bottom-side downward sensor is therefore (0, 0, -1).
 GROUND_FACING = {
-    "U6": ((0.0, 0.0, -1.0), 21.0, 1000.0,
-           "PMW3901 optical flow - needs texture on the ground below"),
-    "U7": ((0.0, 0.0, -1.0), 13.5, 3600.0,
-           "VL53L1X ToF - needs an unobstructed cone to the ground"),
+    # U6 (PMW3901) and U7 (VL53L1X) are deleted: both faced the ESC 3.0 mm away and
+    # could never see anything, which is why they shipped DNP. The downward functions
+    # they were supposed to provide now arrive OFF the board (flow as MAVLink
+    # OPTICAL_FLOW, range from the TFS20-L on the dedicated I2C port J9).
 }
 
 # The optical-flow CAMERA on the companion Pi is also ground-facing, but it is NOT on
@@ -929,16 +974,16 @@ OFFBOARD = dict(
                   "pin-for-pin. Verify against the netlist, not against memory.",
              src="[M] design.py nets: J3.2/3 USART2, J3.4/5 I2C1, J3.6-8 GND"),
     rangefinder_down=dict(part="Benewake TFS20-L", variant="I2C", addr=0x10,
-                          lands_on="J3.4 / J3.5 (I2C1)", vcc="3.3 V",
+                          lands_on="J9 (dedicated I2C port)", vcc="3.3 V",
                           wrong_variant_note="the UART variant needs SERIAL6 (UART4). "
                                              "That IS routed - P71/P72/P73/P74, the old J7 "
                                              "'RF' group - so it would work. Buy I2C anyway: "
-                                             "it shares J3 with the GPS and leaves SERIAL6 free",
+                                             "it plugs straight into J9 and leaves SERIAL6 free",
                           src="[D] AP_RangeFinder Benewake TFS20L driver, I2C 0x10"),
     rangefinder_up=dict(part="VL53L1X module (GY-53-L1X)", addr=0x29,
-                        lands_on="J3.4 / J3.5 (I2C1)", vcc="3.3 V",
-                        free_because="U7 is DNP - the on-board VL53L1X would otherwise own "
-                                     "0x29 and collide",
+                        lands_on="J9 (dedicated I2C port)", vcc="3.3 V",
+                        free_because="U7 is deleted - the on-board VL53L1X would "
+                                     "otherwise own 0x29 and collide",
                         src="[D] VL53L1X fixed default address 0x29"),
     buzzer=dict(part="5V PASSIVE piezo", lands_on="PZ1 / PZ2", drive="PA15 TIM2_CH1 ALARM",
                 must_be="passive",
@@ -957,7 +1002,7 @@ OFFBOARD = dict(
     # THE TRAP: MAVLink mode requires an ESP-BASED receiver. STM32-based ELRS receivers
     # CANNOT do it, and plenty of cheap ones are STM32. This is a purchase-time fit
     # constraint with no software fix - the wrong receiver simply cannot carry telemetry.
-    rx=dict(part="ELRS 2.4 GHz receiver - MUST BE ESP-BASED", lands_on="P51-P54 (USART6)",
+    rx=dict(part="ELRS 2.4 GHz receiver - MUST BE ESP-BASED", lands_on="J5 (USART6)",
             mcu="ESP", min_fw="3.5.0",
             gcs_note="ELRS MAVLink needs SERIAL7_PROTOCOL 2, SERIAL7_BAUD 460, "
                      "RSSI_TYPE 5, and all SRx_ streams 1 except ADSB/PARAMS/RAW_CTRL. "
@@ -1108,7 +1153,7 @@ PAYLOAD = dict(
     # (verified 2026-09-04 - they are net names only), so the fossil is invisible on the
     # physical board, and renaming nets in the artwork days before a fabrication order
     # buys nothing and risks a diff nobody reviews.
-    serial=[(2, "USART1", "TP5 / TP6", "routed to pads - EARMARKED for the 360 lidar "
+    serial=[(2, "USART1", "J11 (TP5 / TP6 remain as probes)", "EARMARKED for the 360 lidar "
                                        "(PRX1_TYPE 16); free only until that is fitted"),
             (6, "UART4", "P71 / P72 / P73 / P74", "GENERAL-PURPOSE EXPANSION UART - free "
                                                   "and unclaimed (settled 2026-09-04). The "
@@ -1116,8 +1161,8 @@ PAYLOAD = dict(
                                                   "earmark; nothing is reserved here")],
     serial_unrouted=[(4, "USART3")],
     serial_earmarked=[(2, "360 lidar, PRX1_TYPE 16")],
-    power_5v=["P71", "P61", "P51", "PL2", "P41"],
-    gnd=["P74", "P64", "P54", "PL3", "P46"],
+    power_5v=["P71", "P61", "PL2", "P41", "J4.1", "J5.1", "J9.1", "J11.1"],
+    gnd=["P74", "P64", "PL3", "P46", "J4.6", "J5.4", "J9.4", "J11.4"],
     # A servo drawing real current must NOT come off the flight controller's 5 V rail.
     # check_build reports 0.95 A of a 2.0 A regulator with everything fitted (L2's
     # 1.6 A Irms governs); a stalled hobby servo alone can pull more than the margin.
@@ -1372,7 +1417,7 @@ def net(name, *pins): NETS.setdefault(name, []).extend(pins)
 # ---- power rails -------------------------------------------------------
 net("GND",
     "U1.10","U1.26","U1.49","U1.74","U1.99","U1.19",           # VSS + VSSA
-    "U2.6","U3.6","U4.3","U5.4","U7.3","U7.4","U7.6","U7.12","U7.2",
+    "U2.6","U3.6","U4.3","U5.4",
     "U8.1","U9.2","U10.2","U11.2","U12.2",
     "J1.A1B12","J1.B1A12","J1.13","J1.14",
     "J2.1","J2.9","J2.10", "J3.6","J3.7","J3.8", "J4.6","J4.7","J4.8",
@@ -1383,20 +1428,25 @@ net("GND",
     "C10.2","C11.2","C12.2","C13.2","C14.2","C15.2","C16.2",
     "C17.2","C18.2","C19.2","C22.2","C23.2",
     "C26.2","C27.2","C28.2","C29.2","C30.2","C31.2","C32.2","C33.2","C34.2",
-    "C35.2","C36.2","C37.2","C38.2","C39.2","C40.2","C41.2","C42.2",
+    "C35.2","C36.2","C41.2","C42.2",
     "C43.2","C44.2","C45.2","C46.2",
     "R1.2","R5.2","R7.2","R14.2","R19.2","SW1.2","SW2.2","D2.2","D3.2",
     "U4.4","U4.5",                                              # CSB + internal -> GND = addr 0x77
-    "U6.1","U6.21","U6.29",
     )
-net("VBAT", "J2.2","D1.2","C17.1","C18.1","C19.1","U8.3","R4.1","R18.1")
+# The battery input is protected by Q4, a P-FET between the entry and the rail.
+# VBAT_IN is the battery side (J2.2 and D1); VBAT is the protected rail downstream of
+# Q4.source. ON Semi AND90146/D Fig. 4: drain to the battery, source to the load -
+# the body diode conducts until the channel turns on, and a reversed pack reverse-
+# biases the diode and leaves the rail dead.
+net("VBAT_IN", "J2.2", "D1.2", "Q4.3")            # Q4 pin 3 = drain
+net("VBAT", "Q4.2", "C17.1","C18.1","C19.1","U8.3","R4.1","R18.1")  # Q4 pin 2 = source
 net("+5V",  "U8.2","C22.1","C23.1","U9.1","C26.1","U10.1","C28.1",
             "J3.1","J4.1","J5.1","J6.1","J7.1","R6.1")
 net("+3V3", "U9.5","C27.1","U1.11","U1.27","U1.50","U1.75","U1.100",
             "C1.1","C2.1","C3.1","C4.1","C5.1","C6.1","C7.1",
-            "U5.8","C36.1","U6.3","C37.1","U7.11","C39.1","C40.1",
+            "U5.8","C36.1",
             "U11.3","C41.1","J8.4","C45.1","C46.1","L1.1",
-            "R9.1","R10.1","R11.1","R12.1","R13.1","R20.1","R21.1",
+            "R9.1","R10.1","R11.1","R12.1","R20.1","R21.1",
             "R22.1","R23.1","R24.1","R25.1","R26.1","R27.1","SW1.1")
 net("+3V3A","U10.5","C29.1","C30.1","U2.5","U2.8","C31.1","C32.1",
             "U3.5","U3.8","C33.1","C34.1","U4.1","U4.2","C35.1")   # U4.2=PS high -> I2C
@@ -1435,19 +1485,26 @@ net("SPI4_SCK","U1.PE12","U3.13"); net("SPI4_MISO","U1.PE13","U3.1")
 net("SPI4_MOSI","U1.PE14","U3.14"); net("IMU2_CS","U1.PE11","U3.12")
 net("IMU3_CS","U1.PC13")                                        # hwdef-declared, unpopulated
 # ---- SPI3: flow + flash ------------------------------------------------
-net("SPI3_SCK","U1.PB3","U6.SCLK","U5.6"); net("SPI3_MISO","U1.PB4","U6.MISO","U5.2")
-net("SPI3_MOSI","U1.PB5","U6.MOSI","U5.5")
-net("EXT_CS1","U1.PD4","U6.NCS"); net("EXT_CS2","U1.PE2","U5.1")
+net("SPI3_SCK","U1.PB3","U5.6"); net("SPI3_MISO","U1.PB4","U5.2")
+net("SPI3_MOSI","U1.PB5","U5.5")
+# EXT_CS1 (PD4) was deleted along with U6 - SPI3 now carries one device,
+# the W25Q128 flash on EXT_CS2 (PE2). PD4 is freed for a future SPI3 peripheral.
+net("EXT_CS2","U1.PE2","U5.1")
 net("FLASH_WP","U5.7","+3V3_T2"); NETS["FLASH_WP"]=["U5.7"]; NETS["+3V3"].append("U5.7")
 net("FLASH_HOLD","U5.3"); NETS["+3V3"].append("U5.3"); del NETS["FLASH_HOLD"]
 del NETS["FLASH_WP"]
 # ---- I2C ---------------------------------------------------------------
-net("I2C1_SCL","U1.PB6","R9.2","U7.10","J3.4")
-net("I2C1_SDA","U1.PB7","R10.2","U7.9","J3.5")
+# I2C1 reaches the outside on J3 (the GPS port, I2C-by-standard per DS-009) AND on
+# the dedicated 4-pin I2C port J9 - rangefinders no longer need a
+# splitter into the GPS loom, which is what check_module_wiring reports as a splice.
+# J9's pins are added in the Phase C block, NOT here: the RF-off block further down
+# strips every 'J9.*' spec (the old U.FL antenna connector used that ref) and would
+# silently delete the wiring otherwise.
+net("I2C1_SCL","U1.PB6","R9.2","J3.4")
+net("I2C1_SDA","U1.PB7","R10.2","J3.5")
 net("I2C2_SCL","U1.PB10","R11.2","U4.8")
 net("I2C2_SDA","U1.PB11","R12.2","U4.7")
-net("TOF_XSHUT","U7.5","R13.2","U1.PD11")
-net("TOF_INT","U7.7","U1.PD10")
+# TOF_XSHUT (PD11) and TOF_INT (PD10) deleted with U7 - both pins freed.
 # ---- UARTs -------------------------------------------------------------
 net("USART2_TX","U1.PD5","J3.2"); net("USART2_RX","U1.PD6","J3.3")   # GPS1
 net("UART7_TX","U1.PE8","J4.2");  net("UART7_RX","U1.PE7","J4.3")    # companion
@@ -1491,30 +1548,45 @@ net("SOOP_Q_ADC","U1.PA4","U14.7")
 net("SOOP_RSSI","U1.PC5","R30.2")
 net("SPARE_ADC","U1.PA7")
 
-# PMW3901 extras (VDD, VREG bypass, reset, motion IRQ)
-NETS["+3V3"] += ["U6.2"]
-net("FLOW_VREG","U6.4","C38.1"); NETS["GND"] += ["C38.2"] if "C38.2" not in NETS["GND"] else []
-net("FLOW_NRESET","U6.7")
-NETS["+3V3"] += ["U6.7"]; del NETS["FLOW_NRESET"]
-net("FLOW_MOTION","U6.15")
 
 # ---- RF front end (SoOP config, all DNP) -------------------------------------
-net("ANT_IN",   "J9.1","C52.1"); NETS["GND"] += ["J9.2"]
-net("LNA1_IN",  "C52.2","U15.3")
-net("LNA1_OUT", "U15.1","L3.2","C53.1")
-net("LNA1_BIAS","L3.1","R32.2","C47.1"); NETS["+3V3"] += ["R32.1"]; NETS["GND"] += ["C47.2"]
-net("SAW_IN",   "C53.2","FL1.1")
-net("SAW_OUT",  "FL1.3","C54.1"); NETS["GND"] += ["FL1.2","FL1.4","FL1.5","FL1.6"]
-net("LNA2_IN",  "C54.2","U16.3")
-net("LNA2_OUT", "U16.1","L4.2","C55.1")
-net("LNA2_BIAS","L4.1","R33.2","C48.1"); NETS["+3V3"] += ["R33.1"]; NETS["GND"] += ["C48.2"]
-net("RFIN",     "C55.2","U13.4")
-NETS["GND"] += ["U15.2","U15.4","U16.2","U16.4","U13.3","U13.10","U13.11","U13.29"]
+# The antenna side arrives already amplified and filtered: J12 is a U.FL taking coax
+# from the Nooelec SAWbird+ IR, which is the LNA and the 1620 MHz SAW in one shielded
+# module sitting AT the antenna. So the board's own LNA/SAW chain (U15, U16, FL1, L3,
+# L4 and their bias networks) is gone entirely - it was two amplifiers and a filter
+# that could not be sourced, doing a job a bought part does better because noise figure
+# is set before cable loss.
+net("ANT_IN",   "J12.1","C52.1"); NETS["GND"] += ["J12.2"]
+net("RFIN",     "C52.2","U13.4")
+NETS["GND"] += ["U13.3","U13.10","U13.11","U13.29"]
 net("VCC_RF",   "U13.1","U13.2","U13.6","U13.7","U13.13","U13.16","U13.25",
                 "C49.1","C50.1","C51.1","R28.2")
-NETS["+3V3"] += ["R28.1"]; NETS["GND"] += ["C49.2","C50.2","C51.2"]
-net("TUNER_XTAL","U13.14","Y2.1","C58.1"); NETS["GND"] += ["Y2.2","Y2.4","C58.2","C59.2"]
-net("TUNER_XTAL2","Y2.3","C59.1")
+# VCC_RF IS FED FROM +3V3A, NOT +3V3, and the reason is measured rather than stylistic.
+# The MAX2112 draws 100 mA. On +3V3 that takes U9 (AP2112K) from 445 mA to 545 mA of
+# its 600 mA guaranteed output - 91% - on the rail whose junction temperature is
+# ALREADY the board's worst warning (179 C on the datasheet's no-heatsink figure).
+# U10 (TLV75533, 500 mA) carries 3 mA today, so the same load lands at ~21% and about
+# 175 mW of dissipation. It is also the RF-correct rail: a low-noise LDO feeding an
+# analogue part, with R28 as the per-block isolation and C49/C50/C51 local to the pins.
+#
+# The cost is that 100 mA now shares a regulator with the IMUs and the barometer. The
+# TLV75533's PSRR and the tuner's near-constant draw should make that a non-issue, but
+# "should" is not a measurement: check IMU noise with the tuner powered at bench T3.
+NETS["+3V3A"] += ["R28.1"]; NETS["GND"] += ["C49.2","C50.2","C51.2"]
+# Y2 IS AN ACTIVE OSCILLATOR AND WAS WIRED AS A PASSIVE CRYSTAL. The old netlist put
+# Y2.1 on the tuner's XTAL pin, grounded Y2.2 AND Y2.4, and ran Y2.3 into a load cap -
+# which is the pin pattern of a 4-pad passive crystal (two terminals, two grounded
+# shield tabs), exactly as Y1 legitimately uses. But the PART fitted here was an active
+# CMOS oscillator, so that wiring GROUNDED ITS SUPPLY: pin 4 is VDD. It could never
+# have started. Nothing caught it because the whole RF block was stripped and DNP, so
+# no check ever ran over it.
+#
+# Correct wiring for a 4-pad oscillator: 1 = OE, 2 = GND, 3 = OUT, 4 = VDD.
+net("TUNER_REF",  "Y2.3", "C58.1")            # TCXO clipped-sine output
+net("TUNER_XTAL", "C58.2", "U13.14")          # AC-coupled into the XTAL pin
+NETS["+3V3A"] += ["Y2.4", "C59.1", "R47.2"]   # VDD + decoupling, on the quiet rail
+NETS["GND"]  += ["Y2.2", "C59.2"]
+net("TUNER_OE",   "Y2.1", "R47.1")            # R47 is DNP - see the note at C58
 net("TUNER_ADDR","U13.28","R29.2"); NETS["GND"] += ["R29.1"]
 NETS["I2C2_SDA"] += ["U13.26"]; NETS["I2C2_SCL"] += ["U13.27"]
 net("VTUNE","U13.9","C56.1"); NETS["GND"] += ["C56.2"]
@@ -1530,7 +1602,7 @@ del NETS["OPA_IN2P"]
 net("OPA_IN2P_","U14.5"); net("OPA_IN2N_","U14.6")
 NETS["QOUT_P"] += ["U14.5"]; NETS["QOUT_N"] += ["U14.6"]
 del NETS["OPA_IN2P_"], NETS["OPA_IN2N_"]
-NETS["+3V3"] += ["U14.8"]; NETS["GND"] += ["U14.4"]
+NETS["+3V3A"] += ["U14.8"]; NETS["GND"] += ["U14.4"]   # opamps follow the tuner
 net("IDC_P","U13.21"); net("IDC_N","U13.22"); net("QDC_P","U13.23"); net("QDC_N","U13.24")
 
 # ---------------------------------------------------------------- fixes ----
@@ -1559,12 +1631,9 @@ NETS.pop("R3", None)
 
 # LDO enables tied to their inputs (always-on)
 NETS["+5V"]  += ["U9.3","U10.3"]
-# VL53L1X VCSEL supply
-NETS["+3V3"] += ["U7.1"]
 
 COMPONENTS.pop("R2", None)
 NETS["GND"] += ["R31.2"]
-NETS["GND"] += ["C38.2"]
 
 # BOOT0 button: +3V3 --SW1-- BOOT0 --R1-- GND   (was shorting +3V3 to BOOT0)
 for n in ("BOOT0","+3V3","GND"):
@@ -1584,7 +1653,8 @@ NETS["GND"]    += ["C60.2","C61.2","C62.2","C63.2","C64.2"]
 
 # ---- power flags: tell ERC these rails are actually driven ---------------
 PWR_FLAGS = {"VBAT":"PF1", "+5V":"PF2", "+3V3":"PF3", "+3V3A":"PF4",
-             "GND":"PF5", "VDDA":"PF6", "VBUS":"PF7", "VCC_RF":"PF8"}
+             "GND":"PF5", "VDDA":"PF6", "VBUS":"PF7", "VCC_RF":"PF8",
+             "VBAT_IN":"PF9"}
 for netname, ref in PWR_FLAGS.items():
     add(ref, "power:PWR_FLAG", "", "PWR_FLAG", "", netname == "VCC_RF")
     NETS[netname].append(f"{ref}.1")
@@ -1602,6 +1672,17 @@ for i, netname in enumerate(TESTPOINT_NETS, 1):
     NETS[netname].append(f"{ref}.1")
 
 # ---- connector reduction: JST-GH -> solder pads ---------------------------
+# TWO OF THE FOUR CAME BACK. This block was written when the board was 41.6 x 39.4 mm
+# and four layers, and it degraded every connector except USB-C, the ESC and the GPS
+# into bare 1.5 mm pads. The board is now 45.0 x 46.0 mm and six layers, and the pads
+# turned out to cost more than the space they saved: an ELRS receiver is not optional
+# equipment, and it was landing on four identical gold squares of which exactly one
+# carried a silkscreen label. That is the highest-consequence hand-solder joint on the
+# aircraft and the easiest one to get wrong.
+#
+# So J4 (companion, 6P) and J5 (RC, 4P) are connectors again. J6 (CAN) and J7 (the
+# spare UART4) stay pads: nothing on this build plugs into either, and an unused
+# connector is mass and edge length spent on nothing.
 # Measured during layout: at 41.6 x 39.4 mm, seven JST-GH connectors plus an LQFP100
 # and a microSD socket exceed the board. That is not a packing failure - the FC alone
 # was already at 67.5% courtyard, above the ~60-65% routable ceiling for 4 layers.
@@ -1611,8 +1692,7 @@ for i, netname in enumerate(TESTPOINT_NETS, 1):
 # make the rest solder pads. Keeps USB-C, the 8-pin ESC JST-SH, and the GPS JST-GH.
 PAD_FP = "TestPoint:TestPoint_Pad_1.5x1.5mm"
 _PAD_LABELS = {
- "J4": {1:"TEL_5V", 2:"TEL_TX", 3:"TEL_RX", 4:"TEL_PPS", 5:"TEL_RTS", 6:"TEL_GND"},
- "J5": {1:"RC_5V",  2:"RC_TX",  3:"RC_RX",  4:"RC_GND"},
+ # J4 (companion) and J5 (RC) are NOT in this table any more - see the note below.
  "J6": {1:"CAN_5V", 2:"CANH",   3:"CANL",   4:"CAN_GND"},
  "J7": {1:"RF_5V",  2:"RF_TX",  3:"RF_RX",  4:"RF_GND"},
 }
@@ -1629,6 +1709,18 @@ for jref, labels in _PAD_LABELS.items():
     for netname, specs in NETS.items():
         NETS[netname] = [sp for sp in specs if not sp.startswith(f"{jref}.")]
 
+# P41/P46 were the +5V/GND pair every ad-hoc load taps - the VTX, the recording camera,
+# a bench meter - and P44 was the SoOP tuner's PPS probe. Restoring J4 as a connector
+# would have taken all three away, so they are re-created as standalone pads. A power
+# tap wants a pad, not a plug: it is soldered once and never unplugged, and giving it a
+# connector would mean a mating lead for two wires.
+add("P41", "Connector:TestPoint", PAD_FP, "TEL_5V",  "", False)
+add("P44", "Connector:TestPoint", PAD_FP, "TEL_PPS", "", False)
+add("P46", "Connector:TestPoint", PAD_FP, "TEL_GND", "", False)
+NETS["+5V"].append("P41.1")
+NETS["PPS_SYNC"].append("P44.1")
+NETS["GND"].append("P46.1")
+
 # ---- SoOP RF front end moved OFF this board ------------------------------
 # Measured, not guessed:
 #   flight controller     2213 mm^2 = 67.5% courtyard across both sides
@@ -1642,19 +1734,15 @@ for jref, labels in _PAD_LABELS.items():
 # the system noise figure before cable loss. The original plan's two-board option
 # had it there. So the SoOP front end becomes its own small board, fed from the
 # RTL-SDR's bias-tee, and this board keeps the companion UART that carries the fix.
-INCLUDE_RF = False
-
-if not INCLUDE_RF:
-    _rf_refs = {"U13", "U14", "U15", "U16", "Y2", "FL1", "J9", "L3", "L4"}
-    # RF passives are C47-C64 and R28-R37 - an earlier rule keyed only on ">= 47" and
-    # left the R28-R37 bias network orphaned on the board.
-    _rf_refs |= {f"C{i}" for i in range(47, 65)} | {f"R{i}" for i in range(28, 38)}
-    for _r in list(COMPONENTS):
-        if _r in _rf_refs:
-            COMPONENTS.pop(_r, None)
-    for _n in list(NETS):
-        NETS[_n] = [sp for sp in NETS[_n] if sp.split(".")[0] not in _rf_refs]
-        if not NETS[_n]: del NETS[_n]
+# The TUNER is on the board. The LNA and SAW are not, and never were sourceable:
+# FL1 (TA1575IG, 1620 MHz SAW) has no LCSC part number at all. Both jobs are done by
+# the bought Nooelec SAWbird+ IR at the antenna. Nothing below is defined any more -
+# the block is kept only so a future two-board build knows what was removed and why.
+INCLUDE_ONBOARD_LNA = False       # U15/U16/FL1/L3/L4 - see the ANT_IN comment
+assert not INCLUDE_ONBOARD_LNA, ("the on-board LNA/SAW chain was deleted, not disabled - "
+                                 "re-adding it needs the 1620 MHz SAW sourced first")
+for _r in ("U15", "U16", "FL1", "L3", "L4"):
+    COMPONENTS.pop(_r, None)
 
 # Keep the SoOP receiver interface reachable from the board edge even though the RF
 # front end now lives elsewhere: I/Q and AGC come back as pads.
@@ -1725,10 +1813,13 @@ add("U18", "jlc_parts:TPS54202DDCR", "jlc:SOT-23-6_L2.9-W1.6-P0.95-LS2.8-BL",
 # of overhang in Y - solderable, check the fillet. A fillet concern, not a part hanging
 # off its land. Current is not an issue either: 0.60 A of a 1.6 A Irms part.
 #
-# The real cost is the LOOP. L5 is B.Cu at (127.50, 119.00) while U18 is F.Cu, so the
-# 9 V switch node crosses the board. All of it is moot today - the block is DNP and
-# BUCK9_PH is unroutable (see POPULATE_VTX) - and ONE respin move fixes land and loop
-# together: L5 onto F.Cu beside U18 on an ANR4030 land, exactly as L2 already is.
+# The real cost was the LOOP, and it is fixed: L5 moved from B.Cu (127.50, 119.00)
+# to F.Cu at (130.50, 117.50) so the 9 V switch node no longer crosses the board - U18
+# is F.Cu at (130.50, 121.22), so U18.2 to L5.1 is ~4.9 mm of the same-side copper
+# instead of a board-crossing run to the other face. The land stays 1210: an ANR4030
+# site was measured and there is none within 12 mm of U18, so "fix the land too" would
+# have moved the inductor away from the switch node it exists to be near. That trade is
+# why ADJACENCY["L5"] is now 5.5 (derived from this placement), not 2.5.
 IND("L5", "10uH", F_L1210)
 CAP("C66", "100n")                 # VIN hf
 CAP("C68", "100n")                 # bootstrap
@@ -1789,6 +1880,122 @@ NETS["BUCK9_EN"] += ["Q3.3", "C73.1"]
 del NETS["SPARE_ADC"]                   # PA7 now has a job
 
 # ===========================================================================
+# Phase C — reverse-polarity protection and the edge connectors.
+# ===========================================================================
+
+# ---- 1. Reverse-polarity protection ------------------------------------------
+# Q4 is a P-FET that blocks a reversed pack. ON Semi AND90146/D Figure 4 ("Reverse
+# Polarity Protection using a P-Channel MOSFET") is explicit about the orientation:
+# DRAIN TO THE BATTERY, SOURCE TO THE LOAD. The body diode conducts until the channel
+# turns on, and a reversed pack reverse-biases the diode so the rail stays dead:
+#
+#   "When the battery is properly connected, the intrinsic body diode is conductive
+#    till the MOSFET's channel is turned ON... When the battery is reversely
+#    connected, the body diode is reversed biased, gate and source have the same
+#    voltage thus turning OFF the P-Channel MOSFET. An additional Zener diode is
+#    used to clamp the gate of the P-Channel MOSFET and protect it in the case of a
+#    too high voltage."            -- AND90146/D
+#
+# The orientation is the whole circuit: drain = battery (VBAT_IN), source = load
+# (VBAT). Written source-to-battery, the body diode would conduct a reversed pack
+# straight into the rail. tools/check_topology.py keys the gate pull-down off the
+# part number and will refuse to order a board whose Q4 gate floats.
+#
+# R46 pulls the gate to GND. A P-FET conducts with Vgs < -VT; with the source at VBAT
+# and the gate at GND the channel is fully enhanced, and a floating gate (no R46)
+# means the FET never turns on - the board is dead with a correct battery connected.
+# DZ1 clamps Vgs at ~15 V, inside the WST4041's +-20 V gate rating (a full 4S pack
+# alone would put -16.8 V on the gate). Zener CATHODE to source, ANODE to gate.
+# J12 is the coax entry from the SAWbird+ IR. The KiCad footprint carries one signal
+# pad and two ground pads, which is 3 electrical joints - and C5137195 is listed by
+# JLCPCB at 3 joints, so check_footprints can verify it rather than take it on trust.
+# The old U.FL was ref J9, which is now the I2C port; reusing that ref would have been
+# the kind of collision the RF-strip block used to hide.
+add("J12", "Connector:Conn_Coaxial", F_UFL, "U.FL ANT", "C5137195", False)
+
+add("Q4", "jlc_parts:WST4041", F_SOT23, "WST4041", "C148357", False)
+add("DZ1", "jlc_parts:BZT52C15", "jlc:SOD-123_L2.7-W1.6-LS3.7-RD",
+    "BZT52C15", "C173427", False)
+RES("R46", "100k")
+net("VBAT_GATE", "Q4.1", "DZ1.2", "R46.1")   # Q4 pin 1 = gate; DZ1 pin 2 = anode
+NETS["VBAT"] += ["DZ1.1"]                        # DZ1 pin 1 = cathode, on the source
+NETS["GND"] += ["R46.2"]                         # gate pull-down to ground
+
+# ---- 2. The edge connectors ---------------------------------------------------
+# EDGE LENGTH IS NOW THE BINDING CONSTRAINT, so it is written down rather than
+# discovered during layout. Measured from the footprints' own courtyards:
+#
+#   J1  USB-C        ~9.0 mm      J2  ESC   JST-SH 8P  ~12.0 mm
+#   J3  GPS   GH 6P  13.32 mm     J4  COMP  GH 6P       13.32 mm
+#   J5  RC    SH 4P   8.26 mm     J8  microSD          ~15.0 mm
+#   J9  I2C   SH 4P   8.26 mm     J10 SERVO SH 4P        8.26 mm
+#   J11 SER2  SH 4P   8.26 mm
+#                                            TOTAL     ~95.7 mm
+#
+# The outline is 45.0 x 46.0 mm, so the perimeter is 182 mm; four M3 holes and the
+# corner radii take roughly 30 mm of it, leaving ~150 mm usable. That is 64%, which
+# fits - but it is not slack, and it is the number that decides whether the layout
+# closes. If it does not, drop J10 (servo) first: it is the only one of the five whose
+# module is not in the buying list. Do NOT drop J5 - the RC receiver is what the whole
+# change is for.
+#
+# JST-SH 4P (C160404) is used for four of them deliberately: one part number, one
+# feeder, one cable type. It is friction-fit rather than latched, which is the same
+# retention J2 already relies on for all four motor signals and is what every 30x30
+# flight controller does. JST-GH (latched) would be better and costs 2.56 mm each; it
+# was rejected because C51940118 is absent from the jlcparts mirror, so its pad count
+# could not be machine-checked, while C160404 verifies at 6 joints against the
+# footprint. Reliability that cannot be verified is not obviously reliability.
+# An earlier draft brought I2C1 to the outside ONLY on J3, the GPS port. That is standard per
+# DS-009, but every Pixhawk-class board also ships a dedicated 4-pin I2C port so
+# sensors do not need a splitter into the GPS loom - check_module_wiring reported the
+# missing one as NO_DEDICATED_BUS. J9 is that port: VCC/SCL/SDA/GND, on +5 V to match
+# J3's own power pin and the Pixhawk I2C convention.
+#
+# THE RANGEFINDERS ARE NOT 5 V PARTS, and J9 does not change that. The TFS20-L is a
+# 3.3 V module - check_purchase.py asserts exactly that - so it needs either an inline
+# regulator in the lead or a breakout that regulates on board, the same as it did on
+# J3. What J9 buys is the SPLITTER, not the LDO: the sensor stops sharing the GPS loom.
+# The bus itself is 3.3 V logic either way, because R9/R10 pull I2C1 up to +3V3.
+#
+# J10 is the servo port. PWM5/PWM6 were bare signal pads at TP3/TP4 with no local
+# power or ground, so one servo meant three wires from three different places on the
+# board. VSERVO is a SEPARATE net from +5 V on purpose: servos can pull far more
+# than the +5 V buck's 0.65 A of headroom, so the rail is fed from an external BEC
+# through TP22 rather than tied to the board's own 5 V. Sharing VSERVO is a power tap,
+# not a splice - check_module_wiring counts it as one.
+add("J9", "jlc_parts:SM04B-SRSS-TB_(LF)(SN)",
+    "jlc:CONN-SMD_4P-P1.00_SM04B-SRSS-TB-LF-SN", "I2C 4P", "C160404", False)
+add("J10", "jlc_parts:SM04B-SRSS-TB_(LF)(SN)",
+    "jlc:CONN-SMD_4P-P1.00_SM04B-SRSS-TB-LF-SN", "SERVO 4P", "C160404", False)
+add("TP22", "Connector:TestPoint", "TestPoint:TestPoint_Pad_1.5x1.5mm",
+    "VSERVO", "", False)
+NETS["+5V"] += ["J9.1"]
+NETS["I2C1_SCL"] += ["J9.2"]
+NETS["I2C1_SDA"] += ["J9.3"]
+NETS["GND"] += ["J9.4", "J9.5", "J9.6"]       # pin 4 = signal, 5/6 = anchor tabs
+NETS["PWM5"] += ["J10.1"]
+NETS["PWM6"] += ["J10.2"]
+net("VSERVO", "J10.3", "TP22.1")
+NETS["GND"] += ["J10.4", "J10.5", "J10.6"]
+
+# J11 is SERIAL2 (USART1) with its own power and ground. The LD06 was landing on TP5
+# and TP6 for its data pair and then reaching across the board to P71 and P74 for 5 V
+# and ground - four wires from three places, which is the same fault J10 fixes for the
+# servo. TP5/TP6 SURVIVE as probe points: a scope on a UART is worth a 1.5 mm pad, and
+# a redundant pad costs nothing once the connector carries the module.
+#
+# The LD06 ships with a ZH1.5T-4P lead, which mates with nothing on any flight
+# controller, so it needs an adapter whatever this port is - that is a property of the
+# sensor, not of this choice.
+add("J11", "jlc_parts:SM04B-SRSS-TB_(LF)(SN)",
+    "jlc:CONN-SMD_4P-P1.00_SM04B-SRSS-TB-LF-SN", "SERIAL2 4P", "C160404", False)
+NETS["+5V"] += ["J11.1"]
+NETS["USART1_TX"] += ["J11.2"]
+NETS["USART1_RX"] += ["J11.3"]
+NETS["GND"] += ["J11.4", "J11.5", "J11.6"]
+
+# ===========================================================================
 # Phase B — placement intent.
 #
 # A decoupling cap sits between two PLANE nets (+3V3 and GND), so a centroid of
@@ -1824,8 +2031,6 @@ ADJACENCY = {
     "C33": ("U3", "5", 1.5), "C34": ("U3", "8", 1.5),
     "C35": ("U4", "1", 1.5),
     "C36": ("U5", "8", 1.5),
-    "C37": ("U6", "3", 1.5), "C38": ("U6", "4", 1.5),
-    "C39": ("U7", "11", 1.5), "C40": ("U7", "11", 3.0),
     "C41": ("U11", "3", 1.5),
     "C42": ("J1", "A4B9", 3.0),
     "C45": ("J8", "4", 3.0), "C46": ("J8", "4", 2.0),
@@ -1847,7 +2052,13 @@ ADJACENCY = {
     "C66": ("U18", "3", 1.5), "C68": ("U18", "6", 1.5),
     "R42": ("U18", "4", 2.5), "R43": ("U18", "4", 2.5),
     "R40": ("U18", "5", 3.0), "R41": ("U18", "5", 3.0),
-    "L5": ("U18", "2", 3.0), "C69": ("U18", "2", 5.0), "C70": ("U18", "2", 5.0),
+    # L5 moved to F.Cu at (130.50, 117.50) so the 9 V switch node no longer
+    # crosses the board - U18.2 sits at (130.50, 122.37), 4.87 mm below. The limit is
+    # DERIVED from that placement, not a class figure: U18.2 to the nearest L5 pad
+    # measures ~5.1 mm, so 5.5 is the real achievable bound. The old 2.5 assumed an
+    # ANR4030 land right beside U18, and no such site exists within 12 mm of it - the
+    # 1210 land stays (see the L5 comment in the 9 V block).
+    "L5": ("U18", "2", 5.5), "C69": ("U18", "2", 5.0), "C70": ("U18", "2", 5.0),
     "C73": ("U18", "5", 3.0),      # EN filter, as close to the pin as the board allows
     # I2C pull-ups belong near the master, not scattered
     "R9": ("U1", "92", 4.0), "R10": ("U1", "93", 4.0),
@@ -1874,11 +2085,11 @@ ADJACENCY["U12"] = ("J1", "A6", 5.0)     # USB ESD belongs at the connector, not
 # QFN pad centre - the pad itself is ~1 mm inside the package - so 1.5 was unachievable
 # rather than desirable. The switching-regulator OUTPUT caps went the other way: they
 # were too loose, and on a buck the output loop is what radiates.
-for _r in ("C31","C32","C33","C34","C35","C36","C38","C39","C65","C41"):
+for _r in ("C31","C32","C33","C34","C35","C36","C65","C41"):
     if _r in ADJACENCY:
         t, pd, _m = ADJACENCY[_r]; ADJACENCY[_r] = (t, pd, 3.5)
 for _r, _lim in (("C22", 3.0), ("C23", 3.0), ("C69", 3.0), ("C70", 3.0),
-                 ("L2", 2.5), ("L5", 2.5)):
+                 ("L2", 2.5)):
     if _r in ADJACENCY:
         t, pd, _m = ADJACENCY[_r]; ADJACENCY[_r] = (t, pd, _lim)
 
@@ -2189,7 +2400,6 @@ NET_VMAX.update({"BUCK_BOOT": 8.4, "BUCK_PH": 8.4, "BUCK9_BOOT": 8.4, "BUCK9_PH"
 #                        that stops well below the 3 V pin abs-max
 #   (BUCK_COMP2 / BUCK9_COMP2 are GONE - the TPS54202 compensates internally, so there
 #    is no error-amplifier output brought outside the package any more)
-#   FLOW_VREG            PMW3901 internal regulator output, ~2 V
 #   BATT_V_DIV           divider output into an ADC pin - it MUST stay under 3.3 V or the
 #     ESC_CUR            MCU is damaged, and check_electrical.py is what proves the
 #                        divider ratio actually holds it there. Declared here at the
@@ -2198,7 +2408,7 @@ NET_VMAX.update({
     "NRST": 3.3, "OSC_IN": 3.3, "OSC_OUT": 3.3,
     "BUCK_SS": 3.3, "BUCK9_SS": 3.3,
     "BUCK_COMP": 3.3, "BUCK9_COMP": 3.3, "BUCK_FB": 3.3, "BUCK9_FB": 3.3,
-    "FLOW_VREG": 3.3, "BATT_V_DIV": 3.3, "ESC_CUR": 3.3,
+    "BATT_V_DIV": 3.3, "ESC_CUR": 3.3,
     # VCAP1/2 are the H743's internal core LDO output, 1.2 V nominal. 1.5 V is the
     # datasheet ceiling for the pin, and the right number to rate a capacitor against.
     "VCAP1": 1.5, "VCAP2": 1.5,
@@ -2269,34 +2479,23 @@ if not POPULATE_VTX:
 
 
 # ---- sensors that cannot see out of this stack ------------------------------------
-# U6 and U7 are on the board's underside, and the ESC sits 3.0 mm below them. Both are
-# aimed at the top of a solid 4-in-1 with no aperture, under a solid carbon bottom
-# plate. check_mechanical.py now proves it rather than asserting it - see GROUND_FACING.
+# U6 (PMW3901) and U7 (VL53L1X) are DELETED rather than shipped DNP. Both sat
+# on the board's underside aimed at the top of the solid 4-in-1 ESC 3.0 mm away - they
+# could never see anything, which is why an earlier draft shipped them DNP - and deleting them
+# frees PD4 (EXT_CS1), PD10 and PD11 plus five passives and ~$50 of BOM.
 #
-# Neither is needed, and that is not a rationalisation after the fact - the architecture
-# in docs/SENSORS.md already routes around both:
+# The functions are still provisioned, off the board:
 #   * flow comes from the Pi's global-shutter camera over MAVLink. defaults.parm ships
-#     FLOW_TYPE 5, which is MAVLink, NOT 2/Pixart - U6 was never enabled.
-#   * height comes from the TFS20-L on I2C1 at 0x10. RNGFND1_TYPE and RNGFND2_TYPE both
-#     ship 0 - U7 was never enabled either.
-# So nothing that flies changes by leaving them off. What changes is cost and risk:
-#   * ~$9.88 a board (PMW3901 $4.96-5.98, VL53L1X $4.92), and 5 boards is ~$50
-#   * the PMW3901 is the only real supply risk in the BOM - 424 units and falling ~57/day
-#   * U6 is the one part in docs/BUYING.md that needs X-ray inspection
-#   * leaving U7 off frees I2C 0x29, which docs/PARTS.csv ALREADY depends on for the
-#     upward-facing VL53L1X module ("only works because U7 is left unpopulated")
-# A PMW3901 also fails over grass, which is the surface this aircraft flies over.
+#     FLOW_TYPE 5, which is MAVLink, NOT 2/Pixart - U6 was never enabled anyway.
+#   * height comes from the TFS20-L on the DEDICATED I2C port J9 at 0x10 - no more
+#     splitter into the GPS loom, which is what check_module_wiring called a splice.
+#   * deleting U7 frees I2C 0x29, which docs/PARTS.csv already depends on for the
+#     upward-facing VL53L1X module ("only works because U7 is left unpopulated").
 #
-# Set POPULATE_BLIND_SENSORS = True to fit them anyway - if the stack is ever inverted,
-# or the board is flown standalone, they would work. Nothing on the PCB changes either
-# way; this is a BOM decision and it is reversible right up until the order is placed.
+# POPULATE_BLIND_SENSORS is kept as an (empty) flag so gen_bom.py's variant logic does
+# not change shape; there is nothing left to populate.
 POPULATE_BLIND_SENSORS = False
-BLIND_SENSORS = ("U6", "U7")
-if not POPULATE_BLIND_SENSORS:
-    for _r in BLIND_SENSORS:
-        if _r in COMPONENTS:
-            _s, _f, _v, _l, _d = COMPONENTS[_r]
-            COMPONENTS[_r] = (_s, _f, _v, _l, True)
+BLIND_SENSORS = ()
 
 
 # Bare copper pads are not components - they must not appear in a BOM or a CPL.
@@ -2327,7 +2526,8 @@ NOT_A_PART = {r for r in COMPONENTS
 # +5V's in four, so a pad can sit on copper that never reaches the source. The real
 # question is the narrowest point along the path from source to load.
 NET_SOURCE = {
-    "VBAT":  "J2.2",     # battery connector
+    "VBAT_IN": "J2.2",   # battery connector, before the protection FET
+    "VBAT":    "Q4.2",   # after the protection FET - Q4 pin 2 = source
     "+5V":   "L2.2",     # 5 V buck output inductor
     "+9V":   "L5.2",     # 9 V buck output inductor
     "+3V3":  "U9.5",     # AP2112 output
@@ -2381,7 +2581,7 @@ NET_CURRENT = {
     # anywhere near this rail and was never compared against the part. check_thermal.py
     # now does that comparison.
     "+3V3": 0.6,
-    "+3V3A": 0.2,
+    "+3V3A": 0.35,   # was 0.2 - the MAX2112's 100 mA now lands on this rail
     # VBUS carries NO load current. It reaches only the USBLC6's reference pin and a
     # bypass cap - nothing bridges it to +5V, so USB cannot power the board and the net
     # is not a supply path. Rating it at 500 mA was rating a wire that feeds nothing.
@@ -2433,7 +2633,6 @@ PIN_INTENT = {
     "SPI3_SCK": dict(mcu="out", why="shared clock, PMW3901 + W25Q128"),
     "SPI3_MOSI": dict(mcu="out", why="MCU drives"),
     "SPI3_MISO": dict(mcu="in",  why="devices drive"),
-    "EXT_CS1":  dict(mcu="out", boot="high", why="PMW3901 select, idle high"),
     "EXT_CS2":  dict(mcu="out", boot="high", why="W25Q128 select, idle high"),
 
     # --- I2C ---------------------------------------------------------------
@@ -2441,12 +2640,6 @@ PIN_INTENT = {
     "I2C1_SDA": dict(mcu="bidir", why="open-drain, 4k7 pull-up"),
     "I2C2_SCL": dict(mcu="bidir", why="open-drain, 4k7 pull-up"),
     "I2C2_SDA": dict(mcu="bidir", why="open-drain, 4k7 pull-up"),
-
-    # --- rangefinder -------------------------------------------------------
-    "TOF_XSHUT": dict(mcu="out", boot="high",
-                      why="VL53L1X runs only while XSHUT is HIGH; R13 pulls it up"),
-    "TOF_INT":   dict(mcu="in",
-                      why="VL53L1X GPIO1 is the sensor's interrupt OUTPUT"),
 
     # --- serial ------------------------------------------------------------
     "USART2_TX": dict(mcu="out", why="to GPS RX"),
@@ -2504,8 +2697,11 @@ PIN_INTENT = {
 # ---------------------------------------------------------------------------
 # MODULES - the one board, and everything that can bolt onto it later.
 #
-# There is a SINGLE PCB. "Rev A" / "Rev B" in older notes are two *firmware
-# configurations* of it, not two boards (docs/PINMAP.md). Everything below
+# THERE IS ONE PCB AND ONLY ONE. Older notes used "Rev A" and "Rev B" for two
+# different things - first two firmware configurations, later a board revision -
+# and both readings are retired: the board is fabricated once. Where a change
+# really would need a second fabrication run, `needs_board_change` says so in
+# those words. Everything below
 # attaches to pads or connectors that ALREADY EXIST unless `needs_board_change`
 # says otherwise, which is what makes the design modular rather than staged.
 #
@@ -2524,12 +2720,13 @@ MODULES = {
         ma_5v=50, counted=True,
         note="carries USART2 *and* I2C1 - the I2C pair is what every ToF sensor shares"),
     "rangefinder_down": dict(
-        what="Benewake TFS20-L, 20 m", lands_on=["J3"], conn="I2C1 off J3.4/J3.5, addr 0x10",
+        what="Benewake TFS20-L, 20 m", lands_on=["J9"], conn="I2C1 off J9.2/J9.3, addr 0x10",
         needs_board_change=None, gbp=32, status="later",
         ma_5v=106, counted=True,
-        note="RNGFND1 - POSZ only. Proximity is never an EKF POSXY source"),
+        note="RNGFND1 - POSZ only. Proximity is never an EKF POSXY source. The "
+             "dedicated I2C port J9 means no splitter into the GPS loom"),
     "rangefinder_up": dict(
-        what="VL53L1X (GY-53-L1X), 4 m", lands_on=["J3"], conn="I2C1 off J3.4/J3.5, addr 0x29",
+        what="VL53L1X (GY-53-L1X), 4 m", lands_on=["J9"], conn="I2C1 off J9.2/J9.3, addr 0x29",
         needs_board_change=None, gbp=6, status="later",
         ma_5v=20, counted=True,
         note="MOUNT SETTLED 2026-09-04: fore or aft of the battery on the top plate. The "
@@ -2540,7 +2737,7 @@ MODULES = {
              "end, 0.4 mm short). Moving 615 g of 1123 g AUW by 11.13 mm shifts CG 6.1 mm; "
              "displace it AWAY from the existing +3.1 mm offset and CG improves to -3.0 mm"),
     "lidar_360": dict(
-        what="LDROBOT LD06, 12 m, INDOOR ONLY", lands_on=["TP5", "TP6"], conn="SERIAL2 (USART1)",
+        what="LDROBOT LD06, 12 m, INDOOR ONLY", lands_on=["J11"], conn="SERIAL2 (USART1) on J11",
         # PRICE, THIRD AND FINAL CORRECTION. The history matters because this figure
         # decides the purchase and it has been wrong in both directions:
         #   GBP 19  - from a superseded "~GBP 15 AliExpress" line
@@ -2559,7 +2756,7 @@ MODULES = {
              "NOT in check_build.LOADS_5V, which "
              "budgets an 8x VL53L1X ring instead of this"),
     "rc_link": dict(
-        what="ELRS 2.4 GHz, ESP-based", lands_on=["P51", "P52", "P53", "P54"], conn="solder pads (USART6)",
+        what="ELRS 2.4 GHz, ESP-based", lands_on=["J5"], conn="JST-SH 4P on J5 (USART6)",
         needs_board_change=None, gbp=12, status="fitted",
         ma_5v=100, counted=True,
         note="MAVLink downlink caps at 1470 B/s - carries telemetry, never video"),
@@ -2568,7 +2765,7 @@ MODULES = {
         lands_on=["TP9", "TP10", "TP11", "P44"], conn="solder pads (I/Q ADC pair, RSSI, PPS)",
         needs_board_change=None, gbp=70, status="later",
         ma_5v=0, counted=True,
-        note="this is the whole 'Rev B' - a reflash plus a tuner, NOT a fabrication run. "
+        note="a reflash plus a bought tuner, NOT a fabrication run. "
              "The tuner is laptop-side and takes no current from this rail"),
     "fpv": dict(
         what="5.8 GHz camera + VTX, 25 mW EIRP", lands_on=["P41", "P46"],
@@ -2585,7 +2782,7 @@ MODULES = {
         note="0.25 A against 0.41 A headroom; can also run standalone on a 1S cell, "
              "which is the right answer if anything else is on the rail"),
     "flow_globalshutter": dict(
-        what="global-shutter flow via a companion", lands_on=["P41", "P42", "P43", "P46"],
+        what="global-shutter flow via a companion", lands_on=["J4"],
         conn="SERIAL1 telemetry pads, MAVLink OPTICAL_FLOW",
         needs_board_change=None, gbp=60, status="later",
         ma_5v=0, counted=True,
@@ -2593,19 +2790,24 @@ MODULES = {
              "it. Runs from its OWN BEC: a Linux SBC's transients do not belong on the "
              "flight controller's buck"),
     "flow_pmw3901": dict(
-        what="PixArt PMW3901 flow", lands_on=[], conn="SPI3 - NOT brought out to pads",
-        needs_board_change="expose SPI3_SCK/MISO/MOSI + EXT_CS1 + FLOW_MOTION + 3V3 + GND = 7 pads",
+        what="PixArt PMW3901 flow", lands_on=[], conn="SPI3 - no socket on this board",
+        needs_board_change="U6 is deleted and SPI3 carries only the W25Q128 flash, so "
+                           "re-fitting on-board flow WOULD NEED A NEW BOARD: a SPI3 "
+                           "socket plus a PD4 re-assignment",
         gbp=12, status="blocked",
         ma_5v=0, counted=True,
-        note="hwdef already has 'SPIDEV pixartflow SPI3 ... MODE3', so the DRIVER is done - "
-             "only the pads are missing. A UART flow module works today at ~4x the price"),
+        note="U6 is deleted - it faced the ESC and could never see the ground, "
+             "and correlation flow of that class fails over grass anyway. MAVLink flow "
+             "from the companion (flow_globalshutter) is the supported path"),
     "vtx_9v_rail": dict(
         what="on-board 9 V buck for a VTX", lands_on=[], conn="BUCK9_PH",
-        needs_board_change="place U18, L5 and C68 on the SAME side",
+        needs_board_change="none - L5 sits on F.Cu beside U18, closing the switch-node "
+                           "loop, so the rail is routable; populate U18/L5/C68/C69/C70 to use it",
         gbp=0, status="dnp",
         ma_5v=0, counted=True,
-        note="UNROUTABLE: U18 is F.Cu, L5/C68 are B.Cu. DNP is the honest BOM for an open "
-             "net - and nothing needs it, because the VTX above runs from VBAT"),
+        note="was DNP in an earlier draft because BUCK9_PH was unroutable with L5 on the "
+             "other face. The loop is fixed; the rail stays DNP because the 25 mW VTX runs from +5V "
+             "and nothing on this build wants 9 V"),
     "src": "[M] every lands_on asserted against real footprints by tools/check_modules.py",
 }
 
