@@ -28,3 +28,26 @@ fp-info-cache
 
 #bench results are measurements of one physical board
 fab/rf-bench-results.json
+
+#prose docs, held back until they are ready to publish these are complete and used
+docs/*.md
+
+#third-party datasheets, 5.6 MB
+docs/datasheets/
+
+#OpenSCAD scratch file from a render run
+cad/tmp*.scad
+
+#KiCad session lock and auto-backup directory
+*.lck
+NAVCORE-SoOP-backups/
+
+#application notes, kept locally
+SPONSORSHIP.md
+
+#every markdown file except the top-level README is held back for now
+cad/README.md
+fab/ORDER.md
+fab/README.md
+sim/README.md
+sitl/README.md

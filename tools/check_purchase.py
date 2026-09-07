@@ -62,7 +62,8 @@ def main():
           f"must be the {rd['variant']} part at 0x{rd['addr']:02X} on {rd['lands_on']}. "
           f"{rd['wrong_variant_note']}", rd["src"])
     check(rd["vcc"] == "3.3 V", "TFS20-L supply",
-          f"module is {rd['vcc']} and J3.1 is 5 V -> inline LDO unless the module "
+          f"module is {rd['vcc']} and {rd['lands_on']} pin 1 is 5 V -> inline LDO "
+          f"unless the module "
           f"regulates on board", rd["src"])
     ru = O["rangefinder_up"]
     check(not design.POPULATE_BLIND_SENSORS, "upward VL53L1X address",
