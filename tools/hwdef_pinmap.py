@@ -3,7 +3,7 @@
 Parse an ArduPilot hwdef.dat into a canonical {PIN: signal} map.
 
 Purpose: the NAVCORE-SoOP schematic must match MatekH743's pinout exactly, so that
-stock ArduPilot binaries run on the board unmodified (Rev A). This turns the hwdef
+stock ArduPilot binaries run on the board unmodified. This turns the hwdef
 into machine-readable truth so the schematic can be checked against it rather than
 transcribed by hand.
 
