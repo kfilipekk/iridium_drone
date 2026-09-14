@@ -150,6 +150,66 @@ def main():
     except ImportError:
         warnings.append("pcbnew unavailable - board value fields NOT checked")
 
+    # ---- THE SAME COMPARISON, FOR THE SCHEMATIC ------------------------------
+    # Nothing checked it. This file did not read NAVCORE-SoOP.kicad_sch at all,
+    # preflight.py touched it only to run ERC, and check_topology.py EXPORTS a netlist
+    # from it and treats that as the source of truth. So a schematic left stale after a
+    # design.py edit was invisible in every direction at once: ERC passed on the old
+    # one, and check_topology validated the old one while reporting on the new design.
+    #
+    # Same shape as the board gap closed above, and the same fix: compare the SETS, both
+    # ways, and fail on a difference. The exporter is check_topology's rather than a
+    # second copy of it - two parsers of the same file drift apart, and then the question
+    # of which one is right becomes its own bug.
+    SCH_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                            "NAVCORE-SoOP.kicad_sch")
+    DESIGN_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "design.py")
+    if not os.path.exists(SCH_FILE):
+        errors.append("NAVCORE-SoOP.kicad_sch is missing - run tools/gen_sch.py")
+    else:
+        # Cheap guard first. gen_sch.py writes random UUIDs on every run, so the
+        # schematic can NEVER be verified by regenerating and diffing - that is where
+        # the 4995-line schematic diffs in this history came from. mtime is the only
+        # free signal that it was regenerated after design.py last changed.
+        if os.path.getmtime(SCH_FILE) < os.path.getmtime(DESIGN_FILE):
+            errors.append("SCHEMATIC IS OLDER THAN design.py - regenerate it with "
+                          "tools/gen_sch.py, or the netlist check_topology exports "
+                          "describes the previous design")
+        try:
+            import check_topology
+            sch_nets, sch_comps = check_topology.netlist()
+            sch_refs = set(sch_comps)
+            # PWR_FLAG symbols are schematic-only (no footprint) and legitimately
+            # absent from anything that counts parts; keep them out of both sides.
+            want_refs = {r for r, c in design.COMPONENTS.items() if c[1]}
+            sch_refs = {r for r in sch_refs if r in design.COMPONENTS and
+                        design.COMPONENTS[r][1]}
+            missing_sch = sorted(want_refs - sch_refs)
+            extra_sch = sorted(r for r in sch_comps
+                               if r not in design.COMPONENTS)
+            if missing_sch:
+                errors.append(f"SCHEMATIC IS BEHIND design.py: {len(missing_sch)} "
+                              f"part(s) are in the design and not in the schematic - "
+                              f"{', '.join(missing_sch)}")
+            if extra_sch:
+                errors.append(f"SCHEMATIC IS AHEAD OF design.py: {len(extra_sch)} "
+                              f"symbol(s) are in the schematic and in no design - "
+                              f"{', '.join(extra_sch)}")
+            # A net with ONE pin is not a connection, and kicad-cli's exporter
+            # legitimately omits it - PWM7-12, the *_SPARE pins and IMU3_CS are all
+            # single-pin by design. Requiring them made the check cry wolf on 19 nets
+            # that are correct. Two pins or more is what "a net exists" means here.
+            want_nets = {n for n, pins in design.NETS.items() if len(set(pins)) > 1}
+            missing_nets = sorted(want_nets - set(sch_nets))
+            if missing_nets:
+                errors.append(f"SCHEMATIC IS MISSING {len(missing_nets)} net(s) the "
+                              f"design declares - {', '.join(missing_nets[:12])}"
+                              + (" ..." if len(missing_nets) > 12 else ""))
+            print(f"schematic  : {len(sch_refs)} symbols, {len(sch_nets)} nets")
+        except Exception as e:
+            warnings.append(f"schematic netlist could not be exported ({e}) - "
+                            "kicad-cli needed; schematic NOT set-checked")
+
     if warnings:
         print(f"\nWARNINGS ({len(warnings)}):")
         for w in warnings: print("  ", w)

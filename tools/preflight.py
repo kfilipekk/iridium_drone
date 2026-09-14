@@ -317,6 +317,30 @@ def integrity(board):
                   f"Y1 is {best:.2f} mm from U1.12 (OSC_IN)")
 
 
+# --------------------------------------------------------------- silkscreen ---
+def silkscreen(board):
+    """Report how many pad/test-point labels made it onto the silkscreen.
+
+    Not a blocker: an unlabelled pad costs a bench session, not a board. But the
+    number is worth seeing every run, because nothing else reports it and the
+    coverage silently drifts as pads are added or moved (P42/P43/P45 vanished on
+    2026-09-09 and took three targets with them).
+    """
+    try:
+        import silk_labels
+        placed, skipped = silk_labels.place_labels(board)
+    except Exception as e:
+        check("fabrication", "pad silkscreen labels", False,
+              f"could not evaluate: {e}", hard=False)
+        return
+    total = len(placed) + len(skipped)
+    ok = not skipped
+    detail = (f"{len(placed)}/{total} pad labels have a clean silkscreen position"
+              + (f" - no clean position for: {', '.join(sorted(skipped))}" if skipped
+                 else ""))
+    check("fabrication", "pad silkscreen labels", ok, detail, hard=False)
+
+
 # -------------------------------------------------------------- the project ---
 def project(board):
     """Everything the drone actually needs, by function rather than by part."""
@@ -342,7 +366,9 @@ def project(board):
         # stay provisioned OFF the board (MAVLink flow; TFS20-L on the I2C port J9),
         # and check_module_wiring asserts J9 exists so they do not need a splitter.
         ("dedicated I2C port",        {"J9"}),
-        ("servo port",                {"J10"}),
+        # J10 (servo port) and J4 (companion) were CUT on 2026-09-09: no legal
+        # edge home exists on a 45 x 46 mm board with 30.5 mm mounts (measured).
+        # PWM5/PWM6 stay on TP3/TP4, VSERVO on TP22; UART7 on P42/P43/P45.
         ("config flash W25Q128",     {"U5"}),
         ("microSD socket",           {"J8"}),
         ("USB-C",                    {"J1"}),
@@ -602,18 +628,44 @@ def firmware(board):
     # geo-gated to a country this project does not buy from.
     # Footprint pad count against JLCPCB's own joint count. The class of error this
     # catches - a footprint from the wrong package variant - is not a rework, it is a
-    # scrapped board, and check_ratings.py only dimension-checks passives. Needs the
-    # jlcparts mirror; SKIPS loudly rather than passing quietly when it is absent.
+    # scrapped board, and check_ratings.py only dimension-checks passives.
+    #
+    # A SKIP IS NOT A PASS. This used to render "ok" when the jlcparts mirror was
+    # missing, because the pass condition was `skipped or m_fp` - so the line said
+    # "NOT CHECKED" while the summary counted it as satisfied, and /tmp is tmpfs so the
+    # mirror goes missing every reboot. The comment above it even claimed it skipped
+    # LOUDLY. It now reports WARN: not a blocker, because the mirror is a convenience
+    # and refetching is a one-liner, but never again indistinguishable from a check
+    # that actually ran.
     rc, out = run("check_footprints.py")
     m_fp = re.search(r'(\d+) footprint\(s\) agree', out)
     skipped = "SKIPPING" in out
     check("assembly", "footprints match JLCPCB's pad count",
-          rc == 0 and (skipped or bool(m_fp)),
-          ("jlcparts mirror absent - NOT CHECKED (see tools/check_lcsc_stock.py)"
+          (not skipped) and rc == 0 and bool(m_fp),
+          ("jlcparts mirror absent - NOT CHECKED. Refetch it before ordering; the "
+           "command is in tools/check_lcsc_stock.py's docstring"
            if skipped else
            (f"{m_fp.group(1)} footprint(s) agree with JLCPCB's joint count"
             if rc == 0 and m_fp else "MISMATCH - see tools/check_footprints.py")),
           hard=not skipped)
+
+    # EXPOSED THERMAL PADS. A slug under an IC body with a single 100% paste aperture
+    # deposits enough solder for the part to float and tilt on reflow, and traps
+    # outgassing under the centre as a void. IPC-7093 puts coverage at 50-80% in an
+    # array. JLCPCB cuts its stencil straight from the paste gerber, so this is what
+    # gets built, not a drawing convention.
+    #
+    # Nothing checked it. tools/windowpane_paste.py was written for U6 and hardcoded to
+    # it, and U6 was deleted in the re-layout - while U13 (MAX2112, TQFN-28-EP, a
+    # 3.25 x 3.25 mm slug) arrived in the same period carrying a solid aperture. The
+    # hazard moved to the part the project is named after and the tool did not follow,
+    # because a one-shot keyed on a reference cannot notice that the reference is gone.
+    rc, out = run("windowpane_paste.py --scan")
+    m_wp = re.search(r'(\d+) pad\(s\) need windowpaning', out)
+    check("assembly", "exposed pads windowpaned", rc == 0,
+          "every thermal slug has a vented paste array" if rc == 0
+          else (f"{m_wp.group(1) if m_wp else '?'} exposed pad(s) still carry a solid "
+                f"100% aperture - run tools/windowpane_paste.py <REF> <PAD> --apply"))
 
     rc, out = run("check_links.py")
     m_frag = re.search(r'(\d+) AliExpress item link', out)
@@ -752,6 +804,7 @@ def main():
     fabrication(board)
     assembly(board)
     integrity(board)
+    silkscreen(board)
     project(board)
     firmware(board)
 

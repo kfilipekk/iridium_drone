@@ -84,6 +84,24 @@ CRITICAL = {
     "C15639":    "MS5611 barometer - the hwdef and I2C address assume this part",
     "C2765186":  "USB-C connector - a different footprint is a respin",
     "C160407":   "JST-SH 8P - must mate with the ESC's supplied cable",
+    # ADDED 2026-09-14, and it is the reason to re-read this list whenever a part is
+    # added. C596391 sat at TWENTY units and passed silently, because "thin" is
+    # membership in THIS dict crossed with the floor below - so the least substitutable
+    # part on the whole BOM was invisible while the MCU at 314 was flagged. A
+    # hand-maintained table that decides whether a check can fire is the same defect
+    # this repo keeps finding in its own gates.
+    #
+    # It is sole-source in the strongest sense available: the JLCPCB library was
+    # searched for anything else covering 1616-1626.5 MHz with quadrature baseband out.
+    # MAX2769B (C118482) is the only near miss and fails twice - stock 0, and its band
+    # tops out around 1610 MHz, BELOW Iridium. Everything cheaper is a component of a
+    # tuner, not a tuner: bare mixers with no LO, no quadrature and no filters.
+    "C596391":   "MAX2112 - the SoOP tuner. NOTHING else in JLCPCB's library does this "
+                 "job in this band; without it the aircraft is a flight controller, not "
+                 "a SoOP receiver. Sole-source, and it is the point of the project",
+    "C22381771": "25 MHz TCXO - the tuner's reference. A CMOS-output substitute would "
+                 "exceed the MAX2112's 2.0 Vpp XTAL input limit, so the replacement must "
+                 "also be CLIPPED SINE at 12-30 MHz - a narrow shelf",
 }
 # An absolute floor, not a multiple of this order. Chosen as roughly a small production
 # run: below this a single other buyer can empty the shelf between checking and ordering.

@@ -102,7 +102,7 @@ def required_rotation(ref, zname, flipped):
 RF_REFS = {"U13", "U14", "U15", "U16", "Y2", "FL1"}
 # IMUs must sit at the board centroid for clean gyro data - also no fallback.
 FIXED_REFS = RF_REFS | {"U1", "U2", "U3", "U4", "J8", "J1", "J2", "J3",
-                        "J4", "J5", "J9", "J10", "J11"}   # every edge connector
+                        "J5", "J9", "J11"}   # every edge connector (J4/J10 cut)
 
 
 def zone_of(ref):
@@ -116,9 +116,9 @@ def zone_of(ref):
     if ref == "J1": return "T_N"      # USB-C, top edge
     if ref == "J2": return "T_W"      # ESC 8-pin, left edge (rotates)
     if ref == "J3": return "T_S"      # GPS, bottom edge
-    if ref in ("J9", "J10"): return "T_W"   # I2C + servo ports, left edge
-    if ref in ("J5", "J11"): return "T_S"   # RC + lidar, bottom edge
-    if ref == "J4": return "T_E"            # companion 6P, right edge
+    if ref == "J9": return "T_W"   # I2C port, left edge
+    if ref == "J11": return "T_W"  # SERIAL2 lidar, left edge (B.Cu)
+    if ref == "J5": return "T_E"   # RC receiver, right edge (B.Cu)
     
     if ref in ("U13","U14","U15","U16","Y2","FL1"): return "B_W"
     if ref.startswith("TP"): return "B_ES"
