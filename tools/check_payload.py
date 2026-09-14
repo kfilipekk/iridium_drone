@@ -49,7 +49,33 @@ def main():
               f"both have it")
 
     print("\n=== declared but NOT reachable - stated so nobody plans around them ===")
-    for idx, periph in P["serial_unrouted"]:
+    # Derived, not trusted.
+    order = []
+    for line in open(HWDEF):
+        if line.startswith("SERIAL_ORDER"):
+            order = line.split()[1:]
+            break
+    derived = {}
+    for idx, periph in enumerate(order):
+        if periph.startswith("OTG"):
+            continue                      # USB, no pads by nature
+        landed = False
+        for suffix in ("_TX", "_RX"):
+            for spec in design.NETS.get(periph + suffix, []):
+                if not spec.startswith("U1."):
+                    landed = True         # something other than the MCU is on it
+        if not landed:
+            derived[idx] = periph
+    declared = dict(P["serial_unrouted"])
+    missed = {i: p for i, p in derived.items() if i not in declared}
+    phantom = {i: p for i, p in declared.items() if i not in derived}
+    check(not missed and not phantom,
+          "unrouted serials match the netlist",
+          "design.PAYLOAD agrees with the wiring" if not missed and not phantom
+          else (f"PAYLOAD['serial_unrouted'] is stale - netlist says also "
+                f"{sorted(missed.items())}" if missed else "")
+               + (f" declares {sorted(phantom.items())} which IS routed" if phantom else ""))
+    for idx, periph in sorted(derived.items()):
         print(f"  note  SERIAL{idx} ({periph}){'':18} in hwdef but routed to NO pad - "
               f"real to the firmware, unreachable with a soldering iron")
 

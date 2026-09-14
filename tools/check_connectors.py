@@ -153,6 +153,51 @@ def main():
         else:
             print(line + f"   ok ({need:.1f} mm clear for the plug)")
 
+    # -------------------------------------------------------- vertical mating ----
+    for ref, spec in sorted(getattr(design, "VERTICAL_MATING", {}).items()):
+        fp = board.FindFootprintByReference(ref)
+        if fp is None:
+            fails.append(f"{ref}: not on the board"); continue
+        if fp.IsFlipped():
+            fails.append(f"{ref}: vertical connector on the BOTTOM face - the plug "
+                         f"points down into the ESC")
+            continue
+        # Horizontal sweep: the coax bend needs `radius` around the connector centre.
+        sweep_fail = sweep_warn = []
+        for other in board.GetFootprints():
+            if other.GetReference() == ref or other.IsFlipped(): continue
+            dx = other.GetPosition().x/1e6 - fp.GetPosition().x/1e6
+            dy = other.GetPosition().y/1e6 - fp.GetPosition().y/1e6
+            if math.hypot(dx, dy) > spec["radius"]: continue
+            h = design.part_height(other.GetFPIDAsString())
+            if h is None:
+                sweep_warn.append(other.GetReference())
+            elif h > spec["plug"] - 0.5:
+                sweep_fail.append(f"{other.GetReference()} ({h:.1f} mm tall)")
+        if sweep_fail:
+            fails.append(f"{ref}: {', '.join(sweep_fail)} sit inside the {spec['radius']:.0f} mm "
+                         f"bend sweep and are tall enough to hit the coax")
+        elif sweep_warn:
+            warns.append(f"{ref}: {', '.join(sweep_warn)} sit inside the bend sweep with "
+                         f"unknown height - check against the part that arrives")
+        # vertical room: standoff - everything below the board top face
+        try:
+            s = design.required_standoff(board)
+            below_board = (design.ESC["pcb"] + design.ESC["parts"] +
+                           design.MOUNTING["gap"] +
+                           s["bot"] + design.BOARD_T)
+            room = s["buy"] - s["below"] - below_board
+            need = spec["plug"] + spec["bend"]
+            if room < need:
+                fails.append(f"{ref}: plug+bend need {need:.1f} mm but the top plate is "
+                             f"only {room:.1f} mm above the board ({spec['src']})")
+            else:
+                print(f"  {ref:4s} vertical  +z plug {spec['plug']:.1f} + bend "
+                      f"{spec['bend']:.1f} = {need:.1f} mm against {room:.1f} mm to the "
+                      f"top plate   ok")
+        except Exception as e:
+            warns.append(f"{ref}: vertical room could not be computed ({e})")
+
     print()
     for w in warns: print(f"  warn  {w}")
     for f in fails: print(f"  FAIL  {f}")

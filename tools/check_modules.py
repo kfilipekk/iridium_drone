@@ -73,8 +73,16 @@ for name, m in mods.items():
 NOT_FOOTPRINTS = {
     "PF1": "PWR_FLAG schematic symbol - the VBAT one. No footprint, correctly absent",
     "PF8": "PWR_FLAG schematic symbol. No footprint, correctly absent",
-    "J4": "a solder-pad GROUP (P41-P46), not a socket - see VERIFICATION.md",
     "J7": "a solder-pad GROUP (P71-P74), not a socket - see VERIFICATION.md",
+    # Rev B removals.
+    "J4": "companion/TELEM1 JST-GH - cut 2026-09-09, no legal edge home; UART7 reaches no pad",
+    "P42": "UART7 S1 spare pad - removed in the Rev B relayout along with J4; UART7 has no landing",
+    "P43": "UART7 S2 spare pad - removed in the Rev B relayout along with J4; UART7 has no landing",
+    "P45": "UART7 spare pad - removed in the Rev B relayout along with J4",
+    "P51": "RC receiver solder pad - removed in the Rev B relayout; RC now lands on J5 (JST-SH 4P, USART6)",
+    "P52": "RC receiver solder pad - removed in the Rev B relayout; RC now lands on J5 (JST-SH 4P, USART6)",
+    "P53": "RC receiver solder pad - removed in the Rev B relayout; RC now lands on J5 (JST-SH 4P, USART6)",
+    "P54": "RC receiver solder pad - removed in the Rev B relayout; RC now lands on J5 (JST-SH 4P, USART6)",
 }
 docs = [q for q in (REPO / "docs").glob("*.md") if q.name != "HISTORY.md"]
 docs.append(REPO / "README.md")

@@ -8,9 +8,10 @@ BOARD = "NAVCORE-SoOP.kicad_pcb"
 TOMM = lambda v: v / 1e6
 
 # Limits are derived, not INVENTED.
+CRYSTAL_MM = design.Y1_STRAY_PF / 0.1        # ~0.1 pF per mm of trace
 CRITICAL = {
-    "OSC_IN":       ("crystal - stray C shifts the load; see Y1_STRAY_PF", 15.0),
-    "OSC_OUT":      ("crystal", 15.0),
+    "OSC_IN":       ("crystal - stray C shifts the load; see Y1_STRAY_PF", CRYSTAL_MM),
+    "OSC_OUT":      ("crystal", CRYSTAL_MM),
     "USB_DP":       ("USB 2.0 FS - delay is irrelevant at 12 Mbps", 80.0),
     "USB_DM":       ("USB 2.0 FS", 80.0),
     "SPI1_SCK":     ("IMU1 clock - the primary IMU, 24 MHz", 50.0),

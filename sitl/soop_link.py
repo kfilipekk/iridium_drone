@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stand in for the companion computer against ArduCopter SITL.
+"""Feed ArduCopter SITL a fix as bad as an Iridium Doppler solve, and measure the EKF.
 
 Usage:
   soop_link.py --mode extnav --duration 120 --report /tmp/nav/sitl/extnav.json

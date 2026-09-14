@@ -121,6 +121,50 @@ def main():
     except ImportError:
         warnings.append("pcbnew unavailable - board value fields NOT checked")
 
+    # ---- the same comparison, for the schematic ------------------------------
+    # Nothing checked it.
+    SCH_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                            "NAVCORE-SoOP.kicad_sch")
+    DESIGN_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "design.py")
+    if not os.path.exists(SCH_FILE):
+        errors.append("NAVCORE-SoOP.kicad_sch is missing - run tools/gen_sch.py")
+    else:
+        # Cheap guard first.
+        if os.path.getmtime(SCH_FILE) < os.path.getmtime(DESIGN_FILE):
+            errors.append("SCHEMATIC IS OLDER THAN design.py - regenerate it with "
+                          "tools/gen_sch.py, or the netlist check_topology exports "
+                          "describes the previous design")
+        try:
+            import check_topology
+            sch_nets, sch_comps = check_topology.netlist()
+            sch_refs = set(sch_comps)
+            # PWR_FLAG symbols are schematic-only (no footprint) and legitimately
+            # absent from anything that counts parts; keep them out of both sides.
+            want_refs = {r for r, c in design.COMPONENTS.items() if c[1]}
+            sch_refs = {r for r in sch_refs if r in design.COMPONENTS and
+                        design.COMPONENTS[r][1]}
+            missing_sch = sorted(want_refs - sch_refs)
+            extra_sch = sorted(r for r in sch_comps
+                               if r not in design.COMPONENTS)
+            if missing_sch:
+                errors.append(f"SCHEMATIC IS BEHIND design.py: {len(missing_sch)} "
+                              f"part(s) are in the design and not in the schematic - "
+                              f"{', '.join(missing_sch)}")
+            if extra_sch:
+                errors.append(f"SCHEMATIC IS AHEAD OF design.py: {len(extra_sch)} "
+                              f"symbol(s) are in the schematic and in no design - "
+                              f"{', '.join(extra_sch)}")
+            want_nets = {n for n, pins in design.NETS.items() if len(set(pins)) > 1}
+            missing_nets = sorted(want_nets - set(sch_nets))
+            if missing_nets:
+                errors.append(f"SCHEMATIC IS MISSING {len(missing_nets)} net(s) the "
+                              f"design declares - {', '.join(missing_nets[:12])}"
+                              + (" ..." if len(missing_nets) > 12 else ""))
+            print(f"schematic  : {len(sch_refs)} symbols, {len(sch_nets)} nets")
+        except Exception as e:
+            warnings.append(f"schematic netlist could not be exported ({e}) - "
+                            "kicad-cli needed; schematic NOT set-checked")
+
     if warnings:
         print(f"\nWARNINGS ({len(warnings)}):")
         for w in warnings: print("  ", w)

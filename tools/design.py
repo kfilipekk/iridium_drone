@@ -37,7 +37,6 @@ COMPONENTS = {
  "J1" : ("jlc_parts:TYPE-C_16PIN_2MD(073)", "jlc:USB-C-SMD_TYPE-C-16PIN-2MD-073",       "USB-C",         "C2765186", False),
  "J2" : ("jlc_parts:SM08B-SRSS-TB(LF)(SN)", "jlc:CONN-TH_SM08B-SRSS-TB-LF-SN",                "ESC 8P",        "C160407",  False),
  "J3" : ("jlc_parts:XY-SM06B-GHS-TB",       "jlc:CONN-SMD_XY-SM06B-GHS-TB",            "GPS+I2C",       "C51940119",False),
- "J4" : ("jlc_parts:XY-SM06B-GHS-TB",       "jlc:CONN-SMD_XY-SM06B-GHS-TB",            "TELEM1/COMP",   "C51940119",False),
  "J5" : ("jlc_parts:SM04B-SRSS-TB_(LF)(SN)","jlc:CONN-SMD_4P-P1.00_SM04B-SRSS-TB-LF-SN","RC IN",         "C160404",  False),
  "J6" : ("jlc_parts:XY-SM04B-GHS-TB",       "jlc:CONN-SMD_4P-P1.25_12502-04WASMT",            "CAN",           "C51940118",False),
  "J7" : ("jlc_parts:XY-SM04B-GHS-TB",       "jlc:CONN-SMD_4P-P1.25_12502-04WASMT",            "RNGFND",        "C51940118",False),
@@ -45,14 +44,14 @@ COMPONENTS = {
  # Y1 is a passive crystal and the part number matters more than it looks.
  "Y1" : ("jlc_parts:X32258MSB4SI",          "jlc:CRYSTAL-SMD_4P-L3.2-W2.5-BL",          "8MHz",          "C2682774", False),
  "D1" : ("Device:D_TVS",                    "jlc:DO-214AA_L4.4-W3.6-LS5.3-RD",                          "SMBJ18A",       "C19077573",False),
- # ---- RF section (SoOP config, DNP) ----
+ # ---- SoOP receiver. The tuner half is fitted - the H743 does the Doppler on
  "U13": ("jlc_parts:MAX2112ETI+T",          "jlc:TQFN-28_L5.0-W5.0-P0.50-BL-EP3.3",      "MAX2112",       "C596391",  False),
  "U14": ("jlc_parts:OPA2374M{slash}TR",     "jlc:SOP-8_L4.9-W3.9-P1.27-LS6.0-BL",       "OPA2374",       "C444392",  False),
  "U15": ("jlc_parts:PSA4-5043+",            "jlc:SOT-343-4_L2.0-W1.3-P1.30-LS2.1-BR",           "PSA4-5043+",    "C5240848", True),
  "U16": ("jlc_parts:PSA4-5043+",            "jlc:SOT-343-4_L2.0-W1.3-P1.30-LS2.1-BR",           "PSA4-5043+",    "C5240848", True),
- "Y2" : ("jlc_parts:SX3M27_000M20F30TNN",   "jlc:OSC-SMD_4P-L3.2-W2.5-BL",              "25MHz TCXO",    "C22381771",False),
+ # Y2 is an active 4-pad TCXO (OW2EL89CEIUXFMYLC-25M, YXC YSOS510TP family).
+ "Y2" : ("jlc_parts:YSOS510TP",               "jlc:OSC-SMD_4P-L3.2-W2.5-BL",              "25MHz TCXO",    "C22381771",False),
  "FL1": ("jlc_parts:TA1575IG",                   "jlc:FILTER-SMD_6P-L3.0-W3.0-P1.19-TR",                       "SAW 1620MHz",   "",         True),
- "J9" : ("Connector:Conn_Coaxial",             F_UFL,                                      "U.FL ANT",      "",         True),
 }
 
 def add(ref, sym, fp, val, lcsc="", dnp=False):
@@ -205,21 +204,14 @@ for r,v in [("R28","0R"),("R29","0R"),("R30","10k"),("R31","10k"),
     RES(r, v, F_R0402)
 CAP("C58","1n", F_C0402)      # series AC coupling, Y2 output -> U13 XTAL
 CAP("C59","100n", F_C0402)
-# Y2 pin 1 is OE on most 4-pad oscillators and VC on some.
-RES("R47","10k", F_R0402, dnp=True)
-
 # ------------------------------------------------------------- connector orientation
 MATING_FACE = {
     "J1": (0.0, +1.0),   # USB-C          - plug inserts along -y toward the board
     "J2": (0.0, +1.0),   # ESC JST-SH 8P
     "J3": (0.0, +1.0),   # GPS/I2C JST-GH 6P
     "J8": (0.0, +1.0),   # microSD card slot
-    # Tier-1 connectors, both JST-SH 4P on the left edge (same class as J2, so
-    # the same face convention: signal pad row at local -y, mouth at +y).
-    "J4": (0.0, +1.0),   # companion / TELEM1 JST-GH 6P
     "J5": (0.0, +1.0),   # RC receiver JST-SH 4P
     "J9": (0.0, +1.0),   # I2C port (VCC/SCL/SDA/GND) - the dedicated bus
-    "J10": (0.0, +1.0),  # servo port (PWM5/PWM6/VSERVO/GND)
     "J11": (0.0, +1.0),  # SERIAL2 lidar port (5V/TX/RX/GND)
 }
 
@@ -227,13 +219,21 @@ MATING_FACE = {
 MATING_CLEARANCE = {
     "J1": 9.0,    # USB-C plug overmould
     "J2": 6.0,    # JST-SH plug plus wire bend
-    "J4": 3.6,    # JST-GH pigtail, same derivation as J3 - see the note above
     "J5": 6.0,    # JST-SH class, same as J2
     "J9": 6.0,    # JST-SH class, same as J2 (the dedicated I2C port)
-    "J10": 6.0,   # JST-SH class, same as J2 (servo port)
     "J11": 6.0,   # JST-SH class, same as J2 (SERIAL2 lidar port)
     "J3": 3.6,
     "J8": 14.0,   # a microSD card must come all the way out
+}
+
+# ----------------------------------------------------------------- vertical mating
+# Connectors that mate along +z instead of across the board.
+VERTICAL_MATING = {
+    "J12": dict(
+        plug=2.2,    # mated plug height above the board, [D] Hirose U.FL-R-SMT-1
+        bend=3.0,    # 90-degree coax bend radius above the plug, [D] RG178 bend radius
+        radius=4.0,  # horizontal sweep the bend needs around the connector centre, mm
+        src="[D] Hirose U.FL-R-SMT-1 vertical + RG178 coax bend"),
 }
 
 
@@ -510,14 +510,23 @@ PAYLOAD = dict(
          ("PWM6", "PA3", "TP4", "SERVO6_FUNCTION")],
     serial=[(2, "USART1", "J11 (TP5 / TP6 remain as probes)", "EARMARKED for the 360 lidar "
                                        "(PRX1_TYPE 16); free only until that is fitted"),
-            (6, "UART4", "P71 / P72 / P73 / P74", "GENERAL-PURPOSE EXPANSION UART - free "
-                                                  "and unclaimed (settled 2026-09-04). The "
-                                                  "RF_* net names are vestigial, not an "
-                                                  "earmark; nothing is reserved here")],
-    serial_unrouted=[(4, "USART3")],
-    serial_earmarked=[(2, "360 lidar, PRX1_TYPE 16")],
-    power_5v=["P71", "P61", "PL2", "P41", "J4.1", "J5.1", "J9.1", "J11.1"],
-    gnd=["P74", "P64", "PL3", "P46", "J4.6", "J5.4", "J9.4", "J11.4"],
+            (6, "UART4", "P71 / P72 / P73 / P74", "EXPANSION UART - unclaimed in "
+                                                  "defaults.parm, but EARMARKED since "
+                                                  "2026-09-14 for the companion computer "
+                                                  "(MAVLink OPTICAL_FLOW), which moved here "
+                                                  "when J4 was cut in the re-layout. A "
+                                                  "payload and the companion cannot both "
+                                                  "have it. The RF_* net names are "
+                                                  "vestigial, not a second earmark")],
+    serial_unrouted=[(1, "UART7"),
+                                      # the companion moved to SERIAL6 on P71-P74
+                     (4, "USART3"),   # PD8/PD9 stop at the MCU
+                     (5, "UART8")],   # declared in hwdef, no nets in the design at all
+    serial_earmarked=[(2, "360 lidar, PRX1_TYPE 16"),
+                      (6, "companion computer, MAVLink OPTICAL_FLOW - moved from "
+                          "SERIAL1 on 2026-09-14 when J4 was cut")],
+    power_5v=["P71", "P61", "PL2", "P41", "J5.1", "J9.1", "J11.1"],
+    gnd=["P74", "P64", "PL3", "P46", "J5.4", "J9.4", "J11.4"],
     # A servo drawing real current must not come off the flight controller's 5 V rail.
     power_note="signal is 3.3 V logic, which every hobby servo and ESC accepts as a valid "
                "PWM high. Take a high-current servo's 5 V from its own BEC, not from this "
@@ -618,7 +627,7 @@ net("GND",
     "U2.6","U3.6","U4.3","U5.4",
     "U8.1","U9.2","U10.2","U11.2","U12.2",
     "J1.A1B12","J1.B1A12","J1.13","J1.14",
-    "J2.1","J2.9","J2.10", "J3.6","J3.7","J3.8", "J4.6","J4.7","J4.8",
+    "J2.1","J2.9","J2.10", "J3.6","J3.7","J3.8",
     "J5.4","J5.5","J5.6", "J6.4","J6.5","J6.6", "J7.4","J7.5","J7.6",
     "J8.6","J8.10","J8.11","J8.12","J8.13",
     "Y1.2","Y1.4", "D1.1",
@@ -635,7 +644,7 @@ net("GND",
 net("VBAT_IN", "J2.2", "D1.2", "Q4.3")            # Q4 pin 3 = drain
 net("VBAT", "Q4.2", "C17.1","C18.1","C19.1","U8.3","R4.1","R18.1")  # Q4 pin 2 = source
 net("+5V",  "U8.2","C22.1","C23.1","U9.1","C26.1","U10.1","C28.1",
-            "J3.1","J4.1","J5.1","J6.1","J7.1","R6.1")
+            "J3.1","J5.1","J6.1","J7.1","R6.1")
 net("+3V3", "U9.5","C27.1","U1.11","U1.27","U1.50","U1.75","U1.100",
             "C1.1","C2.1","C3.1","C4.1","C5.1","C6.1","C7.1",
             "U5.8","C36.1",
@@ -690,8 +699,9 @@ net("I2C2_SDA","U1.PB11","R12.2","U4.7")
 # TOF_XSHUT (PD11) and TOF_INT (PD10) deleted with U7 - both pins freed.
 # ---- UARTs -------------------------------------------------------------
 net("USART2_TX","U1.PD5","J3.2"); net("USART2_RX","U1.PD6","J3.3")   # GPS1
-net("UART7_TX","U1.PE8","J4.2");  net("UART7_RX","U1.PE7","J4.3")    # companion
-net("PPS_SYNC","U1.PE10","J4.4"); net("UART7_RTS","U1.PE9","J4.5")
+net("UART7_TX","U1.PE8");  net("UART7_RX","U1.PE7")        # companion - no landing:
+net("PPS_SYNC","U1.PE10"); net("UART7_RTS","U1.PE9")        # J4 cut, and no free pad site
+                                                                    # exists (board is full)
 net("USART6_TX","U1.PC6","J5.2"); net("RC_IN","U1.PC7","J5.3")
 net("UART4_TX","U1.PB9","J7.2");  net("UART4_RX","U1.PB8","J7.3")    # TFmini-S
 # ---- CAN ---------------------------------------------------------------
@@ -741,9 +751,8 @@ net("VCC_RF",   "U13.1","U13.2","U13.6","U13.7","U13.13","U13.16","U13.25",
 NETS["+3V3A"] += ["R28.1"]; NETS["GND"] += ["C49.2","C50.2","C51.2"]
 net("TUNER_REF",  "Y2.3", "C58.1")            # TCXO clipped-sine output
 net("TUNER_XTAL", "C58.2", "U13.14")          # AC-coupled into the XTAL pin
-NETS["+3V3A"] += ["Y2.4", "C59.1", "R47.2"]   # VDD + decoupling, on the quiet rail
-NETS["GND"]  += ["Y2.2", "C59.2"]
-net("TUNER_OE",   "Y2.1", "R47.1")            # R47 is DNP - see the note at C58
+NETS["+3V3A"] += ["Y2.4", "C59.1"]            # VDD + decoupling, on the quiet rail
+NETS["GND"]  += ["Y2.2", "Y2.1", "C59.2"]    # both ground pins to ground
 net("TUNER_ADDR","U13.28","R29.2"); NETS["GND"] += ["R29.1"]
 NETS["I2C2_SDA"] += ["U13.26"]; NETS["I2C2_SCL"] += ["U13.27"]
 net("VTUNE","U13.9","C56.1"); NETS["GND"] += ["C56.2"]
@@ -847,6 +856,8 @@ add("P46", "Connector:TestPoint", PAD_FP, "TEL_GND", "", False)
 NETS["+5V"].append("P41.1")
 NETS["PPS_SYNC"].append("P44.1")
 NETS["GND"].append("P46.1")
+
+# UART7 has no landing, and the companion does not need ONE.
 
 # ---- SoOP RF front end moved off this board ------------------------------
 INCLUDE_ONBOARD_LNA = False       # U15/U16/FL1/L3/L4 - see the ANT_IN comment
@@ -958,18 +969,13 @@ NETS["GND"] += ["R46.2"]                         # gate pull-down to ground
 # ---- 2. The edge connectors ---------------------------------------------------
 add("J9", "jlc_parts:SM04B-SRSS-TB_(LF)(SN)",
     "jlc:CONN-SMD_4P-P1.00_SM04B-SRSS-TB-LF-SN", "I2C 4P", "C160404", False)
-add("J10", "jlc_parts:SM04B-SRSS-TB_(LF)(SN)",
-    "jlc:CONN-SMD_4P-P1.00_SM04B-SRSS-TB-LF-SN", "SERVO 4P", "C160404", False)
 add("TP22", "Connector:TestPoint", "TestPoint:TestPoint_Pad_1.5x1.5mm",
     "VSERVO", "", False)
 NETS["+5V"] += ["J9.1"]
 NETS["I2C1_SCL"] += ["J9.2"]
 NETS["I2C1_SDA"] += ["J9.3"]
 NETS["GND"] += ["J9.4", "J9.5", "J9.6"]       # pin 4 = signal, 5/6 = anchor tabs
-NETS["PWM5"] += ["J10.1"]
-NETS["PWM6"] += ["J10.2"]
-net("VSERVO", "J10.3", "TP22.1")
-NETS["GND"] += ["J10.4", "J10.5", "J10.6"]
+net("VSERVO", "TP22.1")
 
 # J11 is SERIAL2 (USART1) with its own power and ground.
 add("J11", "jlc_parts:SM04B-SRSS-TB_(LF)(SN)",
@@ -1064,6 +1070,8 @@ PASSIVE_LCSC = {
     ("47p",  F_C0402): "C60137",  ("3n3",  F_C0402): "C26404",
     ("10u",  F_C0805): "C1713",   ("10u",  F_C1206): "C16195875",
     ("1u",   F_C0805): "C91185",  ("22u",  F_C1206): "C5177178",
+    ("0R",   F_R0402): "C17168",  ("100p", F_C0402): "C1546",
+    ("1n",   F_C0402): "C1523",
     ("100R", F_R0402): "C25076",  ("120R", F_R0402): "C25862",
     ("1k",   F_R0402): "C11702",  ("4k7",  F_R0402): "C25900",
     ("5k1",  F_R0402): "C25905",  ("6k8",  F_R0402): "C25917",
@@ -1121,6 +1129,8 @@ RATINGS = {
  "C15195":   ("10n",   50,  "X7R",     "10%",  "0402",  None, None, "[D] LCSC product page, 2026-08-29"),
  "C26404":   ("3n3",   50,  "X7R",     "10%",  "0402",  None, None, "[D] LCSC product page, 2026-08-29"),
  "C60137":   ("47p",   50,  "NP0",     "5%",   "0402",  None, None, "[D] LCSC product page, 2026-08-29"),
+ "C1546":    ("100p",  50,  "NP0",     "5%",   "0402",  None, None, "[D] LCSC product page (0402CG101J500NT), 2026-09-11"),
+ "C1523":    ("1n",    50,  "X7R",     "10%",  "0402",  None, None, "[D] LCSC product page (0402B102K500NT), 2026-09-11"),
 }
 # Parts whose ratings have not been read off a datasheet yet.
 RATINGS_UNVERIFIED = set()
@@ -1151,6 +1161,12 @@ PART_HEIGHT = {
     "L_0805": 1.2,        # ferrite bead
     "C_1206": 1.6, "C_0805": 1.45, "C_0402": 0.55,
     "R_0402": 0.45, "LED_0603": 0.55,
+    # Rev B parts.
+    "CONN-SMD_4P-P1.00_SM04B": 2.9,   # JST SH 4P vertical (J5/J9/J11), same 2.9 as the SH 8P
+    "OSC-SMD_4P": 0.9,                 # 3.2 x 2.5 clipped-sine TCXO (Y2) [D] Ostar
+    "SOD-123": 1.1,                    # DZ1 zener, same body as the SOD-123F already here
+    "TQFN-28_L5.0": 0.8,               # U13 MAX2112, 5 x 5 QFN [D] Maxim
+    "U.FL_Hirose": 1.2,                # J12 vertical U.FL [D] Hirose U.FL-R-SMT-1
 }
 
 
@@ -1408,13 +1424,21 @@ MODULES = {
         note="0.25 A against 0.41 A headroom; can also run standalone on a 1S cell, "
              "which is the right answer if anything else is on the rail"),
     "flow_globalshutter": dict(
-        what="global-shutter flow via a companion", lands_on=["J4"],
-        conn="SERIAL1 telemetry pads, MAVLink OPTICAL_FLOW",
-        needs_board_change=None, gbp=60, status="later",
+        what="global-shutter flow via a companion",
+        lands_on=["P71", "P72", "P73", "P74"],
+        conn="SERIAL6 (UART4) pads, MAVLink OPTICAL_FLOW",
+        needs_board_change=None,
+        gbp=60, status="later",
         ma_5v=0, counted=True,
         note="FLOW_TYPE 5 (MAVLink) - the companion does the vision, the H7 just consumes "
              "it. Runs from its OWN BEC: a Linux SBC's transients do not belong on the "
-             "flight controller's buck"),
+             "flight controller's buck. MOVED FROM SERIAL1 TO SERIAL6 on 2026-09-14: J4 "
+             "was cut in the re-layout and this was recorded as 'needs a new board with a "
+             "UART7 socket', which was wrong. UART4 already comes out on P71-P74 as 5 V, "
+             "TX, RX and GND, routed, and design.PAYLOAD lists it as the unclaimed "
+             "expansion UART. With PPS on P44 that is a complete five-wire companion "
+             "interface on pads that already exist. Set SERIAL6_PROTOCOL 2 (MAVLink2) "
+             "and SERIAL6_BAUD to match the companion"),
     "flow_pmw3901": dict(
         what="PixArt PMW3901 flow", lands_on=[], conn="SPI3 - no socket on this board",
         needs_board_change="U6 is deleted and SPI3 carries only the W25Q128 flash, so "

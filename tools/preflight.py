@@ -256,6 +256,24 @@ def integrity(board):
                   f"Y1 is {best:.2f} mm from U1.12 (OSC_IN)")
 
 
+# --------------------------------------------------------------- silkscreen ---
+def silkscreen(board):
+    """Report how many pad/test-point labels made it onto the silkscreen."""
+    try:
+        import silk_labels
+        placed, skipped = silk_labels.place_labels(board)
+    except Exception as e:
+        check("fabrication", "pad silkscreen labels", False,
+              f"could not evaluate: {e}", hard=False)
+        return
+    total = len(placed) + len(skipped)
+    ok = not skipped
+    detail = (f"{len(placed)}/{total} pad labels have a clean silkscreen position"
+              + (f" - no clean position for: {', '.join(sorted(skipped))}" if skipped
+                 else ""))
+    check("fabrication", "pad silkscreen labels", ok, detail, hard=False)
+
+
 # -------------------------------------------------------------- the project ---
 def project(board):
     """Everything the drone actually needs, by function rather than by part."""
@@ -271,7 +289,6 @@ def project(board):
         ("IMU 2 (ICM-42605)",        {"U3"}),
         ("barometer MS5611",         {"U4"}),
         ("dedicated I2C port",        {"J9"}),
-        ("servo port",                {"J10"}),
         ("config flash W25Q128",     {"U5"}),
         ("microSD socket",           {"J8"}),
         ("USB-C",                    {"J1"}),
@@ -458,12 +475,20 @@ def firmware(board):
     m_fp = re.search(r'(\d+) footprint\(s\) agree', out)
     skipped = "SKIPPING" in out
     check("assembly", "footprints match JLCPCB's pad count",
-          rc == 0 and (skipped or bool(m_fp)),
-          ("jlcparts mirror absent - NOT CHECKED (see tools/check_lcsc_stock.py)"
+          (not skipped) and rc == 0 and bool(m_fp),
+          ("jlcparts mirror absent - NOT CHECKED. Refetch it before ordering; the "
+           "command is in tools/check_lcsc_stock.py's docstring"
            if skipped else
            (f"{m_fp.group(1)} footprint(s) agree with JLCPCB's joint count"
             if rc == 0 and m_fp else "MISMATCH - see tools/check_footprints.py")),
           hard=not skipped)
+
+    rc, out = run("windowpane_paste.py --scan")
+    m_wp = re.search(r'(\d+) pad\(s\) need windowpaning', out)
+    check("assembly", "exposed pads windowpaned", rc == 0,
+          "every thermal slug has a vented paste array" if rc == 0
+          else (f"{m_wp.group(1) if m_wp else '?'} exposed pad(s) still carry a solid "
+                f"100% aperture - run tools/windowpane_paste.py <REF> <PAD> --apply"))
 
     rc, out = run("check_links.py")
     m_frag = re.search(r'(\d+) AliExpress item link', out)
@@ -585,6 +610,7 @@ def main():
     fabrication(board)
     assembly(board)
     integrity(board)
+    silkscreen(board)
     project(board)
     firmware(board)
 

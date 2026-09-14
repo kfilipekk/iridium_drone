@@ -58,6 +58,13 @@ CRITICAL = {
     "C15639":    "MS5611 barometer - the hwdef and I2C address assume this part",
     "C2765186":  "USB-C connector - a different footprint is a respin",
     "C160407":   "JST-SH 8P - must mate with the ESC's supplied cable",
+    # Added and it is the reason to re-read this list whenever a part is added.
+    "C596391":   "MAX2112 - the SoOP tuner. NOTHING else in JLCPCB's library does this "
+                 "job in this band; without it the aircraft is a flight controller, not "
+                 "a SoOP receiver. Sole-source, and it is the point of the project",
+    "C22381771": "25 MHz TCXO - the tuner's reference. A CMOS-output substitute would "
+                 "exceed the MAX2112's 2.0 Vpp XTAL input limit, so the replacement must "
+                 "also be CLIPPED SINE at 12-30 MHz - a narrow shelf",
 }
 # An absolute floor, not a multiple of this order.
 CRITICAL_FLOOR = 2000
