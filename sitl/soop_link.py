@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Stand in for the companion computer against ArduCopter SITL.
+Feed ArduCopter SITL a fix as bad as an Iridium Doppler solve, and measure the EKF.
 
 Reads SITL ground truth, degrades it into something an Iridium Doppler solver could
 plausibly produce, and feeds it back as MAVLink - then measures what the EKF makes of it
@@ -8,6 +8,27 @@ against the truth it never saw.
 
 The point is NOT to prove the messages parse. It is to answer the question the whole
 board rests on: can ArduPilot fly on a fix this bad, this late, this rarely?
+
+WHAT THIS MODELS, AND WHAT IT NO LONGER MODELS. Read this before trusting it as a
+rehearsal for the aircraft.
+
+The ERROR MODEL is architecture-independent and still correct: how bad the fix is, how
+late, how often, and what the EKF does with it does not depend on which processor
+computed it. Everything this harness measures about flyability stands.
+
+The DELIVERY MECHANISM does not. This was written when the SoOP chain was going to live
+on a companion computer publishing GPS_INPUT (#232) over MAVLink, and the aircraft no
+longer works that way: U13 (MAX2112) is ON the board and the H743 samples I/Q on PC4/PA4
+and does the solve itself. An on-board solve does not arrive as GPS_INPUT from outside -
+it needs an AP_GPS backend, or AP_ExternalAHRS, inside the firmware. That integration is
+UNWRITTEN, and it is not a detail: the 5 Hz minimum and the hardcoded 50 m consistency
+gate in AP_GPS::all_consistent() are properties of AP_GPS, so they still apply, but the
+path a fix takes to reach them is different and has never been exercised.
+
+So this remains the right tool for "can it fly on this", and is NOT a test of the
+integration the board actually needs. Keeping the companion path modelled is still
+worth it - SERIAL6 on P71-P74 means a companion remains a supported option - but do not
+read a passing run as evidence that the on-board route works.
 
 WHY THE ERROR MODEL LOOKS LIKE THIS
 -----------------------------------
