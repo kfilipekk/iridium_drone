@@ -449,7 +449,14 @@ def power_islands(board):
     made = 0
     for prio, (area, rail, net, x1, y1, x2, y2) in enumerate(sorted(cands), start=1):
         z = pcbnew.ZONE(board)
-        z.SetLayer(board.GetLayerID("In2.Cu")); z.SetNet(net)
+        # The rail's OWN plane layer, from PLANE - which is In4.Cu for every secondary
+        # rail. This said "In2.Cu" and put the islands on a SIGNAL layer, which is why
+        # the transplanted Rev B board came back with the +5V/VBAT/+3V3A pours gone:
+        # In4 held only the +3V3 base. check_power_cut.py then found every amp entering
+        # the board through 4 mil track - VBAT at 0.2 A against the 1.7 A it needs.
+        # The committed board's zones are on In4.Cu, PLANE says In4.Cu, and preflight's
+        # fragmentation check reads In4.Cu; this was the one place that disagreed.
+        z.SetLayer(board.GetLayerID(PLANE[rail])); z.SetNet(net)
         z.SetAssignedPriority(len(cands) - prio + 1)
         z.SetPadConnection(pcbnew.ZONE_CONNECTION_FULL)
         z.SetLocalClearance(MM(0.25)); z.SetMinThickness(MM(0.2))
@@ -460,6 +467,28 @@ def power_islands(board):
 
 
 def fill(board):
+    """Fill every zone.
+
+    THE BOARD MUST BE LOADED FROM ITS OWN DIRECTORY, WITH ITS .kicad_pro BESIDE IT.
+    This is not a style point - it changes the result by a factor of five, and it has
+    already cost this project a long hunt for strands that do not exist.
+
+    Fill the board at NAVCORE-SoOP.kicad_pcb (where NAVCORE-SoOP.kicad_pro sits) and the
+    ground pour comes out with the two islands that really exist, 1.09 and 2.10 mm2.
+    Fill a COPY of the same board in /tmp, with no project file next to it, and the same
+    copper yields TEN islands - 0.13 to 21.25 mm2, every one of them carrying a pad:
+
+        in place, project present   2 islands   1.09, 2.10
+        /tmp copy, no project      10 islands   0.13, 0.31, 0.54, 1.03, 1.13,
+                                                1.39, 1.63, 2.21, 12.83, 21.25
+
+    Eight of those are phantoms: they are an artefact of the fill running against
+    default project rules, not a property of the copper. Re-filling does not fix it
+    (five passes give the same ten) and reloading does not necessarily either, because
+    pcbnew keeps project state per process. So: if a tool must work on a copy, copy the
+    .kicad_pro beside it, and verify island counts by loading the path in a fresh
+    process.
+    """
     pcbnew.ZONE_FILLER(board).Fill(board.Zones())
 
 

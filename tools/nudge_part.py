@@ -167,32 +167,39 @@ def main():
     idx = shove.ShapeIndex(allsh)
     # foreign pads only, for the mask-web test
     pidx = shove.ShapeIndex([x for x in allsh if x.kind == "pad"])
-    # courtyards of every other part, as boxes
+    # Courtyards of every other part on the SAME SIDE, as boxes. Comparing a front
+    # courtyard against a back-side part's is a false positive by construction - the two
+    # can never touch. It is also not a small one: U5's front courtyard boxes over 14
+    # back-side parts, so every offset in the search "overlapped a courtyard" and the
+    # tool reported no workable placement for a part it had never actually tested.
+    def side_of(f):
+        return pcbnew.B_CrtYd if f.GetLayer() == pcbnew.B_Cu else pcbnew.F_CrtYd
+
+    my_side = side_of(fp)
     yards = []
     for other in board.GetFootprints():
         if other.GetReference() == ref:
             continue
-        for side in (pcbnew.F_CrtYd, pcbnew.B_CrtYd):
-            try:
-                poly = other.GetCourtyard(side)
-            except Exception:
-                continue
-            if poly.OutlineCount() == 0:
-                continue
-            bb = poly.BBox()
-            yards.append((TOMM(bb.GetLeft()), TOMM(bb.GetTop()),
-                          TOMM(bb.GetRight()), TOMM(bb.GetBottom())))
-    my_yard = None
-    for side in (pcbnew.F_CrtYd, pcbnew.B_CrtYd):
+        # The OTHER part's courtyard on THIS part's side, not the other's own side.
+        # Taking the other's own side just puts every back-side part back into the list.
         try:
-            poly = fp.GetCourtyard(side)
+            poly = other.GetCourtyard(my_side)
         except Exception:
             continue
+        if poly.OutlineCount() == 0:
+            continue
+        bb = poly.BBox()
+        yards.append((TOMM(bb.GetLeft()), TOMM(bb.GetTop()),
+                      TOMM(bb.GetRight()), TOMM(bb.GetBottom())))
+    my_yard = None
+    try:
+        poly = fp.GetCourtyard(my_side)
         if poly.OutlineCount():
             bb = poly.BBox()
             my_yard = (TOMM(bb.GetLeft()), TOMM(bb.GetTop()),
                        TOMM(bb.GetRight()), TOMM(bb.GetBottom()))
-            break
+    except Exception:
+        my_yard = None
     holes = route.hole_shapes(board)
     kos = route.keepout_boxes(board)
 

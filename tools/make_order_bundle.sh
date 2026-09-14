@@ -69,7 +69,8 @@ ASSEMBLY
   CPL               CPL-NAVCORE-SoOP.csv
 
   Variants, if you want them instead of the default:
-    *-economic.csv  Economic tier, U3/U6/U7 left off for hand-fitting
+    *-economic.csv  Economic tier, U3 (second IMU) left off for hand-fitting.
+                    U6/U7 are NOT in it - they were deleted from the design.
     *-nofpv.csv     9 V VTX buck omitted (it is DNP by default anyway)
 
 BEFORE YOU PAY - the things no offline check can confirm

@@ -18,6 +18,7 @@
 #
 # Usage:  bash tools/finish.sh <out.ses> [--force]
 set -euo pipefail
+QUIET="${QUIET:-^$}"   # filter for noisy lines; default: suppress nothing
 SES="${1:?usage: finish.sh <out.ses> [--force]}"
 BOARD="NAVCORE-SoOP.kicad_pcb"
 
@@ -49,6 +50,18 @@ python3 tools/fix_drc.py --apply 2>&1 | grep -viE "$QUIET" | tail -2
 
 echo; echo "=== 3c. route what freerouting left, pair by pair ==="
 python3 tools/route_remaining.py --apply 2>&1 | grep -viE "$QUIET" | tail -2
+
+echo; echo "=== 3d. dissolve the ground islands ==="
+# The routing chain above re-creates both B.Cu GND islands, and neither is fixable by
+# routing: island A needs the VCC_RF corridor cut plus an In2 relink, island B needs C3
+# 0.06 mm west. Both tools no-op when there is no island, and both revert themselves
+# unless the island count AND the unconnected count improve, so they are safe to call
+# here - but a rebuild of the placement can move the geometry they key on, in which case
+# they exit 1 and say so rather than writing a broken board.
+python3 tools/free_island_a.py --apply 2>&1 | grep -viE "$QUIET" | tail -3 \
+  || echo "  free_island_a.py found no applicable corridor - re-measure before relying on it"
+python3 tools/free_island_b.py --apply 2>&1 | grep -viE "$QUIET" | tail -3 \
+  || echo "  free_island_b.py found no applicable fix - re-measure before relying on it"
 
 echo; echo "=== 4. verify ==="
 python3 tools/board_report.py "$BOARD" 2>&1 | grep -viE "$QUIET"

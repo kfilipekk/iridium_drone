@@ -53,10 +53,19 @@ OUT = "fab"
 # U6 and U7 are now DNP anyway (design.POPULATE_BLIND_SENSORS): neither can see the
 # ground with the ESC 3 mm below them. They stay listed so the note survives if either
 # is ever populated.
+# Parts the ECONOMIC variant leaves off the assembly order for hand-fitting.
+#
+# U6 (PMW3901) and U7 (VL53L1X) used to be here and are GONE - both were deleted from
+# the design in the Rev B re-layout, so listing them left the economic BOM describing a
+# board that no longer exists. Anything named here must be a ref the design still has.
+#
+# READ THIS BEFORE USING THE ECONOMIC VARIANT. It is now a much weaker saving than it
+# was. U13 (MAX2112, C596391, ~$16.86) is an EXTENDED part and is NOT listed here,
+# because it is the reason the project exists - leaving the tuner off gets you a
+# flight controller, not a SoOP receiver. So "economic" now means one optional IMU,
+# and the extended-part feeder fees are paid either way.
 STANDARD_ONLY = {
     "U3": "ICM-42605 (C2655099) - second IMU, optional; ArduPilot flies on IMU1 alone",
-    "U6": "PMW3901 (C43496881) - optical flow, needs X-ray; DNP, cannot see the ground",
-    "U7": "VL53L1X (C190004) - downward rangefinder; DNP, cannot see the ground",
 }
 
 # A footprint whose name carries LCSC's dimensional suffix came from add_jlc_part.sh and
@@ -157,6 +166,19 @@ def main():
     if no_fpv:
         print(f"NO-FPV variant - the 9 V VTX buck is left off ({len(vtx)} parts):")
         print(f"   {', '.join(sorted(vtx))}")
+        # The 9 V block already ships DNP, so "leave it off" is the default and this
+        # variant can come out byte-identical to the main BOM. Say so rather than hand
+        # the operator three files of which two are the same - picking the wrong one is
+        # harmless here, but only because they are identical, and that stops being true
+        # the moment U18 is populated.
+        import filecmp
+        for kind in ("BOM", "CPL"):
+            a = os.path.join(OUT, f"{kind}-NAVCORE-SoOP.csv")
+            bfile = os.path.join(OUT, f"{kind}-NAVCORE-SoOP-nofpv.csv")
+            if os.path.exists(a) and os.path.exists(bfile) and filecmp.cmp(a, bfile,
+                                                                          shallow=False):
+                print(f"   note {kind} is IDENTICAL to the main {kind} - the 9 V block "
+                      f"is DNP already, so this variant changes nothing today")
     if economic:
         print("ECONOMIC variant - these are left off for hand-fitting:")
         for r, why in sorted(STANDARD_ONLY.items()):

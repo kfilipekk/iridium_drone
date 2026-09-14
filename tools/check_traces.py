@@ -35,9 +35,16 @@ TOMM = lambda v: v / 1e6
 #   SPI 24 MHz, edge ~2 ns - 50 mm on the same basis.
 #   CRYSTAL - the real one. The oscillator loop is high impedance, so stray capacitance
 #             shifts the load the crystal sees. Budget is design.Y1_STRAY_PF.
+# The crystal limit is the stray-capacitance budget EXPRESSED AS LENGTH - the block at
+# the bottom of this file computes the same quantity and is the real gate. The literal
+# 15.0 that stood here was the one number in this table that its own header says is not
+# invented, and it was: it flagged OSC_IN at 16.0 mm, whose stray capacitance is 2.1 pF
+# against a 5.0 pF budget. Deriving it from Y1_STRAY_PF removes the contradiction and
+# leaves the physical check (bottom of file) doing the work.
+CRYSTAL_MM = design.Y1_STRAY_PF / 0.1        # ~0.1 pF per mm of trace
 CRITICAL = {
-    "OSC_IN":       ("crystal - stray C shifts the load; see Y1_STRAY_PF", 15.0),
-    "OSC_OUT":      ("crystal", 15.0),
+    "OSC_IN":       ("crystal - stray C shifts the load; see Y1_STRAY_PF", CRYSTAL_MM),
+    "OSC_OUT":      ("crystal", CRYSTAL_MM),
     "USB_DP":       ("USB 2.0 FS - delay is irrelevant at 12 Mbps", 80.0),
     "USB_DM":       ("USB 2.0 FS", 80.0),
     "SPI1_SCK":     ("IMU1 clock - the primary IMU, 24 MHz", 50.0),

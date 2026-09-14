@@ -207,6 +207,60 @@ def main():
         else:
             print(line + f"   ok ({need:.1f} mm clear for the plug)")
 
+    # -------------------------------------------------------- vertical mating ----
+    # Connectors that mate along +z (U.FL on this board) are invisible to the mouth
+    # and corridor logic above - there is no horizontal face to walk. What they need
+    # instead: to sit on the TOP face (a vertical plug on the bottom points down into
+    # the ESC), and for plug + coax bend to fit the vertical room between the board
+    # and the top plate. The room is COMPUTED from the same stack arithmetic as
+    # design.required_standoff, not assumed: buy - (below-board frame + ESC + gap +
+    # bottom parts + board thickness). With the 35 mm standoff that is 9.8 mm.
+    for ref, spec in sorted(getattr(design, "VERTICAL_MATING", {}).items()):
+        fp = board.FindFootprintByReference(ref)
+        if fp is None:
+            fails.append(f"{ref}: not on the board"); continue
+        if fp.IsFlipped():
+            fails.append(f"{ref}: vertical connector on the BOTTOM face - the plug "
+                         f"points down into the ESC")
+            continue
+        # horizontal sweep: the coax bend needs `radius` around the connector centre.
+        # A neighbour is only a problem if it is tall enough to intrude into the bend
+        # envelope (the plug top is at spec['plug']); low parts pass underneath.
+        sweep_fail = sweep_warn = []
+        for other in board.GetFootprints():
+            if other.GetReference() == ref or other.IsFlipped(): continue
+            dx = other.GetPosition().x/1e6 - fp.GetPosition().x/1e6
+            dy = other.GetPosition().y/1e6 - fp.GetPosition().y/1e6
+            if math.hypot(dx, dy) > spec["radius"]: continue
+            h = design.part_height(other.GetFPIDAsString())
+            if h is None:
+                sweep_warn.append(other.GetReference())
+            elif h > spec["plug"] - 0.5:
+                sweep_fail.append(f"{other.GetReference()} ({h:.1f} mm tall)")
+        if sweep_fail:
+            fails.append(f"{ref}: {', '.join(sweep_fail)} sit inside the {spec['radius']:.0f} mm "
+                         f"bend sweep and are tall enough to hit the coax")
+        elif sweep_warn:
+            warns.append(f"{ref}: {', '.join(sweep_warn)} sit inside the bend sweep with "
+                         f"unknown height - check against the part that arrives")
+        # vertical room: standoff - everything below the board top face
+        try:
+            s = design.required_standoff(board)
+            below_board = (design.ESC["pcb"] + design.ESC["parts"] +
+                           design.MOUNTING["gap"] +
+                           s["bot"] + design.BOARD_T)
+            room = s["buy"] - s["below"] - below_board
+            need = spec["plug"] + spec["bend"]
+            if room < need:
+                fails.append(f"{ref}: plug+bend need {need:.1f} mm but the top plate is "
+                             f"only {room:.1f} mm above the board ({spec['src']})")
+            else:
+                print(f"  {ref:4s} vertical  +z plug {spec['plug']:.1f} + bend "
+                      f"{spec['bend']:.1f} = {need:.1f} mm against {room:.1f} mm to the "
+                      f"top plate   ok")
+        except Exception as e:
+            warns.append(f"{ref}: vertical room could not be computed ({e})")
+
     print()
     for w in warns: print(f"  warn  {w}")
     for f in fails: print(f"  FAIL  {f}")

@@ -34,7 +34,12 @@ BAK = "/tmp/nav/silk_backup.kicad_pcb"
 TOMM = lambda v: v / 1e6
 FROMM = pcbnew.FromMM
 
-TARGETS = ([f"P4{i}" for i in range(1, 7)] + [f"P5{i}" for i in range(1, 5)] +
+# TARGETS names pads by reference, so it goes stale silently when the design changes -
+# P42/P43/P45 and P51-P54 are all gone (the first three were never re-added; the last
+# four became connector J5), and refs that are not on the board are skipped rather than
+# reported. If a pad stops being labelled, check here before concluding the geometry
+# got worse. preflight.py reports the coverage every run for the same reason.
+TARGETS = (["P41", "P44", "P46"] + [f"P5{i}" for i in range(1, 5)] +
            [f"P6{i}" for i in range(1, 5)] + [f"P7{i}" for i in range(1, 5)] +
            [f"TP{i}" for i in range(1, 12)] + ["TP20", "TP21"] +
            ["PL1", "PL2", "PL3", "PV1", "PV2", "PZ1", "PZ2"])
@@ -88,9 +93,13 @@ def collect_obstacles(board, exclude=()):
     return obs
 
 
-def main():
-    apply = "--apply" in sys.argv
-    board = pcbnew.LoadBoard(BOARD)
+def place_labels(board):
+    """Return (placed, skipped) for every TARGETS ref actually on the board.
+
+    Separated from main() so preflight can report the coverage count without
+    touching the board. Placement rules are unchanged: a label that cannot sit
+    cleanly beside its pad is LEFT OFF rather than printed illegibly.
+    """
     edge = board.GetBoardEdgesBoundingBox()
     ex0, ey0 = TOMM(edge.GetX()), TOMM(edge.GetY())
     ex1, ey1 = ex0 + TOMM(edge.GetWidth()), ey0 + TOMM(edge.GetHeight())
@@ -129,6 +138,14 @@ def main():
             obstacles.append(best[2])
         else:
             skipped.append(ref)
+
+    return placed, skipped
+
+
+def main():
+    apply = "--apply" in sys.argv
+    board = pcbnew.LoadBoard(BOARD)
+    placed, skipped = place_labels(board)
 
     print(f"placeable: {len(placed)} of {len(placed) + len(skipped)}")
     if skipped:

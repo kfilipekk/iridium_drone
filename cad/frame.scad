@@ -56,7 +56,7 @@ fc_l_fab       = 45.00;   // centreline: what JLC routes to
 fc_w_fab       = 46.00;
 fc_pcb         = 1.60;
 fc_top_parts   = 4.4;          // tallest: J3
-fc_bot_parts   = 2.3;          // tallest: D1
+fc_bot_parts   = 2.9;          // tallest: J11
 
 esc_l          = 45.6;
 esc_w          = 44.0;
@@ -98,8 +98,8 @@ screw_dia       = 3.0;     // M3
 // Standoff length is COMPUTED (design.required_standoff), not taken from the kit.
 // The kit's 30 mm is 0.3 mm SHORT of the stack before any headroom - buy 35 mm.
 standoff_len    = 35;
-standoff_need   = 32.6;   // incl. 3.0 mm headroom
-standoff_slack  = 5.4;
+standoff_need   = 33.2;   // incl. 3.0 mm headroom
+standoff_slack  = 4.8;
 cam_mod_t       = 12.0;
 cam_mod_w       = 30.0;
 pi_l            = 65.0;

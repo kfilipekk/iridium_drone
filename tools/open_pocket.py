@@ -180,7 +180,12 @@ def main():
                 if runs:
                     break
             if runs is None:
-                res, note = rr.reroute(board, ch, allsh_full, extra, max(step, 0.05))
+                # `reroute` used to be called on max(step, 0.05), so --grid could never
+                # make it finer than 0.05 mm however small the option was set. That cap
+                # is why this tool reported "no path between its endpoints on any signal
+                # layer" for corridors it can route at a finer pitch. The old floor is
+                # kept only as a runtime guard.
+                res, note = rr.reroute(board, ch, allsh_full, extra, max(step, 0.01))
                 if res is None:
                     print(f"       but {ch['net']} can neither be shoved out of the "
                           f"corridor nor rerouted: {note}")
