@@ -276,7 +276,7 @@ def order_sheet():
             "SoOP receiver": 4}
     NAMES = {1: "Minimum to fly", 2: "Sensors - optional for first flight",
              3: "Tools and bench kit - buy once",
-             4: "SoOP receiver - proves the thesis, needs no board respin"}
+             4: "SoOP bench reference receiver - the in-flight chain is on the board"}
 
     def tier(r):
         return TIER.get(r["Group"].strip(), 1)

@@ -30,7 +30,8 @@ pinout matches the MatekH743 across all 75 assigned pins.
 | Sensors | MS5611 baro, W25Q128 flash, microSD |
 | Power | two synchronous bucks (16.8 V to 5 V and 9 V), two 3.3 V LDOs |
 | I/O | USB-C, CAN, 8 UARTs, 4 x DShot, addressable LED, SWD |
-| Payload | analogue I/Q pair, RSSI and PPS brought out to pads |
+| SoOP | MAX2112 tuner and OPA2374 baseband amps on board, U.FL antenna input |
+| Payload | I/Q, RSSI and PPS also brought out to pads for probing |
 
 It ended up on six layers because of the H743. Nothing fits between its pads at any design
 rule you can actually buy, so every pin has to escape outward to a via. On four layers the
@@ -42,24 +43,29 @@ The board is ready to order but has not been built, so nothing here has been mea
 real hardware.
 
 ```
-tools/preflight.py   READY TO ORDER - 0 blocking failures, 5 warnings
+tools/preflight.py   READY TO ORDER - 0 blocking failures, 4 warnings
 tools/check_rf.py    NOT READY TO FLY - the bench measurements don't exist yet
 ```
 
-The layout side is finished: no DRC errors, no ERC violations, all 479 connections on
-fitted parts routed, gerbers checked against the board file, and all 48 part numbers
-confirmed in stock. The thermal and RF figures are all calculated rather than measured,
-which is what the second gate is about.
+The layout side is finished: no DRC errors, no ERC violations, every connection on a
+fitted part routed, gerbers checked against the board file, 133 footprints checked against
+JLCPCB's own joint counts, and all 56 part numbers confirmed in stock.
 
-A couple of things that are easy to misread. The GNSS-denied part is provisioned rather
-than working: the pads are on the board, but the receiver is off-board and I haven't
-bought it yet. And as built this is an ordinary GPS quadcopter with room to expand, since
-every optional sensor ships disabled. ArduPilot refuses to arm if something is configured
-but not physically fitted, so that is deliberate.
+One number is worth knowing before you copy this design: the MAX2112 tuner is down to 20
+units at JLCPCB and nothing else in their library covers 1616 to 1626.5 MHz with quadrature
+baseband out. Buy spares.
+
+A couple of things that are easy to misread. The downconversion happens on the board and
+the H743 samples the I/Q itself, which is the whole point, but the antenna side is bought
+rather than designed: a SAWbird+ IR does the low-noise amplification and the 1620 MHz
+filtering where it belongs, at the antenna, and coax brings it to a U.FL. And the Doppler
+solve itself is not written yet. As built this is an ordinary GPS quadcopter with room to
+expand, since every optional sensor ships disabled. ArduPilot refuses to arm if something
+is configured but not physically fitted, so that is deliberate.
 
 ## Verification
 
-The design is generated from a single Python file and gated by 21 checks. Most of what I
+The design is generated from a single Python file and gated by 24 checks. Most of what I
 learned came from checks that passed while the thing they were supposed to catch was
 still there:
 
@@ -74,12 +80,21 @@ still there:
 - A TVS diode sitting in front of two 30 V regulators clamped at 53 V. It had been chosen
   on cell count, which isn't really the question a TVS answers.
 
-In each case the check was measuring something adjacent to the property that mattered. I
-now try to break every check on purpose before trusting it, and put it back afterwards.
+- A reference oscillator wired with its supply pin grounded. It was an active part wired
+  to a passive crystal's pattern, so it could never have started, and every connectivity
+  check passed because all four pins were connected. Just not to the right things.
+- The board and the design file drifted 43 parts apart, in both directions at once, while
+  the gate reported five unrelated blockers. The comparison between them only ever looked
+  at parts present in both files.
+
+In each case the check was measuring something adjacent to the property that mattered. The
+sharpest version of it is a check that reads a hand-maintained table instead of the thing
+itself, which is why adding a part now means asking which lists have quietly become wrong.
+I try to break every check on purpose before trusting it, and put it back afterwards.
 
 ```bash
 export JLC_LIB=/path/to/jlc.pretty
-python3 tools/preflight.py     # the go/no-go gate
+python3 tools/preflight.py     # the go/no-go gate, 24 checkers behind it
 python3 tools/check_rf.py      # ready-to-fly; computes nothing by design
 ```
 
@@ -91,7 +106,7 @@ run if the export doesn't contain six copper layers.
 
 ```
 tools/design.py          single source of truth: board, airframe, buying list
-tools/preflight.py       the gate, with 21 checkers behind it
+tools/preflight.py       the gate, with 24 checkers behind it
 firmware/NAVCORE_SoOP/   ArduPilot hwdef and shipped defaults
 sitl/                    SITL harness for the GNSS-denied scenarios
 cad/                     OpenSCAD airframe model, generated from design.py
