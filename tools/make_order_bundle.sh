@@ -64,7 +64,7 @@ ASSEMBLY
   Quantity          5 bare PCBs, 2 assembled  (5 is the multilayer minimum,
                     2 the SMT minimum; the 3 spare bare boards are the practice
                     pieces and cost almost nothing)
-  Side              BOTH sides are populated - 30 top, 65 bottom. Two stencils.
+  Side              BOTH sides are populated - @@SIDES@@. Two stencils.
   BOM               BOM-NAVCORE-SoOP.csv
   CPL               CPL-NAVCORE-SoOP.csv
 
@@ -89,6 +89,19 @@ WHAT THIS BOARD IS NOT, YET
   bench measurements exist, and U8/U9 junction temperatures are computed, not
   measured. See docs/BUILD.md T1-T3a before powering anything.
 TXT
+
+# The placement counts are DERIVED from the CPL that ships in this bundle, not typed.
+# They were hardcoded at "30 top, 65 bottom" and the board became 32 top / 84 bottom
+# somewhere in the re-layout - a stale number inside the one document a person orders
+# from. Counting the file that is actually in the zip cannot drift from it.
+# Layer is column 4 of Designator,Mid X,Mid Y,Layer,Rotation - NOT $NF, which is the
+# rotation. Getting that wrong returns 0 for both and the guard below catches it.
+TOPN=$(awk -F, 'NR>1 && tolower($4) ~ /top/' fab/CPL-NAVCORE-SoOP.csv | wc -l)
+BOTN=$(awk -F, 'NR>1 && tolower($4) ~ /bottom/' fab/CPL-NAVCORE-SoOP.csv | wc -l)
+if [ "$TOPN" -eq 0 ] || [ "$BOTN" -eq 0 ]; then
+  echo "REFUSING: could not read placement counts from the CPL" >&2; exit 1
+fi
+sed -i "s/@@SIDES@@/$TOPN top, $BOTN bottom/" "$STAGE/HOW-TO-ORDER.txt"
 
 rm -f "$OUT"
 ( cd "$STAGE" && zip -qr "$OLDPWD/$OUT" . )
