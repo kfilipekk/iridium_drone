@@ -167,14 +167,16 @@ def main():
     if not os.path.exists(SCH_FILE):
         errors.append("NAVCORE-SoOP.kicad_sch is missing - run tools/gen_sch.py")
     else:
-        # Cheap guard first. gen_sch.py writes random UUIDs on every run, so the
-        # schematic can NEVER be verified by regenerating and diffing - that is where
-        # the 4995-line schematic diffs in this history came from. mtime is the only
-        # free signal that it was regenerated after design.py last changed.
+        # mtime is ADVISORY, not a gate. git checkout writes files in whatever order it
+        # likes, so on a fresh clone - or after any history rewrite - the schematic can
+        # land a second before design.py through no fault of anyone's. Failing on that
+        # would mean the repo does not pass its own gate when someone clones it, which
+        # is a worse bug than the one the guard was for. The CONTENT comparison below
+        # is the real check.
         if os.path.getmtime(SCH_FILE) < os.path.getmtime(DESIGN_FILE):
-            errors.append("SCHEMATIC IS OLDER THAN design.py - regenerate it with "
-                          "tools/gen_sch.py, or the netlist check_topology exports "
-                          "describes the previous design")
+            warnings.append("schematic mtime is older than design.py - harmless after a "
+                            "clone or a rebase, but regenerate it if you edited design.py "
+                            "by hand (the content check below is the authority)")
         try:
             import check_topology
             sch_nets, sch_comps = check_topology.netlist()
@@ -205,6 +207,29 @@ def main():
                 errors.append(f"SCHEMATIC IS MISSING {len(missing_nets)} net(s) the "
                               f"design declares - {', '.join(missing_nets[:12])}"
                               + (" ..." if len(missing_nets) > 12 else ""))
+            # NET MEMBERSHIP, not just net NAMES. A net can exist in both files and
+            # connect different pins, which is the change most worth catching and the
+            # one a name-only comparison waves through. `resolved` already holds
+            # (ref, pad-number) pairs because resolve() mapped design.py's pin NAMES
+            # (U1.PB6) onto the numbers the exporter emits (U1.92).
+            # PWR_FLAG symbols carry no footprint, and kicad-cli's exporter leaves them
+            # out of the netlist entirely. They are a schematic annotation telling ERC a
+            # rail is driven, not a connection, so they are excluded from both sides
+            # rather than reported as a disagreement on every power net.
+            flags = set(getattr(design, "PWR_FLAGS", {}).values())
+            wrong = []
+            for n in sorted(want_nets & set(sch_nets)):
+                want_pins = {f"{r}.{num}" for r, num in resolved.get(n, [])
+                             if r not in flags}
+                if want_pins and want_pins != sch_nets[n]:
+                    only_design = sorted(want_pins - sch_nets[n])[:4]
+                    only_sch = sorted(sch_nets[n] - want_pins)[:4]
+                    wrong.append(f"{n} (design has {only_design or 'nothing extra'}, "
+                                 f"schematic has {only_sch or 'nothing extra'})")
+            if wrong:
+                errors.append(f"SCHEMATIC DISAGREES with design.py on {len(wrong)} net(s) "
+                              f"- {'; '.join(wrong[:4])}"
+                              + (" ..." if len(wrong) > 4 else ""))
             print(f"schematic  : {len(sch_refs)} symbols, {len(sch_nets)} nets")
         except Exception as e:
             warnings.append(f"schematic netlist could not be exported ({e}) - "
