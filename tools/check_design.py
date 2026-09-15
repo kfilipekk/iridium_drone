@@ -127,9 +127,9 @@ def main():
     if not os.path.exists(SCH_FILE):
         errors.append("NAVCORE-SoOP.kicad_sch is missing - run tools/gen_sch.py")
     else:
-        #cheap guard first
+        #Mtime is advisory, not a gate
         if os.path.getmtime(SCH_FILE) < os.path.getmtime(DESIGN_FILE):
-            errors.append("Schematic is older than design.py - regenerate it with tools/gen_sch.py, or the netlist check_topology exports describes the previous design")
+            warnings.append("schematic mtime is older than design.py - harmless after a clone or a rebase")
         try:
             import check_topology
             sch_nets, sch_comps = check_topology.netlist()
@@ -155,6 +155,21 @@ def main():
                 errors.append(f"SCHEMATIC IS MISSING {len(missing_nets)} net(s) the "
                               f"design declares - {', '.join(missing_nets[:12])}"
                               + (" ..." if len(missing_nets) > 12 else ""))
+            #net membership, not just net NAMES
+            flags = set(getattr(design, "PWR_FLAGS", {}).values())
+            wrong = []
+            for n in sorted(want_nets & set(sch_nets)):
+                want_pins = {f"{r}.{num}" for r, num in resolved.get(n, [])
+                             if r not in flags}
+                if want_pins and want_pins != sch_nets[n]:
+                    only_design = sorted(want_pins - sch_nets[n])[:4]
+                    only_sch = sorted(sch_nets[n] - want_pins)[:4]
+                    wrong.append(f"{n} (design has {only_design or 'nothing extra'}, "
+                                 f"schematic has {only_sch or 'nothing extra'})")
+            if wrong:
+                errors.append(f"SCHEMATIC DISAGREES with design.py on {len(wrong)} net(s) "
+                              f"- {'; '.join(wrong[:4])}"
+                              + (" ..." if len(wrong) > 4 else ""))
             print(f"schematic  : {len(sch_refs)} symbols, {len(sch_nets)} nets")
         except Exception as e:
             warnings.append(f"schematic netlist could not be exported ({e}) - "
