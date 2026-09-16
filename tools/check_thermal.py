@@ -246,7 +246,9 @@ def main():
                  f"board measures 7443 mm2 of GND plane and 5 vias on the output pad "
                  f"(tools/thermal_vias.py), so the good end is the honest expectation - "
                  f"but the AP2112 has OTSD, so being wrong means a mid-flight BROWNOUT, "
-                 f"not smoke. MEASURE IT at T3a", theta_src)
+                 f"not smoke. U19 (TMP119) sits 3.9 mm away in the same GND pour and "
+                 f"logs this neighbourhood every flight - see TEMP_LOG in defaults.parm",
+                 theta_src)
         elif tj_peak >= tj_max - 25:
             notes.append(f"{ref}: {tj_peak:.0f} C peak leaves under 25 C of margin")
             line("warn", f"{ref} junction temperature",
@@ -271,9 +273,17 @@ def main():
     line("note", "airflow is assumed to be NONE",
          "the stack sits between the ESC and the battery. A hovering quad moves air "
          "downward past it, which helps, but by an amount nobody here has measured")
-    line("note", "MEASURE IT",
-         "thermocouple on U8 AND U9 at docs/BUILD.md T3a, powered, stack assembled, "
-         "logging to the card so U9 sees its real duty, 10 minutes")
+    line("note", "U19 watches U9, and ONLY U9",
+         "U19 is 3.9 mm from U9 and 17.2 mm from U8, so it is a U9 sensor and not a "
+         "board-wide one. It also reads the BOARD, not the junction: it cannot see "
+         "through a package. What it gives is a logged trend from every flight instead "
+         "of one bench reading, which is what turns this from an open question into a "
+         "number that would have to get worse in front of you")
+    line("note", "what still wants a thermocouple",
+         "U8 has no sensor near it, and the board-to-junction offset at U9 is still "
+         "unmeasured. Both are one bench session at docs/BUILD.md T3a - powered, stack "
+         "assembled, logging to the card so U9 sees its real duty, 10 minutes. After "
+         "that the offset is known and U19 carries it forward on its own")
 
     print()
     if fails:

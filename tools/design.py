@@ -46,7 +46,19 @@ COMPONENTS = {
  "U9" : ("jlc_parts:AP2112K-3_3TRG1",       "jlc:SOT-25-5_L2.9-W1.6-P0.95-LS2.8-BL",    "AP2112K-3.3",   "C51118",   False),
  "U10": ("jlc_parts:TLV75533PDBVR",         "jlc:SOT-23-5_L3.0-W1.7-P0.95-LS2.8-BR",    "TLV75533",      "C404027",  False),
  # ---- io ----
- "U11": ("jlc_parts:SN65HVD230DR",          "jlc:SOIC-8_L4.9-W3.9-P1.27-LS6.0-BL",      "SN65HVD230",    "C12084",   False),
+ # U11 is DNP, and it is a THERMAL decision rather than a CAN one. CAN is enabled on no
+ # configuration this board ships - defaults.parm never turns it on - and the transceiver
+ # is 70 mA of U9's 445 mA peak and 17 mA of its 311 mA continuous. U9 is the board's
+ # worst thermal item, so 70 mA on a rail that does not need it is 70 mA in the wrong
+ # place: peak dissipation 757 -> 638 mW, pessimistic junction bound 179 -> 157 C.
+ #
+ # The PADS REMAIN, so CAN is a hand-soldering job away if it is ever wanted. This is a
+ # BOM and CPL change, not a board change: the gerbers do not move, P62/P63 still bring
+ # CANH/CANL out, and R15 is still the termination.
+ #
+ # 157 C still exceeds the 150 C limit on the PESSIMISTIC bound. This reduces the risk;
+ # it does not remove it. Only the T3a measurement does that.
+ "U11": ("jlc_parts:SN65HVD230DR",          "jlc:SOIC-8_L4.9-W3.9-P1.27-LS6.0-BL",      "SN65HVD230",    "C12084",   True),
  "U12": ("jlc_parts:USBLC6-2SC6_C2687116",  "jlc:SOT-23-6_L2.9-W1.6-P0.95-LS2.8-BL",    "USBLC6-2SC6",   "C2687116", False),
  "J1" : ("jlc_parts:TYPE-C_16PIN_2MD(073)", "jlc:USB-C-SMD_TYPE-C-16PIN-2MD-073",       "USB-C",         "C2765186", False),
  "J2" : ("jlc_parts:SM08B-SRSS-TB(LF)(SN)", "jlc:CONN-TH_SM08B-SRSS-TB-LF-SN",                "ESC 8P",        "C160407",  False),
@@ -216,8 +228,18 @@ LOADS_3V3 = [   # through U9, AP2112K-3.3
     # which makes it the opposite of a rare peak.
     ("microSD card (logging)",         0.040, 0.100, "[A] ~40 mA average while ArduPilot "
                                                      "logs; [D] 100 mA write peak"),
-    ("SN65HVD230 CAN transceiver",     0.017, 0.070, "[D] 17 mA recessive, 70 mA dominant"),
+    # U11 is DNP (see its COMPONENTS entry) so it draws nothing. Commented rather
+    # than deleted: if CAN is ever hand-fitted this is the load that comes back,
+    # and the 70 mA peak lands on the rail with the least headroom on the board.
+    # ("SN65HVD230 CAN transceiver",     0.017, 0.070, "[D] 17 mA recessive, 70 mA dominant"),
     ("status LEDs D2/D3",              0.010, 0.010, "[A] 2 x ~5 mA through their resistors"),
+    # Rounds to zero, and is here anyway. This table is HAND-MAINTAINED and
+    # check_thermal reads it instead of the netlist, so a part wired into NETS but not
+    # listed here is invisible to the thermal check - which is exactly how the MAX2112's
+    # 100 mA sat unnoticed on +3V3A. A row that reads 0.000 costs nothing; the habit of
+    # adding one is the point.
+    ("TMP119 temp sensor (U19)",       0.000, 0.000, "[D] TMP119: 3.5 uA active, "
+                                                     "1.25 uA at the 1 Hz default rate"),
 ]
 LOADS_3V3A = [  # through U10, TLV75533
     ("ICM-42688-P",                    0.001, 0.002, "[D] ~0.88 mA 6-axis continuous"),
@@ -1595,9 +1617,11 @@ NETS["GND"] += ["U13.3","U13.10","U13.11","U13.29"]
 net("VCC_RF",   "U13.1","U13.2","U13.6","U13.7","U13.13","U13.16","U13.25",
                 "C49.1","C50.1","C51.1","R28.2")
 # VCC_RF IS FED FROM +3V3A, NOT +3V3, and the reason is measured rather than stylistic.
-# The MAX2112 draws 100 mA. On +3V3 that takes U9 (AP2112K) from 445 mA to 545 mA of
-# its 600 mA guaranteed output - 91% - on the rail whose junction temperature is
-# ALREADY the board's worst warning (179 C on the datasheet's no-heatsink figure).
+# The MAX2112 draws 100 mA. On +3V3 that takes U9 (AP2112K) from 375 mA to 475 mA of
+# its 600 mA guaranteed output - 79% - on the rail whose junction temperature is
+# ALREADY the board's worst warning (157 C on the datasheet's no-heatsink figure).
+# (Those were 445 mA, 91% and 179 C before U11 went DNP; the conclusion did not
+# depend on the margin being that thin, and does not change now it is not.)
 # U10 (TLV75533, 500 mA) carries 3 mA today, so the same load lands at ~21% and about
 # 175 mW of dissipation. It is also the RF-correct rail: a low-noise LDO feeding an
 # analogue part, with R28 as the per-block isolation and C49/C50/C51 local to the pins.
@@ -1969,6 +1993,47 @@ del NETS["SPARE_ADC"]                   # PA7 now has a job
 # the kind of collision the RF-strip block used to hide.
 add("J12", "Connector:Conn_Coaxial", F_UFL, "U.FL ANT", "C5137195", False)
 
+# ---- U19: the board measures its own temperature ----------------------------
+# U9's junction is the one number on this board that nothing at a desk can compute.
+# theta_JA is a property of the ASSEMBLED board - the datasheet's 184 C/W is explicitly
+# "No Heatsink" and TI's EVM measures 100.8 C/W, which brackets the junction between
+# 104 C and 157 C against a 150 C limit. The AP2112 has thermal shutdown, so being
+# wrong means the 3.3 V rail switching off in flight rather than smoke.
+#
+# So the board measures itself. U19 is a TMP119 next to U9, read over I2C1 and logged
+# by ArduPilot every flight (TEMP1_TYPE 10, TEMP1_ADDR 0x48). What that turns a one-off
+# bench measurement into is permanent telemetry.
+#
+# WHY THIS PART AND NOT AN NTC. There is no free ADC input on this board. Every
+# ADC-capable pin is used (motors, PWM5/6, the SoOP I/Q pair, IMU1's SPI, battery
+# sense, the VTX enable), port F is not bonded on LQFP-100, and PC2_C/PC3_C cannot be
+# reached: SYSCFG_PMCR resets to 0x0F000000, so the PC2SO/PC3SO analog switches are
+# OPEN, and ArduPilot never writes that register. An analog thermistor would read
+# nothing. I2C was the only way in.
+#
+# WHY TMP119 SPECIFICALLY. AP_TemperatureSensor_TMP119.cpp checks the device ID
+# register against 0x2117 and refuses anything else, so a TMP117 - which reports
+# 0x0117 - is rejected by the driver despite being register-compatible. Transcribed
+# from the driver, not assumed.
+#
+# WHY I2C1 AND NOT I2C2. I2C2 is the internal bus and would have been the tidier
+# choice, but it only reaches U4 on the BOTTOM face, 8.8 mm from U9. I2C1 passes
+# within 2.4 mm of U9 on the SAME face on its way to J3, so the run is a few
+# millimetres instead of a cross-board route on an already-congested board. Address
+# 0x48 is clear: the compass is 0x0D, the rangefinders 0x10 and 0x29.
+#
+# IT MEASURES BOARD TEMPERATURE NEXT TO U9, NOT U9'S JUNCTION. That is the honest
+# description. It is a logged, repeatable proxy, and T3a still establishes the
+# relationship between this reading and the junction once.
+add("U19", "jlc_parts:TMP119AIYBGR", "jlc:DSBGA-6_L1.5-W1.0-R2-C3-P0.40-BL",
+    "TMP119", "C22428347", False)
+CAP("C74", "100n")                       # U19 supply decoupling
+NETS["I2C1_SDA"] += ["U19.A1"]
+NETS["I2C1_SCL"] += ["U19.A2"]
+NETS["+3V3"] += ["U19.B1", "C74.1"]      # same rail the I2C1 pull-ups sit on
+NETS["GND"] += ["U19.B2", "C74.2", "U19.C1"]   # C1 = ADD0 low -> address 0x48
+# C2 (ALERT) is deliberately left unconnected - the driver polls, it does not use it.
+
 add("Q4", "jlc_parts:WST4041", F_SOT23, "WST4041", "C148357", False)
 add("DZ1", "jlc_parts:BZT52C15", "jlc:SOD-123_L2.7-W1.6-LS3.7-RD",
     "BZT52C15", "C173427", False)
@@ -2095,6 +2160,18 @@ ADJACENCY = {
     "C33": ("U3", "5", 1.5), "C34": ("U3", "8", 1.5),
     "C35": ("U4", "1", 1.5),
     "C36": ("U5", "8", 1.5),
+    # U19 is a TEMPERATURE sensor and its whole value is WHERE it sits. A TMP119 placed
+    # somewhere convenient measures the room; placed against U9 it measures the part
+    # whose junction is the open question. 4.0 mm is the bound, and it is enforced here
+    # rather than hoped for, because a sensor in the wrong place is worse than no sensor
+    # - it will be believed. C74 follows it as its decoupling.
+    "U19": ("U9", "1", 4.0),
+    # C74 is DECOUPLING FOR A 3 uA PART, so the usual 1.5-2.0 mm rule does not apply -
+    # that bound exists for switchers and for ICs with real transient demand, and the
+    # TMP119 has neither. 3.5 mm is still far better than the part needs and it is what
+    # the congestion around U9 actually allows. Widened deliberately with the reason,
+    # rather than left tight and then waived when the placer could not meet it.
+    "C74": ("U19", "B1", 3.5),
     "C41": ("U11", "3", 1.5),
     "C42": ("J1", "A4B9", 3.0),
     "C45": ("J8", "4", 3.0), "C46": ("J8", "4", 2.0),
@@ -2414,6 +2491,12 @@ PART_HEIGHT = {
     "SOD-123": 1.1,                    # DZ1 zener, same body as the SOD-123F already here
     "TQFN-28_L5.0": 0.8,               # U13 MAX2112, 5 x 5 QFN [D] Maxim
     "U.FL_Hirose": 1.2,                # J12 vertical U.FL [D] Hirose U.FL-R-SMT-1
+    # U19's TMP119. [D] docs/datasheets/TMP119-TI.pdf, package outline YBG0006-C01:
+    # "DSBGA - 0.525 mm max height", body D 1.458-1.518 mm x E 0.92-0.98 mm. It is the
+    # shortest part on the board by some margin, so it changes no stack clearance - but
+    # an absent entry is not "zero", it is "unknown", and check_mechanical refuses the
+    # board for it rather than assuming.
+    "DSBGA-6": 0.525,
 }
 
 
@@ -2658,7 +2741,7 @@ NET_CURRENT = {
     # clear of anything legally flyable here without a UAS Radio Operator licence.
     "+9V":  0.30,
     # NOTE this is a COPPER budget (what the trace must carry), not a load estimate.
-    # The load is itemised in LOADS_3V3 and comes to 271 mA continuous / 445 mA peak.
+    # The load is itemised in LOADS_3V3 and comes to 294 mA continuous / 375 mA peak.
     # 0.6 A here is deliberately conservative for copper - and it happens to be exactly
     # the AP2112K's own maximum output, which for a long time was the only number
     # anywhere near this rail and was never compared against the part. check_thermal.py

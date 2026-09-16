@@ -2,8 +2,8 @@
 """
 Thermal vias for the linear regulators, and a measurement of what they buy.
 
-WHY THIS EXISTS. tools/check_thermal.py brackets U9 (AP2112K-3.3, SOT-23-5) at 137 C
-continuous and 179 C peak against a 150 C junction limit - using the Diodes datasheet's
+WHY THIS EXISTS. tools/check_thermal.py brackets U9 (AP2112K-3.3, SOT-23-5) at 132 C
+continuous and 157 C peak against a 150 C junction limit - using the Diodes datasheet's
 theta_JA of 184 C/W, which is explicitly the "No Heatsink" figure. That is the
 MINIMAL-COPPER bound, not this board. A SOT-23-5 has no thermal pad, so every joule
 leaves through the leads into whatever copper is attached to them, and the only lever
