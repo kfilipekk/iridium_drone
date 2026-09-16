@@ -210,3 +210,6 @@ SPIDEV tle_flash  SPI3 DEVID2 EXT_CS2 MODE3 8*MHZ 32*MHZ
 # useless. I2C1 is on the GPS connector - use the compass inside the GPS module.
 define ALLOW_ARM_NO_COMPASS 1
 
+# U19, the TMP119 beside U9, needs this line or it is dead SILICON.
+define AP_TEMPERATURE_SENSOR_ENABLED 1
+
