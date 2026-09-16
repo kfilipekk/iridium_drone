@@ -258,6 +258,27 @@ SPIDEV tle_flash  SPI3 DEVID2 EXT_CS2 MODE3 8*MHZ 32*MHZ
 # useless. I2C1 is on the GPS connector - use the compass inside the GPS module.
 define ALLOW_ARM_NO_COMPASS 1
 
+# U19, the TMP119 beside U9, needs this line or it is DEAD SILICON.
+#
+# AP_TemperatureSensor_config.h picks its own default from the flash budget:
+#
+#     HAL_PROGRAM_SIZE_LIMIT_KB <= 1024  ->  0, compiled out
+#     HAL_PROGRAM_SIZE_LIMIT_KB >  2048  ->  1, real driver
+#     otherwise                          ->  2, "dummy methods for all vehicles
+#                                               except Sub and SITL"
+#
+# This board is FLASH_SIZE_KB 2048 less FLASH_RESERVE_START_KB 128 = 1920 KB, which
+# lands in the middle branch, so ArduCopter got value 2 and AP_TemperatureSensor::init
+# and ::update compiled to EMPTY STUBS - they were four bytes apart in the linked ELF,
+# and no backend object was linked at all.
+#
+# Nothing would have reported this. defaults.parm would still carry TEMP1_TYPE 10,
+# check_params.py would still pass - it validates parameter NAMES against metadata
+# generated from the whole source tree, which says nothing about what THIS board
+# compiled - and the board would boot, arm and fly, logging no temperature ever.
+# tools/check_firmware_features.py exists to catch exactly this.
+define AP_TEMPERATURE_SENSOR_ENABLED 1
+
 # ------------------------------------------------ not yet enabled (commented) ---
 # The L-band receiver lives on its own board (it did not fit here - see
 # docs/LAYOUT.md). When its I/Q reaches these pins, uncomment:

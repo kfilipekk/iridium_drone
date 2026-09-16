@@ -15,7 +15,12 @@ import design
 
 REF   = "firmware/reference/MatekH743-hwdef.dat"
 REFBL = "firmware/reference/MatekH743-hwdef-bl.dat"
-OUT   = "firmware/NAVCORE_SoOP"
+# HWDEF_OUT lets a checker regenerate into a scratch directory and diff the result
+# against what is committed, without touching the real files. check_hwdef.py uses it to
+# prove hwdef.dat and defaults.parm still match this generator - a hand edit to either
+# is reverted the next time this runs, and that has already cost one silently
+# unconfigured sensor.
+OUT   = os.environ.get("HWDEF_OUT", "firmware/NAVCORE_SoOP")
 PCB   = "NAVCORE-SoOP.kicad_pcb"
 
 BOARD_ID = 9001          # 9000-9099 was clear in Tools/AP_Bootloader/board_types.txt
@@ -98,6 +103,27 @@ SPIDEV tle_flash  SPI3 DEVID2 EXT_CS2 MODE3 8*MHZ 32*MHZ
 # No on-board compass by design: a magnetometer 15 mm from a 60 A 4-in-1 ESC is
 # useless. I2C1 is on the GPS connector - use the compass inside the GPS module.
 define ALLOW_ARM_NO_COMPASS 1
+
+# U19, the TMP119 beside U9, needs this line or it is DEAD SILICON.
+#
+# AP_TemperatureSensor_config.h picks its own default from the flash budget:
+#
+#     HAL_PROGRAM_SIZE_LIMIT_KB <= 1024  ->  0, compiled out
+#     HAL_PROGRAM_SIZE_LIMIT_KB >  2048  ->  1, real driver
+#     otherwise                          ->  2, "dummy methods for all vehicles
+#                                               except Sub and SITL"
+#
+# This board is FLASH_SIZE_KB 2048 less FLASH_RESERVE_START_KB 128 = 1920 KB, which
+# lands in the middle branch, so ArduCopter got value 2 and AP_TemperatureSensor::init
+# and ::update compiled to EMPTY STUBS - they were four bytes apart in the linked ELF,
+# and no backend object was linked at all.
+#
+# Nothing would have reported this. defaults.parm would still carry TEMP1_TYPE 10,
+# check_params.py would still pass - it validates parameter NAMES against metadata
+# generated from the whole source tree, which says nothing about what THIS board
+# compiled - and the board would boot, arm and fly, logging no temperature ever.
+# tools/check_firmware_features.py exists to catch exactly this.
+define AP_TEMPERATURE_SENSOR_ENABLED 1
 """
 
 # ---------------------------------------------------------------- defaults ---
@@ -653,6 +679,41 @@ DR_NEXT_MODE 6
 BRD_SAFETY_DEFLT 0
 NTF_LED_TYPES 257
 SERVO13_FUNCTION 120
+
+# --- U19, the board's own thermometer -------------------------------------
+# U9 is an AP2112K-3.3 in SOT-23-5 dropping 1.7 V at up to 375 mA, so it burns 638 mW
+# in a package with no thermal pad. Its junction lands between 104 C and 157 C against
+# a 150 C limit - a BRACKET, not a number, because theta_JA is a property of the
+# assembled board and the two ends come from different sources: the AP2112 datasheet's
+# explicit "no heatsink" 184 C/W, and SBVS293's measured SOT-23-5 EVM figure of
+# 100.8 C/W. This board is 6-layer with 7699 mm2 of GND plane and five vias on U9's
+# output pad, so the truth sits near the low end - but that is an opinion until
+# something measures it.
+#
+# It used to be measured by holding a thermocouple on U9 for ten minutes at BUILD.md
+# T3a, once, by hand. U19 is a TMP119 3.9 mm from U9 on the opposite face, inside the
+# same GND pour, so the number is logged every flight instead. It reads BOARD
+# temperature near U9 and not the junction - it cannot see through a package - but a
+# trend from every flight beats one bench reading that is never repeated.
+#
+# TEMP_LOG IS NOT OPTIONAL. Its default is 0 = Disabled, so without this line the
+# driver polls at 20 Hz and writes nothing to the log: the part would be fitted,
+# healthy and useless, which is the one outcome that makes it not worth its place.
+# The subsystem also has to be compiled in at all - see
+# AP_TEMPERATURE_SENSOR_ENABLED in the hwdef, and tools/check_firmware_features.py,
+# which exists because it was NOT, and nothing noticed.
+TEMP_LOG 1
+TEMP1_TYPE 10
+# Bus 1 is I2C1. hwdef.dat says `I2C_ORDER I2C2 I2C1`, so the index is the position in
+# that list and NOT the peripheral number - bus 0 is I2C2, bus 1 is I2C1. U19 shares
+# I2C1 with the GPS compass and whatever hangs off J3/J9.
+TEMP1_BUS 1
+# 72 = 0x48, the TMP119 address with ADD0 tied to GND, which U19.C1 is. Parameter files
+# are decimal: 0x48 written here parses as 0.
+TEMP1_ADDR 72
+# Source None - this is not an ESC, motor or battery temperature. It also keeps the
+# reading logged under either TEMP_LOG setting.
+TEMP1_SRC 0
 """
 
 
