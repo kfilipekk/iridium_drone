@@ -6,7 +6,7 @@ import design
 
 REF   = "firmware/reference/MatekH743-hwdef.dat"
 REFBL = "firmware/reference/MatekH743-hwdef-bl.dat"
-OUT   = "firmware/NAVCORE_SoOP"
+OUT   = os.environ.get("HWDEF_OUT", "firmware/NAVCORE_SoOP")
 PCB   = "NAVCORE-SoOP.kicad_pcb"
 
 BOARD_ID = 9001
@@ -63,6 +63,9 @@ SPIDEV tle_flash  SPI3 DEVID2 EXT_CS2 MODE3 8*MHZ 32*MHZ
 # No on-board compass by design: a magnetometer 15 mm from a 60 A 4-in-1 ESC is
 # useless. I2C1 is on the GPS connector - use the compass inside the GPS module.
 define ALLOW_ARM_NO_COMPASS 1
+
+# U19, the TMP119 beside U9, needs this line or it is dead SILICON.
+define AP_TEMPERATURE_SENSOR_ENABLED 1
 """
 
 # ---------------------------------------------------------------- defaults ---
@@ -187,6 +190,17 @@ DR_NEXT_MODE 6
 BRD_SAFETY_DEFLT 0
 NTF_LED_TYPES 257
 SERVO13_FUNCTION 120
+
+TEMP_LOG 1
+TEMP1_TYPE 10
+# Bus 1 is I2C1.
+TEMP1_BUS 1
+# 72 = 0x48, the TMP119 address with ADD0 tied to GND, which U19.C1 is. Parameter files
+# are decimal: 0x48 written here parses as 0.
+TEMP1_ADDR 72
+# Source None - this is not an ESC, motor or battery temperature. It also keeps the
+# reading logged under either TEMP_LOG setting.
+TEMP1_SRC 0
 """
 
 

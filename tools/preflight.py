@@ -393,6 +393,15 @@ def firmware(board):
           (f"validated against {fw.group(1)} / {fw.group(2)}" if fw
            else "could not validate - run tools/build_firmware.sh"))
 
+    # Check_params.py proves a parameter name is real.
+    rc, out = run("check_firmware_features.py")
+    m = re.search(r'^(\d+) enabled feature', out, re.M)
+    check("firmware", "enabled features are IN the binary", rc == 0,
+          (f"{m.group(1)} feature(s) traced from defaults.parm into linked symbols"
+           if m and rc == 0 else
+           "a parameter selects a driver this build does not contain - see "
+           "tools/check_firmware_features.py"))
+
     rc, out = run("check_power_cut.py")
     tight = re.findall(r'^\s+(\S+): tightest cut is \S+ mm carrying ~([\d.]+) A',
                        out, re.M)
@@ -568,8 +577,9 @@ def unverifiable():
               "real camera flow over grass - simulated flow is perfect flow; this needs "
               "recorded footage, not a simulator",
               "U9's theta_JA - 184 C/W is the AP2112 datasheet's 'no heatsink' figure, and "
-              "on it U9's PEAK junction (179 C) sits above its 150 C limit. The copper you "
-              "pour is what changes it. docs/BUILD.md T3a",
+              "on it U9's PEAK junction (157 C) sits above its 150 C limit. The copper you "
+              "pour is what changes it. U19 logs the board beside U9 every flight "
+              "(TEMP_LOG), which is a proxy for this, not a substitute. docs/BUILD.md T3a",
               "U8's theta_JA - SLVSD26 gives 118.6 C/W (JEDEC) and 57.2 C/W (EVM); this "
               "6-layer board is between the two and only a thermocouple says where"):
         print(f"     - {s}")

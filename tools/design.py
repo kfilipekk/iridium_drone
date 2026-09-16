@@ -32,7 +32,7 @@ COMPONENTS = {
  "U9" : ("jlc_parts:AP2112K-3_3TRG1",       "jlc:SOT-25-5_L2.9-W1.6-P0.95-LS2.8-BL",    "AP2112K-3.3",   "C51118",   False),
  "U10": ("jlc_parts:TLV75533PDBVR",         "jlc:SOT-23-5_L3.0-W1.7-P0.95-LS2.8-BR",    "TLV75533",      "C404027",  False),
  # ---- io ----
- "U11": ("jlc_parts:SN65HVD230DR",          "jlc:SOIC-8_L4.9-W3.9-P1.27-LS6.0-BL",      "SN65HVD230",    "C12084",   False),
+ "U11": ("jlc_parts:SN65HVD230DR",          "jlc:SOIC-8_L4.9-W3.9-P1.27-LS6.0-BL",      "SN65HVD230",    "C12084",   True),
  "U12": ("jlc_parts:USBLC6-2SC6_C2687116",  "jlc:SOT-23-6_L2.9-W1.6-P0.95-LS2.8-BL",    "USBLC6-2SC6",   "C2687116", False),
  "J1" : ("jlc_parts:TYPE-C_16PIN_2MD(073)", "jlc:USB-C-SMD_TYPE-C-16PIN-2MD-073",       "USB-C",         "C2765186", False),
  "J2" : ("jlc_parts:SM08B-SRSS-TB(LF)(SN)", "jlc:CONN-TH_SM08B-SRSS-TB-LF-SN",                "ESC 8P",        "C160407",  False),
@@ -107,8 +107,10 @@ LOADS_3V3 = [   # through U9, AP2112K-3.3
     # Not zero continuous.
     ("microSD card (logging)",         0.040, 0.100, "[A] ~40 mA average while ArduPilot "
                                                      "logs; [D] 100 mA write peak"),
-    ("SN65HVD230 CAN transceiver",     0.017, 0.070, "[D] 17 mA recessive, 70 mA dominant"),
+    # U11 is DNP (see its COMPONENTS entry) so it draws nothing.
     ("status LEDs D2/D3",              0.010, 0.010, "[A] 2 x ~5 mA through their resistors"),
+    ("TMP119 temp sensor (U19)",       0.000, 0.000, "[D] TMP119: 3.5 uA active, "
+                                                     "1.25 uA at the 1 Hz default rate"),
 ]
 LOADS_3V3A = [  # through U10, TLV75533
     ("ICM-42688-P",                    0.001, 0.002, "[D] ~0.88 mA 6-axis continuous"),
@@ -958,6 +960,16 @@ del NETS["SPARE_ADC"]                   # PA7 now has a job
 # Q4 is a P-FET that blocks a reversed pack.
 add("J12", "Connector:Conn_Coaxial", F_UFL, "U.FL ANT", "C5137195", False)
 
+# ---- U19: the board measures its own temperature ----------------------------
+# U9's junction is the one number on this board that nothing at a desk can compute.
+add("U19", "jlc_parts:TMP119AIYBGR", "jlc:DSBGA-6_L1.5-W1.0-R2-C3-P0.40-BL",
+    "TMP119", "C22428347", False)
+CAP("C74", "100n")                       # U19 supply decoupling
+NETS["I2C1_SDA"] += ["U19.A1"]
+NETS["I2C1_SCL"] += ["U19.A2"]
+NETS["+3V3"] += ["U19.B1", "C74.1"]
+NETS["GND"] += ["U19.B2", "C74.2", "U19.C1"]   # C1 = ADD0 low -> address 0x48
+
 add("Q4", "jlc_parts:WST4041", F_SOT23, "WST4041", "C148357", False)
 add("DZ1", "jlc_parts:BZT52C15", "jlc:SOD-123_L2.7-W1.6-LS3.7-RD",
     "BZT52C15", "C173427", False)
@@ -1008,6 +1020,9 @@ ADJACENCY = {
     "C33": ("U3", "5", 1.5), "C34": ("U3", "8", 1.5),
     "C35": ("U4", "1", 1.5),
     "C36": ("U5", "8", 1.5),
+    # U19 is a temperature sensor and its whole value is where it sits.
+    "U19": ("U9", "1", 4.0),
+    "C74": ("U19", "B1", 3.5),
     "C41": ("U11", "3", 1.5),
     "C42": ("J1", "A4B9", 3.0),
     "C45": ("J8", "4", 3.0), "C46": ("J8", "4", 2.0),
@@ -1167,6 +1182,7 @@ PART_HEIGHT = {
     "SOD-123": 1.1,                    # DZ1 zener, same body as the SOD-123F already here
     "TQFN-28_L5.0": 0.8,               # U13 MAX2112, 5 x 5 QFN [D] Maxim
     "U.FL_Hirose": 1.2,                # J12 vertical U.FL [D] Hirose U.FL-R-SMT-1
+    "DSBGA-6": 0.525,
 }
 
 
