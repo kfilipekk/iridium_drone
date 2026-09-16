@@ -493,6 +493,19 @@ def firmware(board):
           (f"validated against {fw.group(1)} / {fw.group(2)}" if fw
            else "could not validate - run tools/build_firmware.sh"))
 
+    # check_params.py proves a parameter NAME is real. It cannot prove the DRIVER that
+    # name selects was compiled into THIS board's binary, because it validates against
+    # apm.pdef.xml, which is generated from the whole ArduPilot tree. TEMP1_TYPE 10
+    # passed that gate while AP_TemperatureSensor had compiled to empty stubs on a flash
+    # -budget default, so U19 would have flown unread. This reads the linked ELF.
+    rc, out = run("check_firmware_features.py")
+    m = re.search(r'^(\d+) enabled feature', out, re.M)
+    check("firmware", "enabled features are IN the binary", rc == 0,
+          (f"{m.group(1)} feature(s) traced from defaults.parm into linked symbols"
+           if m and rc == 0 else
+           "a parameter selects a driver this build does not contain - see "
+           "tools/check_firmware_features.py"))
+
     rc, out = run("check_power_cut.py")
     tight = re.findall(r'^\s+(\S+): tightest cut is \S+ mm carrying ~([\d.]+) A',
                        out, re.M)
