@@ -4,14 +4,14 @@
 //
 // frame : [D] github.com/tbs-trappy/source_one So1-V6-7inDC-2025-JUL-07.dxf, stack patterns parsed directly 2026-09-02; [L] hobbyrc.co.uk for standoffs 30/22 mm, plates and 143.5 g; [A] plate outline 200x230 mm - overall footprint only, not load-bearing on any check
 // motor : [D] 41 g, M3 19x19, M5 prop adapter thread, 12N14P (BrotherHobby Avenger product data); [A] 1250 g thrust; [D] 28 mm body from the 2806.5 stator designation, [A] 15 mm bell height
-// plates: [M] ezdxf flatten of So1-V6-7inDC-2025-JUL-07.dxf, 2026-09-04; method validated by reproducing the known FC plate to 2 dp. [A] which plate is top vs bottom - inferred from length against the 138 mm battery; confirm with calipers
+// plates: [D] tools/parse_frame_dxf.py -> cad/frame-dxf.json from So1-V6-7inDC-2025-JUL-07.dxf (sha 398556cd); re-derivable, not a one-off flatten
 // batt  : [L] retailer listing
 // prop  : [D] Gemfan Flash 7040-3 published spec: 5 mm centre hole, 178.43 mm disc, 7.9 g, PC. Bore matches the [D] M5 motor shaft. A different brand of 7040 may differ in mass; the 5 mm bore is universal for 7in
 
 wheelbase      = 320.0;
 frame_size_x   = 200.0;
 frame_size_y   = 230.0;
-inner_h        = 30.0;
+inner_h        = 22.0;
 bottom_plate_t = 2.5;
 medium_plate_t = 2.0;
 upper_plate_t  = 2.0;
@@ -95,11 +95,21 @@ hole_dia        = 4.0;
 plate_hole_dia  = 3.2;   // M3 close clearance, > screw_dia
 screw_dia       = 3.0;     // M3
 
-// Standoff length is COMPUTED (design.required_standoff), not taken from the kit.
-// The kit's 30 mm is 0.3 mm SHORT of the stack before any headroom - buy 35 mm.
-standoff_len    = 35;
-standoff_need   = 33.2;   // incl. 3.0 mm headroom
-standoff_slack  = 4.8;
+// TOP PLATE HEIGHT IS THE KIT'S GEOMETRY (design.TOP_PLATE_MOUNT), not a purchase.
+// The DXF settles it: 22 mm standoffs stand on the MID plate at the front posts, 30 mm
+// on the BOTTOM plate at the rear posts, and one flat top plate needs 22 + 8 = 30.
+// standoff_len is the top plate's underside above z = 0 (bottom of the bottom plate).
+standoff_len    = 32.5;   // = bottom_t + 30 = mid plate top + 22
+standoff_front  = 22.0;
+standoff_rear   = 30.0;
+post_od         = 5.0;
+front_posts     = [[-14.6, -27.88], [14.6, -27.88], [-14.6, -52.88], [14.6, -52.88]];   // on the mid plate, rel. stack centre
+rear_posts      = [[-14.6, 27.88], [14.6, 27.88], [-11.0, 80.75], [11.0, 80.75]];   // on the bottom plate
+plate_y_fc      = -29.16;    // plate centres rel. the stack centre, +y aft
+plate_y_bottom  = 31.09;
+plate_y_top     = 4.78;
+standoff_need   = 30.2;   // stack top above z = 0
+standoff_slack  = 2.3;  // headroom under the top plate
 cam_mod_t       = 12.0;
 cam_mod_w       = 30.0;
 pi_l            = 65.0;

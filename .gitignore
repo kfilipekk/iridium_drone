@@ -10,7 +10,7 @@ cad/*.step
 cad/*.glb
 cad/tmp*.scad
 
-#historical board snapshots, 72 MB across 16 files
+#historical board snapshots taken before risky layout operations
 .backup/
 
 #SITL flight logs, 73 MB
@@ -25,6 +25,9 @@ fp-info-cache
 
 #KiCad backup written next to the board by an interrupted save
 *.kicad_pcb.bak
+
+#the same, for the vendored symbol library
+*.kicad_sym.bak
 
 #bench results are measurements of one physical board
 fab/rf-bench-results.json
@@ -47,8 +50,15 @@ SPONSORSHIP.md
 
 #every markdown file except the top-level README is held back for now
 cad/README.md
-fab/ORDER.md
-fab/README.md
 sim/README.md
 sitl/README.md
-.scratch/
+
+#LaTeX drop files from the runbook compile
+docs/*.aux
+docs/*.log
+docs/*.xdv
+docs/*.out
+docs/*.toc
+docs/*.fls
+docs/*.fdb_latexmk
+docs/*.synctex.gz

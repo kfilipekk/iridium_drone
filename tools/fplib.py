@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 """Read .kicad_mod footprints: body text, pad list, and courtyard extent."""
-import re, os, glob
+import re, os, glob, sys
 
-DIRS = ["../../.libraries/jlc.pretty", "/usr/share/kicad/footprints"]
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import jlcpaths
+
+DIRS = [jlcpaths.FOOTPRINTS, "/usr/share/kicad/footprints"]
 
 def find(fpid):
     nick, name = fpid.split(":", 1)
