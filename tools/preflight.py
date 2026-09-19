@@ -836,6 +836,22 @@ def firmware(board):
            f"geo-gated" if rc == 0 and m_frag
            else "see tools/check_links.py"))
 
+    # check_links.py proves the buying links RESOLVE. This proves the FIGURES in the prose
+    # are not retired ones. Five separate defects on 2026-09-19 were the same shape - a
+    # document stating something that had been true and had silently stopped being true, in
+    # a file someone acts on: BATT_AMP_PERVLT "ships at 52.7" (four documents), U6/U7
+    # "on the board but DNP" (deleted in the re-layout), fab/README.md's "NOT READY TO
+    # ORDER" (two revisions stale), J3's retired 6.0 mm nominal (ten places), and 89.2 C/W
+    # cited to a datasheet that does not contain it (three documents). Every one was caught
+    # by a person reading carefully, which is not a mechanism, because they are all prose.
+    rc, out = run("check_doc_figures.py")
+    m_ret = re.search(r'(\d+) mention\(s\) of', out)
+    n_exc = re.search(r'(\d+) mention\(s\) are marked as retired', out)
+    check("assembly", "no retired figure reads as current", rc == 0,
+          (f"{n_exc.group(1) if n_exc else m_ret.group(1) if m_ret else '?'} retired "
+           f"mention(s) in the live docs, every one marked as retired" if rc == 0
+           else "a retired figure is presented as current - run tools/check_doc_figures.py"))
+
     # A module can land on a real footprint and still not be WIRABLE: check_modules.py
     # proves the pads exist, nothing proves that using them does not mean splicing
     # another module's cable. Both were true of an earlier draft - I2C1 reached the outside only

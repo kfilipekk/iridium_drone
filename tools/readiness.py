@@ -157,6 +157,8 @@ PREREQUISITES = [
                "measured by linked symbol size"),
     dict(id="fw.docs", cls=GATED, check="generated doc tables match the code",
          claim="generated tables in the docs are derived from the code, not typed"),
+    dict(id="fw.figures", cls=GATED, tool="check_doc_figures.py",
+         claim="no retired figure is presented as current in the live documentation"),
     dict(id="fw.defaults", cls=GATED, check="default parameters shipped",
          claim="the defaults.parm that ships is the one this board needs"),
 
