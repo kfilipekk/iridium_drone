@@ -9,9 +9,12 @@
 # This file exists to give it its own board ID and to describe only the hardware that
 # is actually populated.
 #
-# NOTE: board ID 9001 is NOT registered with ArduPilot. It is free in
-# Tools/AP_Bootloader/board_types.txt today, but must be requested upstream before
-# this board is shared or sold.
+# NOTE: board ID 9001 is NOT registered with ArduPilot. Verified free in
+# Tools/AP_Bootloader/board_types.txt on 2026-09-19, but it must be requested upstream
+# before this board is shared or sold - and note it sits inside the 1000-19999 range that
+# file reserves for the bootloader, which it says is allocated only via a PR and where it
+# asks for gaps below #7199 to be filled first. See the BOARD_ID block in
+# tools/gen_hwdef.py for the full finding.
 # hw definition file for processing by chibios_pins.py
 # for NAVCORE-SoOP (45 x 46 mm, 30.5 mm stack)
 

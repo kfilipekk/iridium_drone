@@ -23,7 +23,23 @@ REFBL = "firmware/reference/MatekH743-hwdef-bl.dat"
 OUT   = os.environ.get("HWDEF_OUT", "firmware/NAVCORE_SoOP")
 PCB   = "NAVCORE-SoOP.kicad_pcb"
 
-BOARD_ID = 9001          # 9000-9099 was clear in Tools/AP_Bootloader/board_types.txt
+# Board ID. Verified against the registry, not just assumed free.
+#
+# Checked 2026-09-19 by fetching Tools/AP_Bootloader/board_types.txt from ArduPilot
+# master: 9001 is NOT allocated and no NAVCORE/SoOP entry exists, so the ID is free to
+# use locally. But "free" is not the whole story, and the earlier comment here ("9000-9099
+# was clear") recorded only half of it:
+#
+#   * the full range 1000-19999 is RESERVED for the ArduPilot bootloader, and that file
+#     says an ID in it may only be allocated "via a PR against this file";
+#   * it asks for GAPS to be filled rather than new high IDs - "please fill gaps in the
+#     above ranges rather than adding past ID #7199" - and the highest AP_HW_* ID in the
+#     file today is 7171, so 9001 is above every board ArduPilot has.
+#
+# So a request for 9001 may be moved or declined. Nothing breaks locally - this is a
+# bring-up ID for a board that is not shared yet - but ask before assuming 9001 is the
+# number that gets allocated, and do not treat "it was clear" as the approval.
+BOARD_ID = 9001
 
 HEADER = """# hwdef for NAVCORE-SoOP
 #
@@ -36,9 +52,12 @@ HEADER = """# hwdef for NAVCORE-SoOP
 # This file exists to give it its own board ID and to describe only the hardware that
 # is actually populated.
 #
-# NOTE: board ID {bid} is NOT registered with ArduPilot. It is free in
-# Tools/AP_Bootloader/board_types.txt today, but must be requested upstream before
-# this board is shared or sold.
+# NOTE: board ID {bid} is NOT registered with ArduPilot. Verified free in
+# Tools/AP_Bootloader/board_types.txt on 2026-09-19, but it must be requested upstream
+# before this board is shared or sold - and note it sits inside the 1000-19999 range that
+# file reserves for the bootloader, which it says is allocated only via a PR and where it
+# asks for gaps below #7199 to be filled first. See the BOARD_ID block in
+# tools/gen_hwdef.py for the full finding.
 """.format(bid=BOARD_ID)
 
 # Lines to drop: hardware MatekH743 has that this board does not populate.
