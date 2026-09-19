@@ -41,12 +41,22 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import pcbnew
 
 BOARD = "NAVCORE-SoOP.kicad_pcb"
-STEP = 0.025            # grid pitch, mm
+STEP = float(os.environ.get("ROUTE_STEP", "0.025"))   # grid pitch, mm; coarser for long runs
 TRACK_W = 0.1016        # these nets carry microamps; the board minimum is right
 VIA_DIA, VIA_DRILL = 0.45, 0.20
 VIA_COST_MM = 1.2       # a via must buy at least this much detour to be worth taking
 EDGE_KEEP = 0.35
-WINDOW_MM = 7.0
+# In4.Cu is the POWER layer: +3V3, +3V3A, +5V and VBAT live there as zone fills, and
+# HEAD carries no signal track on it at all. A signal routed across it carves the
+# fills - 18 mm of QOUT_P severed the +3V3 island feeding U5 and nothing reported it
+# until the island's only path was gone. Never route there.
+# In1.Cu is the GND plane directly under F.Cu and is kept SOLID: HEAD carries no track
+# on it, preflight refuses "planes carry no routing" and "GND plane is solid" if one
+# appears, and every F.Cu signal's return current runs in it. It looked empty when
+# the first routes went down precisely because it is forbidden. Routing layers on
+# this board are F.Cu, In2.Cu, In3.Cu and B.Cu.
+NO_ROUTE_LAYERS = {"In1.Cu", "In4.Cu"}
+WINDOW_MM = float(os.environ.get("ROUTE_WINDOW", "7.0"))
 
 
 class Grid:
@@ -143,14 +153,14 @@ def collect(board, cu_layers):
     """(netcode -> [(layer, kind, args)]), [(x, y, hole_r)]"""
     items, holes = {}, []
 
-    def add(nc, layer, kind, args):
-        items.setdefault(nc, []).append((layer, kind, args))
+    def add(nc, layer, kind, args, src=None):
+        items.setdefault(nc, []).append((layer, kind, args, src))
 
     for fp in board.Footprints():
         for pad in fp.Pads():
             kind, args = pad_shape(pad)
             for l in pad.GetLayerSet().CuStack():
-                add(pad.GetNetCode(), l, kind, args)
+                add(pad.GetNetCode(), l, kind, args, pad.m_Uuid.AsString())
             d = pad.GetDrillSize()
             if d.x > 0:
                 p = pad.GetPosition()
@@ -161,16 +171,150 @@ def collect(board, cu_layers):
             p = t.GetStart()
             x, y, r = p.x / 1e6, p.y / 1e6, via_radius(t)
             for l in cu_layers:
-                add(nc, l, "cap", (x, y, x, y, r))
+                add(nc, l, "cap", (x, y, x, y, r), t.m_Uuid.AsString())
             holes.append((x, y, t.GetDrill() / 2e6))
         else:
             a, c = t.GetStart(), t.GetEnd()
             add(nc, t.GetLayer(), "cap",
-                (a.x / 1e6, a.y / 1e6, c.x / 1e6, c.y / 1e6, t.GetWidth() / 2e6))
+                (a.x / 1e6, a.y / 1e6, c.x / 1e6, c.y / 1e6, t.GetWidth() / 2e6),
+                t.m_Uuid.AsString())
     return items, holes
 
 
-def route_one(board, grid, cu_layers, src_pad, items, holes, rules, pending_refs,
+def clusters_of(board, netcode):
+    """Connected clusters of one net: tracks, vias, pads and zone-fill islands.
+
+    "Same-net copper" is only a useful routing target if it is NOT already joined to
+    the source. Without this, a pad sitting in an orphaned scrap of pour, or a track
+    left dangling by a rip-up, routes to its own cluster in zero moves and reports
+    success - the U19 ground island and two SOOP_?_ADC gaps were exactly that.
+    Returns {uuid: cluster_index} over tracks, vias and pads. Keyed by UUID and not
+    id(): SWIG mints a new Python wrapper every time a board is iterated, so id() from
+    one pass never matches id() from the next, and a lookup that returned None for
+    everything made None == None exclude every target on the board."""
+    tracks = [t for t in board.GetTracks() if t.GetNetCode() == netcode]
+    pads = [q for fp in board.Footprints() for q in fp.Pads() if q.GetNetCode() == netcode]
+    nodes = tracks + pads
+    par = list(range(len(nodes)))
+
+    def find(i):
+        while par[i] != i:
+            par[i] = par[par[i]]
+            i = par[i]
+        return i
+
+    def union(i, j):
+        par[find(i)] = find(j)
+
+    def seg_dist(px, py, ax, ay, bx, by):
+        dx, dy = bx - ax, by - ay
+        L2 = dx * dx + dy * dy
+        t = 0.0 if L2 == 0 else max(0.0, min(1.0, ((px - ax) * dx + (py - ay) * dy) / L2))
+        return math.hypot(px - (ax + t * dx), py - (ay + t * dy))
+
+    def geom(n):
+        if n.Type() == pcbnew.PCB_PAD_T:
+            return ("pad", set(n.GetLayerSet().CuStack()), n.GetBoundingBox(), None)
+        if n.Type() == pcbnew.PCB_VIA_T:
+            p = n.GetStart()
+            return ("via", None, (p.x, p.y), via_radius(n) * 1e6)
+        a, c = n.GetStart(), n.GetEnd()
+        return ("trk", n.GetLayer(), (a.x, a.y, c.x, c.y), n.GetWidth() / 2)
+
+    G = [geom(n) for n in nodes]
+    for i in range(len(nodes)):
+        for j in range(i + 1, len(nodes)):
+            a, b = G[i], G[j]
+            if a[0] == "pad" and b[0] == "pad":
+                continue
+            if a[0] == "pad":
+                a, b = b, a
+            hit = False
+            if b[0] == "pad":
+                if a[0] == "trk" and a[1] not in b[1]:
+                    continue
+                pts = [(a[2][0], a[2][1]), (a[2][2], a[2][3])] if a[0] == "trk" else [a[2]]
+                hit = any(b[2].Contains(pcbnew.VECTOR2I(int(x), int(y))) for x, y in pts)
+            elif a[0] == "via" and b[0] == "via":
+                hit = math.hypot(a[2][0] - b[2][0], a[2][1] - b[2][1]) <= a[3] + b[3]
+            elif a[0] == "via" or b[0] == "via":
+                v, t = (a, b) if a[0] == "via" else (b, a)
+                hit = seg_dist(v[2][0], v[2][1], *t[2]) <= v[3] + t[3]
+            else:
+                if a[1] != b[1]:
+                    continue
+                tol = a[3] + b[3]
+                hit = (seg_dist(a[2][0], a[2][1], *b[2]) <= tol or
+                       seg_dist(a[2][2], a[2][3], *b[2]) <= tol or
+                       seg_dist(b[2][0], b[2][1], *a[2]) <= tol or
+                       seg_dist(b[2][2], b[2][3], *a[2]) <= tol)
+            if hit:
+                union(i, j)
+    # zone-fill islands join every via/pad that lands inside them on that layer
+    for z in board.Zones():
+        if z.GetNetCode() != netcode or z.GetIsRuleArea():
+            continue
+        for layer in z.GetLayerSet().CuStack():
+            ps = z.GetFilledPolysList(layer)
+            for k in range(ps.OutlineCount()):
+                inside = []
+                for i, n in enumerate(nodes):
+                    g = G[i]
+                    if g[0] == "trk":
+                        continue
+                    if g[0] == "pad" and layer not in g[1]:
+                        continue
+                    p = n.GetPosition() if g[0] == "pad" else n.GetStart()
+                    if ps.Contains(p, k):
+                        inside.append(i)
+                for i in inside[1:]:
+                    union(inside[0], i)
+    roots = {}
+    out = {}
+    for i, n in enumerate(nodes):
+        r = find(i)
+        out[n.m_Uuid.AsString()] = roots.setdefault(r, len(roots))
+    out["_n"] = len(roots)
+    return out
+
+
+def keepouts(board, grid, cu_layers, block, viab, clr, edge_clr):
+    """Rule areas and Edge.Cuts geometry are obstacles on every layer they touch.
+
+    Neither is copper, so collect() never sees them, and the first routes past the
+    mounting holes went straight through the hole and its keepout - seven
+    copper_edge_clearance and nine items_not_allowed errors. A rule area blocks
+    tracks AND vias on its layers; an edge cut (the outline, a screw hole drawn as a
+    circle) blocks within the board's copper-to-edge clearance on every layer."""
+    lidx = {l: k for k, l in enumerate(cu_layers)}
+    zones = list(board.Zones()) + [z for fp in board.Footprints() for z in fp.Zones()]
+    for z in zones:
+        if not z.GetIsRuleArea():
+            continue
+        bb = z.GetBoundingBox()
+        cx, cy = bb.GetCenter().x / 1e6, bb.GetCenter().y / 1e6
+        w, h = bb.GetWidth() / 1e6, bb.GetHeight() / 1e6
+        lays = [l for l in z.GetLayerSet().CuStack() if l in lidx] or list(lidx)
+        for l in lays:
+            grid.rect(block[lidx[l]], cx, cy, w, h, 0, clr)
+        grid.rect(viab, cx, cy, w, h, 0, clr)
+    for d in board.GetDrawings():
+        if d.GetLayer() != pcbnew.Edge_Cuts:
+            continue
+        sh = d.GetShape() if hasattr(d, "GetShape") else None
+        if sh == pcbnew.SHAPE_T_CIRCLE:
+            c = d.GetCenter(); r = d.GetRadius() / 1e6
+            for k in range(len(cu_layers)):
+                grid.capsule(block[k], c.x / 1e6, c.y / 1e6, c.x / 1e6, c.y / 1e6, r + edge_clr)
+            grid.capsule(viab, c.x / 1e6, c.y / 1e6, c.x / 1e6, c.y / 1e6, r + edge_clr + VIA_DIA / 2)
+        elif sh in (pcbnew.SHAPE_T_SEGMENT, pcbnew.SHAPE_T_ARC):
+            a, b = d.GetStart(), d.GetEnd()
+            for k in range(len(cu_layers)):
+                grid.capsule(block[k], a.x / 1e6, a.y / 1e6, b.x / 1e6, b.y / 1e6, edge_clr)
+            grid.capsule(viab, a.x / 1e6, a.y / 1e6, b.x / 1e6, b.y / 1e6, edge_clr + VIA_DIA / 2)
+
+
+def route_one(board, grid, cu_layers, src_pad, items, holes, rules, pending_pads,
               stitch=False):
     clr, hole_clr, h2h = rules
     mynet = src_pad.GetNetCode()
@@ -183,12 +327,18 @@ def route_one(board, grid, cu_layers, src_pad, items, holes, rules, pending_refs
     viab = grid.blank()
     tgt = [grid.blank() for _ in range(nL)]
 
+    cl = clusters_of(board, mynet)
+    my_cluster = cl.get(src_pad.m_Uuid.AsString())
+    assert my_cluster is not None, "source pad not in its own net's cluster map"
+
     for nc, lst in items.items():
         friend = (nc == mynet)
-        for layer, kind, args in lst:
+        for layer, kind, args, src in lst:
             k = lidx.get(layer)
             if k is None:
                 continue
+            if friend and src is not None and cl.get(src) == my_cluster:
+                continue                # already joined to the source: not a target
             if friend:
                 if kind == "cap":
                     grid.capsule(tgt[k], *args)
@@ -205,12 +355,31 @@ def route_one(board, grid, cu_layers, src_pad, items, holes, rules, pending_refs
                     grid.rect(viab, cx, cy, w, h, ang, via_inf)
     for (hx, hy, hr) in holes:
         grid.capsule(viab, hx, hy, hx, hy, hr + h2h + VIA_DRILL / 2)
-
-    # copper belonging to a pad we have not routed yet is not a valid target
+    keepouts(board, grid, cu_layers, block, viab, clr + TRACK_W / 2,
+             board.GetDesignSettings().m_CopperEdgeClearance / 1e6 + TRACK_W / 2)
+    # NO VIA IN ANY PAD, same net or not. Other-net pads are already in viab with
+    # full clearance; a same-net pad is not an electrical obstacle, but an unfilled
+    # via inside a solder pad wicks the joint dry during reflow, and the first pass
+    # of this put one on the corner of an 0402. A via must clear every pad's copper.
     for fp in board.Footprints():
-        if fp.GetReference() not in pending_refs:
-            continue
         for pad in fp.Pads():
+            kind, args = pad_shape(pad)
+            if kind == "cap":
+                x1, y1, x2, y2, rr = args
+                grid.capsule(viab, x1, y1, x2, y2, rr + VIA_DIA / 2 + 0.05)
+            else:
+                cx, cy, w, h, ang = args
+                grid.rect(viab, cx, cy, w, h, ang, VIA_DIA / 2 + 0.05)
+
+    # A pad still waiting to be routed is not a valid target - joining two unrouted
+    # pads leaves both disconnected from the net. PER PAD, not per footprint: the
+    # first version excluded every pad of any footprint with a pending pad, so
+    # routing R50.1 to U14.2 was refused because U14.1 was pending on a different
+    # net, and five short links "had no path".
+    for fp in board.Footprints():
+        for pad in fp.Pads():
+            if f"{fp.GetReference()}.{pad.GetNumber()}" not in pending_pads:
+                continue
             if pad.GetNetCode() != mynet:
                 continue
             kind, args = pad_shape(pad)
@@ -303,7 +472,21 @@ def route_one(board, grid, cu_layers, src_pad, items, holes, rules, pending_refs
                 prev[nf] = f
                 heapq.heappush(pq, (nd, nf))
     if goal is None:
-        return None, "no path exists on any layer"
+        # say how far the search got, per layer, so a failure is diagnosable
+        reach = {}
+        for k in range(nL):
+            xs = [i for j in range(grid.ny) for i in range(nx)
+                  if dist[k * n + j * nx + i] < INF]
+            if xs:
+                ys = [j for j in range(grid.ny) for i in range(nx)
+                      if dist[k * n + j * nx + i] < INF]
+                reach[board.GetLayerName(cu_layers[k])] = (
+                    len(xs), round(grid.x0 + min(xs) * STEP, 1), round(grid.x0 + max(xs) * STEP, 1),
+                    round(grid.y0 + min(ys) * STEP, 1), round(grid.y0 + max(ys) * STEP, 1))
+        nvia = sum(1 for idx in range(n) if not viab[idx])
+        return None, (f"no path exists on any layer; reached "
+                      f"{ {k: f'{v[0]} cells x{v[1]}..{v[2]} y{v[3]}..{v[4]}' for k, v in reach.items()} }; "
+                      f"{nvia} via-legal cells in window")
     path = [goal]
     while path[-1] in prev:
         path.append(prev[path[-1]])
@@ -373,7 +556,8 @@ def main(argv):
     ds = board.GetDesignSettings()
     rules = (ds.m_MinClearance / 1e6, ds.m_HoleClearance / 1e6,
              ds.m_HoleToHoleMin / 1e6)
-    cu_layers = list(board.GetEnabledLayers().CuStack())
+    cu_layers = [l for l in board.GetEnabledLayers().CuStack()
+                 if board.GetLayerName(l) not in NO_ROUTE_LAYERS]
     bb = board.GetBoardEdgesBoundingBox()
 
     pads = []
@@ -393,14 +577,14 @@ def main(argv):
     print(f"grid {grid.nx}x{grid.ny} @ {STEP} mm, {len(cu_layers)} layers, "
           f"clearance {rules[0]} / hole {rules[1]} / hole-to-hole {rules[2]} mm")
 
-    pending = {ref for _, ref, _ in pads}
+    pending = {spec.rstrip("^") for spec, _, _ in pads}
     ok = True
     for spec, ref, pad in pads:
         items, holes = collect(board, cu_layers)
-        pending.discard(ref)
+        pending.discard(spec.rstrip("^"))
         st = spec.endswith("^")
         path, err = route_one(board, grid, cu_layers, pad, items, holes,
-                              rules, pending | {ref}, stitch=st)
+                              rules, pending | {spec.rstrip("^")}, stitch=st)
         if path is None:
             print(f"  {spec:8} [{pad.GetNetname():10}] FAILED: {err}")
             ok = False

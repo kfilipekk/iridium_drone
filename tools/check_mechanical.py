@@ -147,31 +147,17 @@ def main():
     # required_standoff() returns buy=None when the stack is taller than the longest
     # stock length. Nothing handled that: "z_max > None" is a TypeError in Python 3, so
     # the one genuinely unrecoverable geometry crashed instead of reporting.
-    if STO["buy"] is None:
-        line("FAIL", "no stock standoff is long enough",
-             f"stack needs {STO['need']:.1f} mm; the longest stock length is "
-             f"{max(design.STANDOFF_STOCK):.0f} mm", STO["src"])
-    else:
-        # This comparison is a CONSISTENCY check, not an independent one:
-        # required_standoff() picks the first stock size >= this same stack plus
-        # headroom, so it passes by construction. It is kept because it would catch a
-        # future change that computes the two from different inputs - but the load
-        # bearing test is z_max against the FRAME, below, which is external.
-        line("FAIL" if z_max > STO["buy"] else "ok", "tallest point of the stack",
-             f"{z_max:.1f} mm against a {STO['buy']} mm standoff "
-             f"({STO['buy']-z_max:.1f} mm spare) - consistency check, passes by "
-             f"construction", STO["src"])
-    # This was "FAIL if STO[buy] <= FRAME[inner_h]", which is INVERTED: it fails in the
-    # good case (a kit whose standoffs are already long enough) and passes in the bad
-    # one. Needing a longer standoff is a two-pound purchase, not a design failure, so
-    # it is a note either way. What IS a failure is a stack that no standoff fits,
-    # handled above.
-    line("note" if STO["buy"] and STO["buy"] > FRAME["inner_h"] else "ok",
-         "standoff length vs the kit's",
-         f"stack needs {z_max:.1f} mm and the kit ships {FRAME['inner_h']:.0f} mm - "
-         + (f"BUY {STO['buy']} mm (a few pounds, and standoff length is a purchase, "
-            f"not a frame property)" if STO["buy"] else
-            "and NOTHING IN STOCK FITS - see the failure above"), STO["src"])
+    # THE load-bearing test, and it is external: the top plate sits where the KIT's
+    # standoffs put it (design.TOP_PLATE_MOUNT, from the manufacturer DXF - 22 mm front
+    # posts on the mid plate, 30 mm rear posts on the bottom plate), and the stack's
+    # tallest part must clear its underside. This replaced a pair of checks against a
+    # standoff "to buy" at the 30.5 pattern - a standoff the frame does not have, since
+    # the top plate has no 30.5 holes; one of those passed by construction and the
+    # other told PARTS.csv to buy 35 mm.
+    line("FAIL" if z_max > STO["top_plate_z"] else "ok", "tallest point of the stack",
+         f"{z_max:.1f} mm against the top plate's underside at {STO['top_plate_z']:.1f} mm "
+         f"({STO['top_plate_z']-z_max:.1f} mm spare) - the kit's {STO['buy']:.0f} mm front "
+         f"standoffs over the mid plate; nothing to buy", STO["src"])
 
     # ---------------------------------------------------- board vs the ESC, per edge
     print("\n=== board vs the ESC below it (COMPUTED) ===")
@@ -299,9 +285,10 @@ def main():
 
     print("\n=== SETTLED - do not go measuring these ===")
     line("ok", "top plate height",
-         f"{STO['buy']} mm standoffs against a {z_max:.1f} mm stack = "
-         f"{STO['buy']-z_max:.1f} mm spare. The kit's {FRAME['inner_h']:.0f} mm does NOT "
-         f"fit; standoff length is a PURCHASE, so buy {STO['buy']} mm",
+         f"the kit's {STO['buy']:.0f} mm front standoffs stand on the mid plate; the top "
+         f"plate's underside is {STO['top_plate_z']:.1f} mm up against a {z_max:.1f} mm "
+         f"stack = {STO['top_plate_z']-z_max:.1f} mm spare. Use the kit's standoffs - the "
+         f"earlier 'buy 35 mm' assumed a standoff at the 30.5 pattern that does not exist",
          STO["src"])
     line("ok", "motor screw length",
          f"arm {FRAME['arm_t']:.0f} mm is published, so tools/fasteners.py derives the screw - "

@@ -50,7 +50,7 @@ DROP = [
     (r'^ROMFS_WILDCARD libraries/AP_OSD', "no analogue OSD fitted"),
     (r'^PA4 BATT2_VOLTAGE_SENS', "single battery; freed for the SoOP I/Q input"),
     (r'^PC4 PRESSURE_SENS',      "no airspeed sensor; freed for the SoOP I/Q input"),
-    (r'^PC5 RSSI_ADC',           "RSSI arrives over CRSF; freed for the SoOP AGC readback"),
+    (r'^PC5 RSSI_ADC',           "RSSI arrives over CRSF; PC5 is spare"),
     (r'^define HAL_BATT2_',      "single battery"),
     (r'^define HAL_DEFAULT_AIRSPEED_PIN', "no airspeed sensor"),
     (r'^define BOARD_RSSI_ANA_PIN', "RSSI arrives over CRSF"),
@@ -724,7 +724,7 @@ REVB = """
 #
 #   PC4 SOOP_I_ADC   ADC1 SCALE(1)   # ADC1 ch4
 #   PA4 SOOP_Q_ADC   ADC2 SCALE(1)   # ADC2 ch18, sampled simultaneously with PC4
-#   PC5 SOOP_RSSI    ADC1 SCALE(1)   # MAX2112 AGC readback
+#   PC5 SOOP_Q_TAP   ADC1 SCALE(1)   # 10k tap on the tuner Q+ output, not an RSSI
 #
 # Sample PC4 on ADC1 and PA4 on ADC2 in DUAL REGULAR SIMULTANEOUS mode. Any I/Q
 # sampling skew becomes a phase error, which corrupts the Doppler estimate directly.

@@ -23,7 +23,24 @@ unnumbered mechanical pads, so the rule is not "allow +/- 2" - it is "exclude pa
 no pad number", after which all 49 parts agree exactly. A tolerance would have hidden a
 real two-pad error; this does not.
 
-Needs the jlcparts mirror (see tools/check_lcsc_stock.py for the fetch command).
+THE AUTHORITY, AND WHY IT CHANGED. Until 2026-09-18 this check REQUIRED the community
+jlcparts mirror. Upstream stopped rebuilding it, so it returned no rows for most of this
+BOM and the check could only print NOT IN MIRROR - which preflight then had to treat as a
+blocker, because "could not check" is not "passed". It now reads the DATED SNAPSHOT in
+fab/stock-snapshot.json, which tools/check_stock.py fetches from JLCPCB's own parts API.
+
+That is not a downgrade. The snapshot carries componentSpecificationEn - JLCPCB's own
+package string, e.g. 'LQFP-100(14x14)' - for every line. For U1 the mirror's description
+field was EMPTY, which is the only reason DATASHEET_PACKAGE ever needed a hand-entered
+entry for the most expensive part on the board. The live string states it.
+
+Pad count is then derived from that token by PACKAGE_PADS: a LQFP-100 IS a 100-pin
+package, a SOT-23-5 IS a five-lead one. Definitional, not per-part - the same lever
+FAMILY_PITCH already pulls for pitch. Tokens that state no count (the connectors' bare
+'SMD') yield no comparison, and are reported as uncovered rather than assumed good.
+
+The mirror is still used when present, because it carries a real JOINT count. The live
+API does not publish one.
 
     python3 tools/check_footprints.py
 """
@@ -32,8 +49,10 @@ import glob, gzip, json, os, re, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import pcbnew, design
 
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BOARD = sys.argv[1] if len(sys.argv) > 1 else "NAVCORE-SoOP.kicad_pcb"
 DATA = os.environ.get("JLC_DATA", "/tmp/nav/jlc")
+SNAPSHOT = os.path.join(REPO, "fab", "stock-snapshot.json")
 
 # Parts JLCPCB assembles but the community mirror does not carry. Not a pass - a
 # redirection to the authority, the same way check_lcsc_stock.py handles it.
@@ -66,7 +85,53 @@ DATASHEET_PACKAGE = {
 FAMILY_PITCH = {
     "SOT-23": 0.95, "SOT-25": 0.95, "SOIC": 1.27, "LQFP-100": 0.50,
     "LGA-14": 0.50, "LGA-12": 0.80, "QFN-8": 1.25, "COB-28": 0.65,
+    "SOP-8": 1.27, "TQFN-28-EP": 0.50, "DSBGA-6": 0.40,
 }
+
+# Electrical pad count implied by a JLCPCB package token. Definitional, and keyed
+# explicitly rather than regex-parsed on purpose: a regex over the digits in
+# 'DO-214AA(SMB)' reads 214, which would fail every diode on the board. -EP adds the
+# exposed pad because JLCPCB counts it as a joint - TQFN-28-EP is 28 leads + 1 pad = 29,
+# which is exactly what the MAX2112's footprint has.
+PACKAGE_PADS = {
+    "SMD3225-4P": 4, "LQFP-100": 100, "LGA-14": 14, "LGA-12": 12, "QFN-8": 8,
+    "SOIC-8": 8, "SOIC-8-208MIL": 8, "SOP-8": 8, "TQFN-28-EP": 29, "DSBGA-6": 6,
+    "COB-28": 28, "SOT-23": 3, "SOT-23-3": 3, "SOT-23-3L": 3, "SOT-23-5": 5,
+    "SOT-23-6": 6, "SOT-25-5": 5, "SOD-123": 2, "DO-214AA": 2, "DO-214AA(SMB)": 2,
+    "0402": 2, "0603": 2, "0805": 2, "1206": 2,
+}
+
+
+def pads_from_spec(spec):
+    """Pin count JLCPCB's package string implies, or None if it states no count.
+
+    Tokens arrive as 'SMD3225-4P', 'LQFP-100(14x14)', 'TQFN-28-EP(5x5)' - the body dims
+    in parentheses are not part of the package name, so they are stripped first. The
+    bare 'SMD' and 'SMD,P=1mm,...' of the connectors deliberately resolve to None.
+    """
+    if not spec:
+        return None
+    up = spec.strip().upper()
+    # Exact token first. 'DO-214AA(SMB)' is the package NAME, not a name plus body dims,
+    # so stripping the parentheses - which is right for 'LQFP-100(14x14)' - would throw
+    # away the half that identifies it and leave every diode on the board unverified.
+    if up in PACKAGE_PADS:
+        return PACKAGE_PADS[up]
+    return PACKAGE_PADS.get(re.sub(r"\(.*?\)", "", up).strip())
+
+
+def load_snapshot():
+    """{code: (mpn, package_spec)} from the dated JLCPCB snapshot, {} if unreadable."""
+    try:
+        with open(SNAPSHOT) as fh:
+            d = json.load(fh)
+    except (OSError, ValueError):
+        return {}
+    out = {}
+    for code, r in (d.get("lines") or {}).items():
+        if r.get("found"):
+            out[code] = (r.get("mpn"), r.get("spec"))
+    return out
 
 
 def norm(t):
@@ -109,7 +174,8 @@ def family_of(text):
         return None
     for fam in ("LQFP-100", "LGA-14", "LGA-12", "QFN-8", "COB-28", "SOIC-8",
                 "SOT-23-6", "SOT-23-5", "SOT-25-5", "SOT-23-3", "SOT-23",
-                "SMD3225-4P", "SOIC"):
+                "SMD3225-4P", "TQFN-28-EP", "TQFN-28", "SOP-8", "DSBGA-6", "SOD-123",
+                "SOIC"):
         if fam in text.upper().replace("_", "-"):
             return fam
     return None
@@ -134,11 +200,15 @@ def electrical_pads(fp):
 
 
 def main():
-    if not glob.glob(os.path.join(DATA, "*.jsonl.gz")):
-        print(f"no jlcparts data in {DATA} - see tools/check_lcsc_stock.py for the fetch "
-              f"command. SKIPPING (this check needs the outside authority to mean "
-              f"anything).")
-        return 0
+    has_mirror = bool(glob.glob(os.path.join(DATA, "*.jsonl.gz")))
+    snap = load_snapshot()
+    if not has_mirror and not snap:
+        print(f"no jlcparts mirror in {DATA} and no snapshot at {SNAPSHOT} - there is no "
+              f"outside authority to check against. Run `python3 tools/check_stock.py "
+              f"--fetch` to rebuild the snapshot.")
+        return 1
+    print(f"authority: JLCPCB live snapshot {SNAPSHOT}" +
+          ("  + jlcparts mirror (joint counts)" if has_mirror else ""))
 
     board = pcbnew.LoadBoard(BOARD)
     on_board = {fp.GetReference(): fp for fp in board.GetFootprints()}
@@ -174,17 +244,33 @@ def main():
         mech = len(allp) - len(elec)
         rec = recs.get(lcsc)
         if not rec:
-            if lcsc in MIRROR_GAPS:
+            # No mirror row: the live snapshot is the authority. Its package string
+            # still yields a pad count for every IC, connector-free part and passive.
+            sn = snap.get(lcsc)
+            if sn:
+                spec_pads = pads_from_spec(sn[1])
+                rec = (sn[0], spec_pads)
+                descs[lcsc] = sn[1] or ""
+            elif lcsc in MIRROR_GAPS:
                 notes.append(f"{ref} ({lcsc}): {MIRROR_GAPS[lcsc]}")
                 print(f"{ref:6} {lcsc:11} {len(allp):5} {mech:5} {len(elec):5} "
-                      f"{'(gap)':>5}  -- mirror gap, verify at jlcpcb.com/partdetail")
+                      f"{'(gap)':>5}  -- known gap, verify at jlcpcb.com/partdetail")
+                continue
             else:
-                notes.append(f"{ref} ({lcsc}): not in the mirror - check "
-                             f"jlcpcb.com/partdetail/{lcsc} by hand")
+                notes.append(f"{ref} ({lcsc}): in neither the mirror nor the snapshot - "
+                             f"check jlcpcb.com/partdetail/{lcsc} by hand")
                 print(f"{ref:6} {lcsc:11} {len(allp):5} {mech:5} {len(elec):5} "
-                      f"{'?':>5}  -- NOT IN MIRROR")
-            continue
+                      f"{'?':>5}  -- NO AUTHORITY")
+                continue
         mfr, joints = rec
+        # A token with no count in it ('SMD') compares nothing. Say so rather than
+        # letting the row print as though it had been checked.
+        if joints is None:
+            notes.append(f"{ref} ({lcsc}): JLCPCB package string '{descs.get(lcsc)}' "
+                         f"states no pin count - pad count UNVERIFIED for this part")
+            print(f"{ref:6} {lcsc:11} {len(allp):5} {mech:5} {len(elec):5} "
+                  f"{'--':>5}  {str(mfr)[:30]}  -- no count in package string")
+            continue
         flag = ""
         if joints and len(elec) != joints:
             flag = "  <-- MISMATCH: wrong package variant scraps the board"
@@ -212,6 +298,8 @@ def main():
         fpname = fp.GetFPIDAsString().split(":")[-1]
         desc = descs.get(lcsc) or ""
         ds = DATASHEET_PACKAGE.get(lcsc)
+        if not desc:
+            desc = (snap.get(lcsc) or (None, ""))[1] or ""
         jl_fam = family_of(desc)
         fp_fam = family_of(fpname)
         pitch = measured_pitch(fp)
@@ -220,6 +308,8 @@ def main():
             jl_fam, src = ds[0], "datasheet"
         # Strongest first: is the footprint named after the exact part number?
         mfr = (recs.get(lcsc) or ("", None))[0]
+        if not mfr:
+            mfr = (snap.get(lcsc) or (None, ""))[0]
         if not mfr and lcsc in DATASHEET_PACKAGE:
             mfr = DATASHEET_PACKAGE[lcsc][0]
         if mpn_matches(fpname, mfr):
@@ -258,7 +348,7 @@ def main():
     print(f"  {pkg_ok} package(s) agree with an outside package string")
 
     print("-" * 78)
-    print(f"{ok} footprint(s) agree with JLCPCB's joint count, {len(fails)} mismatch(es), "
+    print(f"{ok} footprint(s) agree with an outside pad count, {len(fails)} mismatch(es), "
           f"{len(notes)} needing a manual look")
     for n in notes:
         print(f"  note {n}")

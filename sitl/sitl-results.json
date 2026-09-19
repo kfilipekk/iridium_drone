@@ -1,0 +1,31 @@
+{
+ "ardupilot_head": "1511f27194f1dcc3728270883047bdf022b3fd53",
+ "defaults_path": "firmware/NAVCORE_SoOP/defaults.parm",
+ "defaults_sha256": "04f9309b09a179fb8afbfa012d8c3992a3be7f6b3f579f088ce6037e04ff2a26",
+ "scenarios": {
+  "baseline_gps": "PASS",
+  "deadreckon": "PASS - applet entered Guided_NoGPS and recovered to ['RTL', 'RTL', 'RTL', 'RTL', 'RTL']",
+  "ekf_failsafe": "PASS - EKF failsafe ANNUNCIATED on the SoOP fix but took no action, which is what FS_EKF_ACTION 0 promises; said: ['EKF Failsafe', 'EKF Failsafe Cleared']; other modes after it (applet, not failsafe): ['GUIDED_NOGPS->RTL at t+104.4s']",
+  "extnav_1hz": "INFO - p95 243.98 m during denial (no pass/fail)",
+  "flow_only": "INFO - p95 245.34 m during denial (no pass/fail)",
+  "measurement_canary": "PASS - reported 330.91 m against a 100 m injected offset, so the measurement is real. The excess is the flight's own divergence on top of the injection, which is a result rather than a measurement fault",
+  "proximity_absent": "PASS - refused to arm on PRX1, which is the point",
+  "proximity_ring": "INFO - p95 0.06 m during denial (no pass/fail)",
+  "rangefinder_ceiling": "INFO - p95 312.36 m during denial (no pass/fail)",
+  "rc_loss": "PASS - radio lost, aircraft in RTL on a non-GPS position (entered it after the cut)",
+  "rc_loss_dr": "PASS - radio lost, aircraft in RTL on a non-GPS position (was already in RTL when the radio was cut)",
+  "rc_loss_early": "PASS - radio lost, aircraft in RTL on a non-GPS position (entered it after the cut)",
+  "soop_arming_180m": "INFO - p95 0.17 m during denial (no pass/fail)",
+  "soop_dropout": "INFO - p95 512.19 m during denial. The 120 m divergence boundary DOES NOT APPLY here: it was measured at sigma 20 m and this run is at sigma 180 m. Re-measure the boundary at the current sigma before reading a hold/runaway verdict off it",
+  "soop_dropout_flow": "INFO - p95 486.92 m during denial. The 120 m divergence boundary DOES NOT APPLY here: it was measured at sigma 20 m and this run is at sigma 180 m. Re-measure the boundary at the current sigma before reading a hold/runaway verdict off it",
+  "soop_dropout_honest": "INFO - p95 342.78 m during denial. The 120 m divergence boundary DOES NOT APPLY here: it was measured at sigma 20 m and this run is at sigma 180 m. Re-measure the boundary at the current sigma before reading a hold/runaway verdict off it",
+  "soop_dropout_lowlat": "INFO - p95 453.96 m during denial. The 120 m divergence boundary DOES NOT APPLY here: it was measured at sigma 20 m and this run is at sigma 180 m. Re-measure the boundary at the current sigma before reading a hold/runaway verdict off it",
+  "soop_dropout_lowsigma": "INFO - p95 51.7 m during denial. The 120 m divergence boundary DOES NOT APPLY here: it was measured at sigma 20 m and this run is at sigma 10 m. Re-measure the boundary at the current sigma before reading a hold/runaway verdict off it",
+  "soop_gpsinput": "INFO - p95 257.32 m during denial. The 120 m divergence boundary DOES NOT APPLY here: it was measured at sigma 20 m and this run is at sigma 180 m. Re-measure the boundary at the current sigma before reading a hold/runaway verdict off it",
+  "soop_no_velocity": "INFO - p95 166.02 m during denial. The 120 m divergence boundary DOES NOT APPLY here: it was measured at sigma 20 m and this run is at sigma 180 m. Re-measure the boundary at the current sigma before reading a hold/runaway verdict off it",
+  "soop_raw_1hz": "PASS - refused to arm on GPS 2, which is the point"
+ },
+ "sitl_binary_mtime": 1788212704,
+ "sitl_binary_sha256": "e4dd563f1cba3025c73adef31c97ddc97dc1b072dc8f45907ae2f5c1b9bbe450",
+ "source": "/tmp/nav/sitl/report.json"
+}

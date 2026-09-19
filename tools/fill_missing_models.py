@@ -25,11 +25,13 @@ Usage: python3 tools/fill_missing_models.py [--apply]
 """
 import os, sys, subprocess
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import pcbnew, design
+import pcbnew, design, jlcpaths
 from make_box_step import build
 
 BOARD = 'NAVCORE-SoOP.kicad_pcb'
-JLC   = os.environ.get('JLC_LIB', '/home/krystian/Code/Hardware/.libraries/jlc.pretty')
+# The 3D models are the one part of the JLC library NOT vendored in this repo, so this
+# points at MODEL_ROOT (env JLC_LIB) rather than at libraries/ - see jlcpaths.py.
+JLC   = jlcpaths.MODEL_ROOT
 OUT   = os.path.join(JLC, 'packages3d')
 
 

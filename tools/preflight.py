@@ -14,7 +14,7 @@ Usage:  python3 tools/preflight.py [board.kicad_pcb]
 """
 import os, sys, re, csv, math, glob, subprocess
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import pcbnew, design, route
+import pcbnew, design, route, readiness
 
 BOARD = sys.argv[1] if len(sys.argv) > 1 else "NAVCORE-SoOP.kicad_pcb"
 SCH   = "NAVCORE-SoOP.kicad_sch"
@@ -24,6 +24,12 @@ HWDEF = "firmware/NAVCORE_SoOP/hwdef.dat"
 PLANE_LAYERS = ("In1.Cu", "In4.Cu")
 
 results = []
+
+# Every tool that was actually run, and its exit code. The readiness manifest names tools
+# rather than duplicating their logic, so a prerequisite whose tool was never run (or was
+# silently deleted from this file) must be distinguishable from one that passed. That is
+# how three checks - check_topology.py among them - sat outside the gate unnoticed.
+TOOL_RESULTS = {}
 
 
 def check(group, name, ok, detail, hard=True):
@@ -440,7 +446,73 @@ def firmware(board):
         name, *extra = tool.split()
         r = sp.run([sys.executable, f"tools/{name}", *extra], capture_output=True,
                    text=True, timeout=1800)
+        TOOL_RESULTS[name] = r.returncode
         return r.returncode, (r.stdout or "") + (r.stderr or "")
+
+    # The only check in this repo that can notice a REQUIRED PART IS ABSENT. It found both
+    # buck regulators missing their catch diode, and then sat outside the gate for weeks
+    # because preflight simply never called it. Gated now, for that reason.
+    rc, out = run("check_topology.py")
+    check("fabrication", "datasheet-required externals present", rc == 0,
+          "every IC has the external components its datasheet requires" if rc == 0 else
+          "a required component is ABSENT - see tools/check_topology.py")
+
+    # Aircraft-level and gated for the same reason: it was named in the printed
+    # "run it before ordering" list and never actually run by the gate that printed it.
+    rc, out = run("check_build.py")
+    m = re.search(r'BUILD CHECKS PASS - (\d+) checks across (\d+)', out)
+    check("mechanical", "aircraft-level build checks", rc == 0,
+          (f"{m.group(1)} checks across {m.group(2)} areas" if m else
+           "see tools/check_build.py") if rc == 0 else
+          "the aircraft does not add up - see tools/check_build.py")
+
+    # Stock and part resolution against JLCPCB itself, from a DATED snapshot. Offline in
+    # this run; `--fetch` refreshes it. This is what turns "verify stock before spending
+    # money" from a checklist line nobody re-runs into a check that can fail.
+    rc, out = run("check_stock.py")
+    m = re.search(r'(\d+)/(\d+) line\(s\) resolved with stock', out)
+    age = re.search(r'snapshot\s+:\s+\S+ \((\d+) day', out)
+    check("assembly", "every BOM line is buyable", rc == 0,
+          (f"{m.group(1)}/{m.group(2)} lines in stock for the order, snapshot "
+           f"{age.group(1)} day(s) old" if m else
+           "stock/part check failed - see tools/check_stock.py") if rc == 0 else
+          "a BOM line is unavailable, unreachable or resolves to the wrong part - "
+          "see tools/check_stock.py")
+
+    # READY TO FLY, not READY TO ORDER: it exits 1 by design until the T3b bench
+    # measurements exist. Run here so the FLY verdict is derived from a real result
+    # rather than from a sentence in the docs saying it would fail.
+    rc, out = run("check_rf.py")
+    check("fly", "link budget has bench data", rc == 0,
+          "T3b measurements recorded and within budget" if rc == 0 else
+          "no T3b bench measurements yet - gates FLYING, not ordering", hard=False)
+
+    # SITL is an ORDERING prerequisite, not a flying one: it runs offline, and it has
+    # already found three prearm faults no build check could see. The suite takes ~50 min
+    # so the gate validates a dated VERSIONED result rather than re-running it - and the
+    # result must have been produced against the SAME defaults.parm that ships, compared
+    # by sha256, or it is evidence about a firmware that no longer exists.
+    rc, out = run("check_sitl.py")
+    # The count comes from the line check_sitl.py ACTUALLY prints. This grep used to be
+    # `green\s+:\s+(\d+)/(\d+) scenario`, which no version of that tool has ever emitted -
+    # so the match was always None and a PASSING suite was reported as "no SITL result
+    # recorded, or it predates the current parameters". The verdict was right and the
+    # evidence beside it said the opposite, which is the worst of both: a green gate you
+    # cannot believe. Proved by grepping the control string against the tool's own output.
+    m = re.search(r'mechanisms\s*:\s*(\d+)/(\d+) asserting', out)
+    n_info = re.search(r'measurement:\s*(\d+) informational', out)
+    if m and rc == 0:
+        _sitl = (f"{m.group(1)}/{m.group(2)} asserting scenarios pass"
+                 + (f", {n_info.group(1)} measured not gated" if n_info else "")
+                 + ", against the parameters that ship")
+    elif m:
+        _sitl = f"only {m.group(1)}/{m.group(2)} asserting scenarios pass"
+    else:
+        # No count at all. Say only that, rather than naming a reason this function has
+        # not read - "not run" and "ran and failed" must stay distinguishable.
+        _sitl = ("check_sitl.py reported no scenario count - its output above says why; "
+                 "a suite that has not run is not a passing suite")
+    check("firmware", "SITL scenarios pass", rc == 0, _sitl)
 
     # Mechanical intent, not electrical: every connector's opening must face off the
     # board with room for its plug. Both J1 and J2 shipped fitted backwards and every
@@ -520,8 +592,53 @@ def firmware(board):
           (f"{m.group(1)} parts across {m.group(2)} shared footprints agree on pin 1"
            if m else "geometry check failed - see tools/check_cpl.py"))
 
+    # The order bundle is the artefact that actually gets UPLOADED. Every other
+    # fabrication check reads the loose files - the gerbers on disk, fab/*.csv - and none
+    # of them opens the zip. So it is a second copy of the fabrication output with nothing
+    # comparing it to the first: edit the board, regenerate the gerbers, forget to re-run
+    # the bundle script, and the gate stays green while what you upload is the PREVIOUS
+    # board. That is this project's recurring defect - a check measuring something
+    # adjacent to the property that matters - landing on the one artefact where being
+    # wrong costs money. Made stale on purpose three ways and confirmed to fail each time.
+    rc, out = run("check_order_bundle.py")
+    m = re.search(r'gerbers\s+:\s+(\d+) identical, (\d+) diverged, (\d+) absent', out)
+    check("assembly", "order bundle matches the tree", rc == 0,
+          (f"{m.group(1) if m else '?'} gerber(s) and every BOM/CPL copy identical to "
+           f"fab/; placement counts re-derived from the bundled CPL") if rc == 0 else
+          "the order bundle is stale or incomplete - re-run tools/make_order_bundle.sh")
+
     # These four passed for weeks without being gated, so nothing would have caught them
     # regressing. Adding them costs one subprocess each and closes that hole.
+    # The layer beneath every other check. design.py wires parts by pin NUMBER and
+    # every check derives from design.py, so a symbol whose pin numbering is wrong
+    # passes ERC, DRC and check_design and scraps the fabrication run. This compares
+    # each active part's symbol against KiCad's own library or the maker's datasheet,
+    # and found both IMUs' "Connect to GND" pin floating on a board 71 checks had
+    # passed.
+    rc, out = run("check_symbol_pinout.py")
+    m = re.search(r'(\d+) symbol\(s\) have NO outside authority', out)
+    check("fabrication", "symbol pinouts match an outside authority", rc == 0,
+          "every active part agrees with KiCad's library or its datasheet" if rc == 0
+          else (f"{m.group(1)} symbol(s) verified against nothing - see "
+                f"tools/check_symbol_pinout.py" if m else
+                "a symbol DISAGREES with its authority - see tools/check_symbol_pinout.py"))
+
+    # "The library is in git" and "the project still builds" are different properties.
+    # MEASURED 2026-09-18: deleting libraries/jlc.pretty/CONN-SMD_4P-P1.00_SM04B-SRSS-TB
+    # -LF-SN.kicad_mod - the footprint J5, J9 and J11 ALL share - left check_footprints.py
+    # and check_design.py both at exit 0, because check_footprints compares the BOARD's
+    # embedded footprints against JLCPCB's count and never opens a .kicad_mod. The
+    # library every part is rebuilt from was load-bearing and completely unguarded.
+    rc, out = run("check_libraries.py")
+    m = re.search(r'compared\s+:\s+(\d+) ref', out)
+    o = re.search(r'vendored\s+:\s+(\d+) file\(s\), (\d+) unreferenced', out)
+    check("fabrication", "vendored part library is load-bearing", rc == 0,
+          (f"{m.group(1) if m else '?'} ref(s) agree with the board; "
+           f"{o.group(1) if o else '?'} footprint(s), "
+           f"{o.group(2) if o else '?'} orphaned") if rc == 0 else
+          "the vendored library is incomplete, diverged from the board, or has orphaned "
+          "files - see tools/check_libraries.py")
+
     rc, out = run("check_design.py")
     m = re.search(r'^(\d+) error', out, re.M)
     w = re.search(r'^WARNINGS \((\d+)\)', out, re.M)
@@ -609,6 +726,18 @@ def firmware(board):
               if rc == 0 else
               f"FAILED - {worst[0]} at {worst[1]} mm above the skid contact plane: "
               f"see tools/check_cad_fit.py")
+
+    # The BOLTED JOINTS, as joints. check_cad_fit measures interference and separation,
+    # which cannot see a hole - a skid printed at the frame's 16x16 instead of the
+    # motor's 19x19 has zero overlap and reads ok. check_fit.py checks the declared
+    # joint spec (design.MOTOR_JOINT): pattern by reference, hole vs screw, screw
+    # length against fasteners.py AND PARTS.csv, the stack under the kit's top plate
+    # across the grommet range, and the kit's standoff posts against the board/ESC.
+    rc, out = run("check_fit.py")
+    check("mechanical", "bolted joints fit by declaration", rc == 0,
+          "motor/arm/skid joint, stack bolt, top-plate clearance and standoff posts "
+          "all verified - see tools/check_fit.py" if rc == 0
+          else "a joint does not fit - see tools/check_fit.py")
 
     # THERMAL - a WARNING policy, deliberately.
     #
@@ -745,73 +874,6 @@ def firmware(board):
               "not built - run tools/build_firmware.sh", hard=False)
 
 
-def unverifiable():
-    # Count the BOM lines rather than hardcoding "50" - the count moves with the
-    # design (57 at the time of writing) and a stale constant in a go/no-go gate's
-    # own output is how nobody notices the list shrinking.
-    try:
-        _n_bom = sum(1 for _ in csv.DictReader(open("fab/BOM-NAVCORE-SoOP.csv")))
-    except OSError:
-        _n_bom = None
-    print("\n  Cannot be checked offline - verify before spending money:")
-    for s in (f"LCSC stock and pricing for all {_n_bom or '50+'} BOM lines "
-              "(stock snapshot in docs/BUYING.md - refresh it)",
-              "the 1620 MHz SAW is NOT stocked at LCSC - it is a separate, bought RF board",
-              "ArduPilot board ID 9001 is unregistered - request it upstream",
-              "SpeedyBee grommet flange diameter is assumed 6 mm",
-              "the ESC cable pinout - J2 matches Betaflight's documented SpeedyBee "
-              "F405 V4 order, but check continuity on the cable you receive",
-              "impedance control - none specified, USB is a plain differential pair",
-              "the 1 oz copper assumption behind the current-capacity check - confirm "
-              "the stackup you order is 1 oz outer, not 0.5 oz",
-              "BATT_AMP_PERVLT - a property of the ESC's shunt, calibrate on the bench",
-              "FLOW_ORIENT_YAW - flow arrives as MAVLink from the companion; check the "
-              "sign against the camera's mount before position hold",
-              "whether Iridium NEXT Doppler can actually produce a usable fix from this "
-              "antenna - sitl/ proves what ArduPilot does with a fix of a given quality, "
-              "not that the receiver can produce one",
-              "real camera flow over grass - simulated flow is perfect flow; this needs "
-              "recorded footage, not a simulator",
-              "U9's theta_JA - 184 C/W is the AP2112 datasheet's 'no heatsink' figure, and "
-              "on it U9's PEAK junction (157 C) sits above its 150 C limit. The copper you "
-              "pour is what changes it. U19 logs the board beside U9 every flight "
-              "(TEMP_LOG), which is a proxy for this, not a substitute. docs/BUILD.md T3a",
-              "U8's theta_JA - SLVSD26 gives 118.6 C/W (JEDEC) and 57.2 C/W (EVM); this "
-              "6-layer board is between the two and only a thermocouple says where"):
-        print(f"     - {s}")
-
-    # Derived, not restated. "2.3 mm" was hardcoded in this string while
-    # check_mechanical.py carried 2.5 mm and design.PART_HEIGHT would have said 3.0 for
-    # the FPV build - three numbers for one measurement, in three files.
-    _b = pcbnew.LoadBoard(BOARD)
-    _, _bb, _, _br, _ = design.stack_heights(_b, skip_dnp=True)
-    _, _bf, _, _fr, _ = design.stack_heights(_b, skip_dnp=False)
-    _bot = (f"bottom-side parts {_bb:.2f} mm tall max ({_br}) - clears the ESC below"
-            + (f"; {_bf:.2f} mm ({_fr}) if the FPV buck is populated"
-               if _bf > _bb else ""))
-    print("\n  Mechanical, verified against the 30x30 stack:")
-    for s in ("mounting holes 30.50 x 30.50 mm, 4.00 mm dia - standard 30x30, M3 + grommet",
-              _bot,
-              "USB-C and ESC connector both 0.80 mm from their board edges",
-              "microSD slot faces the bottom edge, 1.62 mm inboard - check your frame "
-              "does not block that edge",
-              "board 45.10 x 46.10 mm - confirm the frame's centre plate accepts it"):
-        print(f"     - {s}")
-
-    print("\n  Whole-aircraft checks (tools/check_build.py):")
-    for s in ("connectors, power budget, current path, mass and thrust, geometry, buses",
-              "every value tagged [M]easured / [D]atasheet / [L]isting / [A]ssumed",
-              "run it before ordering - it is what caught the missing microSD card, the "
-              "2x BATT_AMP_PERVLT error and the 19x19 motor bolt pattern"):
-        print(f"     - {s}")
-
-    print("\n  Run before flying, not before ordering:")
-    for s in ("sitl/run_scenarios.sh - flies defaults.parm against simulated truth. "
-              "Found three prearm faults the build checks could not see",
-              "docs/BUILD.md - T1 power on a current-limited supply BEFORE USB"):
-        print(f"     - {s}")
-
-
 def main():
     os.makedirs("/tmp/nav", exist_ok=True)
     board = pcbnew.LoadBoard(BOARD)
@@ -824,7 +886,8 @@ def main():
 
     # Results print in insertion order, so a check that reports into an earlier group
     # from a later function would open that group's heading twice. Order them explicitly.
-    order = ["fabrication", "assembly", "signal integrity", "project", "firmware"]
+    order = ["fabrication", "assembly", "signal integrity", "project", "firmware",
+             "mechanical", "thermal", "fly"]
     results.sort(key=lambda r: order.index(r[0]) if r[0] in order else len(order))
 
     group = None
@@ -838,13 +901,18 @@ def main():
         nf += verdict == "FAIL"
         nw += verdict == "WARN"
 
-    print("\n" + "=" * 72)
-    if nf:
-        print(f"NOT READY TO ORDER - {nf} blocking failure(s), {nw} warning(s)")
-    else:
-        print(f"READY TO ORDER - 0 blocking failures, {nw} warning(s)")
-    unverifiable()
-    return 1 if nf else 0
+    # THE VERDICT IS DERIVED, not restated. It used to be `not nf` - a count of hard
+    # failures - with a hand-typed list of "cannot be checked offline" items printed
+    # BELOW it and no link between the two. That combination can only ever overclaim: the
+    # verdict could say READY TO ORDER no matter how much of the list was unresolved.
+    # tools/readiness.py now holds every prerequisite, classified, and this walks it.
+    # A prerequisite naming a tool that did not run, a tool that failed, an order-check
+    # with no recorded confirmation, or an entry that is not classified at all - each is
+    # a blocking failure. Proved by breaking all four.
+    print(f"\n({nf} hard failure(s), {nw} warning(s) among the individual checks above)")
+    rep = readiness.evaluate(results, TOOL_RESULTS)
+    print(readiness.render(rep))
+    return 1 if rep["blocking"] else 0
 
 
 if __name__ == "__main__":

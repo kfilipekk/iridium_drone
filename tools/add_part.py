@@ -159,6 +159,10 @@ def _u1_pad(name):
     if _PAD_OF_PIN is None:
         _PAD_OF_PIN = {}
         for pn in symlib.load()["STM32H743VIT6_C114409"]:
+            # keyed BOTH ways. design.py writes the oscillator pins in full
+            # ("PH0-OSC_IN"); keying only on the part before the hyphen returned None
+            # for them, and a caller that read None as "no net" cut the crystal tracks.
+            _PAD_OF_PIN[pn["name"]] = pn["num"]
             _PAD_OF_PIN[pn["name"].split("-")[0]] = pn["num"]
     return _PAD_OF_PIN.get(name, name)
 

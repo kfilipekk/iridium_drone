@@ -17,8 +17,10 @@ Idempotent: reclassifies every pin from its name each run, so re-running is safe
 """
 import re, sys, os, shutil
 
-LIB = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                   "..", "..", ".libraries", "symbols", "jlc_parts.kicad_sym")
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import jlcpaths
+
+LIB = jlcpaths.SYMBOLS
 
 GPIO  = re.compile(r'^P[A-K]\d{1,2}(-|$)')
 POWER = re.compile(r'^(VDD|VSS|VCC|VEE|GND|AVDD|AVSS|VBAT|VIN|VBUS|VDDA|VSSA|'

@@ -43,31 +43,38 @@ The board is ready to order but has not been built, so nothing here has been mea
 real hardware.
 
 ```
-tools/preflight.py   READY TO ORDER - 0 blocking failures, 4 warnings
+tools/preflight.py   READY TO ORDER - all 42 gated prerequisites proven, 0 order-checks outstanding
 tools/check_rf.py    NOT READY TO FLY - the bench measurements don't exist yet
 ```
 
 The layout side is finished: no DRC errors, no ERC violations, every connection on a
-fitted part routed, gerbers checked against the board file, 133 footprints checked against
+fitted part routed, gerbers checked against the board file, 131 footprints checked against
 JLCPCB's own joint counts, and all 56 part numbers confirmed in stock.
 
-One number is worth knowing before you copy this design: the MAX2112 tuner is down to 20
-units at JLCPCB and nothing else in their library covers 1616 to 1626.5 MHz with quadrature
-baseband out. Buy spares.
+One number is worth knowing before you copy this design: the MAX2112 tuner was down to 15
+units at JLCPCB in the last stock snapshot (2026-09-18) and nothing else in their library
+covers 1616 to 1626.5 MHz with quadrature baseband out. Buy spares.
 
 A couple of things that are easy to misread. The downconversion happens on the board and
 the H743 samples the I/Q itself, which is the whole point, but the antenna side is bought
 rather than designed: a SAWbird+ IR does the low-noise amplification and the 1620 MHz
-filtering where it belongs, at the antenna, and coax brings it to a U.FL. And the Doppler
-solve itself is not written yet. As built this is an ordinary GPS quadcopter with room to
-expand, since every optional sensor ships disabled. ArduPilot refuses to arm if something
-is configured but not physically fitted, so that is deliberate.
+filtering where it belongs, at the antenna, and coax brings it to a U.FL. The least-squares
+Doppler solve is written and validated offline (`tools/soop_solver.py`): it inverts a known
+position from clean geometry, reports singular on degenerate geometry rather than inventing
+a number, and measures the geometry's own contribution - 160 m median at 5 Hz of burst
+frequency noise over 40 bursts, which is the precision the receiver has to hit. What is not
+built is the rest of the pipeline: burst detection and frequency estimation from I/Q, the
+on-board C firmware, and the GPS backend that gets a fix into the EKF. As built this is an
+ordinary GPS quadcopter with room to expand, since every optional sensor ships disabled.
+ArduPilot refuses to arm if something is configured but not physically fitted, so that is
+deliberate.
 
 ## Verification
 
-The design is generated from a single Python file and gated by 24 checks. Most of what I
-learned came from checks that passed while the thing they were supposed to catch was
-still there:
+The design is generated from a single Python file and gated by 42 prerequisites, whose
+verdict is derived from a manifest rather than restated beside it (`tools/readiness.py`);
+anything unproven fails. Most of what I learned came from checks that passed while the
+thing they were supposed to catch was still there:
 
 - Both buck regulators were missing their catch diode. All 64 checks passed at the time,
   because each one tested a property of something present, and a missing part has no net
@@ -94,7 +101,7 @@ I try to break every check on purpose before trusting it, and put it back afterw
 
 ```bash
 export JLC_LIB=/path/to/jlc.pretty
-python3 tools/preflight.py     # the go/no-go gate, 24 checkers behind it
+python3 tools/preflight.py     # the go/no-go gate, 42 gated prerequisites behind it
 python3 tools/check_rf.py      # ready-to-fly; computes nothing by design
 ```
 
@@ -106,7 +113,7 @@ run if the export doesn't contain six copper layers.
 
 ```
 tools/design.py          single source of truth: board, airframe, buying list
-tools/preflight.py       the gate, with 24 checkers behind it
+tools/preflight.py       the gate, with 42 gated prerequisites behind it
 firmware/NAVCORE_SoOP/   ArduPilot hwdef and shipped defaults
 sitl/                    SITL harness for the GNSS-denied scenarios
 cad/                     OpenSCAD airframe model, generated from design.py

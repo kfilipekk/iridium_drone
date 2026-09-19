@@ -78,8 +78,9 @@ BEFORE YOU PAY - the things no offline check can confirm
     SIZE and paste apertures; tools/check_footprints.py verifies pad count,
     package family and pitch, but not those.
   - Confirm the quote says 1 oz outer copper.
-  - U6, U7 and U18 are DNP by design. If the preview shows them placed, the
-    wrong BOM went up.
+  - U18 is DNP by design (the 9 V VTX buck: pads provisioned, no part). U6 and
+    U7 are not DNP - they were DELETED from the design entirely and have no
+    pads. If the preview shows any of the three placed, the wrong BOM went up.
   - STM32H743VIT6 (C5271084) and MS5611 (C15639) are sole-source and were thin
     at last check (314 and 1216 units). Confirm stock in the quote tool; buy
     spares if it looks tight.

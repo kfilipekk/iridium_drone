@@ -33,6 +33,25 @@ SRC_PWM = {1: 1000, 2: 1500, 3: 2000}
 # re-measured, update this AND the two figures quoted in the verdict together.
 BOUNDARY_SIGMA_M = 20.0
 
+# RE-MEASURED AT THE SHIPPING SIGMA, 2026-09-18 - n=6 per scenario, nothing else varied,
+# plain repeats (--repeat 6) exactly as soop_dropout's comment prescribed:
+#
+#   soop_gpsinput   p95 302.6 310.9 340.4 349.5 441.1 445.6   (median 345.0)
+#   soop_dropout    p95 366.3 376.1 439.6 450.8 470.3 528.2   (median 445.2)
+#
+# THE FINDING IS NOT A NEW BOUNDARY - IT IS THAT NO BOUNDARY EXISTS AT THIS SIGMA.
+# Every run lands 300-530 m, with no gap separating two regimes: the bimodality itself
+# was a property of the 20 m fix, not of the navigation chain. And the p95 is NOT the
+# vehicle flying away - the TRUE excursion over the same runs had median 73 m
+# (soop_gpsinput) and 91 m (soop_dropout), max 226 m. The position ESTIMATE wanders
+# with the injected fix noise; the applet chain (GUIDED -> GUIDED_NOGPS -> RTL) still
+# recovered in every run. Read together: at Doppler-only accuracy there is no hold to
+# grade, and there is also no runaway the failsafe chain misses. Both old readings
+# ("mostly holds" and "diverged 3/6") described a fix quality this aircraft will not
+# have. See docs/KNOWN-ISSUES.md - the open item is now fix QUALITY (elevation aiding,
+# multi-constellation), not the boundary.
+BOUNDARY_SIGMA_SHIPPED_M = 180.0
+
 SCENARIOS = {
     "baseline_gps": dict(
         mode=None, deny_at=None, src=1,
@@ -69,13 +88,19 @@ SCENARIOS = {
         # and 270.29 m. So "set the limit from a distribution over fixed seeds" - which
         # this comment used to recommend - cannot work: the variation survives the seed.
         #
-        # What CAN be gated is the divergence RATE over repeats. That needs a runner that
-        # repeats scenarios, which sitl/run_scenarios.sh does not yet do. Until then the
-        # number is reported, not asserted - and the harness's SoOP model is still not a
-        # measurement of any real receiver. Its sigma is now SOURCED rather than assumed
-        # (180 m, the published Iridium NEXT figure without elevation aiding - see
-        # DopplerErrorModel), which is an improvement on the old [A] 20 m but is still
-        # literature, not this antenna on this airframe. Measure it on the ground.
+        # What CAN be gated is the divergence RATE over repeats. The runner has had
+        # --repeat for exactly this since its own header documented it - an earlier
+        # version of this comment said it "does not yet do" repeats, which contradicted
+        # the file it ships with. AND the question dissolved on 2026-09-18: re-measured
+        # at the shipping sigma (n=6, see BOUNDARY_SIGMA_SHIPPED_M), there is no
+        # bimodality to measure a rate on - every run p95 300-450 m. The rate question
+        # belongs to the sigma-20 fix, which is not the fix this aircraft gets.
+        #
+        # The harness's SoOP model is still not a measurement of any real receiver. Its
+        # sigma is SOURCED rather than assumed (180 m, the published Iridium NEXT figure
+        # without elevation aiding - see DopplerErrorModel), which is an improvement on
+        # the old [A] 20 m but is still literature, not this antenna on this airframe.
+        # Measure it on the ground.
         max_p95=None, informational=True, diverges_above=120.0),
     "soop_raw_1hz": dict(
         mode="gpsinput", deny_at=40, src=1, startup={"GPS2_TYPE": 14}, rate=1.0,
@@ -124,8 +149,11 @@ SCENARIOS = {
         #
         # It therefore cannot be a single-run gate: asserting it makes the suite fail
         # about half the time on an unchanged configuration. The property worth gating is
-        # the DIVERGENCE RATE over repeats, which needs a runner that repeats scenarios -
-        # see sitl/README.md. Until then the number and the classification are reported.
+        # the DIVERGENCE RATE over repeats - sitl/run_scenarios.sh --repeat does that,
+        # and an earlier note here claiming the runner lacked it was simply wrong.
+        # AND at the shipping sigma (re-measured n=6, 2026-09-18, see
+        # BOUNDARY_SIGMA_SHIPPED_M) there is no bimodality left to rate: uniformly
+        # 366-528 m. The bounded/diverged split is a sigma-20 phenomenon.
         #
         # AND THE SEED IS NOT THE EXPLANATION. --seed defaults to 1 and seeds only the
         # DopplerErrorModel RNG; SITL itself gets no seed. Two runs at seed 1 gave 52.53
@@ -236,9 +264,9 @@ SCENARIOS = {
     "soop_dropout_lowsigma": dict(
         mode="gpsinput", deny_at=40, src=1, outage_p=0.25, rate=5.0, sigma=10.0,
         startup={"GPS2_TYPE": 14},
-        why="ACCURACY SENSITIVITY. soop_dropout with a 10 m SoOP solution instead of "
-            "20 m, everything else identical. This is what a better Doppler solution "
-            "buys, as against what a better sensor suite buys.",
+        why="ACCURACY SENSITIVITY. soop_dropout with a 10 m SoOP solution instead of the "
+            "180 m shipping sigma, everything else identical. This is what a better "
+            "Doppler solution buys, as against what a better sensor suite buys.",
         max_p95=None, informational=True, diverges_above=120.0),
 
     # REGRESSION GUARD for the 50 m two-receiver arming gate.
@@ -1163,13 +1191,31 @@ def _run(name, spec, connect, duration, seed):
             # So when the sigma differs from the one the boundary was measured at, say
             # the boundary does not apply, and report the raw number instead.
             sigma_now = spec.get("sigma", DopplerErrorModel.SIGMA_IRIDIUM_NO_ELEV)
-            if abs(sigma_now - BOUNDARY_SIGMA_M) > 1e-6:
+            if abs(sigma_now - BOUNDARY_SIGMA_SHIPPED_M) <= 1e-6:
+                # The shipping sigma, which the 2026-09-18 re-measurement (n=6 per
+                # scenario, comment at BOUNDARY_SIGMA_SHIPPED_M) covered: no boundary
+                # exists here - every run p95 300-530 m, no separating gap, and the
+                # true excursion far below the p95. Saying "DOES NOT APPLY, re-measure"
+                # is now stale advice: it WAS re-measured, and the answer is that the
+                # classification is empty at this sigma. Report both numbers and the
+                # measured conclusion instead of implying a measurement still owed.
+                exc = res_track.get("truth_excursion_m", 0.0)
+                res["verdict"] = (
+                    f"INFO - p95 {d['p95']} m during denial, true excursion {exc:g} m. "
+                    f"MEASURED at this sigma (n=6, 2026-09-18): no divergence boundary "
+                    f"exists - every run p95 300-530 m with no separating gap, the "
+                    f"estimate tracks the injected fix noise, and the true excursion is "
+                    f"far smaller (medians 73/91 m). The {lim:g} m boundary describes "
+                    f"the sigma {BOUNDARY_SIGMA_M:g} m fix, which Doppler alone does "
+                    f"not provide")
+            elif abs(sigma_now - BOUNDARY_SIGMA_M) > 1e-6:
                 res["verdict"] = (
                     f"INFO - p95 {d['p95']} m during denial. The {lim:g} m divergence "
-                    f"boundary DOES NOT APPLY here: it was measured at sigma "
-                    f"{BOUNDARY_SIGMA_M:g} m and this run is at sigma {sigma_now:g} m. "
-                    f"Re-measure the boundary at the current sigma before reading a "
-                    f"hold/runaway verdict off it")
+                    f"boundary DOES NOT APPLY here: it is measured at sigma "
+                    f"{BOUNDARY_SIGMA_M:g} m, and re-measured at the shipping sigma "
+                    f"{BOUNDARY_SIGMA_SHIPPED_M:g} m (n=6, 2026-09-18) no boundary "
+                    f"exists either. This run is at sigma {sigma_now:g} m, which no "
+                    f"measurement covers - reported raw, not classified")
             else:
                 diverged = d["p95"] > lim
                 res["diverged"] = diverged

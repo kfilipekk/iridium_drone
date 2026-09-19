@@ -12,8 +12,15 @@ Engagement rule: aim for at least 1 x diameter into the thread, which is 3 mm fo
 2.5 mm for M2.5. Aluminium motor bells and nylon standoffs both tolerate that.
 
 Anything this cannot derive is REPORTED as unknown rather than guessed. A missing row is
-a thing to measure, not a thing to assume - the 3.5 mm skid thickness below is itself an
-[A] and it is what sets the motor screw length.
+a thing to measure, not a thing to assume.
+
+THE SKID THICKNESS IS NO LONGER ONE OF THEM. This file carried its own 3.5 mm copy,
+tagged "[A] ready-made TPU skid - MEASURE THE ONE YOU BUY" - but the skid is a PRINTED
+part (design.SKID['printed']), so its thickness is exact by design and there is nothing
+to measure. The duplicate was also live, not merely redundant: design.SKID['t'] feeds
+the CAD and the ground-clearance arithmetic, so editing it there would have left the
+motor screw length computing from a stale 3.5 and the M3x14 purchase silently wrong - a
+joint that fits in the BOM and not on the aircraft. It now reads design.SKID['t'].
 
 Usage: python3 tools/fasteners.py [--md]
 """
@@ -25,7 +32,8 @@ MD = "--md" in sys.argv
 F = design.FRAME
 ENGAGE = {3.0: 4.0, 2.5: 3.0, 2.0: 2.5}     # mm of thread, generous for soft materials
 
-SKID_T = (3.5, "[A] ready-made TPU skid - MEASURE THE ONE YOU BUY, it sets this length")
+SKID_T = (design.SKID["t"],
+          "[M] design.SKID['t'] - PRINTED part, so exact by design, not a measurement")
 ESC_PCB = (1.6, "[D] SpeedyBee BLS 60A")
 FC_PCB = (1.6, "[D] this board, 6-layer stackup")
 GAP = (3.0, "[A] M3 silicone grommet, compressed")
@@ -74,15 +82,47 @@ def joint(where, dia, layers, qty, note=""):
                      engage=ENGAGE[dia], need=need, L=L, layers=layers, note=note))
 
 
-joint("Motor to arm, skid sandwiched", 3.0,
-      [("frame arm", F["arm_t"], F["src"]), ("TPU skid", SKID_T[0], SKID_T[1])],
-      16, "skids MUST match the MOTOR's 19x19 pattern, not the frame's 16x16")
+# THE MOTOR JOINT IS NOT RESTATED HERE. It is built from design.MOTOR_JOINT - the one
+# spec for the pitch, the hole diameters and the through-stack - so a change to the skid
+# thickness or the arm moves the derived screw length in the same edit. The layer
+# thicknesses are (DICT, KEY) references into design.py, resolved here; check_fit.py
+# checks the same spec for hole-vs-screw clearance, so the two tools cannot disagree.
+_MJ = design.MOTOR_JOINT
+_JOINT_LAYERS = []
+for _name, _ref, _hole, _src in _MJ["layers"]:
+    _d, _k = _ref
+    _t = getattr(design, _d)[_k]
+    # label keeps the HOLE, not the thickness: the table prints the thickness itself
+    # from the second field, and embedding it in the label printed every number twice.
+    _JOINT_LAYERS.append((f"{_name}, hole {_hole:.1f}", _t, _src))
+joint("Motor to arm, skid sandwiched", _MJ["screw_dia"], _JOINT_LAYERS, 16,
+      f"skids MUST match the MOTOR's {_MJ['pitch_mm']:.0f}x{_MJ['pitch_mm']:.0f} pattern, "
+      "not the frame's 16x16 - tools/check_fit.py verifies the printed part")
 
-joint("FC to ESC, through the 30.5 mm stack", 3.0,
-      [("ESC PCB", ESC_PCB[0], ESC_PCB[1]),
-       ("grommet gap", GAP[0], GAP[1]),
-       ("FC PCB", FC_PCB[0], FC_PCB[1])],
-      4, "into the frame's own standoff; grommets take M3 through a 4.00 mm hole")
+# THE STACK BOLT. Where it lands is settled by the DXF: the top plate has no 30.5 holes
+# and the kit has no standoff at that pattern, but the BOTTOM plate carries 8 press
+# nuts at the 30.5 / 20 patterns ("M3 Press nuts pre-install", layer 9) and the arm
+# roots have matching holes. So the stack bolt runs FC -> ESC -> mid plate -> arm ->
+# press nut, clamping the arms and the stack in one screw. The separation between the
+# two PCBs is NOT a 3 mm grommet: the ESC's parts (6.2) + air (3.0) + this board's
+# bottom parts (2.9) = 12.1 mm must be held by a spacer - 4 x M3 female standoffs,
+# 12 mm, are the purchase that was missing from PARTS.csv.
+# The board's bottom-parts height is MEASURED from the routed board (design.stack_heights
+# walks the real footprints), not restated here - restating it is how SKID_T went stale.
+import pcbnew as _pcbnew
+_BOT = design.stack_heights(_pcbnew.LoadBoard(os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "NAVCORE-SoOP.kicad_pcb")),
+    skip_dnp=True)[1]
+joint("FC to ESC to frame, the 30.5 mm stack bolt", 3.0,
+      [("FC PCB", FC_PCB[0], FC_PCB[1]),
+       ("ESC-to-FC spacer", round(design.ESC["parts"] + GAP[0] + _BOT, 1),
+        f"[M] ESC parts {design.ESC['parts']:.1f} + air {GAP[0]:.1f} + board bottom "
+        f"parts {_BOT:.1f} (design.stack_heights, measured)"),
+       ("ESC PCB", ESC_PCB[0], ESC_PCB[1]),
+       ("mid plate", F["medium_t"], "[D] TBS: middle plate 2 mm"),
+       ("arm root", F["arm_t"], "[D] TBS: arm 6 mm")],
+      4, "into the bottom plate's press nut (kit, 8 pcs); buy 4 x M3 female standoff "
+         "12 mm for the ESC-to-FC spacer - a grommet cannot hold 12.1 mm")
 
 UNKNOWN = [
     ("Frame assembly - top plate to standoffs", "M3",
@@ -158,4 +198,8 @@ def main():
     return 0
 
 
-sys.exit(main())
+# Guarded: check_fit.py imports ROWS to compare its own derivation against this one,
+# and an unguarded sys.exit(main()) ran this report and exited THE IMPORTER with rc 0
+# before its checks printed - a green exit code from the wrong program.
+if __name__ == "__main__":
+    sys.exit(main())

@@ -12,9 +12,9 @@
       "why": "single battery. ADC2 ch18 - Q channel, sampled simultaneously with ADC1"
     },
     "PC5": {
-      "to": "SOOP_RSSI_ADC",
+      "to": "SPARE",
       "was": "RSSI_ADC",
-      "why": "RSSI comes over CRSF telemetry. Reused for MAX2112 analogue RSSI/AGC readback"
+      "why": "RSSI comes over CRSF telemetry. Once carried a 10k tap from the tuner's QOUT+ that was called RSSI and was not one; removed when the baseband stage was finished. Free."
     },
     "PA7": {
       "to": "SPARE_ADC",
@@ -38,7 +38,7 @@
     "PB8/PB9": "UART4 - TFmini-S rangefinder JST-GH port (outdoor altitude)",
     "PC4": "ADC1 ch4  - I channel from OPA2374 difference amp",
     "PA4": "ADC2 ch18 - Q channel, dual-simultaneous with PC4",
-    "PC5": "MAX2112 RSSI / AGC analogue readback (Rev B)"
+    "PC5": "spare - the MAX2112 has no analogue RSSI pin; signal level is read over I2C"
   },
   "unpopulated_matek_features": [
     "MAX7456 OSD",
@@ -47,5 +47,5 @@
     "analogue RSSI",
     "USART3/GPS2"
   ],
-  "adc_design_note": "I/Q reaches the MCU as TWO SINGLE-ENDED channels, not two differential pairs. VERIFIED from ArduPilot hwdef/scripts/STM32H743xx.py: PC4=ch4, PA4=ch18, PA7=ch7, PC5=ch8, and all four exist on BOTH ADC1 and ADC2 - which is what makes dual-simultaneous sampling possible. NOT VERIFIED: the exact INP->INN pairing for differential mode (st.com refused the datasheet download). STM32H7 differential mode uses fixed INP/INN pin pairs rather than arbitrary pin choice, and those INN pins are largely consumed by SPI1 here - so the design avoids ADC differential mode entirely rather than depend on an unconfirmed detail. The OPA2374 (already required for anti-aliasing) is configured as two difference amplifiers, doing diff->single-ended conversion AND the 2nd-order LPF in one stage. Better regardless of the INN mapping: higher CMRR, half the ADC channels, frees PC5 for AGC readback. CRITICAL: sample PC4 on ADC1 and PA4 on ADC2 in DUAL REGULAR SIMULTANEOUS mode - any I/Q sampling skew becomes a phase error, which corrupts the Doppler frequency estimate directly."
+  "adc_design_note": "I/Q reaches the MCU as TWO SINGLE-ENDED channels, not two differential pairs. VERIFIED from ArduPilot hwdef/scripts/STM32H743xx.py: PC4=ch4, PA4=ch18, PA7=ch7, PC5=ch8, and all four exist on BOTH ADC1 and ADC2 - which is what makes dual-simultaneous sampling possible. NOT VERIFIED: the exact INP->INN pairing for differential mode (st.com refused the datasheet download). STM32H7 differential mode uses fixed INP/INN pin pairs rather than arbitrary pin choice, and those INN pins are largely consumed by SPI1 here - so the design avoids ADC differential mode entirely rather than depend on an unconfirmed detail. The OPA2374 is two four-resistor difference amplifiers (Rin 4k7, Rf 10k, gain 2.13, output centred on a 1.65 V reference) with 100 pF across each feedback resistor for a 159 kHz first-order anti-alias corner: the MAX2112's own baseband filter is 4 MHz at its narrowest and the H743 ADC samples below 3.6 MSPS, so without that corner the tuner's noise floor folds into the burst's band. Better regardless of the INN mapping: higher CMRR and half the ADC channels. This block shipped for a long time as 'resistor values TBD by sim' with NO feedback network at all - open-loop comparators - and was completed on 2026-09-17. CRITICAL: sample PC4 on ADC1 and PA4 on ADC2 in DUAL REGULAR SIMULTANEOUS mode - any I/Q sampling skew becomes a phase error, which corrupts the Doppler frequency estimate directly."
 }

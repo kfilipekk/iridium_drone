@@ -112,6 +112,14 @@ NOT_FOOTPRINTS = {
     "P52": "RC receiver solder pad - removed in the Rev B relayout; RC now lands on J5 (JST-SH 4P, USART6)",
     "P53": "RC receiver solder pad - removed in the Rev B relayout; RC now lands on J5 (JST-SH 4P, USART6)",
     "P54": "RC receiver solder pad - removed in the Rev B relayout; RC now lands on J5 (JST-SH 4P, USART6)",
+    # 2026-09-18 removal. TP11 probed the raw QOUT tap, which existed only because the
+    # baseband had no amplifier. With U14 wired as a real difference amplifier, R30's
+    # DC-coupled tap of QOUT_P became redundant and both parts went; PC5 was freed with
+    # them. KNOWN-ISSUES.md and VERIFICATION.md name TP11 to record that the silkscreen
+    # label count IMPROVED (11 pads unlabelled -> 9) when it left, so it is listed here
+    # rather than left looking like a probe point that should be on the board.
+    "TP11": "Q-channel DC tap probe - removed 2026-09-18 with R30 in the baseband rework; "
+            "SOOP_Q_ADC now comes from U14's difference-amplifier output, and PC5 is free",
 }
 docs = [q for q in (REPO / "docs").glob("*.md") if q.name != "HISTORY.md"]
 docs.append(REPO / "README.md")

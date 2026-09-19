@@ -8,9 +8,9 @@ diffable; the netlist itself lives in design.py, which is the actual source of t
 """
 import os, sys, re, uuid, math
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import symlib, design
+import symlib, design, jlcpaths
 
-JLC   = "../.libraries/symbols/jlc_parts.kicad_sym"
+JLC   = jlcpaths.SYMBOLS
 STOCK = "/usr/share/kicad/symbols"
 U = lambda: str(uuid.uuid4())
 
@@ -54,11 +54,7 @@ def pin_index(lib):
 def resolve_pin(lib_id, pins_by_num, spec, lib):
     if spec in pins_by_num: return spec
     _blk, plist = lib[lib_id]
-    named = [p for p in plist if p['name'] == spec]
-    if len(named) == 1: return named[0]['num']
-    pre = [p for p in plist if p['name'].split('-')[0] == spec]
-    if len(pre) == 1: return pre[0]['num']
-    return None
+    return symlib.resolve(plist, spec)
 
 def main():
     lib = collect()

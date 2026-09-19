@@ -30,6 +30,10 @@ fp-info-cache
 # KiCad backup written next to the board by an interrupted save.
 *.kicad_pcb.bak
 
+# The same, for the vendored symbol library. Nothing reads it and it differs from the
+# live library by bytes, so committing it would just be a second copy to keep in sync.
+*.kicad_sym.bak
+
 # Bench results are MEASUREMENTS of one physical board, not a property of the design.
 # tools/check_rf.py deliberately fails until this exists; committing someone else's
 # numbers would satisfy the gate without anyone having switched a board on.

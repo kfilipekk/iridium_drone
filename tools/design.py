@@ -101,16 +101,41 @@ COMPONENTS = {
  "U14": ("jlc_parts:OPA2374M{slash}TR",     "jlc:SOP-8_L4.9-W3.9-P1.27-LS6.0-BL",       "OPA2374",       "C444392",  False),
  "U15": ("jlc_parts:PSA4-5043+",            "jlc:SOT-343-4_L2.0-W1.3-P1.30-LS2.1-BR",           "PSA4-5043+",    "C5240848", True),
  "U16": ("jlc_parts:PSA4-5043+",            "jlc:SOT-343-4_L2.0-W1.3-P1.30-LS2.1-BR",           "PSA4-5043+",    "C5240848", True),
- # Y2 is an ACTIVE 4-pad TCXO (OW2EL89CEIUXFMYLC-25M, YXC YSOS510TP family). Its own
- # family datasheet (the PDF JLC attaches to C22381771) gives the pin table verbatim:
- # 1 = GND, 2 = GND, 3 = OUT, 4 = VDD. The YSOS510TP symbol below carries exactly that
- # pinout - pin 1 is GROUND, not OE/VC, so the R47 pull-up an earlier draft provisioned
- # would have been a dead resistor shorting +3V3A into a ground pin if anyone had ever
- # fitted it. The old SX3M27 symbol (pin 1 = EN) was a 27 MHz CMOS part's symbol reused
- # BY CLASS: the netlist that grounded pin 4 proved the class was right, and the
- # datasheet proved the pin NAMES were still wrong for this part. Transcribe, do not
- # infer - including when the thing you are inferring from is another symbol.
- "Y2" : ("jlc_parts:YSOS510TP",               "jlc:OSC-SMD_4P-L3.2-W2.5-BL",              "25MHz TCXO",    "C22381771",False),
+ # Y2 is an ACTIVE 4-pad clipped-sine TCXO feeding U13's reference through C58.
+ #
+ # THE PART CHANGED 2026-09-18, and the reason was found by check_stock.py the day it
+ # was written: C22381771 (YXC OW2EL89CEIUXFMYLC-25M) was down to **1 unit in stock at
+ # JLCPCB and 1 at LCSC retail**, with `estimateDate: None` - no published restock - and
+ # the order configures TWO assembled boards. The gate had called that board READY TO
+ # ORDER for weeks, because nothing asked whether a part could actually be bought.
+ #
+ # The replacement is C5563878 (HCI T132S4-25000ML33DTL), chosen on EVIDENCE rather than
+ # on spec-string similarity, because "same package, same frequency" is not the property
+ # that matters here - the LAND PATTERN is, and EasyEDA carries at least four different
+ # lands for parts JLCPCB all describe as "SMD3225-4P":
+ #
+ #   ours / C5563878 / C3003285 / C51966246   pads 1.4 x 1.2 at (+-1.100, +-0.875)
+ #   C48888230 (YXC, same family as the old part) pads 0.6 x 1.2 at (+-1.325, +-0.850)
+ #   C2451321 (ECS)                               pads 0.85 x 1.09 at (+-1.365, +-0.895)
+ #
+ # C5563878's footprint is IDENTICAL to the one already on the board - the fetched file
+ # differs only in its `tedit` stamp and its `tags` string - so this is a BOM and symbol
+ # change with NO board, gerber or stencil change.
+ #
+ # PIN 1 IS THE RISK, and it is why C19674258 (8132S) was rejected despite a matching
+ # land and a better +/-500 ppb: its pin 1 is "OE/NC", and this board ties pin 1 to GND.
+ # An active-high OE would hold the oscillator OFF with no symptom anywhere downstream.
+ # T132S4's pin 1 is "GND or N.C." - GND if it is ground, harmless if it is genuinely
+ # no-connect. That is maker-sanctioned, not assumed: Epson's TG2016SMN sheet says of its
+ # N.C. pin, "Please keep 'N.C.' pin OPEN condition or GND connection". Pin 1 is only
+ # dangerous where it is a Disable/Enable or a Vcon - Kyocera's KT1612A is "1pin
+ # Disable Function" and NDK's catalogue lists "Enable/Disable" - and this part is a
+ # plain TCXO, not a VC-TCXO, so it is neither.
+ #
+ # Everything else matches or improves: clipped sine (required - U13's reference is
+ # AC-coupled by C58), 3.3 V on +3V3A, +/-2 ppm against the old +/-2.5 ppm, and the same
+ # -40..+85 C range. 107 in stock at $1.43 against 1 at $1.79.
+ "Y2" : ("jlc_parts:T132S4-25000ML33DTL",     "jlc:OSC-SMD_4P-L3.2-W2.5-BL",              "25MHz TCXO",    "C5563878", False),
  "FL1": ("jlc_parts:TA1575IG",                   "jlc:FILTER-SMD_6P-L3.0-W3.0-P1.19-TR",                       "SAW 1620MHz",   "",         True),
  # NOTE there is no "J9" here any more. J9 WAS the U.FL antenna connector, back when
  # the RF front end was going to live on this board and the strip block deleted the ref
@@ -162,9 +187,12 @@ Y1_PASSIVE_LCSC = {"C2682774"}      # X32258MSB4SI, YXC, CL 20 pF, 120 ohm ESR
 # the part. Keyed on the fitted part, and an unlisted regulator is an ERROR rather than
 # a silent default, the way check_topology.py refuses an unclassified regulator.
 #
-# CONFIRM_EN_THRESHOLD flags a value that has NOT been read off the datasheet page. The
-# check reports it rather than trusting it, and preflight.py carries it in the
-# "cannot be checked offline" list.
+# The `confirmed` flag marks a value that has NOT been read off the datasheet page. The
+# check reports it rather than trusting it: check_electrical.py warns when the flag is
+# False, naming the citation and the UVLO figure that inherits the uncertainty. (This
+# comment used to say preflight.py carried it in a "cannot be checked offline" list,
+# which was never true of that list and is moot now that the readiness manifest owns the
+# verdict - a comment naming evidence that does not exist is how a real gap hides.)
 EN_THRESHOLD_V = {
     "TPS54331": (1.25, True, "[D] TI TPS54331 datasheet"),
     "TPS54202": (1.21, True, "[D] SLVSD26 5.5 Electrical Characteristics, V(EN_RISING) "
@@ -395,7 +423,7 @@ for i,(r) in enumerate(["R22","R23","R24","R25","R26","R27"]): RES(r, "47k")  # 
 for r,v in [("C49","100n"),("C50","100n"),("C51","1u"),
             ("C52","100p"),("C56","10n"),("C57","10n")]:
     CAP(r, v, F_C0402)
-for r,v in [("R28","0R"),("R29","0R"),("R30","10k"),("R31","10k"),
+for r,v in [("R28","0R"),("R29","0R"),("R31","4k7"),
             ("R34","1k"),("R35","1k"),("R36","4k7"),("R37","4k7")]:
     RES(r, v, F_R0402)
 # C58 WAS an 18 pF crystal load cap. It is now the series coupling capacitor the
@@ -405,7 +433,11 @@ for r,v in [("R28","0R"),("R29","0R"),("R30","10k"),("R31","10k"),
 # permits explicitly: "Input Overdrive level, AC-coupled sine-wave input, 0.5 / 1 /
 # 2.0 VP-P". A clipped-sine TCXO sits inside that window; a CMOS-output part would
 # swing 3.3 V and exceed it, which is why the output type is part of the part choice.
-CAP("C58","1n", F_C0402)      # series AC coupling, Y2 output -> U13 XTAL
+# 10 nF, not 1 nF. The TCXO datasheet is explicit: "DC-cut capacitor is not included in
+# this TCXO. Please attach an external DC-cut capacitor (0.01 uF Min.) to the out pin."
+# 1 nF would have passed 25 MHz into the MAX2112's XTAL input perfectly well - the
+# corner into 10 kOhm is 16 kHz - but it was below a stated minimum for no reason.
+CAP("C58","10n", F_C0402)     # series DC-cut, Y2 output -> U13 XTAL [D] TCXO: 0.01 uF min
 CAP("C59","100n", F_C0402)    # Y2 supply decoupling (was the second 18 pF load cap)
 # ------------------------------------------------------------- connector orientation
 #
@@ -679,6 +711,67 @@ CAMERA_REC = dict(name="XIAO ESP32S3 Sense", L=21.0, W=17.5, H=13.0, g=6.0,
                       "8 MB PSRAM; [L] ~GBP 10-14 AliExpress; [A] 13 mm stacked height "
                       "and 6 g with the Sense expansion - MEASURE ON ARRIVAL")
 
+# ---- THE MOTOR / ARM / SKID BOLT PATTERN - ONE NUMBER, ONE HOME -------------------
+#
+# The joint: a screw runs down through the frame ARM, through the printed SKID, and into
+# the MOTOR's tapped boss. Three parts on one bolt axis, 16 of them - four per motor.
+#
+# It had three representations and no two of them comparable:
+#     FRAME["motor_holes"]   the STRING  "16x16 / 19x19"
+#     MOTOR["holes"]         the STRING  "19x19"
+#     SKID["hole_pitch"]     the NUMBER   19.0
+# and check_purchase.py compared the skid against the LITERAL 19.0 while labelling the
+# row "skid <-> MOTOR pattern". That is a label, not a comparison: change the motor's
+# pattern and the row still passes. The substring test used for the motor-vs-frame pair
+# is the same shape - "6x1" in "16x16 / 19x19" is True.
+#
+# THE MOTOR IS THE AUTHORITY. It is the part with the TAPPED holes, and its pattern is
+# [D] from BrotherHobby's product data. The arm and the printed skid are designed TO it.
+#
+# WHAT WAS NEVER DECLARED AT ALL: any HOLE DIAMETER. So nothing here could catch a skid
+# printed with 2.0 mm holes for an M3 screw, or an arm whose clearance hole is smaller
+# than the screw - the two failures that survive every other check in this project and
+# appear at assembly as a bolt that will not pass through. Those are declared below and
+# checked by tools/check_fit.py, which is the one thing an interference test cannot do:
+# a hole is ABSENT material, so check_cad_fit.py measures a large clearance across a
+# missing bolt hole and reports ok.
+MOTOR_JOINT = dict(
+    pitch_mm=19.0,          # [D] BrotherHobby Avenger 2806.5: M3 at 19 x 19
+    screw="M3",             # [D] same source
+    screw_dia=3.0,
+    # What the screw passes THROUGH, head first, and the hole it passes through in each.
+    # The thickness is a (DICT, KEY) REFERENCE, not a copied number: design.py already
+    # owns FRAME['arm_t'] and SKID['t'], and a copy here would be the same live
+    # duplication this dict exists to end - fasteners.py used to carry a second 3.5 that
+    # went stale the moment the skid got thicker. tools/check_fit.py resolves the
+    # reference and fails if the key moves or disappears.
+    layers=(
+        ("frame arm", ("FRAME", "arm_t"), 3.2,
+         "[D] So1-V6 arm 6.0 mm; [A] 3.2 mm hole - the frame's motor holes are published "
+         "as the 19x19 PATTERN, not as diameters"),
+        ("printed skid", ("SKID", "t"), 3.2,
+         "[M] design.SKID - printed, so the hole is ours to specify; 3.2 mm is standard "
+         "M3 close clearance for a 3.0 mm screw"),
+    ),
+    # and what it engages
+    engages="motor tapped boss",
+    tap_dia=3.0,
+    engage_mm=4.0,          # [A] 1 x diameter for M3 in aluminium - see fasteners.py
+    boss_depth_mm=None,     # NOT PUBLISHED anywhere - see the overshoot warning below
+    src="[D] BrotherHobby Avenger 2806.5 product data (M3, 19x19); "
+        "[M] arm and skid thicknesses referenced from this file",
+)
+
+
+def fmt_pattern(pitches_mm):
+    """(16.0, 19.0) -> '16x16 / 19x19', for doc tables and check messages.
+
+    One formatter, so a pattern is rendered the same way everywhere it is printed.
+    The alternative - a hand-written string per consumer - is how one quantity ends up
+    described three ways, which is the defect MOTOR_JOINT exists to end.
+    """
+    return " / ".join(f"{p:.0f}x{p:.0f}" for p in sorted(pitches_mm))
+
 # THERE IS NO LISTING TO CONFIRM HERE - the skid is a part you PRINT, so it has no
 # marketplace page and never will. That distinction was blurred by tagging the whole
 # dict [A] and telling the reader to "confirm on the listing", which cannot be done.
@@ -691,7 +784,7 @@ CAMERA_REC = dict(name="XIAO ESP32S3 Sense", L=21.0, W=17.5, H=13.0, g=6.0,
 #     clearance, so it is the number to settle before printing, not before ordering.
 # NOTE the frame's own published skate is a 6.0 mm flat wear plate (PRINTABLE), NOT a
 # 25 mm leg - printing that instead gives no ground clearance for a downward camera.
-SKID = dict(t=3.5, drop=40.0, hole_pitch=19.0, printed=True,
+SKID = dict(t=3.5, drop=40.0, hole_pitch=MOTOR_JOINT["pitch_mm"], printed=True,
             # DROP RAISED 25 -> 40 mm to give the LD06 a home. The lidar is [D] 33.30 mm
             # tall and the belly had only 28.5 mm at a 25 mm drop - short by 4.80 mm.
             #
@@ -744,17 +837,58 @@ BELLY_SENSOR["depth_available_mm"] = SKID["drop"] + SKID["t"]
 # bottom plate or from the mid plate is not settled by a 2D DXF, and the readings
 # differ by 8.0 mm. This takes the WORSE one. If the frame turns out to measure from
 # the mid plate, 35 mm standoffs simply leave more room than computed - never less.
-def required_standoff(board, headroom=3.0):
-    """Standoff length needed from the BOTTOM plate, and the stock size to buy."""
+# HOW THE TOP PLATE IS CARRIED - from the manufacturer's flat pattern, parsed by
+# tools/parse_frame_dxf.py into cad/frame-dxf.json (keyed to the DXF's sha256). Every
+# number is relative to the 30.5 mm STACK CENTRE, +y = aft (the camera is at -y).
+#
+#   mid (fc) plate   centre y -29.16, spans -82.46..+24.14; carries the 30.5 / 20 patterns
+#   bottom plate     centre y +31.09, spans -22.72..+84.90; 8 press nuts at 30.5 / 20
+#   top plate        centre y  +4.78, spans -75.35..+84.91; NO 30.5 holes
+#   front posts      22 mm standoffs ON THE MID PLATE at (+-14.6, -27.88) and (+-14.6, -52.88)
+#   rear posts       30 mm standoffs ON THE BOTTOM PLATE at (+-14.6, +27.88) and (+-11.0, +80.75)
+#
+# The 22/30 assignment is not a guess: the two sets stand on plates 8.0 mm apart and
+# hold one flat plate, so they must differ by exactly arms + mid = 8.0 - asserted below.
+# What this settles: the stack's headroom is the FRONT standoff (22 mm) above the mid
+# plate; the posts nearest the board are Ø5 at |y| = 27.88 - 2.5 = 25.38 mm from the
+# stack centre, against a board half-length of 23.05 and an ESC half-length of 22.8.
+TOP_PLATE_MOUNT = dict(
+    front_standoff=22.0, rear_standoff=30.0, post_od=5.0,        # [D] TBS: "30 and 22mm"
+    front_posts=((-14.6, -27.88), (14.6, -27.88), (-14.6, -52.88), (14.6, -52.88)),
+    rear_posts=((-14.6, 27.88), (14.6, 27.88), (-11.0, 80.75), (11.0, 80.75)),
+    plate_centre_y=dict(fc=-29.16, bottom=31.09, top=4.78),
+    src="[D] cad/frame-dxf.json (So1-V6-7inDC-2025-JUL-07.dxf sha 398556cd), hole "
+        "patterns per plate; [D] team-blacksheep.com prod:source1v6 'Standoff height: "
+        "30 and 22mm'; [M] 22-on-mid / 30-on-bottom forced by top-plate flatness")
+
+
+def required_standoff(board, headroom=None):
+    """The stack against the top plate the KIT actually gives it.
+
+    Returns the same keys older callers read, with corrected meaning:
+      below        frame under the stack (bottom plate + arms + mid plate)
+      stack        ESC + gap + this board, parts included
+      buy          the standoff whose length sets the stack's headroom - the kit's
+                   22 mm front standoff; nothing to buy (kit=True)
+      top_plate_z  underside of the top plate above the bottom of the bottom plate,
+                   for the CAD (== bottom_t + rear standoff == below + front standoff)
+      slack        headroom left between the tallest part and the top plate
+    The old version summed from the bottom plate to a standoff at the 30.5 pattern -
+    a standoff the frame does not have - and told PARTS.csv to buy 35 mm.
+    """
     top, bot, topref, botref, _ = stack_heights(board, skip_dnp=True)
     below = FRAME["bottom_t"] + FRAME["arm_t"] + FRAME["medium_t"]
     stack = ESC["pcb"] + ESC["parts"] + MOUNTING["gap"] + bot + BOARD_T + top
-    need  = below + stack + headroom
-    stock = next((s for s in STANDOFF_STOCK if s >= need), None)
-    return dict(below=below, stack=stack, headroom=headroom, need=need, buy=stock,
+    front = TOP_PLATE_MOUNT["front_standoff"]
+    top_plate_z = below + front
+    assert abs(top_plate_z - (FRAME["bottom_t"] + TOP_PLATE_MOUNT["rear_standoff"])) < 1e-6, \
+        "22-on-mid and 30-on-bottom no longer meet at one flat top plate"
+    return dict(below=below, stack=stack, headroom=front - stack, need=below + stack,
+                buy=front, kit=True, top_plate_z=top_plate_z,
                 top=top, bot=bot, topref=topref, botref=botref,
-                slack=(stock - below - stack) if stock else None,
-                src="[M] computed from the board + FRAME + ESC + MOUNTING")
+                slack=front - stack,
+                src="[M] computed from the board + FRAME + ESC + MOUNTING against "
+                    "TOP_PLATE_MOUNT (the kit's 22 mm front standoffs on the mid plate)")
 
 BOARD_T = 1.6                       # [M] 6-layer stackup, tools/design.py
 STANDOFF_STOCK = (25, 30, 35, 40, 45)   # [L] common M3 aluminium standoff lengths
@@ -1276,15 +1410,34 @@ PAYLOAD = dict(
 # are a real model rather than the [A] placeholder they were. Camera, GoPro, antenna and
 # SMA mounts are published too. All fit an Ultimaker 2+ (223 x 223 x 205 mm).
 FRAME = dict(name='TBS Source One V5 7in DC', wb=320.0, size=(200.0, 230.0),
-             inner_h=30.0,
+             # 22, NOT 30. The kit ships 30 mm AND 22 mm standoffs; which set stands over
+             # the stack is forced by the DXF (cad/frame-dxf.json): the top plate's front
+             # holes (x +-14.6, pitch 25.0) match the MID plate, its rear holes (+-14.6 /
+             # +-11.0, pitch 52.87) match the BOTTOM plate, and the mid plate sits 8.0 mm
+             # (arms 6 + plate 2) above the bottom plate. One flat top plate therefore
+             # needs 22 on the mid plate and 30 on the bottom plate - 22 + 8 = 30. So the
+             # ESC + FC stack has 22 mm above the mid plate, and "buy 35 mm standoffs"
+             # (the previous answer) described a standoff that does not exist: nothing
+             # in the kit stands at the 30.5 pattern - the top plate has no 30.5 holes.
+             # A literal because gen_doc_tables.py evaluates this dict on its own; the
+             # assert right after FRAME binds it to TOP_PLATE_MOUNT so it cannot drift.
+             inner_h=22.0,
              bottom_t=2.5, medium_t=2.0, upper_t=2.0, arm_t=6.0, cam_plate_t=2.0,
              stack="30.5x30.5 M3 and 20x20 - VERIFIED from the manufacturer DXF",
-             motor_holes="16x16 / 19x19",
+             # NUMERIC, not the string "16x16 / 19x19". The arm carries both patterns
+             # (a 4-in-1 motor mount offers 16x16 and 19x19); the MOTOR_JOINT decides
+             # which one this aircraft actually bolts to, and check_fit.py verifies it.
+             motor_patterns_mm=(16.0, 19.0),
              strap=(20.0, 300.0), price_gbp=35.90, g=143.5,
              src="[D] github.com/tbs-trappy/source_one So1-V6-7inDC-2025-JUL-07.dxf, "
                  "stack patterns parsed directly 2026-09-02; [L] hobbyrc.co.uk for "
                  "standoffs 30/22 mm, plates and 143.5 g; [A] plate outline 200x230 mm "
                  "- overall footprint only, not load-bearing on any check")
+assert FRAME["inner_h"] == TOP_PLATE_MOUNT["front_standoff"], \
+    "FRAME.inner_h must be the kit's front standoff (TOP_PLATE_MOUNT) - one number"
+assert abs(FRAME["arm_t"] + FRAME["medium_t"]
+           - (TOP_PLATE_MOUNT["rear_standoff"] - TOP_PLATE_MOUNT["front_standoff"])) < 1e-6, \
+    "the two standoff sets stand on plates 8 mm apart and hold one flat top plate"
 
 # THE FIT QUESTION, ANSWERED FROM THE DXF - not deferred to calipers.
 #
@@ -1354,9 +1507,12 @@ PLATES = dict(
     arm=(31.08, 185.21),
     top_m3_x=(14.60, 11.00), bottom_m3_x=(14.60, 11.00),
     battery_overhang_per_side=(47.0 - 42.50) / 2,
-    src="[M] ezdxf flatten of So1-V6-7inDC-2025-JUL-07.dxf, 2026-09-04; method validated "
-        "by reproducing the known FC plate to 2 dp. [A] which plate is top vs bottom - "
-        "inferred from length against the 138 mm battery; confirm with calipers")
+    # which plate is which is no longer inferred from the battery: the 160.26 plate is
+    # the only one whose holes match BOTH other plates' standoff groups (front pair to
+    # the mid plate, rear group to the bottom plate), so it is the top plate; the plate
+    # with the press-nut holes (Ø4.30 + Ø6.00 flange, layer 9) is the bottom plate.
+    src="[D] tools/parse_frame_dxf.py -> cad/frame-dxf.json from "
+        "So1-V6-7inDC-2025-JUL-07.dxf (sha 398556cd); re-derivable, not a one-off flatten")
 
 FRAME_CAD = dict(
     fc_plate=(48.50, 106.59),
@@ -1375,7 +1531,8 @@ FRAME_CAD = dict(
 # shaft_thread is what the PROP screws onto, and it was missing from both dicts - so
 # nothing in this project could have caught a prop with the wrong bore. It is the classic
 # unrecoverable purchase error: the props arrive, and they do not go on the motors.
-MOTOR = dict(name="2806.5 1300KV", kv=1300, g=41.0, thrust_g=1250, holes="19x19",
+MOTOR = dict(name="2806.5 1300KV", kv=1300, g=41.0, thrust_g=1250,
+             hole_pitch_mm=MOTOR_JOINT["pitch_mm"],
              shaft_thread="M5", poles="12N14P",
              # Body envelope, for the CAD. These lived as literals inside
              # tools/gen_scad_frame.py's output f-string, which meant the airframe
@@ -1472,6 +1629,12 @@ def net(name, *pins): NETS.setdefault(name, []).extend(pins)
 net("GND",
     "U1.10","U1.26","U1.49","U1.74","U1.99","U1.19",           # VSS + VSSA
     "U2.6","U3.6","U4.3","U5.4",
+    # Pin 7 of BOTH IMUs. The LGA-14 has five RESV pins; four are "No Connect or
+    # Connect to GND" and pin 7 alone is "Connect to GND" [D] DS-000347 ICM-42688-P
+    # and DS-000292 ICM-42605, pin tables. It was floating on both parts and no check
+    # could see it, because every check reads design.py and design.py said nothing.
+    # Found by comparing the symbols against the datasheets (check_symbol_pinout.py).
+    "U2.7","U3.7",
     "U8.1","U9.2","U10.2","U11.2","U12.2",
     "J1.A1B12","J1.B1A12","J1.13","J1.14",
     "J2.1","J2.9","J2.10", "J3.6","J3.7","J3.8",
@@ -1600,7 +1763,10 @@ net("PC2_SPARE","U1.PC2_C"); net("PC3_SPARE","U1.PC3_C")
 # ---- SoOP analogue front end (SoOP config, DNP) ------------------------------
 net("SOOP_I_ADC","U1.PC4","U14.1")
 net("SOOP_Q_ADC","U1.PA4","U14.7")
-net("SOOP_RSSI","U1.PC5","R30.2")
+# PC5 is FREE. It carried "SOOP_RSSI", a 10k tap from the tuner's QOUT+ - not an RSSI
+# (the MAX2112 has no such pin) and, once a real difference amplifier feeds
+# SOOP_Q_ADC, not information either: the same signal, DC-coupled, unamplified. The
+# resistor was also in the one lane the Q-channel fanout needed. Gone, with its pad.
 net("SPARE_ADC","U1.PA7")
 
 
@@ -1638,8 +1804,12 @@ NETS["+3V3A"] += ["R28.1"]; NETS["GND"] += ["C49.2","C50.2","C51.2"]
 # have started. Nothing caught it because the whole RF block was stripped and DNP, so
 # no check ever ran over it.
 #
-# Correct wiring for this part, transcribed from the YSOS510TP family datasheet
-# (the PDF JLC attaches to C22381771): 1 = GND, 2 = GND, 3 = OUT, 4 = VDD.
+# Wiring: 2 = GND, 3 = OUT, 4 = VDD, and pin 1 is N.C. on a plain TCXO (VC on the
+# VC-TCXO variant) - NOT "GND" as an earlier note here claimed to have transcribed.
+# That is the pin table Epson's TG5032 and ECS's ECS-TXO-3225CS both give for this
+# 4-pad clipped-sine class; YXC's own sheet could not be reached. Pin 1 is tied to
+# GND deliberately: harmless on N.C., and on a VC part it parks the frequency at one
+# end of its pull range, a constant offset the Doppler solver estimates as clock bias.
 net("TUNER_REF",  "Y2.3", "C58.1")            # TCXO clipped-sine output
 net("TUNER_XTAL", "C58.2", "U13.14")          # AC-coupled into the XTAL pin
 NETS["+3V3A"] += ["Y2.4", "C59.1"]            # VDD + decoupling, on the quiet rail
@@ -1650,17 +1820,75 @@ net("VTUNE","U13.9","C56.1"); NETS["GND"] += ["C56.2"]
 net("CPOUT","U13.12","R34.1"); net("LOOP","R34.2","C57.1"); NETS["GND"] += ["C57.2"]
 net("VCOBYP","U13.8"); net("REFOUT","U13.15"); net("GC1","U13.5","R35.2")
 NETS["GND"] += ["R35.1"]
-# MAX2112 baseband -> OPA2374 difference amps -> ADC (resistor values TBD by sim)
+# ---- MAX2112 baseband -> OPA2374 difference amplifiers -> ADC ------------------------
+#
+# THIS BLOCK SHIPPED WITH NO FEEDBACK NETWORK. The comment here read "resistor values
+# TBD by sim" and nothing ever came back to it. Each OPA2374 had its inputs driven and
+# its output wired straight to an ADC pin with no path back to the inverting input -
+# an op-amp with 130 dB of open-loop gain and no feedback is a COMPARATOR, so both ADC
+# pins would have sat at a rail and toggled on the sign of the baseband signal. The
+# symbol pinout audit (tools/check_symbol_pinout.py) found it while confirming that
+# U14's symbol was right; the circuit was what was wrong.
+#
+# It is now a standard four-resistor difference amplifier per channel, designed to
+# the MAX2112 datasheet's numbers rather than a simulation that never ran:
+#
+#   Rin = 4k7 (R36/R37, R47/R31), Rf = Rb = 10k  ->  gain 2.13, output centred on VREF
+#
+#   MAX2112 output  0.5..1 Vp-p differential nominal (RLOAD 2k)  [D] MAX2112 Rev 3
+#   x 2.13          1.1..2.1 Vp-p single-ended around 1.65 V   ->  0.6..2.7 V at the ADC
+#   ADC             0..3.3 V, so ~65% of range at nominal, clipping at 3 Vp-p in, which
+#                   is the MAX2112's own 1 dB compression point - nothing clips first
+#
+# The MAX2112's baseband gain is PROGRAMMABLE over I2C (GC2, BBG[3:0], ~15 dB range),
+# so this stage does not have to guess a level: it does differential-to-single-ended
+# conversion and mid-rail biasing, and the tuner is told what to put out. Getting the
+# gain wrong later is a two-resistor swap; an open-loop op-amp is not fixable.
+#
+# Loading on the tuner: 4k7 per side into a virtual ground, against a 30 Ohm output
+# impedance and a 2 kOhm characterisation load - lighter than the datasheet condition.
+# The +IN leg sees Rin + Rb to VREF, the -IN leg Rin to a virtual ground; that
+# asymmetry is inherent to the topology and costs CMRR, which 1% resistors bound at
+# ~40 dB. The MAX2112's own DC-offset servo (IDC/QDC) removes most of what CMRR would.
+#
+# DC-COUPLED, not the datasheet's "AC-couple with 47nF to the demodulator input". That
+# instruction targets a DVB demodulator IC with its own input bias. A difference
+# amplifier with an explicit mid-rail reference rejects the tuner's common-mode by
+# construction, needs no coupling capacitors (four fewer parts), and has no
+# low-frequency corner mismatch between the + and - paths.
+#
+# VREF is a 10k/10k divider on +3V3A with 1 uF: 165 uA, 5 kOhm source, 32 Hz corner.
+# Above 32 Hz the capacitor makes VREF an AC ground and the gain is exactly Rf/Rin;
+# below it the 5 kOhm in series with Rb shifts the output DC point slightly, which
+# the ADC reads as a constant and software subtracts.
+for r, v in [("R47","4k7"), ("R48","10k"), ("R49","10k"), ("R50","10k"),
+             ("R51","10k"), ("R52","10k"), ("R53","10k")]:
+    RES(r, v, F_R0402)
+CAP("C75", "1u", F_C0402)
+# Anti-aliasing. The MAX2112's baseband lowpass is 4 MHz at its NARROWEST (it is a DVB
+# tuner) and the H743 ADC samples at 3.6 MSPS or less, so with nothing in between the
+# tuner's entire noise floor folds into the burst's ~25 kHz. 100 pF across each 10k
+# feedback resistor gives a 159 kHz first-order corner: an Iridium burst sits within
+# +-60 kHz of the LO once Doppler is included, and the ADC can run at 400 kSPS and up
+# without aliasing. 100 pF is C1546, already on the BOM as C52.
+CAP("C76", "100p", F_C0402); CAP("C77", "100p", F_C0402)
+
+# I channel: IOUT+ -> R36 -> +IN A (R51 to VREF); IOUT- -> R37 -> -IN A (R50 to OUT A)
 net("IOUT_P","U13.19","R36.1"); net("IOUT_N","U13.20","R37.1")
-net("QOUT_P","U13.17","R30.1"); net("QOUT_N","U13.18","R31.1")
-net("OPA_IN1P","R36.2","U14.3"); net("OPA_IN1N","R37.2","U14.2")
-net("OPA_IN2P","R30.1")  # placeholder, merged below
-del NETS["OPA_IN2P"]
-net("OPA_IN2P_","U14.5"); net("OPA_IN2N_","U14.6")
-NETS["QOUT_P"] += ["U14.5"]; NETS["QOUT_N"] += ["U14.6"]
-del NETS["OPA_IN2P_"], NETS["OPA_IN2N_"]
-NETS["+3V3A"] += ["U14.8"]; NETS["GND"] += ["U14.4"]   # opamps follow the tuner
-net("IDC_P","U13.21"); net("IDC_N","U13.22"); net("QDC_P","U13.23"); net("QDC_N","U13.24")
+net("OPA_IN1P","R36.2","U14.3","R51.1"); net("OPA_IN1N","R37.2","U14.2","R50.1")
+NETS["SOOP_I_ADC"] += ["R50.2", "C76.2"]             # feedback, OUT A -> -IN A
+NETS["OPA_IN1N"] += ["C76.1"]                        # C76 across R50: anti-alias
+# Q channel: QOUT+ -> R47 -> +IN B (R49 to VREF); QOUT- -> R31 -> -IN B (R48 to OUT B)
+net("QOUT_P","U13.17","R47.1"); net("QOUT_N","U13.18","R31.1")
+net("OPA_IN2P","R47.2","U14.5","R49.1"); net("OPA_IN2N","R31.2","U14.6","R48.1")
+NETS["SOOP_Q_ADC"] += ["R48.2", "C77.2"]             # feedback, OUT B -> -IN B
+NETS["OPA_IN2N"] += ["C77.1"]                        # C77 across R48: anti-alias
+# the mid-rail reference both channels share
+net("BB_VREF","R52.2","R53.1","C75.1","R51.2","R49.2")
+NETS["+3V3A"] += ["R52.1", "U14.8"]; NETS["GND"] += ["R53.2", "C75.2", "U14.4"]
+# DC-offset servo capacitors, one ACROSS each pair as the datasheet draws them
+net("IDC_P","U13.21","C61.1"); net("IDC_N","U13.22","C61.2")
+net("QDC_P","U13.23","C63.1"); net("QDC_N","U13.24","C63.2")
 
 # ---------------------------------------------------------------- fixes ----
 # LED chains: MCU -> resistor -> LED anode -> GND  (LEDs are active-low in hwdef,
@@ -1690,7 +1918,6 @@ NETS.pop("R3", None)
 NETS["+5V"]  += ["U9.3","U10.3"]
 
 COMPONENTS.pop("R2", None)
-NETS["GND"] += ["R31.2"]
 
 # BOOT0 button: +3V3 --SW1-- BOOT0 --R1-- GND   (was shorting +3V3 to BOOT0)
 for n in ("BOOT0","+3V3","GND"):
@@ -1700,13 +1927,26 @@ NETS["BOOT0"] += ["SW1.2"]; NETS["+3V3"] += ["SW1.1"]
 NETS["+5V"] = [x for x in NETS["+5V"] if x != "U8.2"]
 COMPONENTS.pop("R3", None)
 
-# ---- MAX2112 bypass / DC-offset caps (datasheet-required, SoOP config DNP) ----
-for r, v in [("C60","100n"),("C61","100n"),("C62","100n"),("C63","100n"),("C64","100n")]:
-    CAP(r, v, F_C0402, dnp=True)
-NETS["VCOBYP"] += ["C60.1"]
-NETS["IDC_P"]  += ["C61.1"]; NETS["IDC_N"] += ["C62.1"]
-NETS["QDC_P"]  += ["C63.1"]; NETS["QDC_N"] += ["C64.1"]
-NETS["GND"]    += ["C60.2","C61.2","C62.2","C63.2","C64.2"]
+# ---- MAX2112 bypass / DC-offset caps ---------------------------------------------
+# FITTED. These were marked DNP when the whole SoOP block was stripped, and stayed DNP
+# when U13, U14 and Y2 came back - so the tuner would have been assembled with its
+# VCO bias bypass missing ("Bypass to GND with a 100nF capacitor connected as close as
+# possible to the pin" [D] MAX2112 pin 8) and no integrator on either DC-offset servo.
+# A fitted tuner with DNP datasheet-required capacitors is the fitted/not-fitted
+# distinction failing to propagate, one layer down from the U11 DNP decision.
+#
+# C62 and C64 are gone. The MAX2112 wants ONE capacitor "from IDC- to IDC+" and one
+# from QDC- to QDC+; this had two per channel, each to ground. Electrically that was
+# close - two 100 nF in series is 50 nF differential, near the datasheet's 47 nF - but
+# it was the wrong topology, loaded each servo node to ground with 100 nF, and cost two
+# parts. One 100 nF across the pair per channel now. 100 nF rather than 47 nF because
+# 47 nF is not a value this BOM carries and the corner it sets is not critical: the
+# datasheet's 47 nF gives a 400 Hz baseband highpass, 100 nF gives ~188 Hz, and for an
+# 8 ms Iridium burst a LOWER corner keeps more of the signal.
+for r, v in [("C60","100n"),("C61","100n"),("C63","100n")]:
+    CAP(r, v, F_C0402)
+NETS["VCOBYP"] += ["C60.1"]; NETS["GND"] += ["C60.2"]
+# C61 spans IDC_P/IDC_N and C63 spans QDC_P/QDC_N - wired where the nets are declared
 
 # ---- power flags: tell ERC these rails are actually driven ---------------
 PWR_FLAGS = {"VBAT":"PF1", "+5V":"PF2", "+3V3":"PF3", "+3V3A":"PF4",
@@ -1826,7 +2066,7 @@ for _r in ("U15", "U16", "FL1", "L3", "L4"):
 
 # Keep the SoOP receiver interface reachable from the board edge even though the RF
 # front end now lives elsewhere: I/Q and AGC come back as pads.
-for _i, _n in enumerate(["SOOP_I_ADC", "SOOP_Q_ADC", "SOOP_RSSI"], start=len(TESTPOINT_NETS)+1):
+for _i, _n in enumerate(["SOOP_I_ADC", "SOOP_Q_ADC"], start=len(TESTPOINT_NETS)+1):
     if _n in NETS:
         _r = f"TP{_i}"
         add(_r, "Connector:TestPoint", "TestPoint:TestPoint_Pad_1.5x1.5mm", _n, "", False)
@@ -2172,6 +2412,32 @@ ADJACENCY = {
     # the congestion around U9 actually allows. Widened deliberately with the reason,
     # rather than left tight and then waived when the placer could not meet it.
     "C74": ("U19", "B1", 3.5),
+    # The OPA2374 difference-amplifier network. Feedback resistors define the gain and
+    # a long feedback trace is an antenna into a high-impedance node, so they sit at
+    # the op-amp; the input resistors already do. 4 mm is generous for 0402s around
+    # an SOP-8 and still forbids "somewhere across the board".
+    # 8 mm, not the 4 mm first tried: the block around U14 is full, and a feedback
+    # trace of a few millimetres on a 6-layer board with ground planes is a
+    # non-issue at baseband. What matters is that they are NOT across the board.
+    # Input resistors pair up AT THE TUNER, where R31 and R37 already sit: the long
+    # run to the op-amp is then the same length on + and - of each channel, which is
+    # what CMRR actually depends on. R36 was 12 mm from anything, on its own.
+    "R36": ("R37", "1", 8.0),  "R47": ("R31", "1", 6.0),
+    "R48": ("U14", "6", 8.0),
+    "R49": ("U14", "5", 8.0),  "R50": ("U14", "2", 8.0),
+    "R51": ("U14", "3", 8.0),
+    "C76": ("R50", "1", 12.0), "C77": ("R48", "1", 8.0),   # in parallel with them; a few
+                                                            # mm of trace is ~1 pF against 100 pF
+    "R52": ("U14", "8", 12.0),                # VREF divider: a DC reference, 1 uF at
+    "R53": ("R52", "2", 3.0),                 # the far end makes distance irrelevant
+    "C75": ("R53", "1", 3.0),
+    # DC-offset servo capacitors, "from IDC- to IDC+" across adjacent pins
+    # Bounds match where the layout already has them (1.8 / 2.9 / 3.1 mm): these were
+    # placed when the block was first drawn and only their DNP flag changed. 2 mm
+    # for a VCO bias bypass on a 0.5 mm-pitch QFN is what "as close as possible"
+    # comes to in practice; the servo integrators are not high-frequency parts.
+    "C61": ("U13", "21", 3.5), "C63": ("U13", "23", 3.5),
+    "C60": ("U13", "8", 2.0),
     "C41": ("U11", "3", 1.5),
     "C42": ("J1", "A4B9", 3.0),
     "C45": ("J8", "4", 3.0), "C46": ("J8", "4", 2.0),
@@ -2928,7 +3194,7 @@ MODULES = {
         note="MAVLink downlink caps at 1470 B/s - carries telemetry, never video"),
     "soop_tuner": dict(
         what="SoOP RF front end - the point of the project",
-        lands_on=["TP9", "TP10", "TP11", "P44"], conn="solder pads (I/Q ADC pair, RSSI, PPS)",
+        lands_on=["TP9", "TP10", "P44"], conn="solder pads (I/Q ADC pair, PPS)",
         needs_board_change=None, gbp=70, status="later",
         ma_5v=0, counted=True,
         note="a reflash plus a bought tuner, NOT a fabrication run. "

@@ -147,21 +147,26 @@ def spatial_table():
     rows = [
         ("stack height", f"**{s['below']+s['stack']:.1f} mm** "
          f"({s['below']:.1f} frame + {s['stack']:.1f} stack)",
-         f"needs a **{s['buy']} mm** standoff; the kit's {F['inner_h']:.0f} mm is "
-         f"{s['need']-F['inner_h']:.1f} mm short"),
-        ("clearance above the FC", f"{s['buy']-s['below']-s['stack']:.1f} mm",
+         f"under the top plate at **{s['top_plate_z']:.1f} mm** (the kit's "
+         f"{s['buy']:.0f} mm front standoffs on the mid plate + {F['arm_t']+F['medium_t']:.0f} "
+         f"mm of arms and plate); nothing to buy"),
+        ("clearance above the FC", f"{s['slack']:.1f} mm",
          f"to the top plate, tallest part `{s['topref']}`"),
         ("FC/ESC mounting", f"{design.MOUNTING['pitch']} x {design.MOUNTING['pitch']} mm",
          "shared pattern, boards concentric"),
         ("board envelope", "45.10 x 46.10 mm",
          f"{F_CAD_W:.2f} mm clear per side, {F_CAD_L:.2f} mm at the nearer end"),
-        ("motor pattern", design.MOTOR["holes"], "[D] BrotherHobby product data"),
+        ("motor pattern",
+         f"{design.MOTOR_JOINT['pitch_mm']:.0f} x "
+         f"{design.MOTOR_JOINT['pitch_mm']:.0f} mm",
+         "[D] BrotherHobby product data; one source, `design.MOTOR_JOINT`"),
         ("propeller diameter", f"{P['dia_mm']:.1f} mm", "7 in"),
         ("adjacent propeller gap", f"**{prop_gap:.1f} mm**",
          f"{F['wb']:.0f} mm wheelbase, discs {motor_off*2:.1f} mm apart"),
         ("camera lens to skid contact", f"{cam_margin:.1f} mm",
          f"{S['drop']:.0f} mm drop + {S['t']:.1f} mm pad - {C['mod_t']:.0f} mm module "
-         f"- {C['lens_len']:.1f} mm barrel; drop and thickness are [A]"),
+         f"- {C['lens_len']:.1f} mm barrel; the skid is PRINTED, so drop and thickness "
+         f"are design values, not measurements"),
         ("battery envelope", f"{B['L']} x {B['W']} x {B['H']} mm",
          "plan view only - restraint and CG are physical checks"),
         ("companion board", "NOT FITTED",
@@ -216,10 +221,14 @@ def frame_table(f):
         f"upper {f['upper_t']}, camera side {f['cam_plate_t']} mm |",
         f"| arms | {f['arm_t']} mm |",
         f"| **FC mounting** | **{f['stack']}** |",
-        f"| **inner space height** | **{f['inner_h']:.0f} mm** (what the kit ships) |",
-        f"| **standoff to BUY** | **{_sto['buy']} mm** - the kit's "
-        f"{f['inner_h']:.0f} mm is {_sto['need']-f['inner_h']:.1f} mm short |",
-        f"| motor mounting | {f['motor_holes']} mm |",
+        f"| **inner space over the mid plate** | **{f['inner_h']:.0f} mm** - the kit's "
+        f"22 mm front standoffs; 30 mm rear standoffs stand on the bottom plate "
+        f"(design.TOP_PLATE_MOUNT, from the DXF) |",
+        f"| **standoffs** | **use the kit's** - stack {_sto['stack']:.1f} mm leaves "
+        f"{_sto['slack']:.1f} mm under the top plate |",
+        f"| motor mounting | {' / '.join(f'{p:.0f}x{p:.0f}' for p in f['motor_patterns_mm'])} mm "
+        f"([L] retailer figure - the manufacturer DXF's motor holes are self-inconsistent, "
+        f"see KNOWN-ISSUES.md) |",
         f"| included | frame kit + one {f['strap'][0]:.0f} x {f['strap'][1]:.0f} mm "
         "battery strap |",
         f"| mass / price | {f['g']:.0f} g / GBP {f['price_gbp']:.2f} |",

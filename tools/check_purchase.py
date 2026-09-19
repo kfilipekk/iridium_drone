@@ -48,11 +48,23 @@ def main():
     check(adj > P["dia_mm"], "prop <-> frame",
           f"adjacent motors {adj:.1f} mm, prop {P['dia_mm']:.1f} mm -> "
           f"{adj - P['dia_mm']:+.1f} mm gap", F["src"].split(";")[0])
-    check(M["holes"] in F["motor_holes"], "motor bolts <-> frame arm",
-          f"motor {M['holes']} mm, frame offers {F['motor_holes']} mm", M["src"])
-    check(abs(S["hole_pitch"] - 19.0) < 0.1, "skid <-> MOTOR pattern",
-          f"skid must be {S['hole_pitch']:.0f}x{S['hole_pitch']:.0f} mm - the frame also "
-          f"offers 16x16 and buying that is the classic mistake", S["src"])
+    # NUMERIC and REFERENTIAL, not substring and not a literal. These two rows used to
+    # read  M["holes"] in F["motor_holes"]  - a substring test, which "6x1" passes
+    # against "16x16 / 19x19" - and  abs(S["hole_pitch"] - 19.0) < 0.1  labelled
+    # "skid <-> MOTOR pattern", which compared the skid to a hardcoded number and not to
+    # the motor at all. Both now compare to MOTOR_JOINT, which is the single source.
+    check(design.MOTOR_JOINT["pitch_mm"] in F["motor_patterns_mm"],
+          "motor bolts <-> frame arm",
+          f"motor needs {design.MOTOR_JOINT['pitch_mm']:.0f} x "
+          f"{design.MOTOR_JOINT['pitch_mm']:.0f} mm; the arm offers "
+          f"{design.fmt_pattern(F['motor_patterns_mm'])} mm",
+          design.MOTOR_JOINT["src"])
+    check(abs(S["hole_pitch"] - design.MOTOR_JOINT["pitch_mm"]) < 1e-6,
+          "skid <-> MOTOR pattern",
+          f"skid is built to {S['hole_pitch']:.0f} x {S['hole_pitch']:.0f} mm and the "
+          f"motor IS {design.MOTOR_JOINT['pitch_mm']:.0f} x "
+          f"{design.MOTOR_JOINT['pitch_mm']:.0f} mm - this compares them, where it used "
+          f"to compare the skid to the literal 19.0", S["src"])
 
     print("\n=== power ===")
     check(PC["adapter_needed"], "battery plug <-> everything else",

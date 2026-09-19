@@ -52,7 +52,7 @@ STAGES = [
  ("can",      "CAN1 + transceiver",
               ["CAN1_RX", "CAN1_TX", "CAN1_SILENT", "CANH", "CANL"]),
  ("analog",   "battery sense, ESC current, SoOP ADC breakout",
-              ["BATT_V_DIV", "ESC_CUR", "SOOP_I_ADC", "SOOP_Q_ADC", "SOOP_RSSI"]),
+              ["BATT_V_DIV", "ESC_CUR", "SOOP_I_ADC", "SOOP_Q_ADC"]),
  ("misc",     "LEDs, buzzer, WS2812, ToF control, ESC telemetry, SWD",
               ["LED0", "LED0_K", "LED1", "LED1_K", "BUZZER", "WS2812",
                "TOF_XSHUT", "TOF_INT", "ESC_TEL", "FLOW_VREG", "FLOW_MOTION",

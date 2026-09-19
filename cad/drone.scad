@@ -90,13 +90,12 @@ z_mid_plate = z_arm + arm_t;                    // mid plate clamps the arms
 z_stack     = z_mid_plate + medium_plate_t;     // ESC starts here
 stack_h     = esc_pcb + esc_parts + gap + fc_bot_parts + fc_pcb + fc_top_parts;
 
-// WHERE inner_h IS MEASURED FROM is not settled by a 2D DXF, and the two readings
-// differ by 8.0 mm, so the model takes the WORSE one: standoffs measured from the
-// BOTTOM plate, which leaves the least room above the mid plate. If the real frame
-// measures them from the mid plate there is simply 8 mm more headroom than shown.
-// Standoff length is a few-pound purchase in 25/30/35/40 mm, so this is a buying
-// decision, not a frame constraint - see the note on FRAME in tools/design.py.
-top_plate_z    = standoff_len;                  // COMPUTED, from frame.scad
+// SETTLED by the DXF (design.TOP_PLATE_MOUNT): the 22 mm standoffs stand on the MID
+// plate at front_posts, the 30 mm ones on the BOTTOM plate at rear_posts, and the one
+// flat top plate sits at bottom_t + 30 = mid plate top + 22. Nothing stands at the
+// 30.5 pattern - the top plate has no 30.5 holes - so the stack's headroom is the
+// 22 mm front standoff, not a purchase.
+top_plate_z    = standoff_len;                  // underside of the top plate, from frame.scad
 fc_top_z       = z_stack + stack_h;      // top of the FC's tallest part
 headroom       = top_plate_z - fc_top_z;
 
@@ -108,16 +107,21 @@ motor_off = wheelbase / 2 / sqrt(2);     // offset on each axis, square X
 // own comment admitted it ("must be >= fc_w"). The real plates are 48.50 x 106.59,
 // 42.50 x 160.26 and 48.50 x 107.62, all parsed from the manufacturer DXF and sitting
 // unused in design.PLATES the whole time. The top plate alone was out by 3.2x in length.
-module plate(w, l, t) {
+// Each plate is drawn at ITS OWN centre (plate_y_*, from the DXF, relative to the stack
+// centre) with the holes that plate actually has. `holes` is a list of [x, y] relative
+// to the stack centre; the 30.5 stack pattern is passed in only for the two plates
+// that carry it. The top plate does NOT.
+stack_holes = [for (sx = [-1, 1], sy = [-1, 1]) [sx * hole_pitch/2, sy * hole_pitch/2]];
+module plate(w, l, t, y_off, holes) {
     difference() {
-        linear_extrude(t) offset(r = 4) square([w - 8, l - 8], center = true);
+        translate([0, y_off, 0])
+            linear_extrude(t) offset(r = 4) square([w - 8, l - 8], center = true);
         // plate_hole_dia, NOT screw_dia. Cutting the hole at exactly the screw
         // diameter makes the two surfaces coincident, and the bolt then reads as
         // solidly inside the plate - 132.5 mm^3 of it, near enough the whole bolt.
         // A real M3 clearance hole is 3.2 mm.
-        for (sx = [-1, 1], sy = [-1, 1])
-            translate([sx * hole_pitch/2, sy * hole_pitch/2, -1])
-                cylinder(d = plate_hole_dia, h = t + 2);
+        for (h = holes)
+            translate([h[0], h[1], -1]) cylinder(d = plate_hole_dia, h = t + 2);
     }
 }
 
@@ -130,25 +134,22 @@ module arm() {
 
 module frame() {
     color("#22252a") {
-        translate([0, 0, z_bot_plate]) plate(bot_plate_w, bot_plate_l, plate_t);
+        // bottom plate: press nuts at the stack pattern, rear posts stand on it
+        translate([0, 0, z_bot_plate])
+            plate(bot_plate_w, bot_plate_l, bottom_plate_t, plate_y_bottom,
+                  concat(stack_holes, rear_posts));
         for (a = [45, 135, 225, 315])
             rotate([0, 0, a]) translate([0, 0, z_arm]) arm();
-        // mid plate: the 48.50 x 106.59 strip that actually carries the stack
+        // mid plate: the 48.50 x 106.59 strip that carries the stack; front posts stand on it
         translate([0, 0, z_mid_plate])
-            plate(fc_plate_w, fc_plate_l, medium_plate_t);
-        // TOP PLATE. 42.50 x 160.26 - the long one. It reaches 80.13 mm out along Y,
-        // and it sits at z = standoff_len, ABOVE the prop plane, so it is the part of
-        // the frame that comes nearest a prop disc. That was invisible while it was
-        // drawn as a 50 mm square.
-        //
-        // MEASURE ON ARRIVAL: this plate's own M3 holes are at x = +/-14.60 and
-        // +/-11.00 (design.PLATES), which is NOT the 30.5 mm stack pattern the standoffs
-        // above the FC use, and design.FRAME_CAD puts the nearest candidate at
-        // |y| >= 27.90 mm. So how the stack's upper standoffs land on this plate is
-        // genuinely unresolved. The holes drawn here are the 30.5 pattern, kept so the
-        // stack_screws pair still reads as designed - do not take them as confirmation.
+            plate(fc_plate_w, fc_plate_l, medium_plate_t, plate_y_fc,
+                  concat(stack_holes, front_posts));
+        // TOP PLATE. 42.50 x 160.26 - the long one, ABOVE the prop plane. Its holes are
+        // the eight post positions and NOTHING at 30.5 - resolved from the DXF, see
+        // design.TOP_PLATE_MOUNT. It sits at bottom_t + 30 = mid plate top + 22.
         if (show_top_plate) translate([0, 0, top_plate_z])
-            plate(top_plate_w, top_plate_l, plate_t);
+            plate(top_plate_w, top_plate_l, plate_t, plate_y_top,
+                  concat(front_posts, rear_posts));
         // Corner posts. These were drawn as solid 5 mm cylinders running the whole
         // way from the mid plate to the top plate, straight THROUGH both boards -
         // check_cad_fit.py measured 610 mm^3 of ESC and 386 mm^3 of FC inside them.
@@ -163,13 +164,23 @@ module frame() {
         // the arithmetic identifies it exactly: 4 x pi/4 x 3^2 x 4.7 mm of post =
         // 132.9 mm^3. It was NOT the plates, which the failure message blamed; a
         // label is not a measurement.
-        for (sx = [-1, 1], sy = [-1, 1])
-            translate([sx * hole_pitch/2, sy * hole_pitch/2, fc_top_z])
-                color("#8d949c") difference() {
-                    cylinder(d = 5, h = top_plate_z - fc_top_z);
-                    translate([0, 0, -1])
-                        cylinder(d = plate_hole_dia, h = top_plate_z - fc_top_z + 2);
-                }
+        //
+        // SUPERSEDED by the DXF: there are no posts at the 30.5 pattern at all. The kit's
+        // standoffs are the 22 mm FRONT posts on the mid plate and the 30 mm REAR posts
+        // on the bottom plate (design.TOP_PLATE_MOUNT). Drawn as the bored tubes they
+        // are, at full length, so check_cad_fit.py measures them against the board and
+        // the ESC - the nearest is 25.38 mm from the stack centre against a 23.05 mm
+        // board half-length.
+        for (p = front_posts)
+            translate([p[0], p[1], z_stack]) color("#8d949c") difference() {
+                cylinder(d = post_od, h = standoff_front);
+                translate([0, 0, -1]) cylinder(d = plate_hole_dia, h = standoff_front + 2);
+            }
+        for (p = rear_posts)
+            translate([p[0], p[1], z_arm]) color("#8d949c") difference() {
+                cylinder(d = post_od, h = standoff_rear);
+                translate([0, 0, -1]) cylinder(d = plate_hole_dia, h = standoff_rear + 2);
+            }
     }
 }
 
@@ -255,10 +266,17 @@ module stack_screws() {
     // That is not how the frame goes together. The arms are clamped between the
     // bottom and mid plates by their own fasteners; the 30.5 mm stack pattern is on
     // the mid plate, and the stack bolts run from there upward.
+    //
+    // And they STOP at their nut on the FC's PCB: the top plate has no 30.5 holes, so
+    // a stack bolt drawn up to it passes through solid carbon - check_cad_fit.py
+    // measured exactly that (19.74 mm^3 = 4 bolts x 0.7 mm) when this was drawn to
+    // "the tallest part plus 3". An M3 nut is 2.4 mm tall (ISO 4032), and J3 at 4.4 mm
+    // is taller than the nut, so the bolt end is inside the FC's own envelope.
+    m3_nut_h = 2.4;
     for (sx = [-1, 1], sy = [-1, 1])
         translate([sx * hole_pitch/2, sy * hole_pitch/2, z_mid_plate])
             color("#c0c5cb")
-                cylinder(d = screw_dia, h = top_plate_z + plate_t - z_mid_plate);
+                cylinder(d = screw_dia, h = fc_z + fc_pcb + m3_nut_h - z_mid_plate);
 }
 
 module battery() {
@@ -397,7 +415,8 @@ echo(str("stack height mm = ",
 echo(str("mid plate ", fc_plate_w, " x ", fc_plate_l,
          " mm carries the board ", fc_l, " x ", fc_w));
 echo(str("prop-to-prop gap mm = ", motor_off * 2 - prop_dia));
-echo(str("standoff to buy mm = ", standoff_len, " (kit ships 30 - it does NOT fit)"));
+echo(str("top plate underside z = ", standoff_len, " (kit: ", standoff_front,
+         " mm front posts on the mid plate + ", standoff_rear, " mm rear posts on the bottom plate)"));
 echo(str("clearance above FC to top plate mm = ",
          top_plate_z - (fc_z + fc_pcb + fc_top_parts)));
 // lens margin: camera module bottom (lens tip) must stay ABOVE the skid
