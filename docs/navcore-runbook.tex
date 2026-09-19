@@ -1,0 +1,985 @@
+% NAVCORE-SoOP — order to first flight
+% Compile: tectonic navcore-runbook.tex   (or pdflatex, twice, for the ToC)
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[margin=20mm,top=18mm,bottom=20mm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{enumitem}
+\usepackage{ragged2e}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\usepackage{microtype}
+
+\definecolor{navy}{RGB}{20,50,95}
+\definecolor{warnred}{RGB}{165,30,30}
+\definecolor{okgreen}{RGB}{20,105,60}
+\definecolor{sidegrey}{RGB}{95,100,110}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=navy,
+  urlcolor=navy,
+  pdftitle={NAVCORE-SoOP: order to first flight},
+  pdfsubject={Ordering, assembly and bring-up runbook}
+}
+
+\titleformat{\section}{\normalfont\Large\bfseries\color{navy}}{\thesection}{0.7em}{}
+\titleformat{\subsection}{\normalfont\large\bfseries\color{navy}}{\thesubsection}{0.6em}{}
+\titleformat{\subsubsection}{\normalfont\normalsize\bfseries}{\thesubsubsection}{0.5em}{}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.3pt}
+\fancyhead[L]{\footnotesize\color{sidegrey}NAVCORE-SoOP --- order to first flight}
+\fancyhead[R]{\footnotesize\color{sidegrey}\thepage}
+
+\newcommand{\file}[1]{\texttt{\small #1}}
+\newcommand{\cmd}[1]{\texttt{\small #1}}
+\newcommand{\flag}[1]{\textcolor{warnred}{\textbf{#1}}}
+\newcommand{\good}[1]{\textcolor{okgreen}{\textbf{#1}}}
+\newcommand{\degC}{$^\circ$C}
+
+% Table columns that wrap rather than stretch, so long \file{} tokens do not
+% produce justified rivers or overfull boxes.
+\newcolumntype{P}[1]{>{\RaggedRight\arraybackslash}p{#1}}
+\renewcommand{\arraystretch}{1.14}
+
+\setlist[itemize]{leftmargin=1.3em,itemsep=1pt,topsep=2pt}
+\setlist[enumerate]{leftmargin=1.6em,itemsep=1pt,topsep=2pt}
+
+\begin{document}
+
+\begin{titlepage}
+\centering
+\vspace*{25mm}
+{\Huge\bfseries\color{navy} NAVCORE-SoOP\par}
+\vspace{4mm}
+{\Large Order to first flight\par}
+\vspace{2mm}
+{\large The complete runbook, with an audit of what is still manual,\\ soldered by hand, or not yet measured\par}
+\vspace{12mm}
+\rule{0.72\textwidth}{0.4pt}
+\vspace{6mm}
+
+\begin{tabular}{@{}ll@{}}
+\toprule
+Board & 45.1 $\times$ 46.1 mm, 6-layer, STM32H743VIT6 \\
+Gate verdict & \good{READY TO ORDER} --- all 43 gated prerequisites proven \\
+Hardware verdict & \flag{NOT READY TO FLY} --- 9 items need hardware \\
+Toolchain & KiCad 9.0.8, ArduPilot Copter-4.7.0, Python 3 + pcbnew \\
+\bottomrule
+\end{tabular}
+
+\vspace{8mm}
+\begin{minipage}{0.82\textwidth}
+\small\itshape
+Every figure in this document was re-derived from the repository's own tooling on
+19 September 2026 rather than copied from another document. Where a number is a
+judgement, an assumption or genuinely unknown, it says so. Sections marked
+\flag{flag} are the ones capable of costing money, a board, or a bench session.
+\end{minipage}
+
+\vfill
+{\small Generated from the NAVCORE-SoOP working tree\par}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% =============================================================================
+\section{How to use this, and how to verify it}
+
+This is one document in the order you actually do things: order the board, order the
+aircraft parts, assemble, power it up, and fly it. It exists because the same information
+was spread across \file{docs/ORDER.md}, \file{docs/ASSEMBLY.md}, \file{docs/BUILD.md} and
+\file{docs/BUYING.md}, and those four had drifted apart --- in three cases far enough apart
+to send you shopping for parts with nowhere to put them.
+
+\textbf{Verify before you spend. Read the verdict, not a summary:}
+
+\begin{quote}
+\cmd{python3 tools/preflight.py} \quad$\rightarrow$\quad must print \good{READY TO ORDER}
+\end{quote}
+
+The verdict is \emph{derived} from a manifest of 43 gated prerequisites, so an unrun tool,
+a non-zero exit, a failed check or an unclassified manifest entry is a blocking failure.
+It cannot be typed by hand and it cannot shrink silently. What it proves is that the
+\emph{design} is orderable. It cannot prove anything about money, stock, or JLCPCB's own
+upload preview --- those are Sections~\ref{sec:upload} onward.
+
+\subsection{The four commands that matter}
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\cmd{python3 tools/preflight.py} & the gate; must say READY TO ORDER \\
+\cmd{bash tools/make\_order\_bundle.sh} & regenerate \file{fab/} and zip the order \\
+\cmd{bash tools/finish.sh} & the whole design pipeline, ending in the fab outputs \\
+\cmd{bash tools/build\_firmware.sh} & build \file{arducopter.apj}, pinned to Copter-4.7.0 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Freshness}
+
+\file{fab/stock-snapshot.json} is re-fetched from \file{jlcpcb.com} and
+\file{tools/check\_stock.py} blocks the gate once it is older than \textbf{7 days}. It was
+last refreshed 2026-09-19 and resolves \textbf{56 of 56} non-DNP codes with cover for two
+boards. Everything else in \file{fab/} is regenerated by
+\file{tools/make\_order\_bundle.sh}, which refuses to build the bundle if the copper layer
+count is not 6.
+
+% =============================================================================
+\section{Part 1 --- Order the bare board and its assembly}
+\label{sec:order-board}
+
+\subsection{Regenerate, do not trust}
+\label{sec:regenerate}
+
+\begin{quote}
+\cmd{bash tools/make\_order\_bundle.sh}
+\end{quote}
+
+This re-exports the gerbers and drill, re-runs \file{gen\_bom.py} for \emph{all three}
+variant pairs, checks the layer count, and writes
+\file{fab/NAVCORE-SoOP-order-bundle.zip}.
+
+\flag{Do not hand-copy or hand-edit anything in \file{fab/}.} A \cmd{cp} of a stale variant
+into the bundle is exactly how the Economic BOM once shipped quoting \file{Y2}'s
+superseded, unbuyable part code for three days --- and \file{fab/ORDER.md} was recommending
+those files at the checkout while it did.
+
+\subsection{What to upload}
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{File} & \textbf{Where} \\
+\midrule
+\file{fab/gerbers/} --- zip the \emph{contents} & PCB gerbers + Excellon drill \\
+\file{fab/BOM-NAVCORE-SoOP.csv} & assembly BOM, the default build \\
+\file{fab/CPL-NAVCORE-SoOP.csv} & pick-and-place, the default build \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Or upload the bundle zip, which contains those plus \file{HOW-TO-ORDER.txt}.
+\file{fab/gerbers/} holds \textbf{16 files}: 14 \file{.gbr} (6 copper, 2 paste, 2
+silkscreen, 2 mask, edge cuts, drill map), \file{NAVCORE-SoOP.drl}, and
+\file{NAVCORE-SoOP-job.gbrjob}.
+
+\begin{quote}
+\flag{Stop-condition at upload.} If the preview shows \textbf{four} copper layers, abort.
+The power planes are missing and the board will not work. It must show six.
+\end{quote}
+
+\subsection{Fabrication settings}
+
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Setting} & \textbf{Value} & \textbf{Why} \\
+\midrule
+Layers & \textbf{6} & In1 is a solid GND plane; In4 carries the rails \\
+Dimensions & 45.1 $\times$ 46.1 mm & \\
+Thickness & 1.6 mm & 30.5 mm stack standard \\
+Outer copper & \textbf{1 oz} & every current figure assumes it \\
+Surface finish & ENIG & 0402s and LGA-14s want a flat finish \\
+Min track / spacing & \textbf{0.1016 mm (4 mil)} & should be free tier \\
+Min via / drill & \textbf{0.45 mm / 0.20 mm} & \\
+Impedance control & No & USB is a plain differential pair \\
+Stencil & not needed & everything machine-placed but Section~\ref{sec:solder} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The 1 oz line is not cosmetic: \flag{every current-capacity figure in
+\file{check\_build.py} assumes it}, and 0.5 oz halves each trace's rating.
+
+\subsection{Quantity, and the tier decision}
+
+\textbf{Order 5 bare boards and 2 assembled.} Five is the multilayer minimum; two is the
+usual SMT assembly minimum.
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}lXX@{}}
+\toprule
+ & \textbf{Standard (panelised)} & \textbf{Economic} \\
+\midrule
+Board minimum & \textbf{70 $\times$ 70 mm}, so 2 $\times$ 2 panel + rails & 10 $\times$ 10 mm, no rails \\
+Places & everything, including \file{U3} & everything except \file{U3} \\
+Feeder fees & included & \textbf{GBP 40--46} still charged \\
+Hand-fitting & none & \file{U3} (ICM-42605, second IMU) \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\textbf{Recommendation: Standard, panelised 2 $\times$ 2, ``panel by JLCPCB''.} Do not
+commit a panelised board file --- the board files stay exactly as gated, so nothing has to
+go through DRC, connectivity and the whole gate again. A hand-panelised
+\file{.kicad\_pcb} would have to, for no benefit.
+
+If you take Economic instead, \flag{take its BOM and CPL as a pair}
+(\file{*-economic.csv} for both). Mixing an Economic BOM with the default CPL hands JLC a
+placement list for parts the BOM does not order. \file{tools/check\_variants.py} --- now a
+gated check --- fails if any pair disagrees with the board.
+
+\subsection{The variant files, and why two of them are identical}
+
+\begin{center}
+\begin{tabular}{@{}lrrl@{}}
+\toprule
+\textbf{Variant} & \textbf{BOM lines} & \textbf{Placements} & \textbf{Difference from default} \\
+\midrule
+\file{NAVCORE-SoOP} (default) & 68 & \textbf{129} & --- \\
+\file{NAVCORE-SoOP-economic} & 68 & \textbf{128} & omits \file{U3} only \\
+\file{NAVCORE-SoOP-nofpv} & 68 & \textbf{129} & \textbf{none --- byte-identical} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\file{-nofpv} is byte-identical to the default pair because the 9 V VTX block is DNP
+\emph{either way} (\file{design.POPULATE\_VTX} is \cmd{False}). It is a label, not a
+saving. Choosing Economic only makes sense if you want to hand-fit the second IMU.
+
+\subsection{Parts worth checking before you pay}
+
+Stock is no longer quoted in prose. It lives in the dated snapshot
+\file{fab/stock-snapshot.json}, age-gated at 7 days by \file{tools/check\_stock.py}.
+
+Two substitutions are \textbf{not optional}:
+
+\begin{itemize}
+\item \flag{\file{Y1} must be \file{C2682774}} --- a \emph{passive crystal}, CL 20 pF. The
+visually identical \file{C2901556} is an \textbf{active oscillator}: same SMD3225-4P land
+pattern, but pin 4 is VDD, which this board grounds. Substituting it gives a board that
+never starts.
+\item \flag{\file{Y2} must be \file{C5563878}.} Its predecessor \file{C22381771} was down
+to \textbf{1 unit} with no published restock date when \file{check\_stock.py} was written.
+\end{itemize}
+
+\subsection{The DNP list --- derived, never typed}
+
+\textbf{14 designators ship unpopulated:}
+\file{C68 C69 C70 C73 L5 Q3 R15 R40 R41 R42 R43 R45 U11 U18}.
+
+\begin{center}
+\begin{tabular}{@{}p{0.30\textwidth}p{0.62\textwidth}@{}}
+\toprule
+\textbf{Block} & \textbf{Why it is not fitted} \\
+\midrule
+The 9 V VTX buck (\file{L5}, \file{Q3}, \file{U18}, \file{C68}--\file{C73},
+\file{R41}--\file{R45}) &
+\file{POPULATE\_VTX} is \cmd{False} because its switch node could not be closed on this
+placement. A VTX runs from +5 V instead. \\
+\file{U11}, the CAN transceiver &
+a \emph{thermal} decision, not a CAN one: it was fitted but never enabled in
+\file{defaults.parm}. Removing it dropped \file{U9}'s peak from 445 mA / 179\degC{} to
+375 mA / 157\degC{}. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Both have pads, and the gate prints \file{[NOT FITTED]} for each on every run. Do not type
+this list --- \file{make\_order\_bundle.sh} derives it from the BOM into
+\file{HOW-TO-ORDER.txt}.
+
+\subsection{Check these on screen at upload}
+\label{sec:upload}
+
+\begin{itemize}
+\item Outline and board size: \textbf{45.1 $\times$ 46.1 mm}
+\item Copper layer count: \textbf{6}
+\item Drill count and the 0.20 mm minimum
+\item \textbf{CPL orientation against their preview render} --- the one thing no local tool
+substitutes for
+\item \textbf{1 oz outer copper}, explicitly
+\end{itemize}
+
+\subsection{Paying}
+
+\begin{itemize}
+\item \textbf{Coupons are once-per-order} and cannot be combined. Take the SMT one.
+\item \textbf{6-layer promotions recur}; worth waiting a few days if you are not in a hurry.
+\item \textbf{UK import VAT is 20\%}, collected by the courier above GBP 135 with an
+£8--12 handling fee. It is not a JLCPCB charge and is easy to forget when comparing
+against a UK-stocked alternative.
+\end{itemize}
+
+% =============================================================================
+\section{Part 2 --- Order the aircraft parts}
+
+Order these at the same time; lead times run 2--4 weeks.
+
+\begin{longtable}{@{}p{0.42\textwidth}p{0.10\textwidth}p{0.42\textwidth}@{}}
+\toprule
+\textbf{Item} & \textbf{Qty} & \textbf{Note} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Item} & \textbf{Qty} & \textbf{Note} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+TBS Source One V5 7in DC frame & 1 & 320 mm wheelbase, 6.0 mm arms; open-source DXF \\
+SpeedyBee BLS 60A 4-in-1 ESC & 1 & 30.5 $\times$ 30.5 stack \\
+2806.5 1300KV motors & 4 & \textbf{19 $\times$ 19} bolt pattern, M5 shaft \\
+Gemfan 7040 props & 4 + spares & 5.0 mm bore \\
+Zeee 4S 6500 mAh pack & 1+ & 138 $\times$ 47 $\times$ 48 mm, 615 g, \textbf{EC5} \\
+EC5-to-XT60 adapter & 2 & the pack is EC5, everything else is XT60 \\
+M10 GNSS + QMC5883L compass & 1 & comes with a JST-GH 6-pin lead \\
+ELRS receiver, \textbf{ESP-based} & 1 & an STM32 ELRS receiver cannot carry MAVLink \\
+M3 $\times$ 14 socket screws & 16 & motors, skid sandwiched \\
+M3 $\times$ 30 socket screws & 4 & \textbf{the stack bolts} \\
+M3 female-female standoffs, \textbf{12 mm} & 4 & \textbf{the ESC-to-FC spacer} \\
+\textbf{M3 socket assortment} (10/12/14/16/20) + washers & 1 kit & \textbf{the anti-reorder kit} \\
+Frame kit's own \textbf{30 mm / 22 mm} standoffs & --- & \textbf{already in the kit; do not buy more} \\
+TPU skids, printed & 4 & 3.5 mm thick, 40 mm drop, \textbf{19 $\times$ 19} holes \\
+JST-SH 1.0 mm 4-pin pigtails & pack of 10 & \file{J5}, then \file{J9}/\file{J11} \\
+JST-GH 1.25 mm 6-pin spare lead & 1 & closes the \file{J3} plug risk \\
+5 V \textbf{passive} piezo buzzer & 1 & passive, not active \\
+microSD card & 1 & 32 GB \\
+Bench PSU with current limit & 1 & Section~\ref{sec:T1} does not work without one \\
+Multimeter with continuity & 1 & for buzzing the ESC cable \\
+Smoke stopper (XT60) & 1 & first battery connection only \\
+Thermocouple or IR thermometer & 0--1 & \textbf{only} for \file{U8} now; \file{U19} logs \file{U9} \\
+ST-Link V2 + fine wires or pogo pins & 1 & for the SWD bootloader \\
+Nooelec SAWbird+ IR (1620 MHz) & 1 & own this by T3b, not later \\
+Nooelec 1620 MHz patch antenna & 1 & own this by T3b \\
+RTL-SDR (R820T2) & 1 & the T3b reference receiver \\
+\end{longtable}
+
+\flag{Do not buy a PMW3901 or a VL53L1X.} Both were deleted from the design in the Rev B
+re-layout and have no pads. \file{docs/BUYING.md} told you to hand-fit them until
+2026-09-19, and priced a ``GBP 227 hand-fit route'' around two parts that cannot be bought
+a place for.
+
+\subsection{The one order --- nothing here should make you order twice}
+
+Every ``measure this, then use a different part'' branch in this document is closed by
+buying the alternatives up front. The premium is about \textbf{GBP 6}.
+
+\begin{center}
+\begin{tabular}{@{}P{0.32\textwidth}P{0.56\textwidth}@{}}
+\toprule
+\textbf{What to add} & \textbf{What it closes} \\
+\midrule
+\textbf{M3 socket assortment} + washers &
+Both derived joints round \emph{up} past their engagement target (4.5 mm and 6.7 mm into
+the thread) and the skid's tapped depth is the only measurement that can invalidate the
+length you picked. \\
+\textbf{4 $\times$ 12 mm female-female spacers} &
+the ESC-to-FC separation is 12.1 mm and \file{fasteners.py} says plainly that a grommet
+cannot hold it. Without these the stack cannot be assembled at all. \\
+the kit's own standoffs &
+do \emph{not} buy 35 mm standoffs for the top plate; it has no 30.5 mm holes. \\
+spare \textbf{JST-GH 6-pin} lead &
+the \file{J3} pigtail's 5.30 mm clearance --- swap the lead rather than move \file{R21}. \\
+\textbf{10} JST-SH pigtails, not 4 &
+the first one you crimp badly is then not a project stall. \\
+\textbf{SAWbird+ and RTL-SDR} with Tier 1 &
+T3b cannot be started without them, and the board does not supply them. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Three things genuinely need the parts in hand, and \textbf{none of them is an order}: the
+frame kit's top-plate standoff spacing (the kit supplies it), the camera mount (deferred),
+and the Radxa Zero 3W's hole pattern (deferred, and it is a \textbf{3D print}, not a
+purchase). \file{tools/fasteners.py} prints this list itself under
+\emph{``not derived --- these need the parts in hand''}.
+
+% =============================================================================
+\section{Part 3 --- While you wait (free, and the highest-value work)}
+
+\begin{enumerate}
+\item \textbf{Register ArduPilot board ID 7180.} Not needed to order; needed before
+sharing. The request is written out in \file{firmware/BOARD-ID-REQUEST.md}, with the
+registry check, the alternates and the issue text. \flag{Do not request 9001} --- it is
+free but it is above the \#7199 ceiling that \file{board\_types.txt} explicitly asks you
+not to cross, while 4544 free IDs sit below it.
+\item \textbf{Read \file{docs/ASSEMBLY.md} Stages 3 and 4 twice.} The two screw-depth
+warnings are the ones that strip a frame.
+\item \textbf{Print \file{docs/img/padmap.svg} and the F.Silkscreen gerber 1:1 on paper.}
+Nine pads arrive with no label (Section~\ref{sec:T3d}).
+\item \textbf{Decide the USB edge orientation before cutting any loom.} All four edges
+carry a connector; there may be exactly one orientation that works.
+\item \textbf{Dry-run the SITL suite} if you have a Linux box:
+\cmd{bash sitl/run\_scenarios.sh}.
+\end{enumerate}
+
+% =============================================================================
+\section{Part 4 --- On arrival: inspect before you spend more}
+
+\subsection{Visual inspection}
+
+Under magnification, look at \file{U1} (\textbf{LQFP-100, 0.50 mm pitch}),
+\file{U2}/\file{U3} (\textbf{LGA-14}, no accessible leads), and \file{U13}
+(\textbf{TQFN-28 with an exposed pad}). You are looking for bridges and tombstones.
+JLC is good at this. Look anyway.
+
+\subsection{Confirm the machine-readable facts}
+
+\begin{quote}
+\cmd{python3 tools/preflight.py} \quad never mind the board --- confirm DRC, ERC, gerbers
+and BOM/CPL are all current\\
+\cmd{python3 tools/check\_variants.py} \quad every variant pair matches the board
+\end{quote}
+
+\subsection{The frame measurements that settle a real decision}
+
+\begin{center}
+\begin{tabular}{@{}p{0.40\textwidth}p{0.52\textwidth}@{}}
+\toprule
+\textbf{Check with calipers} & \textbf{Parsed value} \\
+\midrule
+top plate width & \textbf{42.50 mm} --- the battery is 47 mm and already overhangs 2.25 mm
+each side; there is no room for an upward ToF beside it \\
+bottom plate M3 positions & x = $\pm$14.60 and $\pm$11.00, \textbf{no 30.5 mm pattern} --- so
+the FC cannot bolt under the bottom plate; that idea is closed \\
+which plate is top & \textbf{inferred} from length (160.26 mm). The one genuinely open row \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{The three things no drawing can answer}
+
+\begin{itemize}
+\item \textbf{microSD withdrawal clearance} --- depends how \emph{you} mount it
+\item \textbf{grommet compression under load} --- a property of the rubber
+\item \textbf{the real TPU gear's shape, hole pattern and strength} --- the assembly is
+modelled as four legs at the motor pattern on assumed dimensions
+\end{itemize}
+
+% =============================================================================
+\section{Part 5 --- Mechanical assembly}
+
+\subsection{Stack height}
+
+\textbf{22.3 mm against 25 mm of inner space --- 2.7 mm spare.} Two figures exist and both
+are correct about different things: \file{check\_build.py} gives \textbf{19.8 mm} for bare
+parts, and \file{check\_mechanical.py} gives \textbf{22.3 mm} including \file{J3}'s mated
+plug. \textbf{22.3 mm is the one the top plate must clear.}
+
+\subsection{The two screw warnings --- read both}
+
+\begin{quote}
+\cmd{python3 tools/fasteners.py}
+\end{quote}
+
+\begin{itemize}
+\item \flag{Motor to arm, skid sandwiched.} Needs 13.5 mm, so order M3 $\times$ 14. But
+rounding 13.5 $\rightarrow$ 14 drives \textbf{5.5 mm into a thread designed for 4.0 mm}. A
+motor boss is often only about 4 mm deep, and \textbf{a bottomed-out screw feels tight
+while clamping nothing} --- that is the failure that throws a motor in flight. Measure the
+tapped depth before fitting sixteen screws. M3 $\times$ 12 plus a washer is the usual fix.
+\item \flag{FC to ESC to frame, the 30.5 mm stack bolt.} Needs \textbf{27.3 mm}, so M3
+$\times$ 30. Rounding 27.3 $\rightarrow$ 30 puts \textbf{6.7 mm} into the press nut. If the
+tapped depth is shallower than that the screw bottoms out and clamps nothing.
+\end{itemize}
+
+\textbf{This is the whole reason the buy list carries an M3 assortment rather than one
+length.} \file{free\_island} is not involved; the point is that both joints are decided by
+a measurement you have not taken yet, so own every plausible length.
+
+\subsection{Screw heads against copper --- 0.08 mm}
+
+\textbf{No copper is under any screw head, and the margin is thin.} The closest is
+\file{TP20} at \textbf{2.83 mm} against a \textbf{2.75 mm} cap-head radius ---
+\flag{0.08 mm}, and that assumes \textbf{no washers}. A washer, or a head even 0.1 mm over
+nominal diameter, puts metal on copper. If you add washers, re-measure before trusting
+this line.
+
+\subsection{Sequence}
+
+\begin{enumerate}
+\item \textbf{Inspect the boards} (Section 4.1).
+\item \textbf{Print the fab drawing and silkscreen 1:1.} Nine unlabelled pads ---
+Section~\ref{sec:T3d}.
+\item \textbf{Dry-fit the FC into the centre plate.} Confirm nothing blocks the bottom
+edge where the microSD ejects.
+\item \textbf{Buzz the ESC cable} both ends against the \file{J2} pinout below, before
+anything is powered.
+\item \textbf{Sit a skid under each arm}, holes aligned. Motor on top, wires inboard.
+Thread all four screws by hand before tightening any; tighten diagonally.
+\item \textbf{The stack, bottom to top: ESC, grommets, FC.} Fit the silicone grommets into
+the FC's four mounting holes; ESC into the frame on its 30.5 mm pattern; FC on top with
+USB-C facing the direction you will actually plug from.
+\item \textbf{4 $\times$ M3 $\times$ 30 through the stack}, with the four 12 mm
+female-female spacers setting the ESC-to-FC separation.
+\item \textbf{30 mm standoffs for the top plate} --- from the frame kit.
+\end{enumerate}
+
+\subsection{\file{J2}, the ESC connector --- confirmed rather than assumed}
+
+Wired \textbf{1 GND, 2 VBAT, 3 M1, 4 M2, 5 M3, 6 M4, 7 CUR, 8 TEL} (pins 9/10 are the
+shell tabs). Betaflight's board page for the SpeedyBee F405 V4 gives the same FC-side
+order, so it \textbf{matches} --- no cable rework needed.
+
+The vendor table reads oddly because it lists the two \emph{ends} of the cable in opposite
+order, since they face each other. Reverse the ESC column and every pair lines up:
+\file{GND}$\leftrightarrow$\file{GND}, \file{BAT}$\leftrightarrow$\file{VBAT},
+\file{M1}$\leftrightarrow$\file{S1}, \ldots, \file{CUR}$\leftrightarrow$\file{CURRENT}.
+
+\textbf{Buzz it anyway.} One automated read of a wiki table is not the same as measuring
+the cable you received. An 8-pin JST-SH is re-pinnable with a fine pick --- a mismatch
+costs a cable rework, not a respin.
+
+\begin{quote}
+\textbf{Pin 8 is inert.} The ESC end is \file{N/A} --- stock BLHeli\_S has no telemetry
+output at all. \file{SERIAL5\_PROTOCOL 16} and the \file{UART8\_RX} wire are correct and
+cost nothing, but they will receive nothing until a telemetry-capable ESC (BLHeli\_32,
+AM32) is fitted. That is why the board ships \file{INS\_HNTCH\_MODE 1} (throttle) rather
+than 3 (RPM).
+\end{quote}
+
+% =============================================================================
+\section{Part 6 --- Soldering: four joints minimum to fly}
+\label{sec:solder}
+
+Everything else plugs in.
+
+\begin{itemize}
+\item \textbf{Buzzer} --- \file{PZ1} (+) and \file{PZ2} ($-$). Must be a \textbf{passive}
+piezo: PA15 is a timer channel and ArduPilot generates the tone patterns itself. An active
+buzzer has its own oscillator and loses every arming and failsafe pattern.
+\item \textbf{LED strip, optional} --- \file{PL1} = data, \file{PL2} = +5 V,
+\file{PL3} = GND. \flag{\file{PL3} has no label.} 5 V WS2812B.
+\item \flag{Do not solder to \file{P41}.} It is \textbf{5 V} and unlabelled. Identify it on
+the printed gerber first, never by counting from a neighbour.
+\end{itemize}
+
+% =============================================================================
+\section{Part 7 --- T1: first power, before the MCU sees anything}
+\label{sec:T1}
+
+\flag{USB disconnected. No battery. Do not skip this.} A board that goes straight to USB
+can destroy the MCU on a rail fault that a current-limited supply would have caught for
+nothing.
+
+Bench supply on \file{VBAT} (\file{J2.2}), \textbf{16.8 V, current limit 100 mA}.
+
+\begin{center}
+\begin{tabular}{@{}cP{0.19\textwidth}P{0.22\textwidth}P{0.44\textwidth}@{}}
+\toprule
+\textbf{\#} & \textbf{Check} & \textbf{Expect} & \textbf{If wrong} \\
+\midrule
+1.1 & current at power-on & \textbf{$<$ 80 mA} & something is shorted: kill it and inspect
+\file{U8}, \file{U18} and the bulk caps \\
+1.2 & \file{+5V} rail & \textbf{4.97 V} $\pm$0.2 & \file{U8} TPS54202, \file{L1}, feedback divider \\
+1.3 & \file{+3V3} rail & 3.3 V $\pm$0.1 & \file{U9} AP2112 \\
+1.4 & \file{+3V3A} rail & 3.3 V $\pm$0.1 & \file{U10} TLV75533 \\
+1.5 & \file{+9V} rail & \textbf{not populated} & \file{U18} is DNP by design \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Raise the limit to 500 mA only once every rail is correct.
+
+\begin{quote}
+\textbf{If a rail is dead with a correct supply, look at \file{R46} before the buck.} It is
+\file{Q4}'s gate pull-down. Without it the gate floats, the FET never turns on, and the
+board is dead with everything wired correctly.
+\end{quote}
+
+\begin{quote}
+\textbf{Reverse polarity is protected, but do not test it.} \file{Q4} (WST4041 P-FET)
+blocks a reversed pack and \file{DZ1} clamps the gate, but \file{D1} is still a TVS rather
+than a series diode. Use the XT60 keying and check twice.
+\end{quote}
+
+\begin{quote}
+\flag{USB cannot power this board.} VBUS runs the USB PHY only; the rails come from VBAT.
+That would need a respin. For bench work, supply VBAT even to configure it.
+\end{quote}
+
+% =============================================================================
+\section{Part 8 --- T2: MCU alive}
+
+\begin{enumerate}
+\item \flag{Bootloader over SWD first, before USB does anything.} Flash the board's own
+bootloader from \file{Tools/bootloaders/} with \file{dfu-util}, using \file{TP20} (GND) and
+\file{TP21} (+3V3) as the probe's reference. A board with no bootloader will not enumerate.
+\item Data-capable USB-C cable --- charge-only leads enumerate nothing. Keep the supply
+connected.
+\item Hold \file{BOOT}, tap \file{RESET}. \file{lsusb} should show \file{0483:df11}.
+\item Flash \file{arducopter.apj} from \file{tools/build\_firmware.sh}, pinned to
+Copter-4.7.0.
+\item Connect a ground station; confirm the board ID and read \textbf{every} boot message
+--- every fitted sensor should probe, and nothing unfitted should be claimed.
+\item \flag{Copy \file{copter-deadreckon-home.lua} to the microSD at \file{APM/scripts/} by
+hand.} The build script does not package it into the \file{.apj}. Without it,
+\file{FS\_EKF\_ACTION 0} ships with no GPS-loss response at all.
+\end{enumerate}
+
+% =============================================================================
+\section{Part 9 --- T3: sensors on the bench, props OFF}
+
+\begin{longtable}{@{}cP{0.21\textwidth}P{0.33\textwidth}P{0.33\textwidth}@{}}
+\toprule
+\textbf{\#} & \textbf{Check} & \textbf{How} & \textbf{Note} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{\#} & \textbf{Check} & \textbf{How} & \textbf{Note} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+3.1 & IMU1 (\file{U2}) orientation & roll/pitch, watch the horizon & \textbf{asserted in hwdef,
+never measured} \\
+3.2 & IMU2 (\file{U3}) orientation & same, \file{INS\_USE2} & only if \file{U3} was fitted \\
+3.3 & Barometer & tracks a 1 m lift & \\
+3.4 & Battery voltage & against a meter & \file{BATT\_VOLT\_MULT 11.000}, should be close \\
+3.5 & \textbf{Battery current} & known load & ships \textbf{\file{BATT\_AMP\_PERVLT 25.0}} --- a
+starting point, not a calibration \\
+3.6 & RC input & \file{RC\_PROTOCOLS 512} (CRSF) & set to 1 for SBUS/FPort \\
+3.7 & ESC telemetry & RPM with \file{SERIAL5\_PROTOCOL 16} & receive-only, and inert on a
+BLHeli\_S ESC \\
+3.8 & \textbf{Motor order and direction} & motor test, \textbf{props off} & \file{J2.3}--\file{J2.6}
+= M1--M4 \\
+3.9 & Buzzer, LEDs & arming tone, strip lights & \\
+3.10 & TFS20-L, if fitted & tape measure at 1 / 5 / 10 m & \file{RNGFND1\_TYPE 46} \\
+\end{longtable}
+
+\textbf{Everything optional ships disabled in \file{defaults.parm} and must be turned on
+here.} That is deliberate: a rangefinder configured but absent fails prearm, and a bare
+board arms out of the box. Do not enable a sensor you have not fitted.
+
+% =============================================================================
+\section{Part 10 --- T3a: thermal, and the board measures half of it for you}
+
+\file{U19} (TMP119) measures \file{U9} for you. It sits 3.9 mm from \file{U9} on I2C1 at
+\file{0x48}, and \file{defaults.parm} ships \file{TEMP\_LOG 1}, so every flight writes a
+\file{TEMP} message to the card.
+
+\begin{center}
+\begin{tabular}{@{}p{0.20\textwidth}p{0.42\textwidth}p{0.30\textwidth}@{}}
+\toprule
+\textbf{Part} & \textbf{Why it matters} & \textbf{Status} \\
+\midrule
+\file{U9} (3.3 V LDO) & \textbf{linear} regulator dropping 1.7 V in SOT-23-5 with no thermal
+pad, carrying the MCU, flash and microSD & junction \textbf{104--157\degC} against a
+\textbf{150\degC} limit. It has thermal shutdown --- being wrong means the 3.3 V rail
+switching off in flight, not smoke \\
+\file{U8} (+5 V buck) & \textbf{16.8 V $\rightarrow$ 5 V at 0.95 A} through a SOT-23-6 with
+no thermal pad, sandwiched between a 60 A ESC and a battery & junction
+\textbf{70--139\degC} against a \textbf{125\degC} \emph{recommended} max ---
+\flag{an opinion until a thermocouple says so} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Both brackets exist because the junction-to-ambient figure is a property of \emph{your}
+assembled board and the two ends come from different sources (JEDEC and EVM columns of the
+datasheet).
+
+\textbf{What to do:} power it stack-assembled, logging to the card, ten minutes at steady
+state. Read \file{TEMP[0]}. If you own a probe, put it on \file{U8} too and on \file{U9}'s
+case once --- \file{U19} is 17.2 mm from \file{U8} and cannot speak for it, and one case
+reading establishes the offset that \file{U19} then carries forward alone.
+
+\textbf{Stop and ask if \file{TEMP[0]} exceeds about 85\degC{} or \file{U8}'s case exceeds
+about 100\degC.}
+
+% =============================================================================
+\section{Part 11 --- T3b: the RF chain, and the single open question}
+
+This is the one place the project is honest about not knowing.
+
+\textbf{The Doppler solve is written and validated.} \file{tools/soop\_solver.py} runs
+\file{SOLVER OK}, recovering a known position from clean geometry at \textbf{160.1 m median
+at 5 Hz}, and reports a singular geometry rather than inventing a number.
+
+\textbf{What is not known is what the shipping antenna and receiver actually deliver.} The
+shipped \file{DopplerErrorModel} sigma is \textbf{180 m}; the measured divergence boundary
+was taken at \textbf{20 m}. The SITL scenarios print this warning beside their own results:
+
+\begin{quote}
+\emph{``The 120 m divergence boundary DOES NOT APPLY here: it was measured at sigma 20 m
+and this run is at sigma 180 m. Re-measure the boundary at the current sigma before reading
+a hold/runaway verdict off it.''}
+\end{quote}
+
+\flag{Rescaling it by arithmetic would invent a measurement.} Only a bench RF measurement
+moves this: a reference receiver, the real antenna, real geometry. Until then, do not read
+a position-hold verdict off those scenarios.
+
+% =============================================================================
+\section{Part 12 --- T3c: IMU temperature calibration}
+
+Free, and it attacks the dominant error term. Do it once the board is warm enough to be
+realistic --- \textbf{4S, stack assembled}, not the board in free air, because the assembly
+\emph{is} the thermal environment.
+
+% =============================================================================
+\section{Part 13 --- T3d: the nine unlabelled pads}
+\label{sec:T3d}
+
+Of the \textbf{30} pad and test-point references that exist on the board, \textbf{21} get a
+silkscreen label. These \textbf{9} have no clean position at the board's own 0.80 mm
+minimum text height, so \file{tools/silk\_labels.py} leaves them \textbf{blank rather than
+printing something illegible} --- a wrong label on a board is worse than a blank pad,
+because it will be trusted:
+
+\begin{center}
+\file{P41}\quad \file{P44}\quad \file{P62}\quad \file{P72}\quad \file{PL3}\quad
+\file{TP4}\quad \file{TP6}\quad \file{TP7}\quad \file{TP9}
+\end{center}
+
+\flag{\file{P41} is 5 V.} \file{TP6} is \file{USART1\_RX}. Never identify a gold square by
+counting from its neighbour --- use the printed gerber and \file{docs/img/padmap.svg}. The
+gate reprints this list on every run, so treat any other number you read as stale.
+
+% =============================================================================
+\section{Part 14 --- T4/T5: tethered, then flight, strictly in this order}
+
+\begin{enumerate}
+\item \textbf{Run the SITL scenarios first:} \cmd{bash sitl/run\_scenarios.sh}. It found
+three prearm faults no build check saw.
+\item \textbf{Battery via the smoke stopper and the EC5-to-XT60 adapter} the first time.
+\item \textbf{Tethered hover in Stabilize.} Land. Pull the log.
+\item Tune \file{INS\_HNTCH\_FREQ} and \file{INS\_HNTCH\_BW} from the log's FFT.
+\item \textbf{GPS Loiter.} This is a working aircraft.
+\item \textbf{Props on last}, after motor direction is confirmed.
+\end{enumerate}
+
+\textbf{Everything past GPS Loiter is research.} GNSS-denied position hold is
+uncharacterised until T3b is measured.
+
+% =============================================================================
+\section{Part 15 --- Audit: what is still manual, soldered, or unmeasured}
+
+This is the audit you asked for. It is split into the three kinds of risk, because each is
+removed by a different action: \emph{manual work} by buying a jig or an alternative,
+\emph{hand soldering} by a stencil or an assembly tier, and \emph{unmeasured values} only by
+a bench session.
+
+\subsection{15.1 Manual soldering}
+
+The board is machine-assembled, so the soldering is deliberately minimal. What remains:
+
+\begin{center}
+\begin{tabular}{@{}p{0.22\textwidth}cp{0.46\textwidth}@{}}
+\toprule
+\textbf{Item} & \textbf{Joints} & \textbf{Risk and mitigation} \\
+\midrule
+Buzzer, \file{PZ1}/\file{PZ2} & 2 & low. Must be a \textbf{passive} piezo; fitting an active
+one costs you every arming and failsafe tone pattern, which you will only notice in the air \\
+LED strip, \file{PL1}/\file{PL2}/\file{PL3} & 3 & low, and optional. \file{PL3} is unlabelled
+--- see Section~\ref{sec:T3d} \\
+\file{U3}, second IMU & 14-pin LGA & \flag{only if you chose Economic.} An LGA-14 has no
+accessible leads, so it needs hot air or a stencil, not an iron. Standard assembly fits it
+and removes this entirely \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{The inefficiency, stated plainly:} choosing Economic to save one part moves an
+LGA-14 onto your bench and does \emph{not} save the feeder fees. It is the single manual
+soldering task on this board that needs real equipment, and it buys you one optional IMU.
+Unless you want the redundancy, Standard is the cheaper answer once your time is counted.
+
+There is \textbf{no stencil requirement} and no hand-placed passives. That is by design.
+
+\subsection{15.2 Manual assembly}
+
+\begin{center}
+\begin{tabular}{@{}P{0.25\textwidth}P{0.63\textwidth}@{}}
+\toprule
+\textbf{Task} & \textbf{Why it is manual, and what would remove it} \\
+\midrule
+The stack & four bolts, four spacers, grommets, the ESC and the frame's press nuts. Not
+automatable and not worth automating \\
+Motor screws & 16 screws whose length depends on a tapped depth you must measure. The M3
+assortment removes the \emph{reorder}, not the measurement \\
+Skids & printed, not bought. This is a feature: the 3.5 mm thickness is yours to set, which
+is why the screw length is not a fixed number \\
+Board connectors & the GPS, RC, I2C, lidar and ESC leads all plug in; no crimping except
+the spare pigtails \\
+Bootloader over SWD & four wires or pogo pins to a bare board. \flag{There is no
+factory-installed bootloader, so this cannot be skipped} \\
+The GPS-loss applet & \file{copter-deadreckon-home.lua} must be copied to the microSD by
+hand; the build does not package it into the \file{.apj} \\
+Companion mount & no mount exists yet. Deferred with the companion, so nothing blocks \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Two structural inefficiencies worth naming, because neither is fixable now:}
+
+\begin{itemize}
+\item \flag{\file{J3} gives the GPS pigtail 5.30 mm of clear run before \file{R21}}, against
+a 6.0 mm class nominal and a derived allowance of 3.6 mm. A bulky moulded boot or heatshrink
+may not fit. The fix is to swap the lead --- \textbf{do not} move \file{R21}; the corridor
+behind it is saturated. Owning a spare JST-GH lead is the mitigation.
+\item \flag{The board is 45.1 $\times$ 46.1 mm, below JLCPCB's 70 $\times$ 70 mm Standard
+minimum.} Standard assembly therefore requires panelisation with breakaway rails --- an extra
+fabrication step, and an extra thing to confirm in their preview. Economic has no such
+minimum but costs the feeder fees anyway and drops an LGA onto your bench (Section 15.1).
+\end{itemize}
+
+\subsection{15.3 Measurements that have not been confirmed}
+
+This is the longest list, and every row is a value some part of the build \emph{assumes}.
+The gate's own verdict names nine of them as \file{NOT READY TO FLY}.
+
+\begin{longtable}{@{}p{0.26\textwidth}p{0.34\textwidth}p{0.30\textwidth}@{}}
+\toprule
+\textbf{Unconfirmed value} & \textbf{What it decides} & \textbf{Confirmed by} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Unconfirmed value} & \textbf{What it decides} & \textbf{Confirmed by} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+Motor boss tapped depth & M3 $\times$ 14 vs 12 + washer. Too deep a screw clamps nothing while
+feeling tight & your calipers, before the first of 16 screws. Covered by the assortment \\
+Press-nut tapped depth (30.5 mm joint) & M3 $\times$ 30 vs 28 + washer, on 6.7 mm of
+engagement & your calipers \\
+Skid thickness, \textbf{assumed} 3.5 mm & sets the motor screw length entirely & you, because
+you print them. Measure the print \\
+\textbf{Grommet flange} $\leq$ 5.9 mm & at 6.0 mm it touches a printed label; a 7 mm washer
+overlaps by 0.52 mm & calipers on the grommets you receive \\
+\textbf{ESC cable continuity} & whether \file{J2} matches the ESC you were sent. Wrong here
+means a dead board or a smoked one & a multimeter, both ends, \textbf{before any VBAT} \\
+\file{J3} plug against 5.30 mm & whether the received GPS lead seats & fit the plug before
+the headers are soldered \\
+\file{BATT\_AMP\_PERVLT} & battery failsafe and consumed-mAh. Ships 25.0; it is a property of
+the ESC's shunt, not of this board & a known load at T3.5 \\
+IMU orientations & \file{ROTATION\_ROLL\_180} is asserted in the hwdef, never measured. A
+mirrored axis means it does not fly & roll and pitch it, watch the horizon (T3.1) \\
+\file{U8} junction temperature & 70--139\degC{} modelled against a 125\degC{} recommended
+max. If it really is at 139 the fix is a \textbf{respin}, not a reorder & a thermocouple, T3a \\
+\file{U9}'s board-to-junction offset & makes \file{U19}'s logged value meaningful rather than
+a nearby number & one probe reading on the case, then \file{U19} carries it \\
+\file{FLOW\_ORIENT\_YAW} & the sign of the flow correction, if flow is ever fitted & bench
+calibration \\
+The RF sigma the antenna delivers & \textbf{everything} about GNSS-denied hold. Model says
+180 m; the boundary was measured at 20 m & bench RF, T3b. \textbf{The single open question} \\
+Whether this antenna can produce a usable Iridium fix at all & the project's premise & T3b \\
+Flow quality over real grass & simulated flow is perfect flow & a field test \\
+Radxa Zero 3W hole pattern & the companion tray, if the companion is ever fitted & \textbf{not
+published} --- measure the board, then 3D-print a tray \\
+Frame top-plate standoff spacing & nothing to buy: the kit supplies them & the kit \\
+MicroSD withdrawal clearance & how you mount it & your mount \\
+Grommet compression under load & a property of the rubber & the assembled stack \\
+\bottomrule
+\end{longtable}
+
+\subsection{15.4 The three worst, ranked}
+
+\begin{enumerate}
+\item \flag{The RF sigma (T3b).} It is the only item that can invalidate the project's
+premise rather than a build step, and no amount of desk work substitutes for it. Everything
+downstream of it --- position-hold claims, the SITL scenarios' hold/runaway results --- is
+explicitly not readable until it is measured.
+\item \flag{\file{U8}'s junction temperature.} 139\degC{} against a 125\degC{} recommended
+maximum is a measure-and-stop gate, and the remedy if it is real is a board respin. The
+mitigation is that six layers with planes should land near the EVM end of the bracket ---
+but that is an opinion until a probe says otherwise.
+\item \flag{The ESC cable and the tapped depths.} Cheap to check, catastrophic to skip. Both
+are on this list only because they are properties of parts somebody else manufactured, and
+both are silenced by owning the M3 assortment and a multimeter.
+\end{enumerate}
+
+\subsection{15.5 Design-level inefficiencies, for a future revision}
+
+These do not affect this order. They are recorded because a respin is the only place they
+can be fixed, and one of them (\file{U8}) may force one anyway.
+
+\begin{itemize}
+\item \textbf{USB cannot power the board.} VBUS runs the PHY only. Every bench session needs
+a VBAT supply, which is why T1 exists at all.
+\item \textbf{Nine pads arrive unlabelled} (Section~\ref{sec:T3d}) because a three-character
+label at the 0.80 mm minimum height covers a 2.84 mm pitch pad and its neighbours. More
+silkscreen real estate, or fewer test pads, would remove a bench session.
+\item \textbf{14 DNP designators still have pads and copper.} Correct for reversibility, but
+it is unused copper on two rails.
+\item \textbf{\file{-nofpv} is byte-identical to the default pair.} A variant that ships the
+same bytes as another is a place for someone to pick the wrong file.
+\item \textbf{The Economic variant saves one part and not the feeder fees}, which makes it a
+worse deal than it reads as (Section 15.1).
+\item \textbf{In4 rail fragmentation} is an accepted warning on this board.
+\item \textbf{The 1620 MHz SAW filter is not stocked at LCSC}, so the RF front end needs a
+second supplier and a separate board.
+\end{itemize}
+
+% =============================================================================
+\section{Part 16 --- What cannot be confirmed from a desk}
+
+Not everything here is improvable. These are genuinely outside what any local check or any
+web lookup can settle, and they are listed so that ``verified'' is not read into them.
+
+\begin{center}
+\begin{tabular}{@{}p{0.40\textwidth}p{0.52\textwidth}@{}}
+\toprule
+\textbf{Item} & \textbf{Status} \\
+\midrule
+JLCPCB's upload preview & outline, panel size, CPL orientation, stackup, drills. No local tool
+substitutes for looking at their render \\
+1 oz outer copper & every current figure assumes it. Confirm what ships \\
+LCSC stock & snapshot, age-gated at 7 days. Re-fetched live 2026-09-19: 56/56 codes resolve \\
+The 1620 MHz SAW filter & not stocked at LCSC --- separate board, separate supplier \\
+ArduPilot board ID & 7180 is free and below the ceiling; the request is written and ready.
+9001 was free but above the ceiling the registry asks you to respect \\
+\file{U8} junction temperature & modelled, not measured \\
+The sigma the antenna delivers & \textbf{the single open question} \\
+Real flow over grass & simulated flow is perfect flow \\
+IMU orientations & asserted in the hwdef, never measured \\
+\file{BATT\_AMP\_PERVLT} & a property of the ESC's shunt, not of this board \\
+ESC cable continuity & buzz the cable you received \\
+Radxa mounting holes & not published by the vendor \\
+\file{J3} plug clearance & 5.30 mm against a 6.0 mm nominal \\
+Grommet flange & above 5.9 mm it touches a printed label \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% =============================================================================
+\section{The one-page order}
+
+\begin{quote}\small
+\begin{enumerate}[label=\arabic*.,leftmargin=1.4em]
+\item \cmd{python3 tools/preflight.py} --- must print \good{READY TO ORDER}
+\item \cmd{bash tools/make\_order\_bundle.sh} --- regenerate everything
+\item Upload \file{fab/NAVCORE-SoOP-order-bundle.zip}, or the gerbers plus the default
+BOM/CPL pair
+\item 6 layers, 45.1 $\times$ 46.1 mm, 1.6 mm, \textbf{1 oz} outer, ENIG, 4 mil, via
+0.45/0.20
+\item 5 bare boards, 2 assembled. Standard panelised 2 $\times$ 2 unless you want to
+hand-fit \file{U3}
+\item Confirm \file{Y1} = \file{C2682774} and \file{Y2} = \file{C5563878}; refresh the stock
+snapshot if it is over 7 days old
+\item Order the aircraft parts, \textbf{including the M3 assortment} and the Tier 4 RF kit.
+Do not buy a PMW3901 or VL53L1X
+\item While waiting: prepare the board ID request, print the padmap, decide the USB edge
+\item On arrival: inspect under magnification, buzz the ESC cable, measure the tapped depths
+\item T1 current-limited rails $\rightarrow$ T2 bootloader over SWD $\rightarrow$ T3 sensors,
+props off
+\item T3a thermal (\file{U8} needs a probe) $\rightarrow$ T3c IMU temp cal $\rightarrow$ T3d
+nine unlabelled pads
+\item T3b before any position-hold claim: measure the real sigma
+\item SITL scenarios $\rightarrow$ tethered hover $\rightarrow$ GPS Loiter. \textbf{Props on
+last}
+\end{enumerate}
+\end{quote}
+
+\vfill
+\begin{center}
+\footnotesize\color{sidegrey}
+Generated from the NAVCORE-SoOP working tree, 19 September 2026.\\
+Gate: READY TO ORDER, 43 of 43 gated prerequisites proven.\\
+Hardware: NOT READY TO FLY, 9 items requiring hardware.
+\end{center}
+
+\end{document}
