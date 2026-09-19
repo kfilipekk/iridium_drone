@@ -186,7 +186,9 @@ def main():
             below_board = (design.ESC["pcb"] + design.ESC["parts"] +
                            design.MOUNTING["gap"] +
                            s["bot"] + design.BOARD_T)
-            room = s["buy"] - s["below"] - below_board
+            # the top plate sits at the kit's height (design.TOP_PLATE_MOUNT), not at
+            # a bought standoff's - see design.required_standoff
+            room = s["top_plate_z"] - s["below"] - below_board
             need = spec["plug"] + spec["bend"]
             if room < need:
                 fails.append(f"{ref}: plug+bend need {need:.1f} mm but the top plate is "

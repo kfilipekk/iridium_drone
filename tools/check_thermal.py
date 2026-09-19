@@ -205,7 +205,7 @@ def main():
          "number that would have to get worse in front of you")
     line("note", "what still wants a thermocouple",
          "U8 has no sensor near it, and the board-to-junction offset at U9 is still "
-         "unmeasured. Both are one bench session at docs/BUILD.md T3a - powered, stack "
+         "unmeasured. Both are one bench session at runbook T3a - powered, stack "
          "assembled, logging to the card so U9 sees its real duty, 10 minutes. After "
          "that the offset is known and U19 carries it forward on its own")
 

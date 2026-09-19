@@ -83,6 +83,8 @@ NOT_FOOTPRINTS = {
     "P52": "RC receiver solder pad - removed in the Rev B relayout; RC now lands on J5 (JST-SH 4P, USART6)",
     "P53": "RC receiver solder pad - removed in the Rev B relayout; RC now lands on J5 (JST-SH 4P, USART6)",
     "P54": "RC receiver solder pad - removed in the Rev B relayout; RC now lands on J5 (JST-SH 4P, USART6)",
+    "TP11": "Q-channel DC tap probe - removed 2026-09-18 with R30 in the baseband rework; "
+            "SOOP_Q_ADC now comes from U14's difference-amplifier output, and PC5 is free",
 }
 docs = [q for q in (REPO / "docs").glob("*.md") if q.name != "HISTORY.md"]
 docs.append(REPO / "README.md")

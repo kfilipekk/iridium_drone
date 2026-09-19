@@ -74,6 +74,7 @@ def main():
             w.writerow([val, ",".join(sorted(refs)), fpn, lcsc, len(refs),
                         "DNP" if dnp else ""])
 
+    n_cpl = 0
     with open(f"{OUT}/CPL-NAVCORE-SoOP{suffix}.csv", "w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["Designator", "Mid X", "Mid Y", "Layer", "Rotation"])
@@ -87,6 +88,7 @@ def main():
             w.writerow([ref, f"{pcbnew.ToMM(p.x):.4f}mm", f"{-pcbnew.ToMM(p.y):.4f}mm",
                         "bottom" if fp.GetLayerName() == "B.Cu" else "top",
                         f"{cpl_rotation(fp)[0]:.1f}"])
+            n_cpl += 1
 
     n_lines = len(groups)
     n_parts = sum(len(r) for r in groups.values())
@@ -94,7 +96,8 @@ def main():
     no_lcsc = [v for (v, l, fpn, d), r in groups.items()
                if not l or str(l).startswith("LOOKUP:")]
     print(f"BOM: {n_lines} lines, {n_parts} parts ({n_dnp} DNP)")
-    print(f"CPL: {sum(1 for r in placed if r not in skip)} placements")
+    # Count the rows actually written, not the footprints that are not test pads.
+    print(f"CPL: {n_cpl} placements")
     if no_fpv:
         print(f"NO-FPV variant - the 9 V VTX buck is left off ({len(vtx)} parts):")
         print(f"   {', '.join(sorted(vtx))}")

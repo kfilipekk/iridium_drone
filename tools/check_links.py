@@ -2,7 +2,7 @@
 """Buying links: recoverability offline, liveness online."""
 import argparse, csv, os, re, sys, subprocess
 
-DOCS = ("docs/BUYING.md", "docs/BUILD.md", "docs/SENSORS.md", "README.md",
+DOCS = ("docs/BUYING.md", "docs/SENSORS.md", "README.md",
         "docs/HARDWARE.md", "docs/BENCHMARK.md")
 PARTS = "docs/PARTS.csv"
 EXEMPT = ("docs/HISTORY.md",)

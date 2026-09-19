@@ -13,8 +13,8 @@ cad/*.step
 cad/*.glb
 cad/tmp*.scad
 
-# Historical board snapshots, 72 MB across 16 files. These are point-in-time copies
-# taken before risky layout operations; git history now does that job properly.
+# Historical board snapshots taken before risky layout operations, if any are made again;
+# git history does that job properly and the 16 old ones were deleted on 2026-09-19.
 .backup/
 
 # SITL flight logs, 73 MB. Regenerate: bash sitl/run_scenarios.sh
@@ -29,6 +29,10 @@ fp-info-cache
 
 # KiCad backup written next to the board by an interrupted save.
 *.kicad_pcb.bak
+
+# The same, for the vendored symbol library. Nothing reads it and it differs from the
+# live library by bytes, so committing it would just be a second copy to keep in sync.
+*.kicad_sym.bak
 
 # Bench results are MEASUREMENTS of one physical board, not a property of the design.
 # tools/check_rf.py deliberately fails until this exists; committing someone else's
@@ -58,9 +62,19 @@ SPONSORSHIP.md
 
 # Every markdown file except the top-level README is held back for now.
 # They are all still on disk and the tooling reads them; they just aren't published.
+# (fab/ORDER.md and fab/README.md were folded into docs/navcore-runbook.tex on 2026-09-19.)
 cad/README.md
-fab/ORDER.md
-fab/README.md
 sim/README.md
 sitl/README.md
-.scratch/
+
+# LaTeX drop files from the runbook compile. Regenerate: see the comment at the top of
+# docs/navcore-runbook.tex. They are per-run and machine-specific, and the .tex source and
+# the .pdf it produces are the two artefacts worth keeping, so these are noise.
+docs/*.aux
+docs/*.log
+docs/*.xdv
+docs/*.out
+docs/*.toc
+docs/*.fls
+docs/*.fdb_latexmk
+docs/*.synctex.gz

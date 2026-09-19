@@ -25,6 +25,7 @@ _b = pcbnew.LoadBoard(os.path.join(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__))), "NAVCORE-SoOP.kicad_pcb"))
 TOP, BOT, TOPREF, BOTREF, _ = design.stack_heights(_b, skip_dnp=True)
 STO = design.required_standoff(_b)
+TPM = design.TOP_PLATE_MOUNT
 # Board size is measured, not restated.
 _bb = _b.GetBoardEdgesBoundingBox()
 _sw = max([d.GetWidth() / 1e6 for d in _b.GetDrawings()
@@ -128,11 +129,21 @@ hole_dia        = {M['hole_d']};
 plate_hole_dia  = {M['plate_hole_d']};   // M3 close clearance, > screw_dia
 screw_dia       = {M['screw_dia']};     // M3
 
-// Standoff length is COMPUTED (design.required_standoff), not taken from the kit.
-// The kit's 30 mm is 0.3 mm SHORT of the stack before any headroom - buy {STO['buy']} mm.
-standoff_len    = {STO['buy']};
-standoff_need   = {STO['need']:.1f};   // incl. {STO['headroom']:.1f} mm headroom
-standoff_slack  = {STO['slack']:.1f};
+// TOP PLATE HEIGHT IS THE KIT'S GEOMETRY (design.TOP_PLATE_MOUNT), not a purchase.
+// The DXF settles it: 22 mm standoffs stand on the MID plate at the front posts, 30 mm
+// on the BOTTOM plate at the rear posts, and one flat top plate needs 22 + 8 = 30.
+// standoff_len is the top plate's underside above z = 0 (bottom of the bottom plate).
+standoff_len    = {STO['top_plate_z']};   // = bottom_t + {TPM['rear_standoff']:.0f} = mid plate top + {TPM['front_standoff']:.0f}
+standoff_front  = {TPM['front_standoff']};
+standoff_rear   = {TPM['rear_standoff']};
+post_od         = {TPM['post_od']};
+front_posts     = {list(map(list, TPM['front_posts']))};   // on the mid plate, rel. stack centre
+rear_posts      = {list(map(list, TPM['rear_posts']))};   // on the bottom plate
+plate_y_fc      = {TPM['plate_centre_y']['fc']};    // plate centres rel. the stack centre, +y aft
+plate_y_bottom  = {TPM['plate_centre_y']['bottom']};
+plate_y_top     = {TPM['plate_centre_y']['top']};
+standoff_need   = {STO['need']:.1f};   // stack top above z = 0
+standoff_slack  = {STO['slack']:.1f};  // headroom under the top plate
 cam_mod_t       = {C['mod_t']};
 cam_mod_w       = {C['mod_w']};
 pi_l            = {PI['L']};

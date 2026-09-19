@@ -206,11 +206,16 @@ def geometry(board):
          f"which picks the stock length AND warns that the nearest one over-engages",
          f"{FRAME['src']} + {SKID['src']}")
     check("geometry", "motor bolt pattern matches the frame",
-          MOTOR["holes"] in FRAME["motor_holes"],
-          f"motor is M3 {MOTOR['holes']} mm, frame offers {FRAME['motor_holes']} mm",
+          _d.MOTOR_JOINT["pitch_mm"] in FRAME["motor_patterns_mm"],
+          f"motor is M3 {_d.MOTOR_JOINT['pitch_mm']:.0f} x "
+          f"{_d.MOTOR_JOINT['pitch_mm']:.0f} mm, the arm offers "
+          f"{_d.fmt_pattern(FRAME['motor_patterns_mm'])} mm",
           f"[D] BrotherHobby + {FRAME['src']}")
     note("geometry", "landing skids must match the MOTOR pattern",
-         f"buy skids for {MOTOR['holes']} mm, NOT 16x16 - the 2806.5 is the larger pattern",
+         f"build or buy skids for {_d.MOTOR_JOINT['pitch_mm']:.0f} x "
+         f"{_d.MOTOR_JOINT['pitch_mm']:.0f} mm, NOT 16x16 - the 2806.5 is the larger "
+         f"pattern. tools/check_fit.py now verifies the skid's printed hole pattern, its "
+         f"hole DIAMETER and the screw's path through arm + skid into the motor boss",
          "[D] BrotherHobby Avenger 2806.5")
 
 

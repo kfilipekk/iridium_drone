@@ -22,6 +22,8 @@ MODULE_BEGIN = "<!-- BEGIN GENERATED MODULES -->"
 MODULE_END = "<!-- END GENERATED MODULES -->"
 ORDER_BEGIN = "<!-- BEGIN GENERATED ORDER -->"
 ORDER_END = "<!-- END GENERATED ORDER -->"
+TEX_ORDER_BEGIN = "% BEGIN GENERATED ORDER"
+TEX_ORDER_END = "% END GENERATED ORDER"
 
 
 def load_scenarios():
@@ -118,21 +120,26 @@ def spatial_table():
     rows = [
         ("stack height", f"**{s['below']+s['stack']:.1f} mm** "
          f"({s['below']:.1f} frame + {s['stack']:.1f} stack)",
-         f"needs a **{s['buy']} mm** standoff; the kit's {F['inner_h']:.0f} mm is "
-         f"{s['need']-F['inner_h']:.1f} mm short"),
-        ("clearance above the FC", f"{s['buy']-s['below']-s['stack']:.1f} mm",
+         f"under the top plate at **{s['top_plate_z']:.1f} mm** (the kit's "
+         f"{s['buy']:.0f} mm front standoffs on the mid plate + {F['arm_t']+F['medium_t']:.0f} "
+         f"mm of arms and plate); nothing to buy"),
+        ("clearance above the FC", f"{s['slack']:.1f} mm",
          f"to the top plate, tallest part `{s['topref']}`"),
         ("FC/ESC mounting", f"{design.MOUNTING['pitch']} x {design.MOUNTING['pitch']} mm",
          "shared pattern, boards concentric"),
         ("board envelope", "45.10 x 46.10 mm",
          f"{F_CAD_W:.2f} mm clear per side, {F_CAD_L:.2f} mm at the nearer end"),
-        ("motor pattern", design.MOTOR["holes"], "[D] BrotherHobby product data"),
+        ("motor pattern",
+         f"{design.MOTOR_JOINT['pitch_mm']:.0f} x "
+         f"{design.MOTOR_JOINT['pitch_mm']:.0f} mm",
+         "[D] BrotherHobby product data; one source, `design.MOTOR_JOINT`"),
         ("propeller diameter", f"{P['dia_mm']:.1f} mm", "7 in"),
         ("adjacent propeller gap", f"**{prop_gap:.1f} mm**",
          f"{F['wb']:.0f} mm wheelbase, discs {motor_off*2:.1f} mm apart"),
         ("camera lens to skid contact", f"{cam_margin:.1f} mm",
          f"{S['drop']:.0f} mm drop + {S['t']:.1f} mm pad - {C['mod_t']:.0f} mm module "
-         f"- {C['lens_len']:.1f} mm barrel; drop and thickness are [A]"),
+         f"- {C['lens_len']:.1f} mm barrel; the skid is PRINTED, so drop and thickness "
+         f"are design values, not measurements"),
         ("battery envelope", f"{B['L']} x {B['W']} x {B['H']} mm",
          "plan view only - restraint and CG are physical checks"),
         ("companion board", "NOT FITTED",
@@ -187,10 +194,14 @@ def frame_table(f):
         f"upper {f['upper_t']}, camera side {f['cam_plate_t']} mm |",
         f"| arms | {f['arm_t']} mm |",
         f"| **FC mounting** | **{f['stack']}** |",
-        f"| **inner space height** | **{f['inner_h']:.0f} mm** (what the kit ships) |",
-        f"| **standoff to BUY** | **{_sto['buy']} mm** - the kit's "
-        f"{f['inner_h']:.0f} mm is {_sto['need']-f['inner_h']:.1f} mm short |",
-        f"| motor mounting | {f['motor_holes']} mm |",
+        f"| **inner space over the mid plate** | **{f['inner_h']:.0f} mm** - the kit's "
+        f"22 mm front standoffs; 30 mm rear standoffs stand on the bottom plate "
+        f"(design.TOP_PLATE_MOUNT, from the DXF) |",
+        f"| **standoffs** | **use the kit's** - stack {_sto['stack']:.1f} mm leaves "
+        f"{_sto['slack']:.1f} mm under the top plate |",
+        f"| motor mounting | {' / '.join(f'{p:.0f}x{p:.0f}' for p in f['motor_patterns_mm'])} mm "
+        f"([L] retailer figure - the manufacturer DXF's motor holes are self-inconsistent, "
+        f"see KNOWN-ISSUES.md) |",
         f"| included | frame kit + one {f['strap'][0]:.0f} x {f['strap'][1]:.0f} mm "
         "battery strap |",
         f"| mass / price | {f['g']:.0f} g / GBP {f['price_gbp']:.2f} |",
@@ -258,70 +269,88 @@ def fastener_tables():
             "`tools/fasteners.py`; do not edit it here.")
 
 
-def order_sheet():
-    """The shopping list, generated from docs/PARTS.csv rather than hand-written."""
+STAGES = [
+    ("A1", "The board, and its bench",
+     "Power it, flash it, prove it - no aircraft. Runbook Parts 7-10 (T1-T3a)."),
+    ("A2", "Iridium navigation, no aircraft",
+     "The receive chain the board cannot supply, and the bench reference receiver "
+     "for T3b step 1. The tuner (U13) is on the board; this is what feeds it."),
+    ("B1", "The aircraft - minimum to fly on GPS",
+     "Frame, propulsion, radio, GPS, fasteners, looms. Every optional sensor ships "
+     "disabled, so nothing in B2 is needed for a GPS flight."),
+    ("B2", "Aircraft sensors and payload - optional",
+     "`RNGFNDn_TYPE` and `PRX1_TYPE` ship at 0; enable each one at the bench after it "
+     "is fitted. The +5 V rail cannot carry all of these AND the SAWbird+ at once - "
+     "`check_modules.py` prints the budget."),
+]
+
+
+def _parts():
     import csv
     rows = list(csv.DictReader(open(REPO / "docs" / "PARTS.csv")))
     cost_key = next(k for k in rows[0] if "USD" in k or "Indicative" in k)
-    buy = [r for r in rows if r["Status"].strip() in ("TO BUY", "BUY")]
-    later = [r for r in rows if r["Status"].strip() in ("LATER", "DEFERRED", "CONSIDER")]
 
     def money(r):
         try:
             return float(r[cost_key] or 0)
         except ValueError:
             return 0.0
+    return rows, money
 
-    TIER = {"Indoor avoidance": 2, "Navigation": 2, "Tools": 3, "Notify": 3,
-            "SoOP receiver": 4}
-    NAMES = {1: "Minimum to fly", 2: "Sensors - optional for first flight",
-             3: "Tools and bench kit - buy once",
-             4: "SoOP bench reference receiver - the in-flight chain is on the board"}
 
-    def tier(r):
-        return TIER.get(r["Group"].strip(), 1)
+def _tag_of(r):
+    s = r["Provenance"].strip()
+    return ("**[A]**" if s.startswith("ASSUMED") else
+            "[D]" if s.startswith(("DATASHEET", "[D]")) else
+            "[L]" if s.startswith(("LISTING", "[L]")) else
+            "[M]" if s.startswith(("MEASURED", "[M]")) else "[?]")
 
-    def tag_of(r):
-        s = r["Provenance"].strip()
-        return ("**[A]**" if s.startswith("ASSUMED") else
-                "[D]" if s.startswith(("DATASHEET", "[D]")) else
-                "[L]" if s.startswith(("LISTING", "[L]")) else
-                "[M]" if s.startswith(("MEASURED", "[M]")) else "[?]")
 
-    def price_tag(r):
-        """Whether the price is quoted or guessed - a different question from whether the
-        spec is verified, and previously conflated with it. A link to a search page
-        means the number beside it is an estimate nobody has checked against a real
-        listing.
-        """
-        u = r["Link"].strip()
-        return "~est" if ("/w/" in u or "wholesale" in u or u in ("-", "")) else "quoted"
+def _price_tag(r):
+    """Whether the price is quoted or guessed - a different question from whether the spec
+    is verified, and previously conflated with it. A link to a search page means the
+    number beside it is an estimate nobody has checked against a real listing.
+    """
+    u = r["Link"].strip()
+    return "~est" if ("/w/" in u or "wholesale" in u or u in ("-", "")) else "quoted"
+
+
+def order_sheet():
+    """The shopping list, generated from docs/PARTS.csv rather than hand-written."""
+    rows, money = _parts()
+    buy = [r for r in rows if r["Status"].strip() in ("TO BUY", "BUY", "PRINT")]
+    have = [r for r in rows if r["Status"].strip() == "HAVE"]
+    later = [r for r in rows if r["Status"].strip() in ("LATER", "DEFERRED", "CONSIDER")]
+    stage_of = lambda r: (r.get("Stage") or "-").strip()
 
     out, total, n = [], 0.0, 0
     subtotals = {}
-    for tn in (1, 2, 3, 4):
-        grp = [r for r in buy if tier(r) == tn]
-        if not grp:
+    for code, name, blurb in STAGES:
+        grp = [r for r in buy if stage_of(r) == code]
+        own = [r for r in have if stage_of(r) == code]
+        if not grp and not own:
             continue
         sub = sum(money(r) for r in grp)
-        subtotals[tn] = sub
+        subtotals[code] = sub
         total += sub
-        out += [f"**Tier {tn} — {NAMES[tn]}** — {len(grp)} lines, ~GBP {sub:.0f}", "",
+        out += [f"**{code} — {name}** — {len(grp)} lines, ~GBP {sub:.0f}", "", blurb, "",
                 "| # | item | qty | ~GBP | price | source | spec |",
                 "|---|---|---:|---:|---|---|---|"]
         for r in grp:
             n += 1
             out.append(f"| {n} | {r['Item']} | {r['Qty']} | {money(r):.0f} | "
-                       f"{price_tag(r)} | {r['Source']} | {tag_of(r)} |")
+                       f"{_price_tag(r)} | {r['Source']} | {_tag_of(r)} |")
+        if own:
+            out.append("")
+            out.append("Already have: " + ", ".join(r["Item"] for r in own) + ".")
         out.append("")
+    a = subtotals.get("A1", 0) + subtotals.get("A2", 0)
     out += [f"**TOTAL {len(buy)} lines, ~GBP {total:.0f}.** "
-            + " ".join(f"Tier {k} ~GBP {v:.0f}." for k, v in sorted(subtotals.items())),
+            + " ".join(f"{k} ~GBP {v:.0f}." for k, v in subtotals.items()),
             "",
-            f"**Cheapest path to a flying aircraft is Tier 1 alone: ~GBP "
-            f"{subtotals.get(1, 0):.0f}.** Tier 2 is the ToF/lidar sensor suite, which "
-            "nothing in Tier 1 depends on - `PRX1_TYPE` and every `RNGFNDn_TYPE` ship at "
-            "0, so the aircraft flies without them and does not even notice they are "
-            "absent. Tier 3 you buy once and keep.", "",
+            f"**The board and Iridium navigation with no aircraft is A1 + A2: ~GBP {a:.0f}.** "
+            f"A GPS-flying aircraft adds B1 (~GBP {subtotals.get('B1', 0):.0f}); B2 is "
+            "optional and each item is enabled at the bench after it is fitted.", "",
             "Two separate columns, because they are two separate questions. **price** "
             "`quoted` means the link goes to a real product listing; `~est` means it goes "
             "to a search page and the number beside it is an estimate nobody has checked. "
@@ -336,7 +365,49 @@ def order_sheet():
         out += [f"Held back ({len(later)}): "
                 + ", ".join(f"{r['Item']} (~GBP {money(r):.0f})" for r in later), ""]
     out.append("Generated from `docs/PARTS.csv` by `tools/gen_doc_tables.py`; do not edit "
-               "it here. Change a part's `Status` in the CSV to move it in or out.")
+               "it here. Change a part's `Status` or `Stage` in the CSV to move it.")
+    return "\n".join(out)
+
+
+def _tex(s):
+    """Escape a CSV cell for LaTeX."""
+    for a, b in (("\\", r"\textbackslash{}"), ("&", r"\&"), ("%", r"\%"), ("$", r"\$"),
+                 ("#", r"\#"), ("_", r"\_"), ("{", r"\{"), ("}", r"\}"), ("~", r"\textasciitilde{}"),
+                 ("^", r"\textasciicircum{}")):
+        s = s.replace(a, b)
+    return s
+
+
+def runbook_order():
+    """The same staged list as a LaTeX longtable, spliced into docs/navcore-runbook.tex."""
+    rows, money = _parts()
+    buy = [r for r in rows if r["Status"].strip() in ("TO BUY", "BUY", "PRINT")]
+    have = [r for r in rows if r["Status"].strip() == "HAVE"]
+    stage_of = lambda r: (r.get("Stage") or "-").strip()
+    out = []
+    total = 0.0
+    for code, name, blurb in STAGES:
+        grp = [r for r in buy if stage_of(r) == code]
+        own = [r for r in have if stage_of(r) == code]
+        if not grp and not own:
+            continue
+        sub = sum(money(r) for r in grp)
+        total += sub
+        out += [r"\subsubsection*{" + _tex(f"{code} --- {name}") + r"} " +
+                _tex(f"{len(grp)} lines, about GBP {sub:.0f}."),
+                _tex(blurb.replace("`", "")), "",
+                r"\begin{longtable}{@{}P{0.50\textwidth}P{0.12\textwidth}rP{0.22\textwidth}@{}}",
+                r"\toprule", r"\textbf{Item} & \textbf{Qty} & \textbf{GBP} & \textbf{Source} \\ \midrule", r"\endhead",
+                r"\bottomrule", r"\endfoot"]
+        for r in grp:
+            out.append(f"{_tex(r['Item'])} & {_tex(r['Qty'])} & {money(r):.0f} & {_tex(r['Source'])} \\\\")
+        out.append(r"\end{longtable}")
+        if own:
+            out.append(_tex("Already have: " + ", ".join(r["Item"] for r in own) + "."))
+        out.append("")
+    out.append(_tex(f"Total, everything to buy: about GBP {total:.0f}. ") +
+               r"Generated from \file{docs/PARTS.csv} by \file{tools/gen\_doc\_tables.py}; " +
+               r"every row's reasoning and link is in the CSV, and \file{docs/BUYING.md} is the same list with prices and provenance tags.")
     return "\n".join(out)
 
 
@@ -402,6 +473,8 @@ def main():
                   fastener_tables(), "fastener table", args.check)[0]
     rc |= _splice(REPO / "docs" / "MODULES.md", MODULE_BEGIN, MODULE_END,
                   module_table(), "module table", args.check)[0]
+    rc |= _splice(REPO / "docs" / "navcore-runbook.tex", TEX_ORDER_BEGIN, TEX_ORDER_END,
+                  runbook_order(), "runbook buy list", args.check)[0]
     rc |= _splice(REPO / "docs" / "BUYING.md", ORDER_BEGIN, ORDER_END,
                   order_sheet(), "order sheet", args.check)[0]
     rc |= cross_doc_totals(args.check)

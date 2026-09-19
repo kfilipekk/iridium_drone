@@ -95,21 +95,10 @@ def main():
          f"(ESC parts {ESC['parts']:.1f} + air {GAP['mm']:.1f} + bottom parts "
          f"{BOT_PARTS['mm']:.2f}); compressed grommet height is [A]", GAP["src"])
     # Required_standoff() returns buy=None when the stack is taller than the longest stock length.
-    if STO["buy"] is None:
-        line("FAIL", "no stock standoff is long enough",
-             f"stack needs {STO['need']:.1f} mm; the longest stock length is "
-             f"{max(design.STANDOFF_STOCK):.0f} mm", STO["src"])
-    else:
-        line("FAIL" if z_max > STO["buy"] else "ok", "tallest point of the stack",
-             f"{z_max:.1f} mm against a {STO['buy']} mm standoff "
-             f"({STO['buy']-z_max:.1f} mm spare) - consistency check, passes by "
-             f"construction", STO["src"])
-    line("note" if STO["buy"] and STO["buy"] > FRAME["inner_h"] else "ok",
-         "standoff length vs the kit's",
-         f"stack needs {z_max:.1f} mm and the kit ships {FRAME['inner_h']:.0f} mm - "
-         + (f"BUY {STO['buy']} mm (a few pounds, and standoff length is a purchase, "
-            f"not a frame property)" if STO["buy"] else
-            "and NOTHING IN STOCK FITS - see the failure above"), STO["src"])
+    line("FAIL" if z_max > STO["top_plate_z"] else "ok", "tallest point of the stack",
+         f"{z_max:.1f} mm against the top plate's underside at {STO['top_plate_z']:.1f} mm "
+         f"({STO['top_plate_z']-z_max:.1f} mm spare) - the kit's {STO['buy']:.0f} mm front "
+         f"standoffs over the mid plate; nothing to buy", STO["src"])
 
     # ---------------------------------------------------- board vs the ESC, per edge
     print("\n=== board vs the ESC below it (COMPUTED) ===")
@@ -218,9 +207,10 @@ def main():
 
     print("\n=== SETTLED - do not go measuring these ===")
     line("ok", "top plate height",
-         f"{STO['buy']} mm standoffs against a {z_max:.1f} mm stack = "
-         f"{STO['buy']-z_max:.1f} mm spare. The kit's {FRAME['inner_h']:.0f} mm does NOT "
-         f"fit; standoff length is a PURCHASE, so buy {STO['buy']} mm",
+         f"the kit's {STO['buy']:.0f} mm front standoffs stand on the mid plate; the top "
+         f"plate's underside is {STO['top_plate_z']:.1f} mm up against a {z_max:.1f} mm "
+         f"stack = {STO['top_plate_z']-z_max:.1f} mm spare. Use the kit's standoffs - the "
+         f"earlier 'buy 35 mm' assumed a standoff at the 30.5 pattern that does not exist",
          STO["src"])
     line("ok", "motor screw length",
          f"arm {FRAME['arm_t']:.0f} mm is published, so tools/fasteners.py derives the screw - "

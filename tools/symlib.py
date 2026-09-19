@@ -2,7 +2,10 @@
 """Parse a .kicad_sym library into {symbol: [(number, name, type, x, y, rot), ...]}."""
 import re, sys, os
 
-LIB = os.path.join(os.path.dirname(__file__), "..", "..", ".libraries", "symbols", "jlc_parts.kicad_sym")
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import jlcpaths
+
+LIB = jlcpaths.SYMBOLS
 
 def _blocks(s, start):
     """Yield (name, body) for each top-level (symbol "...") at nesting depth `start`."""
@@ -20,6 +23,19 @@ def _blocks(s, start):
         out.append((m.group(1), s[m.start():j+1]))
         i = m.end()
     return out
+
+def resolve(pins, spec):
+    """Resolve a pin given by number or by name to its number, or None."""
+    if any(p['num'] == spec for p in pins):
+        return spec
+    named = [p for p in pins if p['name'] == spec]
+    if len(named) == 1:
+        return named[0]['num']
+    pre = [p for p in pins if p['name'].split('-')[0] == spec]
+    if len(pre) == 1:
+        return pre[0]['num']
+    return None
+
 
 def load(path=LIB):
     s = open(path).read()

@@ -3,9 +3,9 @@
 
 Usage:  python3 tools/preflight.py [board.kicad_pcb]
 """
-import os, sys, re, csv, math, glob, subprocess
+import os, sys, re, csv, math, glob, hashlib, subprocess
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import pcbnew, design, route
+import pcbnew, design, route, readiness
 
 BOARD = sys.argv[1] if len(sys.argv) > 1 else "NAVCORE-SoOP.kicad_pcb"
 SCH   = "NAVCORE-SoOP.kicad_sch"
@@ -15,6 +15,8 @@ HWDEF = "firmware/NAVCORE_SoOP/hwdef.dat"
 PLANE_LAYERS = ("In1.Cu", "In4.Cu")
 
 results = []
+
+TOOL_RESULTS = {}
 
 
 def check(group, name, ok, detail, hard=True):
@@ -350,7 +352,52 @@ def firmware(board):
         name, *extra = tool.split()
         r = sp.run([sys.executable, f"tools/{name}", *extra], capture_output=True,
                    text=True, timeout=1800)
+        TOOL_RESULTS[name] = r.returncode
         return r.returncode, (r.stdout or "") + (r.stderr or "")
+
+    rc, out = run("check_topology.py")
+    check("fabrication", "datasheet-required externals present", rc == 0,
+          "every IC has the external components its datasheet requires" if rc == 0 else
+          "a required component is ABSENT - see tools/check_topology.py")
+
+    rc, out = run("check_build.py")
+    m = re.search(r'BUILD CHECKS PASS - (\d+) checks across (\d+)', out)
+    check("mechanical", "aircraft-level build checks", rc == 0,
+          (f"{m.group(1)} checks across {m.group(2)} areas" if m else
+           "see tools/check_build.py") if rc == 0 else
+          "the aircraft does not add up - see tools/check_build.py")
+
+    # Stock and part resolution against JLCPCB itself, from a dated snapshot.
+    rc, out = run("check_stock.py")
+    m = re.search(r'(\d+)/(\d+) line\(s\) resolved with stock', out)
+    age = re.search(r'snapshot\s+:\s+\S+ \((\d+) day', out)
+    check("assembly", "every BOM line is buyable", rc == 0,
+          (f"{m.group(1)}/{m.group(2)} lines in stock for the order, snapshot "
+           f"{age.group(1)} day(s) old" if m else
+           "stock/part check failed - see tools/check_stock.py") if rc == 0 else
+          "a BOM line is unavailable, unreachable or resolves to the wrong part - "
+          "see tools/check_stock.py")
+
+    rc, out = run("check_rf.py")
+    check("fly", "link budget has bench data", rc == 0,
+          "T3b measurements recorded and within budget" if rc == 0 else
+          "no T3b bench measurements yet - gates FLYING, not ordering", hard=False)
+
+    rc, out = run("check_sitl.py")
+    # The count comes from the line check_sitl.py actually prints.
+    m = re.search(r'mechanisms\s*:\s*(\d+)/(\d+) asserting', out)
+    n_info = re.search(r'measurement:\s*(\d+) informational', out)
+    if m and rc == 0:
+        _sitl = (f"{m.group(1)}/{m.group(2)} asserting scenarios pass"
+                 + (f", {n_info.group(1)} measured not gated" if n_info else "")
+                 + ", against the parameters that ship")
+    elif m:
+        _sitl = f"only {m.group(1)}/{m.group(2)} asserting scenarios pass"
+    else:
+        # No count at all.
+        _sitl = ("check_sitl.py reported no scenario count - its output above says why; "
+                 "a suite that has not run is not a passing suite")
+    check("firmware", "SITL scenarios pass", rc == 0, _sitl)
 
     rc, out = run("check_connectors.py")
     nf = re.search(r'^(\d+) failure\(s\), (\d+) warning\(s\)', out, re.M)
@@ -416,8 +463,41 @@ def firmware(board):
           (f"{m.group(1)} parts across {m.group(2)} shared footprints agree on pin 1"
            if m else "geometry check failed - see tools/check_cpl.py"))
 
+    # The order bundle is the artefact that actually gets UPLOADED.
+    rc, out = run("check_order_bundle.py")
+    m = re.search(r'gerbers\s+:\s+(\d+) identical, (\d+) diverged, (\d+) absent', out)
+    check("assembly", "order bundle matches the tree", rc == 0,
+          (f"{m.group(1) if m else '?'} gerber(s) and every BOM/CPL copy identical to "
+           f"fab/; placement counts re-derived from the bundled CPL") if rc == 0 else
+          "the order bundle is stale or incomplete - re-run tools/make_order_bundle.sh")
+
+    rc, out = run("check_variants.py")
+    m = re.search(r'^(\d+) variant pair\(s\) checked', out, re.M)
+    check("assembly", "every BOM/CPL variant matches the board", rc == 0,
+          (f"{m.group(1)} variant pair(s) agree with the board and the design" if m else
+           "checked, but the count was not reported") if rc == 0 else
+          "a variant BOM/CPL describes a different board - see tools/check_variants.py")
+
+    rc, out = run("check_symbol_pinout.py")
+    m = re.search(r'(\d+) symbol\(s\) have NO outside authority', out)
+    check("fabrication", "symbol pinouts match an outside authority", rc == 0,
+          "every active part agrees with KiCad's library or its datasheet" if rc == 0
+          else (f"{m.group(1)} symbol(s) verified against nothing - see "
+                f"tools/check_symbol_pinout.py" if m else
+                "a symbol DISAGREES with its authority - see tools/check_symbol_pinout.py"))
+
+    # "The library is in git" and "the project still builds" are different properties.
+    rc, out = run("check_libraries.py")
+    m = re.search(r'compared\s+:\s+(\d+) ref', out)
+    o = re.search(r'vendored\s+:\s+(\d+) file\(s\), (\d+) unreferenced', out)
+    check("fabrication", "vendored part library is load-bearing", rc == 0,
+          (f"{m.group(1) if m else '?'} ref(s) agree with the board; "
+           f"{o.group(1) if o else '?'} footprint(s), "
+           f"{o.group(2) if o else '?'} orphaned") if rc == 0 else
+          "the vendored library is incomplete, diverged from the board, or has orphaned "
+          "files - see tools/check_libraries.py")
+
     rc, out = run("check_design.py")
-    m = re.search(r'^(\d+) error', out, re.M)
     w = re.search(r'^WARNINGS \((\d+)\)', out, re.M)
     check("fabrication", "schematic matches the netlist", rc == 0 and "no errors" in out,
           "netlist, pin coverage and hwdef agree"
@@ -471,6 +551,13 @@ def firmware(board):
               f"FAILED - {worst[0]} at {worst[1]} mm above the skid contact plane: "
               f"see tools/check_cad_fit.py")
 
+    # The bolted joints, as joints.
+    rc, out = run("check_fit.py")
+    check("mechanical", "bolted joints fit by declaration", rc == 0,
+          "motor/arm/skid joint, stack bolt, top-plate clearance and standoff posts "
+          "all verified - see tools/check_fit.py" if rc == 0
+          else "a joint does not fit - see tools/check_fit.py")
+
     rc, out = run("check_thermal.py")
     warns_t = re.findall(r'^\s+- (\S+): (.+)$', out, re.M)
     # A finding that needs a thermocouple is not a pass.
@@ -506,6 +593,15 @@ def firmware(board):
            f"geo-gated" if rc == 0 and m_frag
            else "see tools/check_links.py"))
 
+    # Check_links.py proves the buying links RESOLVE.
+    rc, out = run("check_doc_figures.py")
+    m_ret = re.search(r'(\d+) mention\(s\) of', out)
+    n_exc = re.search(r'(\d+) mention\(s\) are marked as retired', out)
+    check("assembly", "no retired figure reads as current", rc == 0,
+          (f"{n_exc.group(1) if n_exc else m_ret.group(1) if m_ret else '?'} retired "
+           f"mention(s) in the live docs, every one marked as retired" if rc == 0
+           else "a retired figure is presented as current - run tools/check_doc_figures.py"))
+
     rc, out = run("check_module_wiring.py")
     m = re.search(r'(\d+) module\(s\) wire cleanly, (\d+) need a cable splice', out)
     check("firmware", "modules plug in without splicing cables", rc == 0,
@@ -540,78 +636,27 @@ def firmware(board):
     # The firmware build is the only proof the hwdef is real.
     apj = os.path.expanduser(os.environ.get("AP_DIR", "~/.cache/navcore/ardupilot")
                              + "/build/NAVCORE_SoOP/bin/arducopter.apj")
+    stamp = apj + ".hwdef.sha256"
     if os.path.exists(apj) and os.path.exists(HWDEF):
-        fresh = os.path.getmtime(apj) >= os.path.getmtime(HWDEF)
         size = os.path.getsize(apj)
+        have = hashlib.sha256(open(HWDEF, "rb").read()).hexdigest()
+        built = ""
+        if os.path.exists(stamp):
+            parts = open(stamp).read().split()
+            built = parts[0] if parts else ""
+        if built:
+            fresh, basis = have == built, f"hwdef sha256 {have[:12]}"
+        else:
+            fresh = os.path.getmtime(apj) >= os.path.getmtime(HWDEF)
+            basis = "no digest recorded, fell back to timestamps"
         check("firmware", "ArduPilot builds for this board", fresh,
-              f"arducopter.apj {size} bytes"
-              + ("" if fresh else " - OLDER than hwdef.dat, re-run tools/build_firmware.sh"),
+              f"arducopter.apj {size} bytes, {basis}"
+              + ("" if fresh else " - does NOT match the hwdef on disk, "
+                                   "re-run tools/build_firmware.sh"),
               hard=False)
     else:
         check("firmware", "ArduPilot builds for this board", False,
               "not built - run tools/build_firmware.sh", hard=False)
-
-
-def unverifiable():
-    try:
-        _n_bom = sum(1 for _ in csv.DictReader(open("fab/BOM-NAVCORE-SoOP.csv")))
-    except OSError:
-        _n_bom = None
-    print("\n  Cannot be checked offline - verify before spending money:")
-    for s in (f"LCSC stock and pricing for all {_n_bom or '50+'} BOM lines "
-              "(stock snapshot in docs/BUYING.md - refresh it)",
-              "the 1620 MHz SAW is NOT stocked at LCSC - it is a separate, bought RF board",
-              "ArduPilot board ID 9001 is unregistered - request it upstream",
-              "SpeedyBee grommet flange diameter is assumed 6 mm",
-              "the ESC cable pinout - J2 matches Betaflight's documented SpeedyBee "
-              "F405 V4 order, but check continuity on the cable you receive",
-              "impedance control - none specified, USB is a plain differential pair",
-              "the 1 oz copper assumption behind the current-capacity check - confirm "
-              "the stackup you order is 1 oz outer, not 0.5 oz",
-              "BATT_AMP_PERVLT - a property of the ESC's shunt, calibrate on the bench",
-              "FLOW_ORIENT_YAW - flow arrives as MAVLink from the companion; check the "
-              "sign against the camera's mount before position hold",
-              "whether Iridium NEXT Doppler can actually produce a usable fix from this "
-              "antenna - sitl/ proves what ArduPilot does with a fix of a given quality, "
-              "not that the receiver can produce one",
-              "real camera flow over grass - simulated flow is perfect flow; this needs "
-              "recorded footage, not a simulator",
-              "U9's theta_JA - 184 C/W is the AP2112 datasheet's 'no heatsink' figure, and "
-              "on it U9's PEAK junction (157 C) sits above its 150 C limit. The copper you "
-              "pour is what changes it. U19 logs the board beside U9 every flight "
-              "(TEMP_LOG), which is a proxy for this, not a substitute. docs/BUILD.md T3a",
-              "U8's theta_JA - SLVSD26 gives 118.6 C/W (JEDEC) and 57.2 C/W (EVM); this "
-              "6-layer board is between the two and only a thermocouple says where"):
-        print(f"     - {s}")
-
-    # Derived, not restated.
-    _b = pcbnew.LoadBoard(BOARD)
-    _, _bb, _, _br, _ = design.stack_heights(_b, skip_dnp=True)
-    _, _bf, _, _fr, _ = design.stack_heights(_b, skip_dnp=False)
-    _bot = (f"bottom-side parts {_bb:.2f} mm tall max ({_br}) - clears the ESC below"
-            + (f"; {_bf:.2f} mm ({_fr}) if the FPV buck is populated"
-               if _bf > _bb else ""))
-    print("\n  Mechanical, verified against the 30x30 stack:")
-    for s in ("mounting holes 30.50 x 30.50 mm, 4.00 mm dia - standard 30x30, M3 + grommet",
-              _bot,
-              "USB-C and ESC connector both 0.80 mm from their board edges",
-              "microSD slot faces the bottom edge, 1.62 mm inboard - check your frame "
-              "does not block that edge",
-              "board 45.10 x 46.10 mm - confirm the frame's centre plate accepts it"):
-        print(f"     - {s}")
-
-    print("\n  Whole-aircraft checks (tools/check_build.py):")
-    for s in ("connectors, power budget, current path, mass and thrust, geometry, buses",
-              "every value tagged [M]easured / [D]atasheet / [L]isting / [A]ssumed",
-              "run it before ordering - it is what caught the missing microSD card, the "
-              "2x BATT_AMP_PERVLT error and the 19x19 motor bolt pattern"):
-        print(f"     - {s}")
-
-    print("\n  Run before flying, not before ordering:")
-    for s in ("sitl/run_scenarios.sh - flies defaults.parm against simulated truth. "
-              "Found three prearm faults the build checks could not see",
-              "docs/BUILD.md - T1 power on a current-limited supply BEFORE USB"):
-        print(f"     - {s}")
 
 
 def main():
@@ -624,7 +669,8 @@ def main():
     project(board)
     firmware(board)
 
-    order = ["fabrication", "assembly", "signal integrity", "project", "firmware"]
+    order = ["fabrication", "assembly", "signal integrity", "project", "firmware",
+             "mechanical", "thermal", "fly"]
     results.sort(key=lambda r: order.index(r[0]) if r[0] in order else len(order))
 
     group = None
@@ -638,13 +684,11 @@ def main():
         nf += verdict == "FAIL"
         nw += verdict == "WARN"
 
-    print("\n" + "=" * 72)
-    if nf:
-        print(f"NOT READY TO ORDER - {nf} blocking failure(s), {nw} warning(s)")
-    else:
-        print(f"READY TO ORDER - 0 blocking failures, {nw} warning(s)")
-    unverifiable()
-    return 1 if nf else 0
+    # The verdict is derived, not restated.
+    print(f"\n({nf} hard failure(s), {nw} warning(s) among the individual checks above)")
+    rep = readiness.evaluate(results, TOOL_RESULTS)
+    print(readiness.render(rep))
+    return 1 if rep["blocking"] else 0
 
 
 if __name__ == "__main__":

@@ -11,7 +11,8 @@ MD = "--md" in sys.argv
 F = design.FRAME
 ENGAGE = {3.0: 4.0, 2.5: 3.0, 2.0: 2.5}     # mm of thread, generous for soft materials
 
-SKID_T = (3.5, "[A] ready-made TPU skid - MEASURE THE ONE YOU BUY, it sets this length")
+SKID_T = (design.SKID["t"],
+          "[M] design.SKID['t'] - PRINTED part, so exact by design, not a measurement")
 ESC_PCB = (1.6, "[D] SpeedyBee BLS 60A")
 FC_PCB = (1.6, "[D] this board, 6-layer stackup")
 GAP = (3.0, "[A] M3 silicone grommet, compressed")
@@ -51,15 +52,30 @@ def joint(where, dia, layers, qty, note=""):
                      engage=ENGAGE[dia], need=need, L=L, layers=layers, note=note))
 
 
-joint("Motor to arm, skid sandwiched", 3.0,
-      [("frame arm", F["arm_t"], F["src"]), ("TPU skid", SKID_T[0], SKID_T[1])],
-      16, "skids MUST match the MOTOR's 19x19 pattern, not the frame's 16x16")
+_MJ = design.MOTOR_JOINT
+_JOINT_LAYERS = []
+for _name, _ref, _hole, _src in _MJ["layers"]:
+    _d, _k = _ref
+    _t = getattr(design, _d)[_k]
+    _JOINT_LAYERS.append((f"{_name}, hole {_hole:.1f}", _t, _src))
+joint("Motor to arm, skid sandwiched", _MJ["screw_dia"], _JOINT_LAYERS, 16,
+      f"skids MUST match the MOTOR's {_MJ['pitch_mm']:.0f}x{_MJ['pitch_mm']:.0f} pattern, "
+      "not the frame's 16x16 - tools/check_fit.py verifies the printed part")
 
-joint("FC to ESC, through the 30.5 mm stack", 3.0,
-      [("ESC PCB", ESC_PCB[0], ESC_PCB[1]),
-       ("grommet gap", GAP[0], GAP[1]),
-       ("FC PCB", FC_PCB[0], FC_PCB[1])],
-      4, "into the frame's own standoff; grommets take M3 through a 4.00 mm hole")
+import pcbnew as _pcbnew
+_BOT = design.stack_heights(_pcbnew.LoadBoard(os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "NAVCORE-SoOP.kicad_pcb")),
+    skip_dnp=True)[1]
+joint("FC to ESC to frame, the 30.5 mm stack bolt", 3.0,
+      [("FC PCB", FC_PCB[0], FC_PCB[1]),
+       ("ESC-to-FC spacer", round(design.ESC["parts"] + GAP[0] + _BOT, 1),
+        f"[M] ESC parts {design.ESC['parts']:.1f} + air {GAP[0]:.1f} + board bottom "
+        f"parts {_BOT:.1f} (design.stack_heights, measured)"),
+       ("ESC PCB", ESC_PCB[0], ESC_PCB[1]),
+       ("mid plate", F["medium_t"], "[D] TBS: middle plate 2 mm"),
+       ("arm root", F["arm_t"], "[D] TBS: arm 6 mm")],
+      4, "into the bottom plate's press nut (kit, 8 pcs); buy 4 x M3 female standoff "
+         "12 mm for the ESC-to-FC spacer - a grommet cannot hold 12.1 mm")
 
 UNKNOWN = [
     ("Frame assembly - top plate to standoffs", "M3",
@@ -124,4 +140,5 @@ def main():
     return 0
 
 
-sys.exit(main())
+if __name__ == "__main__":
+    sys.exit(main())

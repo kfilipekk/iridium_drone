@@ -49,8 +49,8 @@ COMPONENTS = {
  "U14": ("jlc_parts:OPA2374M{slash}TR",     "jlc:SOP-8_L4.9-W3.9-P1.27-LS6.0-BL",       "OPA2374",       "C444392",  False),
  "U15": ("jlc_parts:PSA4-5043+",            "jlc:SOT-343-4_L2.0-W1.3-P1.30-LS2.1-BR",           "PSA4-5043+",    "C5240848", True),
  "U16": ("jlc_parts:PSA4-5043+",            "jlc:SOT-343-4_L2.0-W1.3-P1.30-LS2.1-BR",           "PSA4-5043+",    "C5240848", True),
- # Y2 is an active 4-pad TCXO (OW2EL89CEIUXFMYLC-25M, YXC YSOS510TP family).
- "Y2" : ("jlc_parts:YSOS510TP",               "jlc:OSC-SMD_4P-L3.2-W2.5-BL",              "25MHz TCXO",    "C22381771",False),
+ # Y2 is an active 4-pad clipped-sine TCXO feeding U13's reference through C58.
+ "Y2" : ("jlc_parts:T132S4-25000ML33DTL",     "jlc:OSC-SMD_4P-L3.2-W2.5-BL",              "25MHz TCXO",    "C5563878", False),
  "FL1": ("jlc_parts:TA1575IG",                   "jlc:FILTER-SMD_6P-L3.0-W3.0-P1.19-TR",                       "SAW 1620MHz",   "",         True),
 }
 
@@ -201,10 +201,10 @@ for i,(r) in enumerate(["R22","R23","R24","R25","R26","R27"]): RES(r, "47k")  # 
 for r,v in [("C49","100n"),("C50","100n"),("C51","1u"),
             ("C52","100p"),("C56","10n"),("C57","10n")]:
     CAP(r, v, F_C0402)
-for r,v in [("R28","0R"),("R29","0R"),("R30","10k"),("R31","10k"),
+for r,v in [("R28","0R"),("R29","0R"),("R31","4k7"),
             ("R34","1k"),("R35","1k"),("R36","4k7"),("R37","4k7")]:
     RES(r, v, F_R0402)
-CAP("C58","1n", F_C0402)      # series AC coupling, Y2 output -> U13 XTAL
+CAP("C58","10n", F_C0402)     # series DC-cut, Y2 output -> U13 XTAL [D] TCXO: 0.01 uF min
 CAP("C59","100n", F_C0402)
 # ------------------------------------------------------------- connector orientation
 MATING_FACE = {
@@ -287,8 +287,35 @@ CAMERA_REC = dict(name="XIAO ESP32S3 Sense", L=21.0, W=17.5, H=13.0, g=6.0,
                       "8 MB PSRAM; [L] ~GBP 10-14 AliExpress; [A] 13 mm stacked height "
                       "and 6 g with the Sense expansion - MEASURE ON ARRIVAL")
 
+# ---- the MOTOR / ARM / SKID bolt pattern - one number, one home -------------------
+MOTOR_JOINT = dict(
+    pitch_mm=19.0,          # [D] BrotherHobby Avenger 2806.5: M3 at 19 x 19
+    screw="M3",             # [D] same source
+    screw_dia=3.0,
+    # What the screw passes through, head first, and the hole it passes through in each.
+    layers=(
+        ("frame arm", ("FRAME", "arm_t"), 3.2,
+         "[D] So1-V6 arm 6.0 mm; [A] 3.2 mm hole - the frame's motor holes are published "
+         "as the 19x19 PATTERN, not as diameters"),
+        ("printed skid", ("SKID", "t"), 3.2,
+         "[M] design.SKID - printed, so the hole is ours to specify; 3.2 mm is standard "
+         "M3 close clearance for a 3.0 mm screw"),
+    ),
+    engages="motor tapped boss",
+    tap_dia=3.0,
+    engage_mm=4.0,          # [A] 1 x diameter for M3 in aluminium - see fasteners.py
+    boss_depth_mm=None,     # not published anywhere - see the overshoot warning below
+    src="[D] BrotherHobby Avenger 2806.5 product data (M3, 19x19); "
+        "[M] arm and skid thicknesses referenced from this file",
+)
+
+
+def fmt_pattern(pitches_mm):
+    """(16.0, 19.0) -> '16x16 / 19x19', for doc tables and check messages."""
+    return " / ".join(f"{p:.0f}x{p:.0f}" for p in sorted(pitches_mm))
+
 # The skid is a part you print, so it has no marketplace page and never will.
-SKID = dict(t=3.5, drop=40.0, hole_pitch=19.0, printed=True,
+SKID = dict(t=3.5, drop=40.0, hole_pitch=MOTOR_JOINT["pitch_mm"], printed=True,
             # Drop raised 25 -> 40 mm to give the LD06 a home.
             src="[D] 19x19 pitch is the motor's bolt pattern (BrotherHobby Avenger); "
                 "[M] 3.5 mm thickness is a design choice for a printed part; "
@@ -298,17 +325,31 @@ SKID = dict(t=3.5, drop=40.0, hole_pitch=19.0, printed=True,
 # Belly depth is SKID's drop plus its pad thickness, measured from the bottom plate's underside.
 BELLY_SENSOR["depth_available_mm"] = SKID["drop"] + SKID["t"]
 # The ESC this board bolts to.
-def required_standoff(board, headroom=3.0):
-    """Standoff length needed from the bottom plate, and the stock size to buy."""
+TOP_PLATE_MOUNT = dict(
+    front_standoff=22.0, rear_standoff=30.0, post_od=5.0,        # [D] tbs: "30 and 22mm"
+    front_posts=((-14.6, -27.88), (14.6, -27.88), (-14.6, -52.88), (14.6, -52.88)),
+    rear_posts=((-14.6, 27.88), (14.6, 27.88), (-11.0, 80.75), (11.0, 80.75)),
+    plate_centre_y=dict(fc=-29.16, bottom=31.09, top=4.78),
+    src="[D] cad/frame-dxf.json (So1-V6-7inDC-2025-JUL-07.dxf sha 398556cd), hole "
+        "patterns per plate; [D] team-blacksheep.com prod:source1v6 'Standoff height: "
+        "30 and 22mm'; [M] 22-on-mid / 30-on-bottom forced by top-plate flatness")
+
+
+def required_standoff(board, headroom=None):
+    """The stack against the top plate the kit actually gives it."""
     top, bot, topref, botref, _ = stack_heights(board, skip_dnp=True)
     below = FRAME["bottom_t"] + FRAME["arm_t"] + FRAME["medium_t"]
     stack = ESC["pcb"] + ESC["parts"] + MOUNTING["gap"] + bot + BOARD_T + top
-    need  = below + stack + headroom
-    stock = next((s for s in STANDOFF_STOCK if s >= need), None)
-    return dict(below=below, stack=stack, headroom=headroom, need=need, buy=stock,
+    front = TOP_PLATE_MOUNT["front_standoff"]
+    top_plate_z = below + front
+    assert abs(top_plate_z - (FRAME["bottom_t"] + TOP_PLATE_MOUNT["rear_standoff"])) < 1e-6, \
+        "22-on-mid and 30-on-bottom no longer meet at one flat top plate"
+    return dict(below=below, stack=stack, headroom=front - stack, need=below + stack,
+                buy=front, kit=True, top_plate_z=top_plate_z,
                 top=top, bot=bot, topref=topref, botref=botref,
-                slack=(stock - below - stack) if stock else None,
-                src="[M] computed from the board + FRAME + ESC + MOUNTING")
+                slack=front - stack,
+                src="[M] computed from the board + FRAME + ESC + MOUNTING against "
+                    "TOP_PLATE_MOUNT (the kit's 22 mm front standoffs on the mid plate)")
 
 BOARD_T = 1.6                       # [M] 6-layer stackup, tools/design.py
 STANDOFF_STOCK = (25, 30, 35, 40, 45)   # [L] common M3 aluminium standoff lengths
@@ -361,8 +402,10 @@ FLOW = dict(
     fitted=False,
     camera="OV9281 global shutter, 22-pin CSI - NOT ordered in this pass",
     arrives_as="MAVLink OPTICAL_FLOW from the companion, FLOW_TYPE 5",
-    onboard_fallback="U6 PMW3901 is on the board but DNP - the ESC blocks its view, and "
-                     "correlation sensors of that class fail over grass",
+    onboard_fallback="there is no on-board flow part. U6 (PMW3901) was DELETED from the "
+                     "design in the Rev B re-layout - the ESC sat 3.0 mm below it and "
+                     "would have blocked its view, and correlation sensors of that class "
+                     "fail over grass anyway. Do not shop for one: there is no pad.",
     operational_note="EK3_SRC2 and EK3_SRC3 both use VELXY 5 (flow). With no flow fitted "
                      "they have no data, and they are reachable ONLY by the pilot's RC9 "
                      "source-set switch. Do not select source set 2 or 3 in flight until "
@@ -468,7 +511,7 @@ OFFBOARD = dict(
                scan_plane_height_mm=None,
     gbp=13.99,
     # Position on the belly, mm aft of centre (negative = aft).
-    mount_y_mm=-22.0,     # [A] measure on arrival - see docs/BUILD.md
+    mount_y_mm=-22.0,     # [A] measure on arrival - see the runbook, Part 4
                # Power comes off the SERIAL6 pad group's 5V/GND pins. That does not claim
                # SERIAL6 - P72/P73, the UART pair, stay free.
                wiring={"TX": "TP6 (USART1_RX)", "5V": "P71", "GND": "P74"},
@@ -541,15 +584,22 @@ PAYLOAD = dict(
 
 # Tbs source one V5 7" DC - and the reason for it is the provenance, not the geometry.
 FRAME = dict(name='TBS Source One V5 7in DC', wb=320.0, size=(200.0, 230.0),
-             inner_h=30.0,
+             # 22, not 30.
+             inner_h=22.0,
              bottom_t=2.5, medium_t=2.0, upper_t=2.0, arm_t=6.0, cam_plate_t=2.0,
              stack="30.5x30.5 M3 and 20x20 - VERIFIED from the manufacturer DXF",
-             motor_holes="16x16 / 19x19",
+             # Numeric, not the string "16x16 / 19x19".
+             motor_patterns_mm=(16.0, 19.0),
              strap=(20.0, 300.0), price_gbp=35.90, g=143.5,
              src="[D] github.com/tbs-trappy/source_one So1-V6-7inDC-2025-JUL-07.dxf, "
                  "stack patterns parsed directly 2026-09-02; [L] hobbyrc.co.uk for "
                  "standoffs 30/22 mm, plates and 143.5 g; [A] plate outline 200x230 mm "
                  "- overall footprint only, not load-bearing on any check")
+assert FRAME["inner_h"] == TOP_PLATE_MOUNT["front_standoff"], \
+    "FRAME.inner_h must be the kit's front standoff (TOP_PLATE_MOUNT) - one number"
+assert abs(FRAME["arm_t"] + FRAME["medium_t"]
+           - (TOP_PLATE_MOUNT["rear_standoff"] - TOP_PLATE_MOUNT["front_standoff"])) < 1e-6, \
+    "the two standoff sets stand on plates 8 mm apart and hold one flat top plate"
 
 # The fit question, answered from the DXF - not deferred to calipers.
 PLATES = dict(
@@ -557,9 +607,8 @@ PLATES = dict(
     arm=(31.08, 185.21),
     top_m3_x=(14.60, 11.00), bottom_m3_x=(14.60, 11.00),
     battery_overhang_per_side=(47.0 - 42.50) / 2,
-    src="[M] ezdxf flatten of So1-V6-7inDC-2025-JUL-07.dxf, 2026-09-04; method validated "
-        "by reproducing the known FC plate to 2 dp. [A] which plate is top vs bottom - "
-        "inferred from length against the 138 mm battery; confirm with calipers")
+    src="[D] tools/parse_frame_dxf.py -> cad/frame-dxf.json from "
+        "So1-V6-7inDC-2025-JUL-07.dxf (sha 398556cd); re-derivable, not a one-off flatten")
 
 FRAME_CAD = dict(
     fc_plate=(48.50, 106.59),
@@ -570,7 +619,8 @@ FRAME_CAD = dict(
     nearest_standoff_candidate_y=27.90,
     src="[M] parsed from So1-V6-7inDC-2025-JUL-07.dxf, 2026-09-02")
 # Weight and bolt pattern are from BrotherHobby's own Avenger 2806.5 product data.
-MOTOR = dict(name="2806.5 1300KV", kv=1300, g=41.0, thrust_g=1250, holes="19x19",
+MOTOR = dict(name="2806.5 1300KV", kv=1300, g=41.0, thrust_g=1250,
+             hole_pitch_mm=MOTOR_JOINT["pitch_mm"],
              shaft_thread="M5", poles="12N14P",
              # Body envelope, for the CAD.
              dia_mm=28.0, h_mm=15.0,
@@ -627,6 +677,8 @@ def net(name, *pins): NETS.setdefault(name, []).extend(pins)
 net("GND",
     "U1.10","U1.26","U1.49","U1.74","U1.99","U1.19",           # VSS + VSSA
     "U2.6","U3.6","U4.3","U5.4",
+    # Pin 7 of both IMUs.
+    "U2.7","U3.7",
     "U8.1","U9.2","U10.2","U11.2","U12.2",
     "J1.A1B12","J1.B1A12","J1.13","J1.14",
     "J2.1","J2.9","J2.10", "J3.6","J3.7","J3.8",
@@ -740,7 +792,7 @@ net("PC2_SPARE","U1.PC2_C"); net("PC3_SPARE","U1.PC3_C")
 # ---- SoOP analogue front end (SoOP config, DNP) ------------------------------
 net("SOOP_I_ADC","U1.PC4","U14.1")
 net("SOOP_Q_ADC","U1.PA4","U14.7")
-net("SOOP_RSSI","U1.PC5","R30.2")
+# PC5 is FREE.
 net("SPARE_ADC","U1.PA7")
 
 
@@ -761,17 +813,30 @@ net("VTUNE","U13.9","C56.1"); NETS["GND"] += ["C56.2"]
 net("CPOUT","U13.12","R34.1"); net("LOOP","R34.2","C57.1"); NETS["GND"] += ["C57.2"]
 net("VCOBYP","U13.8"); net("REFOUT","U13.15"); net("GC1","U13.5","R35.2")
 NETS["GND"] += ["R35.1"]
-# MAX2112 baseband -> OPA2374 difference amps -> ADC (resistor values TBD by sim)
+# ---- MAX2112 baseband -> OPA2374 difference amplifiers -> ADC ------------------------
+# The comment here read "resistor values TBD by sim" and nothing ever came back to it.
+for r, v in [("R47","4k7"), ("R48","10k"), ("R49","10k"), ("R50","10k"),
+             ("R51","10k"), ("R52","10k"), ("R53","10k")]:
+    RES(r, v, F_R0402)
+CAP("C75", "1u", F_C0402)
+CAP("C76", "100p", F_C0402); CAP("C77", "100p", F_C0402)
+
+# I channel: IOUT+ -> R36 -> +in A (R51 to VREF); IOUT- -> R37 -> -IN A (R50 to out A)
 net("IOUT_P","U13.19","R36.1"); net("IOUT_N","U13.20","R37.1")
-net("QOUT_P","U13.17","R30.1"); net("QOUT_N","U13.18","R31.1")
-net("OPA_IN1P","R36.2","U14.3"); net("OPA_IN1N","R37.2","U14.2")
-net("OPA_IN2P","R30.1")  # placeholder, merged below
-del NETS["OPA_IN2P"]
-net("OPA_IN2P_","U14.5"); net("OPA_IN2N_","U14.6")
-NETS["QOUT_P"] += ["U14.5"]; NETS["QOUT_N"] += ["U14.6"]
-del NETS["OPA_IN2P_"], NETS["OPA_IN2N_"]
-NETS["+3V3A"] += ["U14.8"]; NETS["GND"] += ["U14.4"]   # opamps follow the tuner
-net("IDC_P","U13.21"); net("IDC_N","U13.22"); net("QDC_P","U13.23"); net("QDC_N","U13.24")
+net("OPA_IN1P","R36.2","U14.3","R51.1"); net("OPA_IN1N","R37.2","U14.2","R50.1")
+NETS["SOOP_I_ADC"] += ["R50.2", "C76.2"]             # feedback, out A -> -IN A
+NETS["OPA_IN1N"] += ["C76.1"]                        # C76 across R50: anti-alias
+# Q channel: QOUT+ -> R47 -> +in B (R49 to VREF); QOUT- -> R31 -> -IN B (R48 to out B)
+net("QOUT_P","U13.17","R47.1"); net("QOUT_N","U13.18","R31.1")
+net("OPA_IN2P","R47.2","U14.5","R49.1"); net("OPA_IN2N","R31.2","U14.6","R48.1")
+NETS["SOOP_Q_ADC"] += ["R48.2", "C77.2"]             # feedback, out B -> -IN B
+NETS["OPA_IN2N"] += ["C77.1"]                        # C77 across R48: anti-alias
+# the mid-rail reference both channels share
+net("BB_VREF","R52.2","R53.1","C75.1","R51.2","R49.2")
+NETS["+3V3A"] += ["R52.1", "U14.8"]; NETS["GND"] += ["R53.2", "C75.2", "U14.4"]
+# DC-offset servo capacitors, one across each pair as the datasheet draws them
+net("IDC_P","U13.21","C61.1"); net("IDC_N","U13.22","C61.2")
+net("QDC_P","U13.23","C63.1"); net("QDC_N","U13.24","C63.2")
 
 # ---------------------------------------------------------------- fixes ----
 # LED chains: MCU -> resistor -> LED anode -> GND  (LEDs are active-low in hwdef,
@@ -799,7 +864,6 @@ NETS.pop("R3", None)
 NETS["+5V"]  += ["U9.3","U10.3"]
 
 COMPONENTS.pop("R2", None)
-NETS["GND"] += ["R31.2"]
 
 for n in ("BOOT0","+3V3","GND"):
     NETS[n] = [x for x in NETS[n] if x not in ("SW1.1","SW1.2")]
@@ -808,13 +872,11 @@ NETS["BOOT0"] += ["SW1.2"]; NETS["+3V3"] += ["SW1.1"]
 NETS["+5V"] = [x for x in NETS["+5V"] if x != "U8.2"]
 COMPONENTS.pop("R3", None)
 
-# ---- MAX2112 bypass / DC-offset caps (datasheet-required, SoOP config DNP) ----
-for r, v in [("C60","100n"),("C61","100n"),("C62","100n"),("C63","100n"),("C64","100n")]:
-    CAP(r, v, F_C0402, dnp=True)
-NETS["VCOBYP"] += ["C60.1"]
-NETS["IDC_P"]  += ["C61.1"]; NETS["IDC_N"] += ["C62.1"]
-NETS["QDC_P"]  += ["C63.1"]; NETS["QDC_N"] += ["C64.1"]
-NETS["GND"]    += ["C60.2","C61.2","C62.2","C63.2","C64.2"]
+# ---- MAX2112 bypass / DC-offset caps ---------------------------------------------
+for r, v in [("C60","100n"),("C61","100n"),("C63","100n")]:
+    CAP(r, v, F_C0402)
+NETS["VCOBYP"] += ["C60.1"]; NETS["GND"] += ["C60.2"]
+# C61 spans IDC_P/IDC_N and C63 spans QDC_P/QDC_N - wired where the nets are declared
 
 # ---- power flags: tell ERC these rails are actually driven ---------------
 PWR_FLAGS = {"VBAT":"PF1", "+5V":"PF2", "+3V3":"PF3", "+3V3A":"PF4",
@@ -870,7 +932,7 @@ for _r in ("U15", "U16", "FL1", "L3", "L4"):
 
 # Keep the SoOP receiver interface reachable from the board edge even though the RF
 # front end now lives elsewhere: I/Q and AGC come back as pads.
-for _i, _n in enumerate(["SOOP_I_ADC", "SOOP_Q_ADC", "SOOP_RSSI"], start=len(TESTPOINT_NETS)+1):
+for _i, _n in enumerate(["SOOP_I_ADC", "SOOP_Q_ADC"], start=len(TESTPOINT_NETS)+1):
     if _n in NETS:
         _r = f"TP{_i}"
         add(_r, "Connector:TestPoint", "TestPoint:TestPoint_Pad_1.5x1.5mm", _n, "", False)
@@ -1023,6 +1085,18 @@ ADJACENCY = {
     # U19 is a temperature sensor and its whole value is where it sits.
     "U19": ("U9", "1", 4.0),
     "C74": ("U19", "B1", 3.5),
+    # The OPA2374 difference-amplifier network.
+    "R36": ("R37", "1", 8.0),  "R47": ("R31", "1", 6.0),
+    "R48": ("U14", "6", 8.0),
+    "R49": ("U14", "5", 8.0),  "R50": ("U14", "2", 8.0),
+    "R51": ("U14", "3", 8.0),
+    "C76": ("R50", "1", 12.0), "C77": ("R48", "1", 8.0),   # in parallel with them; a few
+                                                            # mm of trace is ~1 pF against 100 pF
+    "R52": ("U14", "8", 12.0),                # VREF divider: a DC reference, 1 uF at
+    "R53": ("R52", "2", 3.0),                 # the far end makes distance irrelevant
+    "C75": ("R53", "1", 3.0),
+    "C61": ("U13", "21", 3.5), "C63": ("U13", "23", 3.5),
+    "C60": ("U13", "8", 2.0),
     "C41": ("U11", "3", 1.5),
     "C42": ("J1", "A4B9", 3.0),
     "C45": ("J8", "4", 3.0), "C46": ("J8", "4", 2.0),
@@ -1419,12 +1493,14 @@ MODULES = {
         ma_5v=100, counted=True,
         note="MAVLink downlink caps at 1470 B/s - carries telemetry, never video"),
     "soop_tuner": dict(
-        what="SoOP RF front end - the point of the project",
-        lands_on=["TP9", "TP10", "TP11", "P44"], conn="solder pads (I/Q ADC pair, RSSI, PPS)",
+        what="SoOP RF front end: SAWbird+ IR (LNA+SAW) + 1620 MHz patch, at the antenna",
+        lands_on=["J12", "P41", "P46"], conn="U.FL coax into J12; micro-USB power from +5V/GND pads",
         needs_board_change=None, gbp=70, status="later",
-        ma_5v=0, counted=True,
-        note="a reflash plus a bought tuner, NOT a fabrication run. "
-             "The tuner is laptop-side and takes no current from this rail"),
+        ma_5v=180, counted=False,
+        note="the LNA+SAW stage the board could not source, bought built. 180 mA [D] at "
+             "3.3-5.5 V, powered by bias tee (bench), micro-USB or DC barrel (aircraft) - "
+             "J12 carries no bias tee. NOT in check_build.LOADS_5V; counted here with the "
+             "other optional 5 V loads"),
     "fpv": dict(
         what="5.8 GHz camera + VTX, 25 mW EIRP", lands_on=["P41", "P46"],
         conn="+5V / GND pads",
@@ -1503,7 +1579,7 @@ RF_BENCH = dict(
                  "keep the SDR off the airframe entirely - the receive chain is "
                  "laptop-side, so this board allows it"],
     src="[A] min_fraction_of_baseline is a judgement call; every other field is a slot "
-        "for an [M]easured value recorded by docs/BUILD.md T3b",
+        "for an [M]easured value recorded by runbook T3b",
 )
 
 

@@ -12,6 +12,8 @@ SRC_PWM = {1: 1000, 2: 1500, 3: 2000}
 
 BOUNDARY_SIGMA_M = 20.0
 
+BOUNDARY_SIGMA_SHIPPED_M = 180.0
+
 SCENARIOS = {
     "baseline_gps": dict(
         mode=None, deny_at=None, src=1,
@@ -100,9 +102,9 @@ SCENARIOS = {
     "soop_dropout_lowsigma": dict(
         mode="gpsinput", deny_at=40, src=1, outage_p=0.25, rate=5.0, sigma=10.0,
         startup={"GPS2_TYPE": 14},
-        why="ACCURACY SENSITIVITY. soop_dropout with a 10 m SoOP solution instead of "
-            "20 m, everything else identical. This is what a better Doppler solution "
-            "buys, as against what a better sensor suite buys.",
+        why="ACCURACY SENSITIVITY. soop_dropout with a 10 m SoOP solution instead of the "
+            "180 m shipping sigma, everything else identical. This is what a better "
+            "Doppler solution buys, as against what a better sensor suite buys.",
         max_p95=None, informational=True, diverges_above=120.0),
 
     # Regression guard for the 50 m two-receiver arming gate.
@@ -764,13 +766,24 @@ def _run(name, spec, connect, duration, seed):
         lim = spec.get("diverges_above")
         if lim is not None:
             sigma_now = spec.get("sigma", DopplerErrorModel.SIGMA_IRIDIUM_NO_ELEV)
-            if abs(sigma_now - BOUNDARY_SIGMA_M) > 1e-6:
+            if abs(sigma_now - BOUNDARY_SIGMA_SHIPPED_M) <= 1e-6:
+                exc = res_track.get("truth_excursion_m", 0.0)
+                res["verdict"] = (
+                    f"INFO - p95 {d['p95']} m during denial, true excursion {exc:g} m. "
+                    f"MEASURED at this sigma (n=6, 2026-09-18): no divergence boundary "
+                    f"exists - every run p95 300-530 m with no separating gap, the "
+                    f"estimate tracks the injected fix noise, and the true excursion is "
+                    f"far smaller (medians 73/91 m). The {lim:g} m boundary describes "
+                    f"the sigma {BOUNDARY_SIGMA_M:g} m fix, which Doppler alone does "
+                    f"not provide")
+            elif abs(sigma_now - BOUNDARY_SIGMA_M) > 1e-6:
                 res["verdict"] = (
                     f"INFO - p95 {d['p95']} m during denial. The {lim:g} m divergence "
-                    f"boundary DOES NOT APPLY here: it was measured at sigma "
-                    f"{BOUNDARY_SIGMA_M:g} m and this run is at sigma {sigma_now:g} m. "
-                    f"Re-measure the boundary at the current sigma before reading a "
-                    f"hold/runaway verdict off it")
+                    f"boundary DOES NOT APPLY here: it is measured at sigma "
+                    f"{BOUNDARY_SIGMA_M:g} m, and re-measured at the shipping sigma "
+                    f"{BOUNDARY_SIGMA_SHIPPED_M:g} m (n=6, 2026-09-18) no boundary "
+                    f"exists either. This run is at sigma {sigma_now:g} m, which no "
+                    f"measurement covers - reported raw, not classified")
             else:
                 diverged = d["p95"] > lim
                 res["diverged"] = diverged
