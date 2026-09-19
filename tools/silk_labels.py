@@ -108,6 +108,21 @@ def place_labels(board):
     placed, skipped = [], []
 
     # try close in first, and cardinal directions before diagonals
+    # These distances and directions are a settled result, not a guess, so do not widen
+    # them without reading this. Two variants were measured on the 2026-09-19 board and
+    # NEITHER is an improvement, which is why the nine crowded pads are still blank:
+    #
+    #   * distances extended to 3.0/3.5/4.0 -> 25 of 30 placeable. But a label that far out
+    #     sits in a gap shared with other pads, and nothing in the placement rule checks
+    #     WHICH pad a reader would attribute it to, so the four extra labels are only
+    #     placed, not verified as unambiguous.
+    #   * enforcing the header's own principle (place only where the owning pad is the
+    #     nearest pad CENTRE) -> 14 of 30. That guard also withdraws seven labels the rule
+    #     above places, so it is stricter than a bbox collision test, and adopting it would
+    #     LOWER the coverage preflight reports while possibly being more correct.
+    #
+    # The tie is not resolvable from geometry alone, and resolving it means touching copper
+    # to re-verify, so the conservative rule stands and preflight reports the gaps each run.
     dirs = [(0, -1), (0, 1), (-1, 0), (1, 0), (-1, -1), (1, -1), (-1, 1), (1, 1)]
     dists = [1.15, 1.55, 2.0, 2.5]
 

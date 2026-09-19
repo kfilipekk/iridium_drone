@@ -42,6 +42,16 @@ BOARD = "NAVCORE-SoOP.kicad_pcb"
 # grows.
 TARGETS = {
     "U9": ["2", "5", "1", "3"],     # GND, VOUT(+3V3), VIN(+5V), EN(+5V)
+    # U8 is here for the MEASUREMENT, not to place anything, and only pin 1 is listed.
+    # It is the part check_thermal.py brackets at 139 C, so its attached copper belongs on
+    # the record next to U9's - without it the 139 C reads as a property of this board when
+    # it is the JEDEC test board's. Pin 1 is GND and is the only safe copper here: pin 2 is
+    # BUCK_PH, the switch node, and hanging copper on it adds parasitic capacitance to the
+    # aggressor - worse EMI and more switching loss, for no thermal gain, because that pad
+    # is not the die's heat path. Pins 4/5/6 (FB, EN, BOOT) carry no load current.
+    # Measured 2026-09-19: 3 vias already within 1.7 mm, 7655.8 mm2 of GND plane attached,
+    # and no legal position for another - so this places nothing and changes no copper.
+    "U8": ["1"],
 }
 
 # A STUB IS COPPER TOO. The first version of this tool checked only the VIA position and

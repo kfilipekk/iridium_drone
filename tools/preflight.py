@@ -12,7 +12,7 @@ passes is worse than no check.
 
 Usage:  python3 tools/preflight.py [board.kicad_pcb]
 """
-import os, sys, re, csv, math, glob, subprocess
+import os, sys, re, csv, math, glob, hashlib, subprocess
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import pcbnew, design, route, readiness
 
@@ -878,16 +878,35 @@ def firmware(board):
           "no defaults.parm - a flashed board would not know it has a rangefinder")
 
     # The firmware build is the only proof the hwdef is real. It is too slow to run
-    # here, so this checks that one was produced and is newer than the hwdef it came
-    # from - a stale binary proves nothing about the current file.
+    # here, so this checks that a build exists AND was made from the hwdef now on disk.
+    #
+    # It used to compare MTIMES, which is wrong in both directions at once. The hwdef is
+    # GENERATED, so a comment-only edit to gen_hwdef.py rewrites the file byte-for-byte
+    # identically and moves its timestamp - and the compiler never saw the difference.
+    # That reported a valid build as stale, and the remedy the message offers is a
+    # ten-minute rebuild for nothing. This is not hypothetical: a note added to
+    # gen_hwdef.py on 2026-09-19 did exactly that. build_firmware.sh now records the
+    # sha256 it compiled from, so the comparison is on CONTENT. The mtime test survives
+    # only as a fallback for a build made before that record existed.
     apj = os.path.expanduser(os.environ.get("AP_DIR", "~/.cache/navcore/ardupilot")
                              + "/build/NAVCORE_SoOP/bin/arducopter.apj")
+    stamp = apj + ".hwdef.sha256"
     if os.path.exists(apj) and os.path.exists(HWDEF):
-        fresh = os.path.getmtime(apj) >= os.path.getmtime(HWDEF)
         size = os.path.getsize(apj)
+        have = hashlib.sha256(open(HWDEF, "rb").read()).hexdigest()
+        built = ""
+        if os.path.exists(stamp):
+            parts = open(stamp).read().split()
+            built = parts[0] if parts else ""
+        if built:
+            fresh, basis = have == built, f"hwdef sha256 {have[:12]}"
+        else:
+            fresh = os.path.getmtime(apj) >= os.path.getmtime(HWDEF)
+            basis = "no digest recorded, fell back to timestamps"
         check("firmware", "ArduPilot builds for this board", fresh,
-              f"arducopter.apj {size} bytes"
-              + ("" if fresh else " - OLDER than hwdef.dat, re-run tools/build_firmware.sh"),
+              f"arducopter.apj {size} bytes, {basis}"
+              + ("" if fresh else " - does NOT match the hwdef on disk, "
+                                   "re-run tools/build_firmware.sh"),
               hard=False)
     else:
         check("firmware", "ArduPilot builds for this board", False,

@@ -18,8 +18,11 @@
 # quietly unconfigured. tools/check_params.py checks defaults.parm against THIS tag.
 #
 # Board ID 9001 is registered LOCALLY in the clone so the build can resolve
-# AP_HW_NAVCORE_SOOP. That is not upstream registration; it must still be requested from
-# ArduPilot before this design is shared or sold.
+# AP_HW_NAVCORE_SOOP. That is NOT upstream registration and it is NOT the ID this board
+# should end up with: the registry asks that a free gap below #7199 be filled before a
+# new ID is added past it, so the request is for 7180 and 9001 is only the local
+# placeholder until it is granted. See firmware/BOARD-ID-REQUEST.md. Flip ID here and
+# BOARD_ID in tools/gen_hwdef.py together, on the day it is granted.
 #
 # The bootloader is built FIRST and on purpose. ArduPilot embeds the bootloader binary
 # into the main firmware when AP_BOOTLOADER_FLASHING_ENABLED is on, so `waf configure`
@@ -111,6 +114,15 @@ echo "=== 4. configure ==="
 echo "=== 5. copter ==="
 ./waf copter > "$LOGS/copter.log" 2>&1 \
   && echo "  ok" || { echo "  FAILED"; tail -40 "$LOGS/copter.log"; exit 1; }
+
+# Record the digest of the hwdef this binary was compiled from, so preflight.py can
+# compare CONTENT rather than timestamps. The hwdef is generated, so a comment-only edit
+# to gen_hwdef.py rewrites it identically and moves its mtime - which made preflight
+# report a valid build as stale, and the fix it asks for is a ten-minute rebuild.
+sha256sum "$HERE/firmware/NAVCORE_SoOP/hwdef.dat" \
+  | awk '{print $1}' > "$AP/build/$BOARD/bin/arducopter.apj.hwdef.sha256"
+echo "=== 5b. hwdef digest recorded, for preflight to compare against ==="
+sed 's/^/  /' "$AP/build/$BOARD/bin/arducopter.apj.hwdef.sha256"
 
 echo "=== 6. what the hwdef processing said ==="
 grep -iE "warn|error|conflict|shared|no dma|not enough|unassign|no default" \

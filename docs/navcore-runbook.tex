@@ -300,6 +300,10 @@ this list --- \file{make\_order\_bundle.sh} derives it from the BOM into
 \item \textbf{CPL orientation against their preview render} --- the one thing no local tool
 substitutes for
 \item \textbf{1 oz outer copper}, explicitly
+\item \textbf{Panel by JLCPCB.} Standard assembly requires a single PCB of at least
+$70 \times 70$~mm and this board is $45.1 \times 46.1$~mm, so the panel and its breakaway
+rails have to come from somewhere. Their own panelisation is the low-risk answer: you then
+confirm the panel outline in the same preview as the CPL.
 \end{itemize}
 
 \subsection{Paying}
@@ -381,7 +385,9 @@ cannot hold it. Without these the stack cannot be assembled at all. \\
 the kit's own standoffs &
 do \emph{not} buy 35 mm standoffs for the top plate; it has no 30.5 mm holes. \\
 spare \textbf{JST-GH 6-pin} lead &
-the \file{J3} pigtail's 5.30 mm clearance --- swap the lead rather than move \file{R21}. \\
+the residual \file{J3} risk is a \emph{bulky moulded boot} on the lead you receive, not the
+board: the 5.30 mm clear run meets its derived 3.6 mm requirement. Test-fit the plug before
+soldering; a second lead is then the fallback rather than an interruption. \\
 \textbf{10} JST-SH pigtails, not 4 &
 the first one you crimp badly is then not a project stall. \\
 \textbf{SAWbird+ and RTL-SDR} with Tier 1 &
@@ -681,6 +687,17 @@ Both brackets exist because the junction-to-ambient figure is a property of \emp
 assembled board and the two ends come from different sources (JEDEC and EVM columns of the
 datasheet).
 
+\textbf{Half of that bracket is now measured rather than assumed.} A SOT-23 has no thermal
+pad, so every watt leaves through the leads into whatever copper is attached to them --- and
+\file{tools/thermal\_vias.py} reads that copper off the board for \emph{both} regulators.
+Measured 2026-09-19: \file{U8.1} has \textbf{3 vias within 1.7 mm holding 7655.8 mm$^2$ of
+GND plane}, \file{U9.2} has 2 vias onto the same plane, and \textbf{no legal position
+exists for another via on either part} (the search runs to 1.7 mm and refuses in-pad vias,
+which would wick solder). That is the strongest statement the layout alone can make, and it
+is why the low end of the bracket above is the plausible one for this board.
+\flag{It still does not license a number} --- copper moves the bound monotonically, and only
+a thermocouple converts it into degrees.
+
 \textbf{What to do:} power it stack-assembled, logging to the card, ten minutes at steady
 state. Read \file{TEMP[0]}. If you own a probe, put it on \file{U8} too and on \file{U9}'s
 case once --- \file{U19} is 17.2 mm from \file{U8} and cannot speak for it, and one case
@@ -813,17 +830,28 @@ Companion mount & no mount exists yet. Deferred with the companion, so nothing b
 \end{tabular}
 \end{center}
 
-\textbf{Two structural inefficiencies worth naming, because neither is fixable now:}
+\textbf{Two structural constraints worth naming, because neither is removable now. Note
+that the first reads like a defect and is not --- it is the opposite, and worth reading for
+how it was settled:}
 
 \begin{itemize}
-\item \flag{\file{J3} gives the GPS pigtail 5.30 mm of clear run before \file{R21}}, against
-a 6.0 mm class nominal and a derived allowance of 3.6 mm. A bulky moulded boot or heatshrink
-may not fit. The fix is to swap the lead --- \textbf{do not} move \file{R21}; the corridor
-behind it is saturated. Owning a spare JST-GH lead is the mitigation.
+\item \file{J3}'s GPS clearance \textbf{passes, because the requirement was re-derived
+rather than the board changed.} The clear run before \file{R21} is \textbf{5.30 mm}. The
+table's old figure of 6.0 mm was a JST-GH \emph{class} nominal, and it assumed a bend
+allowance that nothing in that corridor needs: a pre-wired GH shell exits its wires at the
+rear, already parallel to the board, and the only neighbour is a 0402 resistor 0.55 mm tall.
+Shell half-width 2.6 mm plus 1.0 mm of handling margin is 3.6 mm, so 5.30 mm clears by
+1.7 mm. \textbf{Relocating \file{R21} was mapped and rejected} --- \file{TP20}'s courtyard
+and a via fence leave no position in the span that yields 6.0 mm, so there was never a fix
+available there. The residual risk is a bulky moulded boot, which is why a spare JST-GH lead
+is on the order list and T2 fits the plug \emph{before} the headers are soldered.
 \item \flag{The board is 45.1 $\times$ 46.1 mm, below JLCPCB's 70 $\times$ 70 mm Standard
-minimum.} Standard assembly therefore requires panelisation with breakaway rails --- an extra
-fabrication step, and an extra thing to confirm in their preview. Economic has no such
-minimum but costs the feeder fees anyway and drops an LGA onto your bench (Section 15.1).
+minimum.} Confirmed against their capability page: Standard single-PCB assembly runs
+70 $\times$ 70 mm to 460 $\times$ 500 mm, while Economic runs 10 $\times$ 10 mm up. So
+Standard needs the board panelled with breakaway rails --- an extra fabrication step and an
+extra thing to confirm in their preview, not a blocker. Economic avoids the panel entirely
+but charges the feeder fees anyway and drops an LGA onto your bench (Section 15.1), which is
+why Standard plus panelisation is the recommendation.
 \end{itemize}
 
 \subsection{15.3 Measurements that have not been confirmed}
@@ -939,7 +967,8 @@ IMU orientations & asserted in the hwdef, never measured \\
 \file{BATT\_AMP\_PERVLT} & a property of the ESC's shunt, not of this board \\
 ESC cable continuity & buzz the cable you received \\
 Radxa mounting holes & not published by the vendor \\
-\file{J3} plug clearance & 5.30 mm against a 6.0 mm nominal \\
+\file{J3} plug clearance & 5.30 mm clears the derived 3.6 mm requirement; what is still
+unconfirmed is whether the plug you receive seats in it \\
 Grommet flange & above 5.9 mm it touches a printed label \\
 \bottomrule
 \end{tabular}
