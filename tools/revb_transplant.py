@@ -19,8 +19,12 @@ import os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import pcbnew
 
-OLD = sys.argv[1] if len(sys.argv) > 1 else ".scratch/old_head_board.kicad_pcb"
+OLD = sys.argv[1] if len(sys.argv) > 1 else None
 NEW = sys.argv[2] if len(sys.argv) > 2 else "NAVCORE-SoOP.kicad_pcb"
+if not OLD:
+    sys.exit("give the old board explicitly, e.g. "
+             "git show <rev>:NAVCORE-SoOP.kicad_pcb > /tmp/old.kicad_pcb && "
+             "python3 tools/revb_transplant.py /tmp/old.kicad_pcb")
 
 old_b = pcbnew.LoadBoard(OLD)
 new_b = pcbnew.LoadBoard(NEW)

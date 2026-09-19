@@ -67,7 +67,6 @@ fab/ORDER.md
 fab/README.md
 sim/README.md
 sitl/README.md
-.scratch/
 
 # LaTeX drop files from the runbook compile. Regenerate: see the comment at the top of
 # docs/navcore-runbook.tex. They are per-run and machine-specific, and the .tex source and

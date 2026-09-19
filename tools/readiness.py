@@ -44,8 +44,8 @@ fails once it expires, naming the command that refreshes it.
 """
 import os
 
-GATED, ADVISORY, ORDER_CHECK, ORDER_ACTION, BENCH, FLY = (
-    "GATED", "ADVISORY", "ORDER_CHECK", "ORDER_ACTION", "BENCH", "FLY")
+GATED, ADVISORY, ORDER_CHECK, ORDER_ACTION, BENCH, FLY, BUILD = (
+    "GATED", "ADVISORY", "ORDER_CHECK", "ORDER_ACTION", "BENCH", "FLY", "BUILD")
 
 # ---------------------------------------------------------------------------------
 # The manifest. `tool=` names a file under tools/; `check=` names an inline preflight
@@ -282,6 +282,32 @@ PREREQUISITES = [
     # -- READY TO FLY only ---------------------------------------------------------
     dict(id="fly.rfbench", cls=FLY, tool="check_rf.py",
          claim="the T3b bench measurements are recorded and within the link budget"),
+
+    # -- code that does not exist yet: gates the PROJECT, not ordering or flying -----
+    # A BUILD item is never blocking and never passable by a bench run, because it is
+    # software that has to be written. It is reported so that the verdict is the WHOLE
+    # remaining-work inventory: without this class, a reader sees 43 green checks and
+    # "NOT READY TO FLY - 9 items need hardware" and reasonably concludes the only thing
+    # left is to switch hardware on. The on-board Iridium chain's largest components do
+    # not exist, and nothing in the gated set could say so. See docs/KNOWN-ISSUES.md,
+    # "Not built yet, and not pretending otherwise".
+    dict(id="build.ephemeris", cls=BUILD,
+         claim="SGP4 and real TLE ephemeris, so the solver stops taking satellite state as input",
+         why="tools/soop_solver.py is validated against a circular propagator, which proves "
+             "the geometry inverts and is not an ephemeris. Writing it is the only way."),
+    dict(id="build.burst", cls=BUILD,
+         claim="burst detection and frequency estimation from I/Q, to ~5 Hz over 40-80 bursts",
+         why="no RF bench run substitutes for it: T3b measures the ANTENNA and front end, "
+             "while this is the DSP that meets the 5 Hz precision the solver established. "
+             "An 8.28 ms burst has ~120 Hz of raw FFT resolution, so the carrier must be "
+             "estimated well inside a bin."),
+    dict(id="build.firmware", cls=BUILD,
+         claim="the C firmware for the H743 that runs the solve on the aircraft",
+         why="the solver exists in Python on a desk; the aircraft has to run it in flight."),
+    dict(id="build.ekf", cls=BUILD,
+         claim="an AP_GPS backend or AP_ExternalAHRS so the fix reaches the EKF",
+         why="GPS_INPUT (#232) is the documented route for an EXTERNAL computer, and this "
+             "aircraft solves on board - so the route into the EKF does not exist yet."),
 ]
 
 
@@ -298,7 +324,7 @@ def evaluate(results, tool_results, today=None):
     for g, name, verdict, _ in results:
         by_name.setdefault(name, []).append(verdict)
 
-    blocking, advisory, order_actions, bench, fly = [], [], [], [], []
+    blocking, advisory, order_actions, bench, fly, build = [], [], [], [], [], []
     for p in PREREQUISITES:
         cls = p["cls"]
         if cls == GATED:
@@ -336,6 +362,8 @@ def evaluate(results, tool_results, today=None):
             order_actions.append(p)
         elif cls == BENCH:
             bench.append(p)
+        elif cls == BUILD:
+            build.append(p)
         elif cls == FLY:
             bad = None
             if "tool" in p:
@@ -354,7 +382,7 @@ def evaluate(results, tool_results, today=None):
                                 f"be classified"))
 
     return dict(blocking=blocking, advisory=advisory, order_actions=order_actions,
-                bench=bench, fly=fly,
+                bench=bench, fly=fly, build=build,
                 n_gated=sum(1 for p in PREREQUISITES if p["cls"] == GATED),
                 n_total=len(PREREQUISITES))
 
@@ -374,7 +402,8 @@ def render(rep, width=72):
 
     out.append(f"\n   {rep['n_total']} prerequisites: "
                f"{rep['n_gated']} gated, {len(rep['order_actions'])} order-time actions, "
-               f"{len(rep['bench'])} bench-only, {len(rep['advisory'])} advisory")
+               f"{len(rep['bench'])} bench-only, {len(rep['advisory'])} advisory, "
+               f"{len(rep['build'])} to build")
 
     if rep["order_actions"]:
         out.append("\n  Do these AT THE CHECKOUT - they cannot be done before it:")
@@ -393,6 +422,12 @@ def render(rep, width=72):
             out.append(f"     - {p['claim']}")
     else:
         out.append("READY TO FLY - every bench item is recorded")
+
+    if rep["build"]:
+        out.append(f"\n  NOT BUILT YET - {len(rep['build'])} item(s) are code, not "
+                   f"measurements (gates the project, not ordering):")
+        for p in rep["build"]:
+            out.append(f"     - {p['claim']}")
 
     out.append(f"\n  Advisory (report-only, reasons in tools/readiness.py): "
                f"{', '.join(p['id'].split('.', 1)[1] for p in rep['advisory'])}")

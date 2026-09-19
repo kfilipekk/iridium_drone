@@ -352,10 +352,13 @@ re-pinnable with a fine pick, but owning one removes even the rework \\
 JST-GH 1.25 mm 6-pin spare lead & 1 & closes the \file{J3} plug risk \\
 5 V \textbf{passive} piezo buzzer & 1 & passive, not active \\
 microSD card & 1 & 32 GB \\
-\textbf{Radxa Zero 3W} companion & 1 & carries the flow camera. The \emph{tray} is a
-3D print; the board is a purchase \\
-\textbf{OV9281} global-shutter module & 1 & the flow camera, mounted on the companion \\
-\textbf{XIAO ESP32S3 Sense} & 1 & the nose recording camera, writes to its own microSD \\
+\textbf{XIAO ESP32S3 Sense} & 1 & the nose recording camera, writes to its own microSD
+(\file{TO BUY} in \file{docs/PARTS.csv}, takes 5\,V and GND from \file{P41}/\file{P46}) \\
+\emph{Not} the Radxa Zero 3W or the OV9281 flow camera & --- & \flag{deferred, and that is a
+recorded decision, not an omission.} \file{J4} was cut from the board on 2026-09-09, so a
+companion has nowhere to plug in, and the flow camera hangs off the companion's CSI port.
+Both sit in \file{docs/PARTS.csv} at status \file{DEFERRED}/\file{LATER} with the reasoning;
+buying them now is \GBP{}18 spent on parts this board cannot connect \\
 M3 silicone grommet, \textbf{spare set} & 1 pack & the flange width belongs to the frame
 kit's grommets, so a wide one used to mean a different grommet. A spare set makes it a swap,
 not an order \\
@@ -406,21 +409,19 @@ the first one you crimp badly is then not a project stall. \\
 \textbf{SAWbird+ and a bias-tee RTL-SDR} with Tier 1 &
 T3b cannot be started without them, and the board does not supply them. \flag{A generic
 R820T2 stick has no bias tee}, so the SAWbird+ would sit unpowered --- this is the one place
-a cheap substitution silently costs you the whole measurement. \\
-\textbf{Radxa Zero 3W, OV9281, XIAO ESP32S3} &
-the companion, the flow camera and the recording camera are \emph{purchases}, not prints, and
-the two flow bench items cannot be closed without the first two. Buy them on this order and
-only the 3D-printed tray is left outstanding. \\
+a cheap substitution silently costs you the whole measurement. \file{docs/PARTS.csv}
+already names the right one: \emph{RTL-SDR Blog V4} \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-Three things need the parts in hand, and \textbf{only two of them are 3D prints}: the camera
-mount and the Radxa Zero 3W's tray (the vendor never published its hole pattern). The third is
-the frame kit's top-plate standoff spacing, which the kit supplies. Read that carefully: the
-\emph{prints} are deferred, but the Radxa board and both cameras are \textbf{purchases}, and
-they are on the list above on purpose --- buy them in this order and the only thing left
-outstanding is something you can print.
+Three things need the parts in hand: the frame kit's top-plate standoff spacing (the kit
+supplies it), the camera mount (deferred, and the XIAO is the camera it must take), and the
+Radxa Zero 3W's hole pattern (deferred \emph{with the companion} --- the vendor never
+published it, so the tray is a print against a measured board). Note the asymmetry: the
+Radxa and the flow camera are deferred \emph{purchases}, deferred because \file{J4} does not
+exist to connect them, while the XIAO records to its own microSD over two wires and so is
+ordered now.
 
 \subsection{The bench measurements that could have cost you a purchase}
 
