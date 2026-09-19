@@ -347,9 +347,18 @@ M3 female-female standoffs, \textbf{12 mm} & 4 & \textbf{the ESC-to-FC spacer} \
 Frame kit's own \textbf{30 mm / 22 mm} standoffs & --- & \textbf{already in the kit; do not buy more} \\
 TPU skids, printed & 4 & 3.5 mm thick, 40 mm drop, \textbf{19 $\times$ 19} holes \\
 JST-SH 1.0 mm 4-pin pigtails & pack of 10 & \file{J5}, then \file{J9}/\file{J11} \\
+JST-SH 1.0 mm \textbf{8-pin} pigtail & 1 & \file{J2}, the ESC lead. A mismatch is
+re-pinnable with a fine pick, but owning one removes even the rework \\
 JST-GH 1.25 mm 6-pin spare lead & 1 & closes the \file{J3} plug risk \\
 5 V \textbf{passive} piezo buzzer & 1 & passive, not active \\
 microSD card & 1 & 32 GB \\
+\textbf{Radxa Zero 3W} companion & 1 & carries the flow camera. The \emph{tray} is a
+3D print; the board is a purchase \\
+\textbf{OV9281} global-shutter module & 1 & the flow camera, mounted on the companion \\
+\textbf{XIAO ESP32S3 Sense} & 1 & the nose recording camera, writes to its own microSD \\
+M3 silicone grommet, \textbf{spare set} & 1 pack & the flange width belongs to the frame
+kit's grommets, so a wide one used to mean a different grommet. A spare set makes it a swap,
+not an order \\
 Bench PSU with current limit & 1 & Section~\ref{sec:T1} does not work without one \\
 Multimeter with continuity & 1 & for buzzing the ESC cable \\
 Smoke stopper (XT60) & 1 & first battery connection only \\
@@ -357,7 +366,11 @@ Thermocouple or IR thermometer & 0--1 & \textbf{only} for \file{U8} now; \file{U
 ST-Link V2 + fine wires or pogo pins & 1 & for the SWD bootloader \\
 Nooelec SAWbird+ IR (1620 MHz) & 1 & own this by T3b, not later \\
 Nooelec 1620 MHz patch antenna & 1 & own this by T3b \\
-RTL-SDR (R820T2) & 1 & the T3b reference receiver \\
+\textbf{RTL-SDR with a bias tee} (Blog V3/V4) & 1 & \flag{not a generic R820T2 stick.}
+The SAWbird+ is powered \emph{up the coax} at 3.3--5.5\,V, which only a bias-tee dongle
+supplies --- the Blog V3/V4 gives 4.5\,V at up to 180\,mA in software. On a generic stick
+the LNA sits unpowered and T3b cannot be started at all. An external bias tee (or Nooelec's
+Iridium bundle, which includes the patch, a DC block and the adapters) is the alternative \\
 \end{longtable}
 
 \flag{Do not buy a PMW3901 or a VL53L1X.} Both were deleted from the design in the Rev B
@@ -390,16 +403,57 @@ board: the 5.30 mm clear run meets its derived 3.6 mm requirement. Test-fit the 
 soldering; a second lead is then the fallback rather than an interruption. \\
 \textbf{10} JST-SH pigtails, not 4 &
 the first one you crimp badly is then not a project stall. \\
-\textbf{SAWbird+ and RTL-SDR} with Tier 1 &
-T3b cannot be started without them, and the board does not supply them. \\
+\textbf{SAWbird+ and a bias-tee RTL-SDR} with Tier 1 &
+T3b cannot be started without them, and the board does not supply them. \flag{A generic
+R820T2 stick has no bias tee}, so the SAWbird+ would sit unpowered --- this is the one place
+a cheap substitution silently costs you the whole measurement. \\
+\textbf{Radxa Zero 3W, OV9281, XIAO ESP32S3} &
+the companion, the flow camera and the recording camera are \emph{purchases}, not prints, and
+the two flow bench items cannot be closed without the first two. Buy them on this order and
+only the 3D-printed tray is left outstanding. \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-Three things genuinely need the parts in hand, and \textbf{none of them is an order}: the
-frame kit's top-plate standoff spacing (the kit supplies it), the camera mount (deferred),
-and the Radxa Zero 3W's hole pattern (deferred, and it is a \textbf{3D print}, not a
-purchase). \file{tools/fasteners.py} prints this list itself under
+Three things need the parts in hand, and \textbf{only two of them are 3D prints}: the camera
+mount and the Radxa Zero 3W's tray (the vendor never published its hole pattern). The third is
+the frame kit's top-plate standoff spacing, which the kit supplies. Read that carefully: the
+\emph{prints} are deferred, but the Radxa board and both cameras are \textbf{purchases}, and
+they are on the list above on purpose --- buy them in this order and the only thing left
+outstanding is something you can print.
+
+\subsection{The bench measurements that could have cost you a purchase}
+
+Sort the bench items into two kinds, because only one kind can reach your wallet. Six of them
+cannot: \file{BATT\_AMP\_PERVLT}, the IMU orientation, \file{FLOW\_ORIENT\_YAW}, flow
+quality over grass, and both thermal readings are numbers you write down or calibrate, and no
+possible answer changes what you should have bought. \file{U8}'s junction is worse than those
+--- if it really is 139\degC{} the remedy is a \textbf{respin} --- but it is still not a
+purchase.
+
+Three could have. Each is now bought around:
+
+\begin{center}
+\begin{tabular}{@{}P{0.26\textwidth}P{0.62\textwidth}@{}}
+\toprule
+\textbf{Measurement} & \textbf{Why it can no longer send you shopping} \\
+\midrule
+\file{J2}'s ESC cable pinout & a wrong cable is re-pinnable with a fine pick \emph{and} a
+spare \textbf{8-pin} JST-SH lead is on the order --- previously the only route was to rework
+the cable you already had \\
+the RF chain can hear Iridium & the SAWbird+ is powered \emph{up the coax}, and the order now
+names a \textbf{bias-tee} dongle (Blog V3/V4) rather than "an RTL-SDR". A generic R820T2
+stick would have turned a small saving into an unpowered LNA and a stalled T3b \\
+the grommet flange & the flange is a property of the frame kit's grommets, so a wide one meant
+a different grommet. A spare silicone set is now a line item: measure, and swap rather than
+order \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\flag{The honest residue:} one answer can still cost real money, and it is not a part. If
+\file{U8} is genuinely at 139\degC{} the remedy is a new board --- which is why \textbf{three
+spare bare PCBs} are on the order and why T3a is a stop gate rather than a note. \file{tools/fasteners.py} prints this list itself under
 \emph{``not derived --- these need the parts in hand''}.
 
 % =============================================================================
@@ -855,6 +909,7 @@ why Standard plus panelisation is the recommendation.
 \end{itemize}
 
 \subsection{15.3 Measurements that have not been confirmed}
+\label{sec:audit-153}
 
 This is the longest list, and every row is a value some part of the build \emph{assumes}.
 The gate's own verdict names nine of them as \file{NOT READY TO FLY}.
@@ -943,36 +998,68 @@ second supplier and a separate board.
 \end{itemize}
 
 % =============================================================================
-\section{Part 16 --- What cannot be confirmed from a desk}
+\section{Part 16 --- What only the outside world can settle}
 
-Not everything here is improvable. These are genuinely outside what any local check or any
-web lookup can settle, and they are listed so that ``verified'' is not read into them.
+Section~\ref{sec:audit-153} is the authoritative register of every value this build
+\emph{assumes}, and it is deliberately not repeated here --- an earlier draft restated nine of
+its rows and the two lists were free to disagree. What follows is the short list no local
+check and no desk work can close, because each needs a fab, a supplier, a vendor or a
+maintainer to answer it.
 
 \begin{center}
-\begin{tabular}{@{}p{0.40\textwidth}p{0.52\textwidth}@{}}
+\begin{tabular}{@{}p{0.34\textwidth}p{0.58\textwidth}@{}}
 \toprule
 \textbf{Item} & \textbf{Status} \\
 \midrule
-JLCPCB's upload preview & outline, panel size, CPL orientation, stackup, drills. No local tool
-substitutes for looking at their render \\
-1 oz outer copper & every current figure assumes it. Confirm what ships \\
-LCSC stock & snapshot, age-gated at 7 days. Re-fetched live 2026-09-19: 56/56 codes resolve \\
-The 1620 MHz SAW filter & not stocked at LCSC --- separate board, separate supplier \\
-ArduPilot board ID & 7180 is free and below the ceiling; the request is written and ready.
-9001 was free but above the ceiling the registry asks you to respect \\
-\file{U8} junction temperature & modelled, not measured \\
-The sigma the antenna delivers & \textbf{the single open question} \\
-Real flow over grass & simulated flow is perfect flow \\
-IMU orientations & asserted in the hwdef, never measured \\
-\file{BATT\_AMP\_PERVLT} & a property of the ESC's shunt, not of this board \\
-ESC cable continuity & buzz the cable you received \\
-Radxa mounting holes & not published by the vendor \\
-\file{J3} plug clearance & 5.30 mm clears the derived 3.6 mm requirement; what is still
-unconfirmed is whether the plug you receive seats in it \\
-Grommet flange & above 5.9 mm it touches a printed label \\
+JLCPCB's upload preview & outline, panel size, CPL orientation, stackup and drills. No local
+tool substitutes for looking at their render \\
+\textbf{1 oz outer copper} & every current figure assumes it, and 0.5 oz halves every trace's
+rating. Confirm what actually ships \\
+LCSC stock & a live external fact, age-gated at 7 days. Re-fetched \textbf{2026-09-19}:
+56/56 codes resolve, covering 2 boards \\
+The 1620 MHz SAW filter & not stocked at LCSC --- a separate board from a separate supplier,
+and the only part of the RF front end this BOM cannot buy \\
+ArduPilot board ID & \textbf{7180} is free and below the ceiling; the request, the registry
+diff and the required \file{Readme.md} are ready in \file{firmware/}. The local build still
+uses 9001, which is above the ceiling the registry asks you to respect \\
 \bottomrule
 \end{tabular}
 \end{center}
+
+% =============================================================================
+\section{Part 17 --- What is not built yet}
+
+The board and its firmware are green. The project's \emph{premise} is not, and a clean gate
+says nothing about it, so it is stated here rather than left to the repository's own notes.
+
+\textbf{The Iridium Doppler solver exists and is validated; the chain around it does not.}
+
+\begin{center}
+\begin{tabular}{@{}P{0.29\textwidth}P{0.61\textwidth}@{}}
+\toprule
+\textbf{Piece} & \textbf{Status} \\
+\midrule
+The least-squares Doppler solve & \good{built and validated} --- \file{tools/soop\_solver.py}.
+Gauss-Newton over position and clock with an analytic Jacobian; it recovers a known position
+exactly from clean geometry, and reports \emph{singular} on degenerate geometry rather than
+inventing a number \\
+SGP4 and real TLE ephemeris & \flag{not built} --- the solver takes satellite state as
+\emph{input}, and a circular propagator stands in for the test. That is enough to prove the
+geometry inverts; it is not an ephemeris \\
+Burst detection and frequency estimation & \flag{not built} --- from I/Q, to the precision the
+solver needs. No RF bench run substitutes for writing it \\
+The C firmware for the H743 & \flag{not built} \\
+Getting the fix into the EKF & \flag{not built} --- an \file{AP\_GPS} backend or
+\file{AP\_ExternalAHRS}. \file{GPS\_INPUT} is the documented route for an \emph{external}
+computer, and this aircraft solves on board \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The solver also established the receiver's requirement, which was written down nowhere before:
+\textbf{about 5 Hz of burst frequency precision over 40--80 bursts}. An 8.28 ms burst has
+roughly 120 Hz of raw FFT resolution, so the carrier must be estimated well inside a bin ---
+that is the number T3b is really trying to meet.
 
 % =============================================================================
 \section{The one-page order}
