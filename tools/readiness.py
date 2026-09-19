@@ -217,6 +217,20 @@ PREREQUISITES = [
          claim="5 bare PCBs / 2 assembled, BOTH sides",
          why="5 is the multilayer minimum and 2 the SMT minimum; both sides are populated "
              "so two stencils are needed."),
+    # Added 2026-09-19. This was missing while the runbook had it, and it belongs in the
+    # class that means "done at the checkout, cannot be done earlier" more than any other:
+    # JLCPCB's capability page gives Standard single-PCB assembly as 70 x 70 mm to
+    # 460 x 500 mm, and this board is 45.1 x 46.1 mm, so it CANNOT go through Standard
+    # unpanelled. "Panel by JLCPCB" is the answer and it also adds the edge rails, fiducial
+    # marks and tooling holes by default. Economic needs no panel (10 x 10 mm up), which is
+    # the one real advantage it has - and the reason this belongs in the checkout list is
+    # that choosing the tier and the panel IS a checkout choice, not a design property.
+    dict(id="act.panel", cls=ORDER_ACTION,
+         claim="Panel by JLCPCB, 2 x 2 (not a committed panel file)",
+         why="Standard assembly requires a single PCB of at least 70 x 70 mm and this is "
+             "45.1 x 46.1 mm, so the board must be panelled to be assembled at all. "
+             "2 x 2 gives roughly 93 x 95 mm. Do NOT commit a panelised .kicad_pcb: the "
+             "board files stay exactly as verified, so nothing has to be re-checked."),
 
     # -- only knowable with hardware in hand: gates FLYING, not ordering ------------
     dict(id="bench.u8", cls=BENCH,
