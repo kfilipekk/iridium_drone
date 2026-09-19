@@ -14,7 +14,7 @@ RESULTS = REPO / SPEC["results"]
 
 def template() -> str:
     return json.dumps(
-        {"_note": "T3b per docs/BUILD.md. Record steps IN ORDER - the ordering is the "
+        {"_note": "T3b per the runbook (docs/navcore-runbook.tex). Record steps IN ORDER - the ordering is the "
                   "experiment: each degradation names its own culprit.",
          "_band_mhz": list(SPEC["band_mhz"]),
          **{name: {f: None for f in SPEC["fields"]} | {"_what": what, "_isolates": why}

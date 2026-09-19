@@ -83,7 +83,7 @@ define HAL_BATT_CURR_SCALE 40.0
 # [removed: no airspeed sensor; freed for the SoOP I/Q input] PC4 PRESSURE_SENS ADC1 scale(2)
 # [removed: no airspeed sensor] define HAL_DEFAULT_AIRSPEED_PIN 4
 
-# [removed: RSSI arrives over CRSF; freed for the SoOP AGC readback] PC5 RSSI_ADC ADC1
+# [removed: RSSI arrives over CRSF; PC5 is spare] PC5 RSSI_ADC ADC1
 # [removed: RSSI arrives over CRSF] define BOARD_RSSI_ANA_PIN 8
 
 # LED green LED1 marked as B/E blue LED0 marked as act.

@@ -67,6 +67,11 @@ echo "=== 5. copter ==="
 ./waf copter > "$LOGS/copter.log" 2>&1 \
   && echo "  ok" || { echo "  FAILED"; tail -40 "$LOGS/copter.log"; exit 1; }
 
+sha256sum "$HERE/firmware/NAVCORE_SoOP/hwdef.dat" \
+  | awk '{print $1}' > "$AP/build/$BOARD/bin/arducopter.apj.hwdef.sha256"
+echo "=== 5b. hwdef digest recorded, for preflight to compare against ==="
+sed 's/^/  /' "$AP/build/$BOARD/bin/arducopter.apj.hwdef.sha256"
+
 echo "=== 6. what the hwdef processing said ==="
 grep -iE "warn|error|conflict|shared|no dma|not enough|unassign|no default" \
   "$LOGS/configure.log" | sed 's/^/  /' || echo "  (nothing flagged)"

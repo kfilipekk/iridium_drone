@@ -120,7 +120,7 @@ def main():
     print("what this check cannot do:")
     print("  - it proves the CODE is present, not that the DEVICE answers. U19 not")
     print("    being fitted, or sitting at the wrong I2C address, looks identical here.")
-    print("    That is BUILD.md T3, not a desk check.")
+    print("    That is runbook T3 (docs/navcore-runbook.tex Part 9), not a desk check.")
     print("  - it only covers the features listed in FEATURES. A parameter added to")
     print("    defaults.parm without a row here is not traced.")
     if fails:

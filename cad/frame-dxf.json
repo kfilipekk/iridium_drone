@@ -1,0 +1,818 @@
+{
+ "source": "So1-V6-7inDC-2025-JUL-07.dxf",
+ "sha256": "398556cd5f8720ac1a39b79bd1a0d1c083c6c57def55920bc17b212061b6d099",
+ "units": "mm",
+ "plates": {
+  "bottom_plate": {
+   "layer": "Draw14",
+   "w": 48.5,
+   "l": 107.62,
+   "holes": [
+    {
+     "dia": 2.0,
+     "x": -8.0,
+     "y": -50.84,
+     "layer": "Draw14"
+    },
+    {
+     "dia": 2.0,
+     "x": -8.0,
+     "y": -11.34,
+     "layer": "Draw14"
+    },
+    {
+     "dia": 2.0,
+     "x": 8.0,
+     "y": -50.84,
+     "layer": "Draw14"
+    },
+    {
+     "dia": 2.0,
+     "x": 8.0,
+     "y": -11.34,
+     "layer": "Draw14"
+    },
+    {
+     "dia": 2.2,
+     "x": -10.0,
+     "y": 12.41,
+     "layer": "Draw14"
+    },
+    {
+     "dia": 2.2,
+     "x": -10.0,
+     "y": 32.41,
+     "layer": "Draw14"
+    },
+    {
+     "dia": 2.2,
+     "x": 10.0,
+     "y": 12.41,
+     "layer": "Draw14"
+    },
+    {
+     "dia": 2.2,
+     "x": 10.0,
+     "y": 32.41,
+     "layer": "Draw14"
+    },
+    {
+     "dia": 3.0,
+     "x": -14.6,
+     "y": -3.21,
+     "layer": "Draw14"
+    },
+    {
+     "dia": 3.0,
+     "x": -11.0,
+     "y": 49.66,
+     "layer": "Draw14"
+    },
+    {
+     "dia": 3.0,
+     "x": 11.0,
+     "y": 49.66,
+     "layer": "Draw14"
+    },
+    {
+     "dia": 3.0,
+     "x": 14.6,
+     "y": -3.21,
+     "layer": "Draw14"
+    },
+    {
+     "dia": 4.3,
+     "x": -15.25,
+     "y": -46.34,
+     "layer": "9"
+    },
+    {
+     "dia": 4.3,
+     "x": -15.25,
+     "y": -15.84,
+     "layer": "9"
+    },
+    {
+     "dia": 4.3,
+     "x": -10.0,
+     "y": -41.09,
+     "layer": "9"
+    },
+    {
+     "dia": 4.3,
+     "x": -10.0,
+     "y": -21.09,
+     "layer": "9"
+    },
+    {
+     "dia": 4.3,
+     "x": 10.0,
+     "y": -41.09,
+     "layer": "9"
+    },
+    {
+     "dia": 4.3,
+     "x": 10.0,
+     "y": -21.09,
+     "layer": "9"
+    },
+    {
+     "dia": 4.3,
+     "x": 15.25,
+     "y": -46.34,
+     "layer": "9"
+    },
+    {
+     "dia": 4.3,
+     "x": 15.25,
+     "y": -15.84,
+     "layer": "9"
+    },
+    {
+     "dia": 6.0,
+     "x": -15.25,
+     "y": -46.34,
+     "layer": "9"
+    },
+    {
+     "dia": 6.0,
+     "x": -15.25,
+     "y": -15.84,
+     "layer": "9"
+    },
+    {
+     "dia": 6.0,
+     "x": -10.0,
+     "y": -41.09,
+     "layer": "9"
+    },
+    {
+     "dia": 6.0,
+     "x": -10.0,
+     "y": -21.09,
+     "layer": "9"
+    },
+    {
+     "dia": 6.0,
+     "x": 10.0,
+     "y": -41.09,
+     "layer": "9"
+    },
+    {
+     "dia": 6.0,
+     "x": 10.0,
+     "y": -21.09,
+     "layer": "9"
+    },
+    {
+     "dia": 6.0,
+     "x": 15.25,
+     "y": -46.34,
+     "layer": "9"
+    },
+    {
+     "dia": 6.0,
+     "x": 15.25,
+     "y": -15.84,
+     "layer": "9"
+    },
+    {
+     "dia": 10.0,
+     "x": 0.0,
+     "y": -31.09,
+     "layer": "Draw14"
+    }
+   ]
+  },
+  "top_plate": {
+   "layer": "Draw13",
+   "w": 42.5,
+   "l": 160.26,
+   "holes": [
+    {
+     "dia": 3.0,
+     "x": -14.6,
+     "y": -57.66,
+     "layer": "Draw13"
+    },
+    {
+     "dia": 3.0,
+     "x": -14.6,
+     "y": -32.66,
+     "layer": "Draw13"
+    },
+    {
+     "dia": 3.0,
+     "x": -14.6,
+     "y": 23.11,
+     "layer": "Draw13"
+    },
+    {
+     "dia": 3.0,
+     "x": -11.0,
+     "y": 75.98,
+     "layer": "Draw13"
+    },
+    {
+     "dia": 3.0,
+     "x": 11.0,
+     "y": 75.98,
+     "layer": "Draw13"
+    },
+    {
+     "dia": 3.0,
+     "x": 14.6,
+     "y": -57.66,
+     "layer": "Draw13"
+    },
+    {
+     "dia": 3.0,
+     "x": 14.6,
+     "y": -32.66,
+     "layer": "Draw13"
+    },
+    {
+     "dia": 3.0,
+     "x": 14.6,
+     "y": 23.11,
+     "layer": "Draw13"
+    }
+   ]
+  },
+  "fc_plate": {
+   "layer": "Draw3",
+   "w": 48.5,
+   "l": 106.59,
+   "holes": [
+    {
+     "dia": 3.0,
+     "x": -15.25,
+     "y": 13.91,
+     "layer": "Draw3"
+    },
+    {
+     "dia": 3.0,
+     "x": -15.25,
+     "y": 44.41,
+     "layer": "Draw3"
+    },
+    {
+     "dia": 3.0,
+     "x": -14.6,
+     "y": -23.72,
+     "layer": "Draw3"
+    },
+    {
+     "dia": 3.0,
+     "x": -14.6,
+     "y": 1.28,
+     "layer": "Draw3"
+    },
+    {
+     "dia": 3.0,
+     "x": -10.0,
+     "y": 19.16,
+     "layer": "Draw3"
+    },
+    {
+     "dia": 3.0,
+     "x": -10.0,
+     "y": 39.16,
+     "layer": "Draw3"
+    },
+    {
+     "dia": 3.0,
+     "x": 10.0,
+     "y": 19.16,
+     "layer": "Draw3"
+    },
+    {
+     "dia": 3.0,
+     "x": 10.0,
+     "y": 39.16,
+     "layer": "Draw3"
+    },
+    {
+     "dia": 3.0,
+     "x": 14.6,
+     "y": -23.72,
+     "layer": "Draw3"
+    },
+    {
+     "dia": 3.0,
+     "x": 14.6,
+     "y": 1.28,
+     "layer": "Draw3"
+    },
+    {
+     "dia": 3.0,
+     "x": 15.25,
+     "y": 13.91,
+     "layer": "Draw3"
+    },
+    {
+     "dia": 3.0,
+     "x": 15.25,
+     "y": 44.41,
+     "layer": "Draw3"
+    },
+    {
+     "dia": 4.0,
+     "x": -8.0,
+     "y": 9.41,
+     "layer": "Draw3"
+    },
+    {
+     "dia": 4.0,
+     "x": 8.0,
+     "y": 9.41,
+     "layer": "Draw3"
+    },
+    {
+     "dia": 10.0,
+     "x": 0.0,
+     "y": 29.16,
+     "layer": "Draw3"
+    }
+   ]
+  }
+ },
+ "arms": [
+  {
+   "motor_centre": [
+    1422.39,
+    1584.62
+   ],
+   "slots": [
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    },
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    },
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    },
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    }
+   ],
+   "square_side_min": 11.31,
+   "square_side_max": 13.44
+  },
+  {
+   "motor_centre": [
+    1373.34,
+    1403.15
+   ],
+   "slots": [
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    },
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    },
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    },
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    }
+   ],
+   "square_side_min": 11.31,
+   "square_side_max": 13.44
+  },
+  {
+   "motor_centre": [
+    1614.74,
+    1584.62
+   ],
+   "slots": [
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    },
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    },
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    },
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    }
+   ],
+   "square_side_min": 11.31,
+   "square_side_max": 13.44
+  },
+  {
+   "motor_centre": [
+    1663.79,
+    1403.15
+   ],
+   "slots": [
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    },
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    },
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    },
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    }
+   ],
+   "square_side_min": 11.31,
+   "square_side_max": 13.44
+  },
+  {
+   "motor_centre": [
+    958.14,
+    1553.79
+   ],
+   "slots": [
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    },
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    },
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    },
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    }
+   ],
+   "square_side_min": 11.31,
+   "square_side_max": 13.44
+  },
+  {
+   "motor_centre": [
+    987.46,
+    1562.99
+   ],
+   "slots": [
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    },
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    },
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    },
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    }
+   ],
+   "square_side_min": 11.31,
+   "square_side_max": 13.44
+  },
+  {
+   "motor_centre": [
+    1059.42,
+    1553.79
+   ],
+   "slots": [
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    },
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    },
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    },
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    }
+   ],
+   "square_side_min": 11.31,
+   "square_side_max": 13.44
+  },
+  {
+   "motor_centre": [
+    1030.1,
+    1562.99
+   ],
+   "slots": [
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    },
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    },
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    },
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    }
+   ],
+   "square_side_min": 11.31,
+   "square_side_max": 13.44
+  },
+  {
+   "motor_centre": [
+    2053.24,
+    1651.96
+   ],
+   "slots": [
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    },
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    },
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    },
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    }
+   ],
+   "square_side_min": 11.31,
+   "square_side_max": 13.44
+  },
+  {
+   "motor_centre": [
+    2082.56,
+    1661.16
+   ],
+   "slots": [
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    },
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    },
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    },
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    }
+   ],
+   "square_side_min": 11.31,
+   "square_side_max": 13.44
+  },
+  {
+   "motor_centre": [
+    2154.52,
+    1651.96
+   ],
+   "slots": [
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    },
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    },
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    },
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    }
+   ],
+   "square_side_min": 11.31,
+   "square_side_max": 13.44
+  },
+  {
+   "motor_centre": [
+    2125.2,
+    1661.16
+   ],
+   "slots": [
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    },
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    },
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    },
+    {
+     "r_centre": 8.75,
+     "r_min": 8.0,
+     "r_max": 9.5,
+     "width": 3.0
+    }
+   ],
+   "square_side_min": 11.31,
+   "square_side_max": 13.44
+  }
+ ],
+ "labels": [
+  {
+   "text": "2mm",
+   "layer": "Draw13",
+   "outline": [
+    2.0,
+    34.0
+   ]
+  },
+  {
+   "text": "6mm",
+   "layer": "Frame-Arms",
+   "outline": [
+    31.08,
+    185.21
+   ]
+  },
+  {
+   "text": "2mm",
+   "layer": "Draw14",
+   "outline": [
+    48.5,
+    107.62
+   ]
+  },
+  {
+   "text": "2mm",
+   "layer": "Camera-Holder",
+   "outline": [
+    34.0,
+    48.88
+   ]
+  },
+  {
+   "text": "2mm",
+   "layer": "Draw3",
+   "outline": [
+    48.5,
+    106.59
+   ]
+  },
+  {
+   "text": "6mm",
+   "layer": "Draw2",
+   "outline": [
+    30.4,
+    30.4
+   ]
+  },
+  {
+   "text": "6mm",
+   "layer": "Frame-Arms",
+   "outline": [
+    31.08,
+    185.21
+   ]
+  }
+ ],
+ "hardware": [
+  "M3 Press nuts pre-install",
+  "M3x30mm = 4pcs",
+  "M3x22mm = 4pcs",
+  "M3x14mm = 4pcs",
+  "M3x12mm = 4pcs",
+  "M3x10mm = 16pcs",
+  "M2x6mm = 4pcs",
+  "M3x20mm = 2pcs"
+ ]
+}
