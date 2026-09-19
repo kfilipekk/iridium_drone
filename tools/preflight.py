@@ -640,7 +640,12 @@ def firmware(board):
           "files - see tools/check_libraries.py")
 
     rc, out = run("check_design.py")
-    m = re.search(r'^(\d+) error', out, re.M)
+    # There was a `re.search(r'^(\d+) error', out, re.M)` here whose value was never read.
+    # It could never have matched either: check_design.py prints "ERRORS (N):" when it
+    # fails and "no errors." when it passes, so no line starts with a bare count. The
+    # verdict below correctly keys off `"no errors" in out` instead. Removed rather than
+    # left as an unused match - a regex in a gate reads as evidence that something is
+    # being parsed, and a dead one makes a future reader think this is where it happens.
     w = re.search(r'^WARNINGS \((\d+)\)', out, re.M)
     check("fabrication", "schematic matches the netlist", rc == 0 and "no errors" in out,
           "netlist, pin coverage and hwdef agree"
