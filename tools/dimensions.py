@@ -150,13 +150,11 @@ def main():
     row("top of the tallest part (J3)", f"{ztop:.2f} mm", "[D] JST GH series")
     #the kit's inner height is not the number to build
     _sto = design.required_standoff(b)
-    row("frame's inner space (kit standoffs)", f"{FRAME_H[0]:.2f} mm", FRAME_H[1])
-    row("SPARE against the kit's standoffs", f"{FRAME_H[0]-ztop:.2f} mm", "[M] derived")
-    row("standoff to BUY", f"{_sto['buy']} mm" if _sto["buy"] else "NONE IN STOCK FITS",
-        _sto["src"])
-    if _sto["buy"]:
-        row("SPARE against the bought standoff", f"{_sto['buy']-ztop:.2f} mm",
-            "[M] derived")
+    #the top plate is where the kit puts it (design.TOP_PLATE_MOUNT)
+    row("frame's inner space over the mid plate (kit 22 mm standoffs)",
+        f"{FRAME_H[0]:.2f} mm", FRAME_H[1])
+    row("top plate underside above z=0", f"{_sto['top_plate_z']:.2f} mm", _sto["src"])
+    row("SPARE under the top plate", f"{_sto['top_plate_z']-ztop:.2f} mm", "[M] derived")
 
     h("What the frame must provide")
     hdr("requirement", "value", "source")

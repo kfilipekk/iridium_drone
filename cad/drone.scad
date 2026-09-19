@@ -32,21 +32,22 @@ z_mid_plate = z_arm + arm_t;                    //mid plate clamps the arms
 z_stack     = z_mid_plate + medium_plate_t;     //ESC starts here
 stack_h     = esc_pcb + esc_parts + gap + fc_bot_parts + fc_pcb + fc_top_parts;
 
-//where inner_h IS MEASURED FROM is not settled by a 2D DXF
-top_plate_z    = standoff_len;                  //COMPUTED, from frame.scad
+//SETTLED by the DXF (design.TOP_PLATE_MOUNT)
+top_plate_z    = standoff_len;                  //underside of the top plate, from frame.scad
 fc_top_z       = z_stack + stack_h;      //top of the FC's tallest part
 headroom       = top_plate_z - fc_top_z;
 
 motor_off = wheelbase / 2 / sqrt(2);     //offset on each axis, square X
 
 //rectangular, and a different rectangle per plate
-module plate(w, l, t) {
+stack_holes = [for (sx = [-1, 1], sy = [-1, 1]) [sx * hole_pitch/2, sy * hole_pitch/2]];
+module plate(w, l, t, y_off, holes) {
     difference() {
-        linear_extrude(t) offset(r = 4) square([w - 8, l - 8], center = true);
+        translate([0, y_off, 0])
+            linear_extrude(t) offset(r = 4) square([w - 8, l - 8], center = true);
         //plate_hole_dia, not screw_dia
-        for (sx = [-1, 1], sy = [-1, 1])
-            translate([sx * hole_pitch/2, sy * hole_pitch/2, -1])
-                cylinder(d = plate_hole_dia, h = t + 2);
+        for (h = holes)
+            translate([h[0], h[1], -1]) cylinder(d = plate_hole_dia, h = t + 2);
     }
 }
 
@@ -59,23 +60,31 @@ module arm() {
 
 module frame() {
     color("#22252a") {
-        translate([0, 0, z_bot_plate]) plate(bot_plate_w, bot_plate_l, plate_t);
+        //bottom plate: press nuts at the stack pattern, rear posts stand on it
+        translate([0, 0, z_bot_plate])
+            plate(bot_plate_w, bot_plate_l, bottom_plate_t, plate_y_bottom,
+                  concat(stack_holes, rear_posts));
         for (a = [45, 135, 225, 315])
             rotate([0, 0, a]) translate([0, 0, z_arm]) arm();
-        //mid plate: the 48.50 x 106.59 strip that actually carries the stack
+        //mid plate: the 48.50 x 106.59 strip that carries the stack
         translate([0, 0, z_mid_plate])
-            plate(fc_plate_w, fc_plate_l, medium_plate_t);
-        //TOP PLATE. 42.50 x 160.26 - the long one
+            plate(fc_plate_w, fc_plate_l, medium_plate_t, plate_y_fc,
+                  concat(stack_holes, front_posts));
+        //TOP PLATE. 42.50 x 160.26 - the long one, ABOVE the prop plane
         if (show_top_plate) translate([0, 0, top_plate_z])
-            plate(top_plate_w, top_plate_l, plate_t);
+            plate(top_plate_w, top_plate_l, plate_t, plate_y_top,
+                  concat(front_posts, rear_posts));
         //corner posts
-        for (sx = [-1, 1], sy = [-1, 1])
-            translate([sx * hole_pitch/2, sy * hole_pitch/2, fc_top_z])
-                color("#8d949c") difference() {
-                    cylinder(d = 5, h = top_plate_z - fc_top_z);
-                    translate([0, 0, -1])
-                        cylinder(d = plate_hole_dia, h = top_plate_z - fc_top_z + 2);
-                }
+        for (p = front_posts)
+            translate([p[0], p[1], z_stack]) color("#8d949c") difference() {
+                cylinder(d = post_od, h = standoff_front);
+                translate([0, 0, -1]) cylinder(d = plate_hole_dia, h = standoff_front + 2);
+            }
+        for (p = rear_posts)
+            translate([p[0], p[1], z_arm]) color("#8d949c") difference() {
+                cylinder(d = post_od, h = standoff_rear);
+                translate([0, 0, -1]) cylinder(d = plate_hole_dia, h = standoff_rear + 2);
+            }
     }
 }
 
@@ -149,10 +158,11 @@ module fc() {
 
 module stack_screws() {
     //FROM the MID plate UP, not from z = 0
+    m3_nut_h = 2.4;
     for (sx = [-1, 1], sy = [-1, 1])
         translate([sx * hole_pitch/2, sy * hole_pitch/2, z_mid_plate])
             color("#c0c5cb")
-                cylinder(d = screw_dia, h = top_plate_z + plate_t - z_mid_plate);
+                cylinder(d = screw_dia, h = fc_z + fc_pcb + m3_nut_h - z_mid_plate);
 }
 
 module battery() {
@@ -247,7 +257,8 @@ echo(str("stack height mm = ",
 echo(str("mid plate ", fc_plate_w, " x ", fc_plate_l,
          " mm carries the board ", fc_l, " x ", fc_w));
 echo(str("prop-to-prop gap mm = ", motor_off * 2 - prop_dia));
-echo(str("standoff to buy mm = ", standoff_len, " (kit ships 30 - it does NOT fit)"));
+echo(str("top plate underside z = ", standoff_len, " (kit: ", standoff_front,
+         " mm front posts on the mid plate + ", standoff_rear, " mm rear posts on the bottom plate)"));
 echo(str("clearance above FC to top plate mm = ",
          top_plate_z - (fc_z + fc_pcb + fc_top_parts)));
 //lens margin: camera module bottom (lens tip) must stay ABOVE the skid contact line
