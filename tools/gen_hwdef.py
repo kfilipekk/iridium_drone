@@ -39,7 +39,17 @@ PCB   = "NAVCORE-SoOP.kicad_pcb"
 # So a request for 9001 may be moved or declined. Nothing breaks locally - this is a
 # bring-up ID for a board that is not shared yet - but ask before assuming 9001 is the
 # number that gets allocated, and do not treat "it was clear" as the approval.
-BOARD_ID = 9001
+#
+# THE ID TO REQUEST IS 7180, not 9001. Measured 2026-09-19 against the registry: 9001 is
+# free but sits ABOVE #7199, which is the one thing the file asks you not to do, and there
+# are 4544 free IDs below it. 7180 is free, in no reserved block, and fills the gap
+# directly below the ceiling, so it needs no new comment block and does not push the used
+# region higher. 7160, 1241 and 2025 are equally free alternates; 9001 is not an option.
+#
+# The request is written out, ready to submit, in firmware/BOARD-ID-REQUEST.md. Change
+# this constant only once the ID is GRANTED, so the local bring-up ID and the allocated
+# one never disagree about which is which.
+BOARD_ID = 9001          # local bring-up only - request 7180 upstream, see above
 
 HEADER = """# hwdef for NAVCORE-SoOP
 #
