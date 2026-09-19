@@ -50,9 +50,10 @@ OUT = "fab"
 # everything - but CONFIRM IT WITH JLC before relying on it again. A wrong reason left in
 # the repo is how the next decision goes wrong.
 #
-# U6 and U7 are now DNP anyway (design.POPULATE_BLIND_SENSORS): neither can see the
-# ground with the ESC 3 mm below them. They stay listed so the note survives if either
-# is ever populated.
+# U6 and U7 are GONE, not DNP - both were deleted from the design in the Rev B re-layout
+# (see the STANDARD_ONLY comment below). An earlier version of this note said they were
+# "DNP anyway" and would "stay listed", which contradicted the block immediately beneath
+# it and told a reader there were pads to populate. There are none.
 # Parts the ECONOMIC variant leaves off the assembly order for hand-fitting.
 #
 # U6 (PMW3901) and U7 (VL53L1X) used to be here and are GONE - both were deleted from
@@ -101,10 +102,18 @@ def cpl_rotation(fp):
 
 def main():
     economic = "--economic" in sys.argv
-    # The 9 V VTX buck is now POPULATED by default (design.POPULATE_VTX), so the plain
-    # run is the FPV build and there is nothing to opt into. --no-fpv is the opt-OUT,
-    # for a build without video: it puts exactly design.VTX_BUCK_DNP back to DNP and
-    # changes nothing else.
+    # The 9 V VTX buck is DNP by DEFAULT - design.POPULATE_VTX is False, because its
+    # switch node could not be closed on this placement - so the plain run already omits
+    # it and --no-fpv currently produces a byte-identical pair.
+    #
+    # This comment claimed the OPPOSITE for weeks ("the 9 V VTX buck is now POPULATED by
+    # default, so the plain run is the FPV build"). That is a claim about what you RECEIVE,
+    # sitting in the file that generates the BOM you order from, and it disagreed with
+    # design.py, with fab/ORDER.md, with docs/ASSEMBLY.md and with the BOM it writes.
+    #
+    # --no-fpv stays as the explicit opt-out for a build without video: it puts exactly
+    # design.VTX_BUCK_DNP back to DNP and changes nothing else, so that setting
+    # POPULATE_VTX True later reverses cleanly.
     no_fpv = "--no-fpv" in sys.argv
     if economic and no_fpv:
         print("--economic and --no-fpv are different builds; pick one")
@@ -137,6 +146,7 @@ def main():
             w.writerow([val, ",".join(sorted(refs)), fpn, lcsc, len(refs),
                         "DNP" if dnp else ""])
 
+    n_cpl = 0
     with open(f"{OUT}/CPL-NAVCORE-SoOP{suffix}.csv", "w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["Designator", "Mid X", "Mid Y", "Layer", "Rotation"])
@@ -153,6 +163,7 @@ def main():
             w.writerow([ref, f"{pcbnew.ToMM(p.x):.4f}mm", f"{-pcbnew.ToMM(p.y):.4f}mm",
                         "bottom" if fp.GetLayerName() == "B.Cu" else "top",
                         f"{cpl_rotation(fp)[0]:.1f}"])
+            n_cpl += 1
 
     n_lines = len(groups)
     n_parts = sum(len(r) for r in groups.values())
@@ -162,7 +173,12 @@ def main():
     no_lcsc = [v for (v, l, fpn, d), r in groups.items()
                if not l or str(l).startswith("LOOKUP:")]
     print(f"BOM: {n_lines} lines, {n_parts} parts ({n_dnp} DNP)")
-    print(f"CPL: {sum(1 for r in placed if r not in skip)} placements")
+    # Count the rows actually written, not the footprints that are not test pads. This
+    # printed "143 placements" for all three variants - 143 being every placed footprint
+    # INCLUDING the 14 DNP ones - so the economic run reported the same number as the
+    # default while its CPL carried one fewer part. A count that cannot tell the variants
+    # apart is the kind of number a person quotes.
+    print(f"CPL: {n_cpl} placements")
     if no_fpv:
         print(f"NO-FPV variant - the 9 V VTX buck is left off ({len(vtx)} parts):")
         print(f"   {', '.join(sorted(vtx))}")

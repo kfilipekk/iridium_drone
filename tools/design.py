@@ -576,9 +576,11 @@ CAMERA = dict(name="OV9281 global-shutter module", mod_w=30.0, mod_t=12.0,
 #
 # The recurring question is "the flight controller cannot see down, so how do we have a
 # downward ToF and downward flow?" The premise is right and the conclusion does not
-# follow: NOTHING ON THE FC NEEDS TO SEE. U6 (PMW3901) and U7 (VL53L1X) are DNP because
-# they face the ESC 3.0 mm away, and U6 is 15.5 mm off the board centre so it could not
-# even use the frame's 10 mm centre pass-through if the stack were inverted.
+# follow: NOTHING ON THE FC NEEDS TO SEE. U6 (PMW3901) and U7 (VL53L1X) were DELETED from
+# the design in the Rev B re-layout, for exactly that reason - they faced the ESC 3.0 mm
+# away, and U6 was 15.5 mm off the board centre so it could not even use the frame's 10 mm
+# centre pass-through if the stack were inverted. They are not DNP: there is no pad left
+# to leave unpopulated, and no U6/U7 entry in COMPONENTS above.
 #
 # Downward sensors mount UNDER THE BOTTOM PLATE and cable back. That is also what every
 # commercial aircraft does - DJI's downward vision system is a belly module, not part of
@@ -1039,8 +1041,10 @@ FLOW = dict(
     fitted=False,
     camera="OV9281 global shutter, 22-pin CSI - NOT ordered in this pass",
     arrives_as="MAVLink OPTICAL_FLOW from the companion, FLOW_TYPE 5",
-    onboard_fallback="U6 PMW3901 is on the board but DNP - the ESC blocks its view, and "
-                     "correlation sensors of that class fail over grass",
+    onboard_fallback="there is no on-board flow part. U6 (PMW3901) was DELETED from the "
+                     "design in the Rev B re-layout - the ESC sat 3.0 mm below it and "
+                     "would have blocked its view, and correlation sensors of that class "
+                     "fail over grass anyway. Do not shop for one: there is no pad.",
     operational_note="EK3_SRC2 and EK3_SRC3 both use VELXY 5 (flow). With no flow fitted "
                      "they have no data, and they are reachable ONLY by the pilot's RC9 "
                      "source-set switch. Do not select source set 2 or 3 in flight until "

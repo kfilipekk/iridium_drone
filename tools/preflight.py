@@ -139,7 +139,8 @@ def assembly(board):
     # The BASE build is what gets gated. A bare glob picked whichever variant the
     # filesystem returned first, so the gate once reported a different build's placement
     # count as if it were the default order's. The variant suffixes have changed once
-    # already (-fpv became -nofpv when the VTX buck became default), so match on the
+    # already (-fpv became -nofpv; the VTX buck is DNP, so today it changes nothing), so
+    # match on the
     # ABSENCE of any suffix rather than on a list of known ones - a list goes stale
     # silently and picks the wrong file again.
     def _pick(kind):
@@ -606,6 +607,20 @@ def firmware(board):
           (f"{m.group(1) if m else '?'} gerber(s) and every BOM/CPL copy identical to "
            f"fab/; placement counts re-derived from the bundled CPL") if rc == 0 else
           "the order bundle is stale or incomplete - re-run tools/make_order_bundle.sh")
+
+    # The bundle check above proves the bundle equals fab/ - which is worthless if fab/
+    # itself is stale, because both copies agree. The VARIANTS were exactly that: three
+    # days old, and `fab/ORDER.md` recommends the Economic pair AT THE CHECKOUT. Its BOM
+    # still carried Y2's old code (C22381771 - 1 unit, no restock date, the reason Y2
+    # changed), its CPL placed neither U19 nor the tuner's decoupling, and R36 sat 38 mm
+    # from where the board puts it. Ordering that variant would have bought the unbuyable
+    # part. Nothing compared a variant to the board, and this is that comparison.
+    rc, out = run("check_variants.py")
+    m = re.search(r'^(\d+) variant pair\(s\) checked', out, re.M)
+    check("assembly", "every BOM/CPL variant matches the board", rc == 0,
+          (f"{m.group(1)} variant pair(s) agree with the board and the design" if m else
+           "checked, but the count was not reported") if rc == 0 else
+          "a variant BOM/CPL describes a different board - see tools/check_variants.py")
 
     # These four passed for weeks without being gated, so nothing would have caught them
     # regressing. Adding them costs one subprocess each and closes that hole.

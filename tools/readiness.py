@@ -130,6 +130,10 @@ PREREQUISITES = [
          claim="every thermal slug has a vented paste array"),
     dict(id="assy.twosided", cls=GATED, check="two-sided assembly",
          claim="the bottom-side placement is stated, so you order the right stencil"),
+    dict(id="assy.variants", cls=GATED, tool="check_variants.py",
+         claim="every BOM/CPL variant - including the Economic pair the ordering "
+               "document recommends at the checkout - matches the board, and no variant "
+               "moves a part rather than omitting it"),
     dict(id="assy.padcount", cls=GATED, tool="check_footprints.py",
          claim="each footprint's pad count, package family and pitch match JLCPCB's own "
                "package string for that part, from the live parts API"),

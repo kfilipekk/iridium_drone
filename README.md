@@ -28,8 +28,14 @@ pinout matches the MatekH743 across all 75 assigned pins.
 | MCU | STM32H743VIT6, 480 MHz, LQFP-100 on 0.5 mm pitch |
 | IMU | ICM-42688-P and ICM-42605, LGA-14, on their own 3.3 V analogue rail |
 | Sensors | MS5611 baro, W25Q128 flash, microSD |
-| Power | two synchronous bucks (16.8 V to 5 V and 9 V), two 3.3 V LDOs |
+| Power | two synchronous bucks (16.8 V to 5 V, and 16.8 V to 9 V), two 3.3 V LDOs |
 | I/O | USB-C, CAN, 8 UARTs, 4 x DShot, addressable LED, SWD |
+
+Two of those are **designed and provisioned but not fitted as ordered**, and the BOM says
+so: `U18` (the 9 V VTX buck — its switch node could not be closed on this placement) and
+`U11` (the CAN transceiver — it drew rail for a feature `defaults.parm` never enabled).
+Both have pads and paste-free footprints, and `preflight.py` prints `[NOT FITTED]` for
+each on every run. Everything else in the table is populated.
 | SoOP | MAX2112 tuner and OPA2374 baseband amps on board, U.FL antenna input |
 | Payload | I/Q, RSSI and PPS also brought out to pads for probing |
 
