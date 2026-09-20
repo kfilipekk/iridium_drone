@@ -44,6 +44,10 @@ RETIRED = [
     (r"\b43 (of 43 )?gated\b|all 43 gated", "a gate count from one commit ago", "read it off preflight.py; do not type it"),
     (r"\bJ10\b", "a servo connector that was dropped in the Rev B re-layout",
      "the servo lands on TP3/TP4 (PWM5/6) with VSERVO on TP22"),
+    (r"70\s?[-–]{1,2}\s?139|\b139\s?(°\s?C|C\b|\\degC)|\b0\.947\s?A|\b947\s?mA|\b653\s?mA",
+     "U8's junction bracket and the +5 V budget it was computed from (0.947 A, 653 mA headroom)",
+     "design.LOADS_5V derives 0.737 A; check_thermal.py gives 63-117 C; headroom 863 mA - "
+     "the old figures counted 281 mA of deleted parts and missed U10"),
     (r"bootloader over SWD|no bootloader will not enumerate", "a first-flash procedure that is wrong for an H743",
      "hold BOOT (SW1) through RESET and the ROM DFU enumerates as 0483:df11 with no bootloader; SWD is the fallback"),
 ]
@@ -54,8 +58,42 @@ MARKERS = (
     "deprecated", "obsolete", "instead of", "until", "came from", "was wrong", "wrong",
     "earlier", "old ", "history", "not in ", "does not contain", "no longer exists",
     "not stocked", "two revisions", "originally",
+    "this said", "dropped",
 )
 WINDOW = 3
+
+CLAUSE_BREAK = re.compile(r"(?<=[.;!?])\s|\u2014|\u2013|--")
+
+
+def retirement_marker(text, rx, anchor):
+    """The retirement marker that excuses the first match of `rx` at or after `anchor`."""
+    m = next((q for q in re.finditer(rx, text, re.I) if q.start() >= anchor), None)
+    if not m:
+        return None
+    breaks = list(CLAUSE_BREAK.finditer(text))
+    before = [q for q in breaks if q.end() <= m.start()]
+    after = [q for q in breaks if q.start() >= m.end()]
+    start = before[-1].end() if before else 0
+    end = after[0].start() if after else len(text)
+    candidates = [text[start:end]]
+    if len(before) >= 2:
+        candidates.append(text[before[-2].end():start].lstrip(" *_>#:-\t"))
+    elif start == 0:
+        candidates.append(text[:start])
+    else:
+        candidates.append("")
+    if len(after) >= 2:
+        candidates.append(text[end:after[1].start()].lstrip(" *_>#:-\t"))
+    else:
+        candidates.append(text[end:].lstrip(" *_>#:-\t"))
+    # The figure's own clause: any marker. Its neighbours: only a marker that opens the clause.
+    for mk in MARKERS:
+        if mk in candidates[0]:
+            return mk
+    for mk in MARKERS:
+        if candidates[1].startswith(mk) or candidates[2].startswith(mk):
+            return mk
+    return None
 
 explain = "--explain" in sys.argv
 
@@ -75,7 +113,8 @@ for path in files:
             hits += 1
             lo, hi = max(0, i - WINDOW), min(len(lines), i + WINDOW + 1)
             near = " ".join(lines[lo:hi]).lower()
-            mark = next((m for m in MARKERS if m in near), None)
+            anchor = len(" ".join(lines[lo:i])) + (1 if i > lo else 0)
+            mark = retirement_marker(near, rx, anchor)
             if mark:
                 excused.append((path, i + 1, what, mark))
                 continue

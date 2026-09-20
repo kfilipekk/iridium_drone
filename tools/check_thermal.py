@@ -10,16 +10,10 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import design
 
 VIN_4S = 16.8               # [M] 4S fully charged, design.BATT
-F_SW = 500e3
 
-RDS_HS, RDS_LS, T_EDGE = 0.148, 0.078, 10e-9
-# [L] efficiency band for a 2 A synchronous buck at this step-down ratio
+T_EDGE = 10e-9
+# [L] efficiency band for a 2-3 A synchronous buck at this step-down ratio
 EFF_LO, EFF_HI = 0.85, 0.90
-THETA_JA_JEDEC = 118.6      # [D] SLVSD26 5.4, RthetaJA, JEDEC standard test board
-THETA_JA_EVM   = 57.2       # [D] SLVSD26 5.4, RthetaJA_EVM, TI's official EVM board
-T_JUNCTION_MAX    = 125.0   # [D] SLVSD26 5.3 Recommended Operating Conditions
-T_JUNCTION_ABSMAX = 150.0   # [D] SLVSD26 5.1 Absolute Maximum Ratings
-T_SHUTDOWN        = 160.0   # [D] SLVSD26 5.5, thermal shutdown rising
 T_AMBIENT_STACK = 40.0      # [A] inside a stack between an ESC and a battery, no airflow
 
 fails, notes = [], []
@@ -33,70 +27,92 @@ def line(status, name, detail, src=""):
 
 def main():
     print("=== switching regulator dissipation ===")
-    print(f"      Vin {VIN_4S} V (4S), fsw {F_SW/1e3:.0f} kHz, ambient "
-          f"{T_AMBIENT_STACK:.0f} C [A]")
-    print(f"      theta_JA {THETA_JA_EVM} C/W (EVM board) to {THETA_JA_JEDEC} C/W "
-          f"(JEDEC board) [D SLVSD26 5.4]")
-    print(f"      limits: {T_JUNCTION_MAX:.0f} C recommended operating, "
-          f"{T_JUNCTION_ABSMAX:.0f} C absolute max, {T_SHUTDOWN:.0f} C thermal "
-          f"shutdown [D SLVSD26 5.1/5.3/5.5]\n")
+    print(f"      Vin {VIN_4S} V (4S), ambient {T_AMBIENT_STACK:.0f} C [A]")
+    print(f"      every part-specific number comes from design.BUCK_THERMAL, keyed on the "
+          f"fitted part,")
+    print(f"      and every rail voltage from design.BUCK_RAILS (asserted against the "
+          f"fitted divider by\n      check_electrical.py section 2) - this file no longer "
+          f"carries a copy of either\n")
 
-    rails = [("U8", "+5V", 4.967, design.INDUCTOR_LOAD_A["L2"], False),
-             ("U18", "+9V", 9.361, design.INDUCTOR_LOAD_A["L5"], not design.POPULATE_VTX)]
+    for ref, rail, vout, _rt, _rb, ind in design.BUCK_RAILS:
+        part = design.COMPONENTS[ref][2]
+        spec = design.BUCK_THERMAL.get(part)
+        if not spec:
+            fails.append(f"{ref}: {part} has no entry in design.BUCK_THERMAL - an "
+                         f"unclassified regulator is not a checked one")
+            line("FAIL", f"{ref} unclassified", f"{part} is not in design.BUCK_THERMAL")
+            continue
+        iout, dnp = design.INDUCTOR_LOAD_A[ind], design.buck_dnp(ref)
+        fsw = spec["fsw"]
+        rds_hs, rds_ls = spec["rds_hs"], spec["rds_ls"]
+        theta_jedec = spec["theta_jedec"]
+        theta_evm = spec["theta_evm"] or theta_jedec
+        tj_max = spec["tj_max"]
 
-    for ref, rail, vout, iout, dnp in rails:
         pout = vout * iout
         D = vout / VIN_4S
-        p_comp = iout**2 * RDS_HS * D + iout**2 * RDS_LS * (1 - D) \
-            + 0.5 * VIN_4S * iout * T_EDGE * F_SW * 2
+        p_comp = iout**2 * rds_hs * D + iout**2 * rds_ls * (1 - D) \
+            + 0.5 * VIN_4S * iout * T_EDGE * fsw * 2
         p_lo = pout * (1 / EFF_HI - 1)      # 90 % efficiency
         p_hi = pout * (1 / EFF_LO - 1)      # 85 % efficiency
-        tj_lo = T_AMBIENT_STACK + p_lo * THETA_JA_EVM       # best case
-        tj_hi = T_AMBIENT_STACK + p_hi * THETA_JA_JEDEC     # worst case
-        tj_mid_hi = T_AMBIENT_STACK + p_hi * THETA_JA_EVM   # good copper, poor efficiency
+        # Corners: best = most efficient on the best-copper board, worst = least efficient on the JEDEC board.
+        tj_lo = T_AMBIENT_STACK + p_lo * theta_evm       # best case
+        tj_hi = T_AMBIENT_STACK + p_hi * theta_jedec     # worst case
+        tj_mid_hi = T_AMBIENT_STACK + p_hi * theta_evm   # good copper, poor efficiency
 
         tag = " (DNP on this build)" if dnp else ""
-        print(f"  {ref} {rail}{tag}")
-        print(f"      Pout {pout:.2f} W at D={D:.3f}")
+        print(f"  {ref} {rail} {part}{tag}")
+        print(f"      Pout {pout:.2f} W at {vout:.3f} V x {iout:.2f} A, D={D:.3f}, "
+              f"fsw {fsw/1e3:.0f} kHz")
+        print(f"      theta_JA {theta_evm:.1f}-{theta_jedec:.1f} C/W (good copper to JEDEC "
+              f"board), limits {tj_max:.0f} C recommended / {spec['tj_absmax']:.0f} C "
+              f"absolute / {spec['t_shutdown']:.0f} C shutdown")
         print(f"      Pd: {p_comp*1e3:.0f} mW component-level [D RDS(on), A edges]  vs  "
               f"{p_lo*1e3:.0f}-{p_hi*1e3:.0f} mW at {EFF_HI*100:.0f}-{EFF_LO*100:.0f}% "
               f"efficiency [L]")
-        print(f"      junction {tj_lo:.0f} C best (EVM copper, {EFF_HI*100:.0f}%) .. "
-              f"{tj_mid_hi:.0f} C (EVM copper, {EFF_LO*100:.0f}%) .. "
-              f"{tj_hi:.0f} C worst (JEDEC copper, {EFF_LO*100:.0f}%), against "
-              f"{T_JUNCTION_MAX:.0f} C")
-        print(f"      the spread IS the finding - it needs measuring, not more arithmetic")
+        if theta_evm == theta_jedec:
+            print(f"      junction {tj_lo:.0f} C best ({EFF_HI*100:.0f}%) .. {tj_hi:.0f} C "
+                  f"worst ({EFF_LO*100:.0f}%) against {tj_max:.0f} C - the datasheet "
+                  f"gives ONE theta_JA, so the spread here is the efficiency band alone")
+        else:
+            print(f"      junction {tj_lo:.0f} C best (EVM copper, {EFF_HI*100:.0f}%) .. "
+                  f"{tj_mid_hi:.0f} C (EVM copper, {EFF_LO*100:.0f}%) .. "
+                  f"{tj_hi:.0f} C worst (JEDEC copper, {EFF_LO*100:.0f}%), against "
+                  f"{tj_max:.0f} C")
+            print(f"      the spread IS the finding - it needs measuring, not more "
+                  f"arithmetic")
 
         if dnp:
             line("note", f"{ref} not fitted",
                  f"DNP - no dissipation on this build, but if the VTX rail is ever "
                  f"populated this part reaches {tj_hi:.0f} C worst case "
                  + ("(over the "
-                    f"{T_SHUTDOWN:.0f} C thermal shutdown - it would hiccup)"
-                    if tj_hi >= T_SHUTDOWN else
-                    f"({'over' if tj_hi >= T_JUNCTION_MAX else 'under'} the "
-                    f"{T_JUNCTION_MAX:.0f} C limit)"))
-        elif tj_lo >= T_JUNCTION_MAX:
+                    f"{spec['t_shutdown']:.0f} C thermal shutdown - it would hiccup)"
+                    if tj_hi >= spec['t_shutdown'] else
+                    f"({'over' if tj_hi >= tj_max else 'under'} the "
+                    f"{tj_max:.0f} C limit)"))
+        elif tj_lo >= tj_max:
             fails.append(f"{ref}: even the best-case junction {tj_lo:.0f} C exceeds "
-                         f"{T_JUNCTION_MAX:.0f} C")
+                         f"{tj_max:.0f} C")
             line("FAIL", f"{ref} junction temperature",
-                 f"{tj_lo:.0f} C BEST case exceeds the {T_JUNCTION_MAX:.0f} C limit - "
+                 f"{tj_lo:.0f} C BEST case exceeds the {tj_max:.0f} C limit - "
                  f"no layout fixes this")
-        elif tj_hi >= T_JUNCTION_MAX:
+        elif tj_hi >= tj_max:
             notes.append(f"{ref}: worst-case junction {tj_hi:.0f} C exceeds "
-                         f"{T_JUNCTION_MAX:.0f} C on JEDEC copper - MEASURE IT at T3")
+                         f"{tj_max:.0f} C on JEDEC copper - MEASURE IT at T3")
             line("warn", f"{ref} junction temperature",
-                 f"{tj_hi:.0f} C worst case EXCEEDS the {T_JUNCTION_MAX:.0f} C limit on "
+                 f"{tj_hi:.0f} C worst case EXCEEDS the {tj_max:.0f} C limit on "
                  f"JEDEC copper; {tj_mid_hi:.0f} C on EVM-class copper. This board is "
                  f"6-layer with planes, so the truth is nearer the low end - but that is "
-                 f"an opinion until T3 measures it")
-        elif tj_hi >= T_JUNCTION_MAX - 30:
+                 f"an opinion until T3 measures it", spec["src"])
+        elif tj_hi >= tj_max - 30:
             notes.append(f"{ref}: {tj_hi:.0f} C leaves under 30 C of margin")
             line("warn", f"{ref} junction temperature",
-                 f"{tj_hi:.0f} C worst case - under 30 C of margin. MEASURE IT at T3")
+                 f"{tj_hi:.0f} C worst case - under 30 C of margin. MEASURE IT at T3",
+                 spec["src"])
         else:
             line("ok", f"{ref} junction temperature",
-                 f"{tj_hi:.0f} C worst case, {T_JUNCTION_MAX-tj_hi:.0f} C of margin")
+                 f"{tj_hi:.0f} C worst case, {tj_max-tj_hi:.0f} C of margin", spec["src"])
         print()
 
     # ------------------------------------------------------------------ the LDOs ---
@@ -186,14 +202,18 @@ def main():
     print("=== what this check cannot do ===")
     line("note", "RDS(on) and edge rate are [A]",
          "the component figure implies ~97% efficiency, optimistic for this part. "
-         "RDS(on) is CONFIRMED [D] SLVSD26 5.5 (148/78 mOhm); T_EDGE is still [A] and "
+         "RDS(on) is CONFIRMED [D] per part in design.BUCK_THERMAL (the fitted "
+         "LMR33630A: SLVSD26 5.5 gives 148/78 mOhm, SNVSAN3F 7.5 gives 75/50 typ); "
+         "T_EDGE is still [A] and "
          "gate-charge, dead-time and Coss losses are not modelled at all - which is why "
          "the efficiency-band figure, not this one, drives the verdict")
     line("note", "theta_JA is JEDEC-board, not THIS board",
-         f"{THETA_JA_JEDEC} C/W is SLVSD26's RthetaJA (JEDEC standard test board) and "
-         f"{THETA_JA_EVM} C/W is its EVM figure. The copper under U8 here differs from "
-         f"both, so treat the bracket as the range the T3 measurement "
-         f"validates, not as gospel")
+         "each part carries the RthetaJA its own datasheet gives, keyed in "
+         "design.BUCK_THERMAL: the fitted LMR33630A has ONE (72.5 C/W, RNX on a "
+         "4-layer JEDEC board - no EVM figure, so one honest number rather than a "
+         "bracket invented from two), while U18's TPS54202 has two (118.6 C/W JEDEC "
+         "and 57.2 C/W on TI's EVM). The copper under U8 here differs from all of "
+         "them, so treat the figure as what the T3 measurement validates, not gospel")
     line("note", "airflow is assumed to be NONE",
          "the stack sits between the ESC and the battery. A hovering quad moves air "
          "downward past it, which helps, but by an amount nobody here has measured")

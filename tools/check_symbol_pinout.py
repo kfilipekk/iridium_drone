@@ -35,6 +35,12 @@ DATASHEET_VERIFIED = {
                      "all 28 pins + EP, every one wired", "2026-09-17"),
     "OPA2374M{slash}TR": ("docs/datasheets/OPA2374-TI.pdf, D package, Pin Functions: OPA2374",
                           "all 8 pins", "2026-09-17"),
+    "LMR33630ARNXR": ("docs/datasheets/LMR33630-SNVSAN3F.pdf Table 6-1 Pin Functions "
+                      "(VQFN column) + Figure 6-2 RNX top view + 7.4/7.5",
+                      "all 12 pins. Pin 3 is 'NC' in the table and is TIED TO SW on the "
+                      "PCB per 10.1 guideline 3; pin 8 (PG) is left open, which the "
+                      "pin-table note permits; pin 5 (VCC) carries the 1 uF bypass",
+                      "2026-09-20"),
     "SN74LVC1G17DBVR": ("docs/datasheets/SN74LVC1G17-TI.pdf Pin Functions, DBV column",
                         "all 5 pins: NC A GND Y VCC", "2026-09-18"),
     "ICM-42688-P": ("docs/datasheets/ICM-42688-P-TDK.pdf DS-000347 pin table, and an "

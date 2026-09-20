@@ -1,0 +1,15 @@
+# Python dependencies beyond the standard library.
+#
+# The repository is deliberately stdlib-only EVERYWHERE except the real-ephemeris path in
+# tools/soop_solver.py, which propagates TLEs with SGP4. That dependency is narrow on
+# purpose: SGP4 is a published standard with a validated reference implementation, and a
+# hand-rolled copy is exactly the kind of artefact that is subtly wrong in a way nothing
+# else in this repo would catch.
+#
+# tools/check_soop_ephemeris.py reports a missing package as a FAILURE, not a skip, and
+# soop_solver refuses to fall back to its synthetic propagator - a fallback would quietly
+# turn "no ephemeris" into "an ephemeris that flatters the answer".
+#
+#   pip install -r requirements.txt
+#
+sgp4>=2.27

@@ -136,12 +136,11 @@ PREREQUISITES = [
          claim="every BOM line is in stock at JLCPCB in the quantity ordered, the code "
                "resolves to the manufacturer part number the design intends, and the "
                "snapshot is no older than 7 days"),
-    dict(id="bench.grommet", cls=BENCH,
-         claim="the grommet flange (assumed 6.0 mm) clears the parts around the holes",
-         why="the flange is a property of the grommet in the frame kit, not of this PCB. "
-             "A wider flange means a different grommet, not a different board, so it "
-             "cannot change what is ordered - only how the stack goes together.",
-         refresh="measure the grommet when the frame kit arrives"),
+    dict(id="bench.bounds", cls=GATED, check="no bench item can change what is ordered",
+         claim="every bench-only item confirms a design-side bound, sets a firmware "
+               "constant, or records a bought part's property - none can require "
+               "different copper"),
+
 
     # -- performed at the checkout, so they cannot be done earlier ------------------
     dict(id="act.copper", cls=ORDER_ACTION,
@@ -167,40 +166,44 @@ PREREQUISITES = [
              "2 x 2 gives roughly 93 x 95 mm. Do NOT commit a panelised .kicad_pcb: the "
              "board files stay exactly as verified, so nothing has to be re-checked."),
 
-    # -- only knowable with hardware in hand: gates flying, not ordering ------------
-    dict(id="bench.u8", cls=BENCH,
+    dict(id="bench.u8", cls=BENCH, bound="87 C worst case against 125 C - 38 C of margin",
          claim="U8's junction temperature under load",
-         why="the datasheet gives 118.6 C/W JEDEC and 57.2 C/W EVM, and this 6-layer "
-             "board is between them. Only a thermocouple says where.",
+         why="BOUND. The fitted LMR33630A RNX carries ONE theta_JA (72.5 C/W) rather than "
+             "the old part's JEDEC-EVM bracket, so 87 C is the corner and not the top of "
+             "a range. U8 was swapped for exactly this and the swap is already on the "
+             "board; a reading can confirm it and cannot un-fit it.",
          refresh="runbook T3 (docs/navcore-runbook.tex Part 9)"),
     dict(id="bench.u9", cls=BENCH,
+         bound="104 C peak on good copper against 150 C - 46 C of margin",
          claim="U9's board-to-junction offset",
-         why="U19 logs the board beside U9 every flight; the offset between TEMP[0] and "
-             "the junction is set once, at T3a, and then carried forward.",
+         why="BOUND. Only the datasheet's '(No Heatsink)' corner is over, and that corner "
+             "describes a 2-layer board - this one is MEASURED by tools/thermal_vias.py "
+             "at 7443 mm2 of GND plane and 5 vias on the output pad. What the bench sets "
+             "is the offset between TEMP[0] and the junction, a constant U19 then carries "
+             "forward every flight.",
          refresh="runbook T3a (docs/navcore-runbook.tex Part 10)"),
-    dict(id="bench.escshunt", cls=BENCH,
-         claim="BATT_AMP_PERVLT, from the ESC's actual shunt",
-         why="it is a property of the ESC you receive, not of this board.",
-         refresh="calibrate against a known current at T1"),
-    dict(id="bench.esccable", cls=BENCH,
-         claim="the ESC cable pinout matches J2",
-         why="J2 matches Betaflight's documented SpeedyBee F405 V4 order, but the cable "
-             "is a separate purchase and must be buzzed out.",
-         refresh="continuity test on the cable received"),
-    dict(id="bench.flowyaw", cls=BENCH,
+    dict(id="bench.flowyaw", cls=BENCH, bound="one of four cardinal values in defaults.parm",
          claim="FLOW_ORIENT_YAW, against the camera's actual mount",
-         why="flow arrives as MAVLink from the companion; the sign depends on how the "
-             "camera is mounted, which is not in any file here.",
+         why="PARAM. Flow arrives as MAVLink from the off-board companion, so the board "
+             "cannot encode the sign and has no pin to change. Set it from CAD, confirm "
+             "it in position hold.",
          refresh="check the sign before position hold, runbook Part 14"),
     dict(id="bench.rf", cls=BENCH,
+         bound="Pr >= -110 dBm at 2 dB system NF, met by the bought SAWbird+ IR",
          claim="that this antenna and front end can produce a usable Iridium fix",
-         why="sitl/ proves what ArduPilot does with a fix of a GIVEN quality; it cannot "
-             "prove the receiver can produce one. Needs the SDR and the antenna.",
+         why="MODULE. sitl/ proves what ArduPilot does with a fix of a GIVEN quality; it "
+             "cannot prove the receiver can produce one. But the receiver IS a bought "
+             "part - the Nooelec SAWbird+ IR, >=30 dB gain with the SAW at the antenna - "
+             "and a desense result is fixed by placement, ferrites and shielding. The one "
+             "board-side lever, an on-board LNA+SAW, was DELETED in favour of that module, "
+             "so it is not a lever any more.",
          refresh="runbook T3b (docs/navcore-runbook.tex Part 11)"),
     dict(id="bench.cameraflow", cls=BENCH,
+         bound="an off-board camera's property; J4 was cut",
          claim="flow quality over real grass",
-         why="simulated flow is perfect flow. This needs recorded footage from the "
-             "actual camera, over actual ground.",
+         why="MODULE. Simulated flow is perfect flow, so this needs recorded footage from "
+             "the actual camera over actual ground. The camera is off-board and J4 was cut "
+             "from this board, so poor flow selects a different camera.",
          refresh="record a flight, then replay it"),
 
     # Flies the way the firmware says it does; an ordering prerequisite ---------- not classified as FLY.
@@ -210,25 +213,38 @@ PREREQUISITES = [
 
     # Ready to FLY only.
     dict(id="fly.rfbench", cls=FLY, tool="check_rf.py",
+         bound="recorded data; asserts nothing about the board",
          claim="the T3b bench measurements are recorded and within the link budget"),
 
-    dict(id="build.ephemeris", cls=BUILD,
-         claim="SGP4 and real TLE ephemeris, so the solver stops taking satellite state as input",
-         why="tools/soop_solver.py is validated against a circular propagator, which proves "
-             "the geometry inverts and is not an ephemeris. Writing it is the only way."),
-    dict(id="build.burst", cls=BUILD,
-         claim="burst detection and frequency estimation from I/Q, to ~5 Hz over 40-80 bursts",
-         why="no RF bench run substitutes for it: T3b measures the ANTENNA and front end, "
-             "while this is the DSP that meets the 5 Hz precision the solver established. "
-             "An 8.28 ms burst has ~120 Hz of raw FFT resolution, so the carrier must be "
-             "estimated well inside a bin."),
+    dict(id="solver.ephemeris", cls=GATED,
+         check="real Iridium ephemeris inverts the geometry",
+         claim="the solver propagates real TLEs with SGP4 and recovers a known position"),
+    dict(id="solver.burst", cls=GATED,
+         check="burst detection and carrier estimation meet the 5 Hz target",
+         claim="I/Q gives a carrier estimate inside the solver's 5 Hz target"),
+    # The solve is ported to C and gated (solver.c below). What remains is not the
+    # arithmetic - it is the aircraft around it.
     dict(id="build.firmware", cls=BUILD,
-         claim="the C firmware for the H743 that runs the solve on the aircraft",
-         why="the solver exists in Python on a desk; the aircraft has to run it in flight."),
+         claim="the flight firmware: I/Q capture, an in-C ephemeris and the EKF hand-off on the H743",
+         why="the solve is ported and agrees with the Python reference (solver.c), but "
+             "nothing yet samples the MAX2112, runs SGP4 in C, or hands a fix to the EKF "
+             "on the aircraft."),
+    dict(id="solver.c", cls=GATED,
+         check="the C solver agrees with the Python reference and builds for the target",
+         claim="the Doppler solve is ported to C, matches the Python reference and "
+               "cross-compiles for the H743"),
+    # The BACKEND now exists and is gated (ekf.backend below). What is not yet proven is
+    # the end-to-end hand-off on a running vehicle.
     dict(id="build.ekf", cls=BUILD,
-         claim="an AP_GPS backend or AP_ExternalAHRS so the fix reaches the EKF",
-         why="GPS_INPUT (#232) is the documented route for an EXTERNAL computer, and this "
-             "aircraft solves on board - so the route into the EKF does not exist yet."),
+         claim="the solved fix reaches the EKF end-to-end, and the on-board solve drives the backend",
+         why="the backend is written, registered and compiled (ekf.backend), and a SITL "
+             "harness for the hand-off exists (tools/soop_sitl_test.py) - but it is not "
+             "yet passing, so 'the fix reaches the EKF' is NOT claimed. The solve task "
+             "that calls AP_SoOPFix::set() is also unwritten."),
+    dict(id="ekf.backend", cls=GATED,
+         check="the SoOP GPS backend is registered and compiled into the firmware",
+         claim="an in-process AP_GPS backend carries the on-board Doppler fix, so the "
+               "EKF route does not depend on an external computer"),
 ]
 
 
@@ -304,6 +320,12 @@ def evaluate(results, tool_results, today=None):
                 n_total=len(PREREQUISITES))
 
 
+def bound_fmt(p):
+    """The design-side bound beside a bench item, or nothing if it has not been stated."""
+    b = p.get("bound")
+    return f"\n         bound: {b}" if b else ""
+
+
 def render(rep, width=72):
     """The verdict, derived. Never printed without its breakdown."""
     out = ["\n" + "=" * width]
@@ -331,12 +353,14 @@ def render(rep, width=72):
     out.append("")
     if failed_fly or rep["bench"]:
         out.append(f"NOT READY TO FLY - {len(failed_fly) + len(rep['bench'])} "
-                   f"item(s) need hardware:")
+                   f"item(s) need hardware.")
+        out.append("     None can change what is ORDERED - each confirms a bound, sets a")
+        out.append("     parameter, or records a bought part (tools/check_bench_bounds.py).")
         for p, bad in rep["fly"]:
             if bad:
-                out.append(f"     - {p['claim']}  [{bad}]")
+                out.append(f"     - {p['claim']}  [{bad}]" + bound_fmt(p))
         for p in rep["bench"]:
-            out.append(f"     - {p['claim']}")
+            out.append(f"     - {p['claim']}" + bound_fmt(p))
     else:
         out.append("READY TO FLY - every bench item is recorded")
 

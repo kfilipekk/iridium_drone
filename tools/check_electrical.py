@@ -165,35 +165,44 @@ def main():
 
     # ---------------------------------------------------------- 2. buck dividers
     # The reference is A property of the part, and hardcoding it hid a real error.
-    VREF = {"TPS54331": 0.800,      # [D] TI TPS54331 datasheet
-            "TPS54202": 0.596}      # [D] TI TPS54202 SLVSD26C, "typical voltage
-                                    #     reference is designed at 0.596 V"
-    for name, rail, rtop, rbot in (("5 V buck (U8)", "+5V", "R6", "R7"),
-                                   ("9 V buck (U18)", "+9V", "R42", "R43")):
-        _ref_part = design.COMPONENTS[name.split("(")[1].rstrip(")")][2]
+    VREF = design.VREF_V
+    for ref, rail, vout_declared, rtop, rbot, _ind in design.BUCK_RAILS:
+        name = f"{rail} buck ({ref})"
+        _ref_part = design.COMPONENTS[ref][2]
         if _ref_part not in VREF:
             errs.append(f"{name}: regulator {_ref_part} has no reference voltage in "
-                        f"VREF - add it with its datasheet citation before trusting "
-                        f"this divider")
+                        f"design.VREF_V - add it with its datasheet citation before "
+                        f"trusting this divider")
             continue
-        vref = VREF[_ref_part]
+        vref = VREF[_ref_part][0]
         a, b = to_ohms(value_of(rtop)), to_ohms(value_of(rbot))
         if not a or not b:
             notes.append(f"{name}: cannot read {rtop}/{rbot}")
             continue
         vout = vref * (1 + a / b)
         want = {"+5V": 5.0, "+9V": 9.0}[rail]
-        line = (f"{name}: {value_of(rtop)}/{value_of(rbot)} -> {vout:.2f} V "
-                f"(target {want} V)")
-        if abs(vout - want) / want > 0.10:
-            errs.append(line + " - more than 10% off")
+        detail = (f"{name}: {value_of(rtop)}/{value_of(rbot)} on a {vref:.3f} V "
+                  f"reference -> {vout:.3f} V (design.BUCK_RAILS declares "
+                  f"{vout_declared:.3f} V, nominal {want} V)")
+        if abs(vout - vout_declared) / vout_declared > 0.01:
+            errs.append(detail + " - THE DECLARED RAIL VOLTAGE AND THE FITTED DIVIDER "
+                                 "DISAGREE by more than 1%; one of the two is stale, "
+                                 "and a thermal or load budget built on the stale one "
+                                 "is built on a rail that does not exist")
+        elif abs(vout - want) / want > 0.10:
+            errs.append(detail + " - more than 10% off")
         elif abs(vout - want) / want > 0.05:
-            warns.append(line)
+            warns.append(detail)
         else:
-            notes.append(line)
+            notes.append(detail)
     # Enable dividers set the undervoltage lockout.
     PACK_EMPTY_V = design.CELLS * 3.3       # 4S at 3.3 V/cell - land well before this
-    BUCK_MIN_VIN = 4.5                      # [D] SLVSD26C recommended minimum VIN
+    # The lower bound is A property of the part TOO.
+    MIN_VIN = {"TPS54331": (3.5, "[D] TI TPS54331 datasheet"),
+               "TPS54202": (4.5, "[D] SLVSD26C recommended operating conditions, "
+                                 "VIN 4.5-28 V"),
+               "LMR33630A": (3.8, "[D] SNVSAN3F 7.3 Recommended Operating Conditions, "
+                                  "VIN 3.8-36 V")}
     for name, ref, rtop, rbot in (("5 V buck EN", "U8", "R4", "R5"),
                                   ("9 V buck EN", "U18", "R40", "R41")):
         a, b = to_ohms(value_of(rtop)), to_ohms(value_of(rbot))
@@ -207,7 +216,12 @@ def main():
                         f"design.EN_THRESHOLD_V - an unclassified regulator is not a "
                         f"checked one; add it with its datasheet citation")
             continue
+        if part not in MIN_VIN:
+            errs.append(f"{name}: regulator {part} has no minimum input voltage recorded, "
+                        f"so there is nothing to say where this UVLO must sit")
+            continue
         vth, confirmed, src = ent
+        BUCK_MIN_VIN = MIN_VIN[part][0]
         uvlo = vth * (a + b) / b
         line = (f"{name}: {value_of(rtop)}/{value_of(rbot)} at a {vth} V threshold "
                 f"-> starts at {uvlo:.1f} V in")
@@ -216,7 +230,7 @@ def main():
                                f"({PACK_EMPTY_V:.1f} V); the rail would drop out in "
                                f"flight")
         elif uvlo <= BUCK_MIN_VIN:
-            errs.append(line + f" - below the regulator's own {BUCK_MIN_VIN} V minimum "
+            errs.append(line + f" - below {part}'s own {BUCK_MIN_VIN} V minimum "
                                f"input, so the UVLO does nothing")
         else:
             notes.append(line + f" (window {BUCK_MIN_VIN}-{PACK_EMPTY_V:.1f} V)")

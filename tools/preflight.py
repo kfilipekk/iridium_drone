@@ -387,17 +387,72 @@ def firmware(board):
     # The count comes from the line check_sitl.py actually prints.
     m = re.search(r'mechanisms\s*:\s*(\d+)/(\d+) asserting', out)
     n_info = re.search(r'measurement:\s*(\d+) informational', out)
+    first_problem = re.search(r'^FAIL - \d+ problem\(s\):\n\s+- (.+)$', out, re.M)
     if m and rc == 0:
         _sitl = (f"{m.group(1)}/{m.group(2)} asserting scenarios pass"
                  + (f", {n_info.group(1)} measured not gated" if n_info else "")
                  + ", against the parameters that ship")
+    elif first_problem:
+        _sitl = (f"{m.group(1)}/{m.group(2)} asserting scenarios pass, but the suite is "
+                 f"NOT green - {first_problem.group(1).strip()}" if m else
+                 f"the suite is NOT green - {first_problem.group(1).strip()}")
     elif m:
-        _sitl = f"only {m.group(1)}/{m.group(2)} asserting scenarios pass"
+        _sitl = (f"{m.group(1)}/{m.group(2)} asserting scenarios pass, but check_sitl.py "
+                 f"exited non-zero and named no problem - its output above says why")
     else:
         # No count at all.
         _sitl = ("check_sitl.py reported no scenario count - its output above says why; "
                  "a suite that has not run is not a passing suite")
     check("firmware", "SITL scenarios pass", rc == 0, _sitl)
+
+    # The real-ephemeris prerequisite.
+    rc, out = run("check_soop_ephemeris.py")
+    m = re.search(r'EPHEMERIS OK - (\d+)/(\d+) assertions on (\d+) real', out)
+    check("firmware", "real Iridium ephemeris inverts the geometry", rc == 0,
+          (f"SGP4 + TLE, {m.group(3)} satellites, {m.group(1)}/{m.group(2)} assertions"
+           if m else "see tools/check_soop_ephemeris.py") if rc == 0 else
+          "the SGP4/TLE ephemeris or the TEME->ECEF frame conversion does not hold - "
+          "see tools/check_soop_ephemeris.py")
+
+    # The burst-DSP prerequisite, gated.
+    rc, out = run("check_soop_burst.py")
+    m = re.search(r'BURST DSP OK - (\d+)/(\d+) assertions, p90 ([\d.]+) Hz < 5 Hz '
+                  r'at C/N0 (\d+) dB-Hz', out)
+    check("firmware", "burst detection and carrier estimation meet the 5 Hz target",
+          rc == 0,
+          (f"{m.group(1)}/{m.group(2)} assertions, p90 {m.group(3)} Hz, "
+           f"C/N0 {m.group(4)} dB-Hz on synthetic I/Q" if m else
+           "see tools/check_soop_burst.py") if rc == 0 else
+          "the burst detector or the carrier estimator does not meet the solver's "
+          "precision - see tools/check_soop_burst.py")
+
+    # The C port of the solve, gated.
+    rc, out = run("check_soop_c.py")
+    m = re.search(r'SOOP-C OK - C solver agrees with Python to ([\d.eE+-]+) m', out)
+    check("firmware", "the C solver agrees with the Python reference and builds for the target",
+          rc == 0,
+          (f"differential on identical observations, agreement {m.group(1)} m, "
+           f"cross-compiled Cortex-M7" if m else
+           "see tools/check_soop_c.py") if rc == 0 else
+          "the C solver disagrees with the Python reference, or does not build for the "
+          "target - see tools/check_soop_c.py")
+
+    # The SoOP AP_GPS backend, gated.
+    rc, out = run("check_soop_backend.py")
+    m = re.search(r'AP_GPS_SoOP::read\(\) is (\d+) bytes', out)
+    check("firmware", "the SoOP GPS backend is registered and compiled into the firmware",
+          rc == 0,
+          (f"GPS_TYPE_SOOP = 27; backend read() {m.group(1)} bytes in the board and SITL "
+           f"firmwares" if m else "see tools/check_soop_backend.py") if rc == 0 else
+          "the SoOP backend is not registered or not in the firmware - see "
+          "tools/check_soop_backend.py")
+
+    rc, out = run("check_bench_bounds.py")
+    n = re.search(r'^(\d+) items accounted for: (.*)$', out, re.M)
+    check("mechanical", "no bench item can change what is ordered", rc == 0,
+          (f"{n.group(1)} classified - {n.group(2)}" if n else
+           "see tools/check_bench_bounds.py") if rc == 0 else
+          "a bench item could force a board change - see tools/check_bench_bounds.py")
 
     rc, out = run("check_connectors.py")
     nf = re.search(r'^(\d+) failure\(s\), (\d+) warning\(s\)', out, re.M)

@@ -41,6 +41,9 @@ PACKAGE_PADS = {
     "SOIC-8": 8, "SOIC-8-208MIL": 8, "SOP-8": 8, "TQFN-28-EP": 29, "DSBGA-6": 6,
     "COB-28": 28, "SOT-23": 3, "SOT-23-3": 3, "SOT-23-3L": 3, "SOT-23-5": 5,
     "SOT-23-6": 6, "SOT-25-5": 5, "SOD-123": 2, "DO-214AA": 2, "DO-214AA(SMB)": 2,
+    # U8's RNX: 'VQFN-12(2x3)' in JLCPCB's own package string. 12 perimeter pads, and
+    # the SW "blade" is pad 12 - there is no separate exposed pad to count.
+    "VQFN-12": 12,
     "0402": 2, "0603": 2, "0805": 2, "1206": 2,
 }
 
@@ -101,7 +104,7 @@ def family_of(text):
     """The package family token in a JLC description or a footprint name."""
     if not text:
         return None
-    for fam in ("LQFP-100", "LGA-14", "LGA-12", "QFN-8", "COB-28", "SOIC-8",
+    for fam in ("VQFN-12", "LQFP-100", "LGA-14", "LGA-12", "QFN-8", "COB-28", "SOIC-8",
                 "SOT-23-6", "SOT-23-5", "SOT-25-5", "SOT-23-3", "SOT-23",
                 "SMD3225-4P", "TQFN-28-EP", "TQFN-28", "SOP-8", "DSBGA-6", "SOD-123",
                 "SOIC"):

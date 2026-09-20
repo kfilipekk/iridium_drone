@@ -11,6 +11,19 @@ import design as _d
 
 BOARD = "NAVCORE-SoOP.kicad_pcb"
 PARTS = "docs/PARTS.csv"
+DEFAULTS = "firmware/NAVCORE_SoOP/defaults.parm"
+
+
+def shipped_param(name):
+    """The value a parameter ships with, read from the generated defaults.parm."""
+    try:
+        for line in open(DEFAULTS):
+            line = line.split("#", 1)[0].strip()
+            if line.startswith(name + " "):
+                return float(line.split()[1])
+    except FileNotFoundError:
+        return None
+    return None
 
 results = []          # (group, name, verdict, detail, source)
 assumptions = []
@@ -43,11 +56,7 @@ PI = dict(name=_d.PI["name"], g=_d.PI["g"], A5=_d.PI["power_a"], cams=1,
               "(11 g) with eMMC pads and a heavier SoC; [D] 5V/2A per radxa.com")
 
 # 5 V loads that hang off this board once everything is fitted.
-LOADS_5V = [("board itself",        0.620, "[M] docs/HARDWARE.md budget"),
-            ("TFS20-L lidar",       0.106, "[D] 0.35 W at 3.3 V via an inline LDO"),
-            ("ToF ring: 8x VL53L1X",0.160, "[D] ~20 mA each"),
-            ("TCA9548A mux",        0.001, "[D]"),
-            ("WS2812 strip",        0.060, "[M] strobe duty <=10% of [D] 10x60 mA full-white peak; peak 0.6 A transient, buck rated 2 A")]
+LOADS_5V = [(n, cont, src) for n, cont, _peak, src in _d.LOADS_5V]
 
 PI_OWN_BEC = (_d.PI["name"], 2.000,
               "[D] peak for the Zero 2 W; the Pi 5 needs up to 5 A")
@@ -132,6 +141,10 @@ def power(loads):
           "[D] FNR4030S100MT C167879; Isat 2.4 A is a transient rating, NOT this budget")
     check("power", "TPS54202 5 V regulator", total <= 2.0,
           f"{total:.2f} A of the regulator's 2.0 A rating", "[D] TPS54202DDCR C191884")
+    pk = _d.RAIL_5V["fitted_peak_a"]
+    check("power", "L2 saturation at the peak column", pk <= _d.RAIL_5V["isat_a"],
+          f"{pk:.2f} A peak (WS2812 full-white transient) of L2's {_d.RAIL_5V['isat_a']} A Isat",
+          "[D] FNR4030S100MT; a millisecond transient is judged against Isat, not Irms")
     note("power", "Pi 5 instead of the Zero",
          "draws up to 5 A - CANNOT be powered from this board; needs its own BEC",
          "[D] Raspberry Pi")
@@ -224,10 +237,31 @@ def buses():
           f"DShot600 (MOT_PWM_TYPE 6) against the ESC's {ESC['proto']}", ESC["src"])
     check("buses", "battery chemistry", "4S" in "3-6S" or True,
           f"4S pack within the ESC's {ESC['cells']} input range", ESC["src"])
+    # Compared to the shipped file, not to a literal.
     derived = 1000.0 / ESC["cur_scale_mv_per_A"]
-    check("buses", "BATT_AMP_PERVLT matches the ESC", abs(derived - 25.0) < 0.5,
-          f"ESC Scale={ESC['cur_scale_mv_per_A']:.0f} mV/A -> {derived:.1f} A/V; "
-          f"this board adds no divider", ESC["src"])
+    shipped = shipped_param("BATT_AMP_PERVLT")
+    check("buses", "BATT_AMP_PERVLT matches the ESC",
+          shipped is not None and abs(shipped - derived) < 0.05,
+          (f"ESC Scale={ESC['cur_scale_mv_per_A']:.0f} mV/A -> {derived:.1f} A/V, and "
+           f"{DEFAULTS} ships {shipped}; this board adds no divider"
+           if shipped is not None else
+           f"BATT_AMP_PERVLT is absent from {DEFAULTS}"), ESC["src"])
+    # ------------------------------------------------------------------ J2 vs the manual
+    J2_SIGNAL = {"GND": "GND", "VBAT_IN": "VBAT", "M1": "M1", "M2": "M2", "M3": "M3",
+                 "M4": "M4", "ESC_CUR": "CUR", "ESC_TEL": "TEL"}
+    want = list(ESC["pin_order"])
+    pin_net = {}
+    for name, pins in _d.NETS.items():
+        for p in pins:
+            if p.startswith("J2.") and p[3:].isdigit():
+                pin_net[int(p[3:])] = name
+    seq = [J2_SIGNAL.get(pin_net.get(i), pin_net.get(i, "missing"))
+           for i in range(1, len(want) + 1)]
+    check("buses", "J2 pin order matches the ESC manual", seq == want,
+          (f"J2.1-{len(want)} = {' '.join(seq)}, matching the manual" if seq == want else
+           f"J2.1-{len(want)} = {' '.join(seq)} but the manual is {' '.join(want)}"),
+          ESC["src"])
+
     seen = {}
     clash = False
     for name, addr, src in I2C1:

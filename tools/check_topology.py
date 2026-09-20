@@ -58,6 +58,11 @@ def main():
                      'low-side FET IS the freewheel path, so no catch diode exists to '
                      'forget. Vref 0.596 V, internal compensation, 5 ms internal '
                      'soft-start.'),
+        "LMR33630A": ('[D] TI SNVSAN3F: "3.8-V to 36-V, 3-A synchronous buck converter" '
+                      'with R(HSD) and R(LSD) integrated (7.5 lists both) - the low-side '
+                      'FET IS the freewheel path, so no catch diode exists to forget. '
+                      'Vref 1.000 V, internally compensated. The RNX variant additionally '
+                      'ties the SW pin to the NC pin on the PCB (10.1).'),
     }
     print("=== buck regulators: is the required freewheel path present? ===")
     for ref, ph, boot, out in (("U8", "BUCK_PH", "BUCK_BOOT", "+5V"),

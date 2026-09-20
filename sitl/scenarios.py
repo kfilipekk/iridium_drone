@@ -157,12 +157,16 @@ SCENARIOS = {
         mode="gpsinput", deny_at=40, src=1, startup={"GPS2_TYPE": 14}, rate=5.0,
         rc_fail_at=70, fs_thr=1,
         why="LATE CUT. Manual control is lost while the aircraft is flying on a SoOP "
-            "fix, at t+70 - by which time the applet has ALREADY taken it to RTL (~t+60 "
-            "on the shipped FS_EKF_ACTION 0). So this measures that radio loss does not "
-            "DISTURB an applet-commanded recovery; it does NOT exercise the radio "
-            "failsafe transition, because there is no transition left to make. "
-            "rc_loss_early is the scenario that tests the transition.",
-        max_p95=None, expect_mode="RTL", informational=True),
+            "fix, at t+70. So this measures that radio loss does not DISTURB an "
+            "applet-commanded recovery; it does NOT exercise the radio failsafe "
+            "transition - rc_loss_early is the scenario that tests that. "
+            "NOTE the expectation is a PAIR. The applet owns GPS loss and the SoOP fix's "
+            "health toggles, so the mode is a ~5 s square wave, RTL <-> GUIDED_NOGPS; "
+            "which one t+70 lands in is cycle phase, not aircraft behaviour. Until "
+            "2026-09-20 this asserted RTL alone and PASSed or FAILed on that phase - "
+            "the same recorded binary does both. Both modes ARE the recovery, so both "
+            "count, and the observed sequence is reported either way.",
+        max_p95=None, expect_mode=("RTL", "GUIDED_NOGPS"), informational=True),
 
     "rc_loss_early": dict(
         mode="gpsinput", deny_at=40, src=1, startup={"GPS2_TYPE": 14}, rate=5.0,
@@ -183,8 +187,12 @@ SCENARIOS = {
             "the aircraft reaches RTL at t+70 and the failsafe CANCELS it into LAND at "
             "t+78. rc_loss still reports PASS on it, because it asserts RTL was entered "
             "rather than that it survived - which is exactly how the defect hid. Compare "
-            "against rc_loss/deadreckon on the shipped FS_EKF_ACTION 0.",
-        max_p95=None, expect_mode="RTL", informational=True),
+            "against rc_loss/deadreckon on the shipped FS_EKF_ACTION 0. "
+            "Accepted modes are the same PAIR as rc_loss, for the same square-wave "
+            "reason - the LAND that ACTION 1 produces is the COMPARISON this scenario "
+            "exists to show, so it is reported in the observed sequence rather than "
+            "asserted on.",
+        max_p95=None, expect_mode=("RTL", "GUIDED_NOGPS"), informational=True),
     "ekf_failsafe": dict(
         mode="gpsinput", deny_at=40, src=1, startup={"GPS2_TYPE": 14}, rate=5.0,
         watch_ekf=True,
@@ -687,17 +695,19 @@ def _run(name, spec, connect, duration, seed):
             res["verdict"] = (f"PASS - applet entered Guided_NoGPS and recovered to "
                               f"{recovery}")
     elif spec.get("expect_mode") is not None:
+        # Expect_mode is one mode, or a TUPLE of modes that all count as the recovery.
         want = spec["expect_mode"]
+        wants = (want,) if isinstance(want, str) else tuple(want)
         after = [b for t_, a, b in mode_changes if t_ >= spec.get("rc_fail_at", 0)]
         # Assert the state, not the transition.
-        entered = want in after
-        was_already = (mode_at_cut == want)
-        how = ("entered it after the cut" if entered
-               else f"was already in {want} when the radio was cut")
+        hit = [m for m in wants if m in after or mode_at_cut == m]
+        how = (f"was already in {mode_at_cut} when the radio was cut"
+               if mode_at_cut in wants else "entered it after the cut")
         res["verdict"] = (
-            f"PASS - radio lost, aircraft in {want} on a non-GPS position ({how})"
-            if (entered or was_already) else
-            f"FAIL - radio lost and the aircraft was not in {want}; "
+            f"PASS - radio lost, aircraft in {hit[0]} on a non-GPS position ({how}; "
+            f"observed {after or 'no mode change'})"
+            if hit else
+            f"FAIL - radio lost and the aircraft was in none of {wants}; "
             f"mode at cut {mode_at_cut}, modes after: {after or 'none'}"
             + (f"; it said: {post_cut_msgs[:4]}" if post_cut_msgs else
                "; and it said NOTHING - the failsafe never fired at all"))

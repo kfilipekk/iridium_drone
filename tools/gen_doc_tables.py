@@ -22,6 +22,8 @@ MODULE_BEGIN = "<!-- BEGIN GENERATED MODULES -->"
 MODULE_END = "<!-- END GENERATED MODULES -->"
 ORDER_BEGIN = "<!-- BEGIN GENERATED ORDER -->"
 ORDER_END = "<!-- END GENERATED ORDER -->"
+POWER_BEGIN = "<!-- BEGIN GENERATED POWER -->"
+POWER_END = "<!-- END GENERATED POWER -->"
 TEX_ORDER_BEGIN = "% BEGIN GENERATED ORDER"
 TEX_ORDER_END = "% END GENERATED ORDER"
 
@@ -411,6 +413,30 @@ def runbook_order():
     return "\n".join(out)
 
 
+def power_table():
+    """The +5 V budget, from design.LOADS_5V and design.MODULES - never retyped."""
+    sys.path.insert(0, str(REPO / "tools"))
+    import design
+    rail = design.RAIL_5V
+    out = ["| Load on the FC's +5 V buck (U8) | continuous | peak | source |",
+           "|---|---:|---:|---|"]
+    for n, cont, peak, src in design.LOADS_5V:
+        out.append(f"| {n} | {cont*1000:.0f} mA | {peak*1000:.0f} mA | {src} |")
+    out.append(f"| **fitted load** | **{rail['fitted_load_a']*1000:.0f} mA** | "
+               f"{rail['fitted_peak_a']*1000:.0f} mA | derived |")
+    out.append(f"| **headroom to L2's {rail['irms_a']} A Irms** | "
+               f"**{rail['headroom_a']*1000:.0f} mA** | | Isat {rail['isat_a']} A is the peak limit |")
+    bec = [(k, m) for k, m in design.MODULES.items() if isinstance(m, dict) and m.get("bec")]
+    if bec:
+        out += ["", "On the **payload 5 V BEC** (stage B2), and therefore **not** on U8 - "
+                "`check_modules.py` fails any module that is on neither list:", "",
+                "| payload | running | note |", "|---|---:|---|"]
+        for k, m in sorted(bec, key=lambda kv: -kv[1]["ma_5v"]):
+            out.append(f"| {m['what']} | {m['ma_5v']} mA | {m['conn']} |")
+        out.append(f"| **BEC load** | **{sum(m['ma_5v'] for _, m in bec)} mA** | LD06 surges to 300 mA at start-up |")
+    return "\n".join(out)
+
+
 def _splice(path, begin, end, body, what, check):
     text = path.read_text()
     if begin not in text or end not in text:
@@ -473,6 +499,8 @@ def main():
                   fastener_tables(), "fastener table", args.check)[0]
     rc |= _splice(REPO / "docs" / "MODULES.md", MODULE_BEGIN, MODULE_END,
                   module_table(), "module table", args.check)[0]
+    rc |= _splice(REPO / "docs" / "HARDWARE.md", POWER_BEGIN, POWER_END,
+                  power_table(), "5 V budget", args.check)[0]
     rc |= _splice(REPO / "docs" / "navcore-runbook.tex", TEX_ORDER_BEGIN, TEX_ORDER_END,
                   runbook_order(), "runbook buy list", args.check)[0]
     rc |= _splice(REPO / "docs" / "BUYING.md", ORDER_BEGIN, ORDER_END,

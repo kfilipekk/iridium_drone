@@ -71,7 +71,7 @@
 \toprule
 Board & 45.1 $\times$ 46.1 mm, 6-layer, STM32H743VIT6 \\
 Gate verdict & \good{READY TO ORDER} --- every gated prerequisite proven (the gate prints the count) \\
-Hardware verdict & \flag{NOT READY TO FLY} --- 9 items need hardware \\
+Hardware verdict & \flag{NOT READY TO FLY} --- 6 items need hardware, none of which can change what is ordered \\
 Toolchain & KiCad 9.0.8, ArduPilot Copter-4.7.0, Python 3 + pcbnew \\
 \bottomrule
 \end{tabular}
@@ -363,7 +363,7 @@ The receive chain the board cannot supply, and the bench reference receiver for 
 Nooelec SAWbird+ IR (1620MHz LNA+SAW) & 1 & 35 & Nooelec \\
 Nooelec 1620MHz Iridium patch antenna & 1 & 25 & Nooelec \\
 SMA-male to U.FL (IPEX MHF1) coax pigtail, 10-15 cm & 2 & 4 & AliExpress \\
-micro-USB power lead for the SAWbird+ (5 V from P41/P46) & 1 & 2 & AliExpress \\
+micro-USB power lead for the SAWbird+ (5 V from the payload BEC) & 1 & 2 & AliExpress \\
 RTL-SDR Blog V4 (R820T2, with bias tee) & 1 & 30 & AliExpress / RTL-SDR Blog \\
 gr-iridium + iridium-toolkit (software) & 1 & 0 & GitHub (muccc) \\
 \end{longtable}
@@ -402,7 +402,7 @@ JST-GH 1.25mm 6-pin spare lead (J3 GPS port) & 1 & 2 & AliExpress \\
 \end{longtable}
 Already have: 4S LiPo packs, LiPo balance charger.
 
-\subsubsection*{B2 --- Aircraft sensors and payload - optional} 5 lines, about GBP 68.
+\subsubsection*{B2 --- Aircraft sensors and payload - optional} 6 lines, about GBP 73.
 RNGFNDn\_TYPE and PRX1\_TYPE ship at 0; enable each one at the bench after it is fitted. The +5 V rail cannot carry all of these AND the SAWbird+ at once - check\_modules.py prints the budget.
 
 \begin{longtable}{@{}P{0.50\textwidth}P{0.12\textwidth}rP{0.22\textwidth}@{}}
@@ -416,9 +416,10 @@ VL53L1X ToF module (GY-53-L1X) & 1 & 6 & AliExpress \\
 LDROBOT LD06 360 lidar (INDOOR USE ONLY) & 1 & 14 & eBay - Okdo Lidar Hat kit (use the LIDAR UNIT only) \\
 XIAO ESP32S3 Sense (recording camera) & 1 & 14 & AliExpress \\
 Camera power: thin silicone wire + 2-pin JST pigtails & 1 kit & 2 & AliExpress \\
+Payload 5 V BEC, 3 A (SAWbird+, camera, FPV, lidar) & 1 & 5 & AliExpress / Matek \\
 \end{longtable}
 
-Total, everything to buy: about GBP 757. Generated from \file{docs/PARTS.csv} by \file{tools/gen\_doc\_tables.py}; every row's reasoning and link is in the CSV, and \file{docs/BUYING.md} is the same list with prices and provenance tags.
+Total, everything to buy: about GBP 762. Generated from \file{docs/PARTS.csv} by \file{tools/gen\_doc\_tables.py}; every row's reasoning and link is in the CSV, and \file{docs/BUYING.md} is the same list with prices and provenance tags.
 % END GENERATED ORDER
 
 \flag{Do not buy a bare PMW3901 or VL53L1X chip to hand-fit.} Both were deleted from the
@@ -469,38 +470,72 @@ exist to connect them, while the XIAO records to its own microSD over two wires 
 ordered now.
 
 \subsection{The bench measurements that could have cost you a purchase}
+\label{sec:benchbounds}
 
-Sort the bench items into two kinds, because only one kind can reach your wallet. Six of them
-cannot: \file{BATT\_AMP\_PERVLT}, the IMU orientation, \file{FLOW\_ORIENT\_YAW}, flow
-quality over grass, and both thermal readings are numbers you write down or calibrate, and no
-possible answer changes what you should have bought. \file{U8}'s junction is worse than those
---- if it really is 139\degC{} the remedy is a \textbf{respin} --- but it is still not a
-purchase.
+Sort the bench items by what a result could move, because only one kind can reach your
+wallet. \cmd{python3 tools/check\_bench\_bounds.py} does this sort now and the gate walks its
+verdict, so the answer is printed rather than argued. Nine items became six on 2026-09-20,
+in five kinds:
 
-Three could have. Each is now bought around:
+\begin{itemize}
+\item \textbf{CLOSED} --- the answer was already fixed by a \emph{document} or by the
+artwork, so there is nothing left to measure that could change the board. Three items left
+the list this way: the grommet, \file{BATT\_AMP\_PERVLT} and the \file{J2} pin order. They
+are not deleted --- \file{check\_bench\_bounds.py} still prints each with its evidence, and a
+reconciliation step refuses if this list and the manifest ever disagree.
+\item \textbf{BOUND} --- the design-side corner is already under the limit and the
+measurement \emph{confirms} it. \file{U8}: 87\,\degC{} against 125\,\degC{}. \file{U9}:
+104\,\degC{} on good copper against 150\,\degC{}, on a board \file{thermal\_vias.py}
+measures at 7443\,mm\textsuperscript{2} of plane. The grommet: the \emph{metal} M3 head clears
+copper at every hole by $+$0.08\,mm, and the flange is always the wider of the two, so a wider
+grommet adds only silicone bearing on mask.
+\item \textbf{PARAM} --- the result is a \emph{firmware constant}: \file{FLOW\_ORIENT\_YAW}.
+The board carries the pin and has no value to change.
+\item \textbf{MODULE} --- the property belongs to a \emph{bought part} that plugs in: the
+RF front end, which is the Nooelec SAWbird+ IR, and flow quality, which is the off-board
+camera. A shortfall is placement, shielding or a different module.
+\item \textbf{DATA} --- the T3b record asserts nothing about the board at all.
+\end{itemize}
+
+The consequence is the one that matters before you pay: \flag{no bench result can force a
+different board}. Every item is still measured, but it confirms a bound instead of
+discovering one, so the order does not wait for the session. The old text here warned that a
+hot \file{U8} meant a respin; that risk was closed on 2026-09-20 by the part swap (Part~10),
+which moved the worst corner to 87\,\degC{} and left it on the board.
+
+Three are now closed outright rather than bought around. Each names the evidence:
 
 \begin{center}
 \begin{tabular}{@{}P{0.26\textwidth}P{0.62\textwidth}@{}}
 \toprule
-\textbf{Measurement} & \textbf{Why it can no longer send you shopping} \\
+\textbf{Item} & \textbf{What fixed the answer, so nothing is left to measure} \\
 \midrule
-\file{J2}'s ESC cable pinout & a wrong cable is re-pinnable with a fine pick \emph{and} a
-spare \textbf{8-pin} JST-SH lead is on the order --- previously the only route was to rework
-the cable you already had \\
-the RF chain can hear Iridium & the order names a \textbf{bias-tee} dongle (Blog V3/V4)
-rather than ``an RTL-SDR'', so the bench chain is one cable; and it names the SMA-to-U.FL
-pigtail and the SAWbird+'s power lead, without which the chain reaches the bench but never
-the aircraft \\
-the grommet flange & the flange is a property of the frame kit's grommets, so a wide one meant
-a different grommet. A spare silicone set is now a line item: measure, and swap rather than
-order \\
+the grommet flange & the flange and the M3 cap head are \emph{concentric}, so the flange is
+always the wider of the two and the metal always the narrower. A wider grommet adds only
+silicone bearing on mask; it cannot make the metal reach copper. Z was already swept
+2.0--4.5\,mm by \file{check\_fit.py}, which requires every purchase to cover the range, so
+the design is \emph{invariant} over the grommet \\
+\file{BATT\_AMP\_PERVLT} & the ESC's own manual publishes Scale=400, i.e. 40\,mV/A, i.e.
+25.0\,A/V --- and \file{defaults.parm} ships exactly that. The value was typed in two places,
+so \file{gen\_hwdef.py} now \emph{derives} it from \file{design.ESC} and \file{check\_build.py}
+asserts it against the shipped file. Mutation-tested with the retired 52.7 \\
+the \file{J2} pin order & \file{design.ESC} now \emph{declares} the manual's order and
+\file{check\_build.py} holds the netlist against it. Nothing checked this before: \file{J2} is
+a passive connector, so DRC, ERC and the pin-semantics check all pass a transposed one. The
+symptom is four motors on the wrong signals \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-\flag{The honest residue:} one answer can still cost real money, and it is not a part. If
-\file{U8} is genuinely at 139\degC{} the remedy is a new board --- which is why \textbf{three
-spare bare PCBs} are on the order and why T3a is a stop gate rather than a note. \file{tools/fasteners.py} prints this list itself under
+\flag{The honest residue:} no bench item can change what you \emph{order}, and that is now a
+gated claim rather than a reading of this section --- \file{check\_bench\_bounds.py} fails if
+any item is unclassified, if a bench entry is added without one, or if this list and the
+manifest disagree. \emph{One} item has no analytic bound and stays a flight gate: whether the
+RF link closes depends on real sky and real desense, which no desk calculation settles. The one risk that \emph{was}
+real has been closed: the old \file{U8} corner of 139\,\degC{} was a budget error, and on
+2026-09-20 (Part~10) the part was swapped in place to the LMR33630ARNXR, taking the worst
+corner to 87\,\degC{} against 125\,\degC{}. \textbf{Three spare bare PCBs} stay on the order
+for misadventure, not for a known unknown. \file{tools/fasteners.py} prints this list itself under
 \emph{``not derived --- these need the parts in hand''}.
 
 % =============================================================================
@@ -792,7 +827,7 @@ ESC instead works, but the ESC's own draw then sits inside the 80 mA below.
 \midrule
 1.1 & current at power-on & \textbf{$<$ 80 mA} & something is shorted: kill it and inspect
 \file{U8} and the bulk caps (\file{U18} is not fitted) \\
-1.2 & \file{+5V} rail & \textbf{4.97 V} $\pm$0.2 & \file{U8} TPS54202, \file{L1}, feedback divider \\
+1.2 & \file{+5V} rail & \textbf{5.02 V} $\pm$0.2 & \file{U8} LMR33630ARNXR, \file{L1}, feedback divider \\
 1.3 & \file{+3V3} rail & 3.3 V $\pm$0.1 & \file{U9} AP2112 \\
 1.4 & \file{+3V3A} rail & 3.3 V $\pm$0.1 & \file{U10} TLV75533 \\
 1.5 & \file{+9V} rail & \textbf{not populated} & \file{U18} is DNP by design \\
@@ -905,10 +940,11 @@ board arms out of the box. Do not enable a sensor you have not fitted.
 pad, carrying the MCU, flash and microSD & junction \textbf{104--157\degC} against a
 \textbf{150\degC} limit. It has thermal shutdown --- being wrong means the 3.3 V rail
 switching off in flight, not smoke \\
-\file{U8} (+5 V buck) & \textbf{16.8 V $\rightarrow$ 5 V at 0.95 A} through a SOT-23-6 with
-no thermal pad, sandwiched between a 60 A ESC and a battery & junction
-\textbf{70--139\degC} against a \textbf{125\degC} \emph{recommended} max ---
-\flag{an opinion until a thermocouple says so} \\
+\file{U8} (+5 V buck) & \textbf{16.8 V $\rightarrow$ 5 V at 0.74 A} through a TI
+LMR33630ARNXR (VQFN-12), swapped in place 2026-09-20, sandwiched between a 60 A ESC and a
+battery & junction \textbf{70--87\degC} against a \textbf{125\degC} \emph{recommended} max
+--- 38\degC{} of margin at the worst corner; \flag{still an estimate until a thermocouple
+says so} \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -917,14 +953,35 @@ Both brackets exist because the junction-to-ambient figure is a property of \emp
 assembled board and the two ends come from different sources (JEDEC and EVM columns of the
 datasheet).
 
-\textbf{Half of that bracket is now measured rather than assumed.} A SOT-23 has no thermal
-pad, so every watt leaves through the leads into whatever copper is attached to them --- and
+\textbf{Why U8's bracket read 70--139\degC{} until 2026-09-20, and what changed.} The load
+it was modelled at, 0.95 A, was a hand-copied budget that still counted the deleted
+PMW3901/VL53L1X, the DNP CAN transceiver and an eight-sensor ToF ring that the LD06
+replaced --- 281 mA of parts not on the board --- while missing the tuner's 100 mA on
+\file{U10}. \file{design.LOADS\_5V} now derives the rail from the 3.3 V load lists and the
+fitted sensors: \textbf{0.74 A} continuous. The 139\degC{} was retired as a budget error,
+and the part was \emph{then} changed --- two steps worth keeping apart. The LMR33630 in its
+8-pin HSOIC-8 package was measured against the artwork on 2026-09-19 and its courtyard is
+0.80 mm too wide for \file{U8}'s pocket in every orientation (\file{docs/KNOWN-ISSUES.md}
+keeps those numbers); the \emph{same silicon} in the 12-pin RNX VQFN has a 3.9 $\times$
+2.9 mm courtyard, and it was swapped in place on 2026-09-20, taking the worst corner from
+117\degC{} to \textbf{87\degC}.
+
+\flag{The rule that keeps it there:} nothing that is \emph{payload} draws from this board's
+buck. The SAWbird+, the recording camera, an FPV AIO and the LD06 run from the
+\textbf{payload 5 V BEC} (stage B2, ~GBP 4); with the first two alone on the FC rail the
+worst corner would be 154\degC. \file{check\_modules.py} fails any module that is neither in
+\file{design.LOADS\_5V} nor marked BEC-powered, so a load cannot land on \file{U8}
+unbudgeted.
+
+\textbf{Half of that bracket is now measured rather than assumed.} Neither package has a
+case to bolt a heatsink to, so every watt leaves into whatever copper is attached --- and
 \file{tools/thermal\_vias.py} reads that copper off the board for \emph{both} regulators.
-Measured 2026-09-19: \file{U8.1} has \textbf{3 vias within 1.7 mm holding 7655.8 mm$^2$ of
-GND plane}, \file{U9.2} has 2 vias onto the same plane, and \textbf{no legal position
-exists for another via on either part} (the search runs to 1.7 mm and refuses in-pad vias,
-which would wick solder). That is the strongest statement the layout alone can make, and it
-is why the low end of the bracket above is the plausible one for this board.
+Measured 2026-09-20, after the swap: \file{U8.1} has \textbf{1 via within 1.7 mm holding
+7600.3 mm$^2$ of GND plane}, \file{U9.2} has 2 vias onto the same plane, and \textbf{no
+legal position exists for another via on either part} (the search runs to 1.7 mm and refuses
+in-pad vias, which would wick solder). The RNX is a leadframe package with \emph{no}
+separate exposed pad, so that plane is the whole thermal path --- which is what the
+datasheet's $R\theta_{JB}$ of 23.3 \degC{}/W is describing.
 \flag{It still does not license a number} --- copper moves the bound monotonically, and only
 a thermocouple converts it into degrees.
 
@@ -1118,7 +1175,8 @@ why Standard plus panelisation is the recommendation.
 \label{sec:audit-153}
 
 This is the longest list, and every row is a value some part of the build \emph{assumes}.
-The gate's own verdict names nine of them as \file{NOT READY TO FLY}.
+The gate's own verdict names six of them as \file{NOT READY TO FLY}; three more were closed
+outright on 2026-09-20 by evidence (Section~\ref{sec:benchbounds}).
 
 \begin{longtable}{@{}p{0.26\textwidth}p{0.34\textwidth}p{0.30\textwidth}@{}}
 \toprule
@@ -1147,8 +1205,10 @@ the headers are soldered \\
 the ESC's shunt, not of this board & a known load at T3.5 \\
 IMU orientations & \file{ROTATION\_ROLL\_180} is asserted in the hwdef, never measured. A
 mirrored axis means it does not fly & roll and pitch it, watch the horizon (T3.1) \\
-\file{U8} junction temperature & 70--139\degC{} modelled against a 125\degC{} recommended
-max. If it really is at 139 the fix is a \textbf{respin}, not a reorder & a thermocouple, T3a \\
+\file{U8} junction temperature & 70--87\degC{} modelled against a 125\degC{} recommended
+max, on an honest budget \emph{and a swapped part} since 2026-09-20; the worst corner has
+38\degC{} of margin. If the board measures well past its bracket the fix is a \textbf{respin}
+& a thermocouple, T3a \\
 \file{U9}'s board-to-junction offset & makes \file{U19}'s logged value meaningful rather than
 a nearby number & one probe reading on the case, then \file{U19} carries it \\
 \file{FLOW\_ORIENT\_YAW} & the sign of the flow correction, if flow is ever fitted & bench
@@ -1172,10 +1232,10 @@ Grommet compression under load & a property of the rubber & the assembled stack 
 premise rather than a build step, and no amount of desk work substitutes for it. Everything
 downstream of it --- position-hold claims, the SITL scenarios' hold/runaway results --- is
 explicitly not readable until it is measured.
-\item \flag{\file{U8}'s junction temperature.} 139\degC{} against a 125\degC{} recommended
-maximum is a measure-and-stop gate, and the remedy if it is real is a board respin. The
-mitigation is that six layers with planes should land near the EVM end of the bracket ---
-but that is an opinion until a probe says otherwise.
+\item \flag{\file{U8}'s junction temperature.} 87\degC{} at the worst corner against a
+125\degC{} recommended maximum --- 38\degC{} of margin, after the 2026-09-20 swap to the
+LMR33630ARNXR. It is now a number to confirm rather than one to rescue, and the payload BEC
+is what stops a later addition eating the margin.
 \item \flag{The ESC cable and the tapped depths.} Cheap to check, catastrophic to skip. Both
 are on this list only because they are properties of parts somebody else manufactured, and
 both are silenced by owning the M3 assortment and a multimeter.
@@ -1249,15 +1309,24 @@ The least-squares Doppler solve & \good{built and validated} --- \file{tools/soo
 Gauss-Newton over position and clock with an analytic Jacobian; it recovers a known position
 exactly from clean geometry, and reports \emph{singular} on degenerate geometry rather than
 inventing a number \\
-SGP4 and real TLE ephemeris & \flag{not built} --- the solver takes satellite state as
-\emph{input}, and a circular propagator stands in for the test. That is enough to prove the
-geometry inverts; it is not an ephemeris \\
-Burst detection and frequency estimation & \flag{not built} --- from I/Q, to the precision the
-solver needs. No RF bench run substitutes for writing it \\
-The C firmware for the H743 & \flag{not built} \\
-Getting the fix into the EKF & \flag{not built} --- an \file{AP\_GPS} backend or
-\file{AP\_ExternalAHRS}. \file{GPS\_INPUT} is the documented route for an \emph{external}
-computer, and this aircraft solves on board \\
+SGP4 and real TLE ephemeris & \good{built and validated} (2026-09-20) --- \file{tools/soop\_solver.py
+--ephemeris} propagates the vendored Iridium NEXT catalogue with SGP4 and converts
+TEME$\rightarrow$ECEF including the Earth's rotation. A known position is recovered from
+\emph{real} orbits to $\sim$260\,m median at 5\,Hz over 60 bursts. SGP4 propagation error is
+not measured by it \\
+Burst detection and frequency estimation & \good{built and validated} (2026-09-20) ---
+\file{tools/soop\_burst.py}, from I/Q: energy detection plus a periodogram carrier estimate
+that beats the burst's $\sim$120\,Hz FFT bin, measured at p90 2.4\,Hz at C/N0
+$\approx$62\,dB-Hz on synthetic I/Q. The bench re-check on recorded I/Q stays a bench item \\
+The solve ported to C for the H743 & \good{built and validated} (2026-09-20) ---
+\file{firmware/soop/}, a differential test against the Python reference (agreement
+$1.6\times10^{-8}$\,m) and a cross-compile for Cortex-M7 \\
+The flight firmware around it & \flag{not built} --- nothing yet samples the MAX2112, runs
+SGP4 in C, or hands a fix to the EKF on the aircraft \\
+The route into the EKF & \good{built} (2026-09-20) --- an in-process \file{AP\_GPS} backend
+(\file{GPS\_TYPE\_SOOP}), so the fix never leaves the vehicle. Registered and compiled into
+both firmwares, and gated; that the EKF actually \emph{fuses} it is not yet proven ---
+\file{tools/soop\_sitl\_test.py} exists but is not passing \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -1302,7 +1371,7 @@ last}
 \footnotesize\color{sidegrey}
 Generated from the NAVCORE-SoOP working tree, 19 September 2026.\\
 Gate: READY TO ORDER, every gated prerequisite proven --- the count is printed by the gate, not typed here.\\
-Hardware: NOT READY TO FLY, 9 items requiring hardware.
+Hardware: NOT READY TO FLY, 6 items requiring hardware.
 \end{center}
 
 \end{document}

@@ -56,7 +56,7 @@ for name, m in mods.items():
             fail.append(f"{name}: '{ref}' exists but NO PAD CARRIES A NET - not an attachment point")
 
     # 2. a module claiming it needs no board change must actually have somewhere to land
-    if needs is None and not m["lands_on"]:
+    if needs is None and not m["lands_on"] and not m.get("bec"):
         fail.append(f"{name}: claims needs_board_change=None but lands_on is empty")
 
     # 3. status and needs_board_change must agree - this is the anti-drift assertion
@@ -106,16 +106,26 @@ for ref, where in sorted(ghosts.items()):
 # ---------------------------------------------------------------------------
 rail = design.RAIL_5V
 budget_ma = rail["headroom_a"] * 1000
+on_bec = [(n, m["ma_5v"]) for n, m in mods.items() if m.get("bec")]
 uncounted = [(n, m["ma_5v"]) for n, m in mods.items()
-             if not m["counted"] and m["ma_5v"]]
+             if not m["counted"] and m["ma_5v"] and not m.get("bec")]
 total = sum(ma for _, ma in uncounted)
 
-print(f"\n+5 V rail: {rail['fitted_load_a']:.3f} A fitted against L2's "
-      f"{rail['irms_a']} A Irms -> {budget_ma:.0f} mA headroom")
+print(f"\n+5 V rail: {rail['fitted_load_a']:.3f} A fitted (continuous, every FC-rail sensor "
+      f"budgeted) against L2's {rail['irms_a']} A Irms -> {budget_ma:.0f} mA headroom")
+if on_bec:
+    bec_total = sum(ma for _, ma in on_bec)
+    print(f"  on the PAYLOAD BEC, not this rail ({bec_total} mA running; LD06 surges to 300 mA):")
+    for n, ma in sorted(on_bec, key=lambda x: -x[1]):
+        print(f"    {n:20s} {ma:4d} mA")
+    if bec_total > 2000:
+        fail.append(f"payload BEC loads total {bec_total} mA - above a 3 A BEC's sensible continuous rating")
 if uncounted:
-    print(f"  modules NOT already in check_build.LOADS_5V, totalling {total} mA:")
+    print(f"  modules on the FC rail but NOT in design.LOADS_5V, totalling {total} mA:")
     for n, ma in sorted(uncounted, key=lambda x: -x[1]):
         print(f"    {n:20s} {ma:4d} mA")
+        fail.append(f"{n}: {ma} mA on the FC's +5 V rail but neither in design.LOADS_5V nor "
+                    f"marked bec=True - U8's thermal bracket does not include it")
 if total > budget_ma:
     print(f"  -> {total} mA exceeds {budget_ma:.0f} mA: these CANNOT all run together.")
     print(f"     Fit them one or two at a time, or give one its own BEC off the battery.")
