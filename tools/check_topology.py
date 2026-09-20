@@ -55,6 +55,7 @@ def main():
     }
     SYNCHRONOUS = {
         "TPS54202": ("[D] TI TPS54202 SLVSD26C: \"two integrated switching FETs\" - the low-side FET is the freewheel path, so no catch diode exists to forget"),
+        "LMR33630A": ("[D] TI SNVSAN3F: \"3.8-V to 36-V, 3-A synchronous buck converter\" with R(HSD) and R(LSD) integrated (7.5 lists both)"),
     }
     print("=== buck regulators: is the required freewheel path present? ===")
     for ref, ph, boot, out in (("U8", "BUCK_PH", "BUCK_BOOT", "+5V"),
