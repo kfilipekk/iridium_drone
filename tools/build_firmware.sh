@@ -38,6 +38,9 @@ rm -rf "$AP/libraries/AP_HAL_ChibiOS/hwdef/$BOARD"
 cp -r "$HERE/firmware/NAVCORE_SoOP" "$AP/libraries/AP_HAL_ChibiOS/hwdef/$BOARD"
 echo "  $(ls "$AP/libraries/AP_HAL_ChibiOS/hwdef/$BOARD" | tr '\n' ' ')"
 
+echo "=== 1b. install the SoOP GPS backend ==="
+python3 "$HERE/tools/install_soop_backend.py" --ap-dir "$AP" | sed 's/^/  /'
+
 echo "=== 2. register the board ID (local only) ==="
 BT="$AP/Tools/AP_Bootloader/board_types.txt"
 grep -qE "^AP_HW_NAVCORE_SOOP\s" "$BT" \

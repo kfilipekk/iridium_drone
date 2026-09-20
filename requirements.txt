@@ -1,0 +1,2 @@
+#Python dependencies beyond the standard library
+sgp4>=2.27

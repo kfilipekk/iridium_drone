@@ -72,22 +72,36 @@ The board is ready to order but has not been built, so nothing here has been mea
 real hardware.
 
 ```
-tools/preflight.py   READY TO ORDER - all 44 gated prerequisites proven, 0 order-checks outstanding
-                     66 prerequisites: 44 gated, 5 order-time actions, 8 bench-only, 4 advisory, 4 to build*
-tools/check_rf.py    NOT READY TO FLY - the bench measurements don't exist yet
+tools/preflight.py   READY TO ORDER - all 49 gated prerequisites proven, 0 order-checks outstanding
+                     66 prerequisites: 49 gated, 5 order-time actions, 5 bench-only, 4 advisory, 2 to build*
+tools/check_rf.py    NOT READY TO FLY - 6 items; the T3b measurements don't exist yet
 ```
 
-*the gate also prints **4 items that are code, not measurement** — the four components of the
-on-board Iridium DSP (ephemeris, burst detection, H743 firmware, EKF backend). A green gate
-says nothing about it, so the verdict prints it. See `docs/KNOWN-ISSUES.md`.
+Six bench items remain, down from nine, and **none is an ordering risk** - the gate says so
+in its own output. Three were closed outright on 2026-09-20 by evidence rather than by
+measuring: the grommet (the flange is concentric with the M3 head, so the design is invariant
+over it), `BATT_AMP_PERVLT` (the ESC manual fixes it, and the value is now derived and
+asserted against the shipped `defaults.parm`) and the J2/ESC pin order (now a declared list
+held against the netlist). `tools/check_bench_bounds.py` classifies the remaining six and
+**reconciles** its list against the manifest, so a bench item cannot be added unclassified or
+removed to make the verdict look better. The order does not wait on a bench session - the
+session confirms a bound instead of discovering one.
+
+*the gate also prints **2 items that are code, not measurement** — the flight firmware around
+the C solve (I/Q capture, an in-C ephemeris, the solve task that calls the backend) and the
+end-to-end proof that the solved fix reaches the EKF. Four of the Iridium DSP components were
+built on 2026-09-20 and are now gated checks: the SGP4/TLE ephemeris (`check_soop_ephemeris`),
+the burst DSP (`check_soop_burst`), the C solve ported to the target (`check_soop_c`) and the
+in-process **`AP_GPS` backend** (`check_soop_backend`, registered as `GPS_TYPE_SOOP`). A green
+gate says nothing about the rest, so the verdict prints them. See `docs/KNOWN-ISSUES.md`.
 
 The layout side is finished: no DRC errors, no ERC violations, every connection on a
 fitted part routed, gerbers checked against the board file, 131 footprints checked against
-JLCPCB's own joint counts, and all 56 order lines confirmed in stock (snapshot
-2026-09-19, aged 0 days).
+JLCPCB's own joint counts, and all 57 order lines confirmed in stock (snapshot
+2026-09-20, aged 0 days).
 
 One number is worth knowing before you copy this design: the MAX2112 tuner was down to **15
-units at LCSC** in the last stock snapshot (2026-09-19) and nothing else in their library
+units at LCSC** in the last stock snapshot (2026-09-20) and nothing else in their library
 covers 1616 to 1626.5 MHz with quadrature baseband out. Buy spares. **USB does not power
 this board** — `VBUS` reaches only the ESD part and a bypass cap, so `J2.2` needs a pack or
 a bench supply even to configure it.
