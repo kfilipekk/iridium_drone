@@ -38,6 +38,9 @@ rm -rf "$AP/libraries/AP_HAL_ChibiOS/hwdef/$BOARD"
 cp -r "$HERE/firmware/NAVCORE_SoOP" "$AP/libraries/AP_HAL_ChibiOS/hwdef/$BOARD"
 echo "  $(ls "$AP/libraries/AP_HAL_ChibiOS/hwdef/$BOARD" | tr '\n' ' ')"
 
+echo "=== 1b. install the SoOP GPS backend ==="
+python3 "$HERE/tools/install_soop_backend.py" --ap-dir "$AP" | sed 's/^/  /'
+
 echo "=== 2. register the board ID (local only) ==="
 BT="$AP/Tools/AP_Bootloader/board_types.txt"
 grep -qE "^AP_HW_NAVCORE_SOOP\s" "$BT" \
@@ -66,6 +69,11 @@ echo "=== 4. configure ==="
 echo "=== 5. copter ==="
 ./waf copter > "$LOGS/copter.log" 2>&1 \
   && echo "  ok" || { echo "  FAILED"; tail -40 "$LOGS/copter.log"; exit 1; }
+
+sha256sum "$HERE/firmware/NAVCORE_SoOP/hwdef.dat" \
+  | awk '{print $1}' > "$AP/build/$BOARD/bin/arducopter.apj.hwdef.sha256"
+echo "=== 5b. hwdef digest recorded, for preflight to compare against ==="
+sed 's/^/  /' "$AP/build/$BOARD/bin/arducopter.apj.hwdef.sha256"
 
 echo "=== 6. what the hwdef processing said ==="
 grep -iE "warn|error|conflict|shared|no dma|not enough|unassign|no default" \

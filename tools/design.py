@@ -5,6 +5,7 @@ R  = "Device:R";  C  = "Device:C";  L = "Device:L"; FB = "Device:FerriteBead"
 LED = "Device:LED"; SW = "Switch:SW_Push"; XTAL = "Device:Crystal_GND24"
 
 F_R0402  = "Resistor_SMD:R_0402_1005Metric"
+F_R0603  = "Resistor_SMD:R_0603_1608Metric"
 F_C0402  = "Capacitor_SMD:C_0402_1005Metric"
 F_C0805  = "Capacitor_SMD:C_0805_2012Metric"
 F_C1206  = "Capacitor_SMD:C_1206_3216Metric"
@@ -28,29 +29,30 @@ COMPONENTS = {
  "U4" : ("jlc_parts:MS561101BA03-50",       "jlc:SENSORS-SMD_MS5611-01BA03",            "MS5611",        "C15639",   False),
  "U5" : ("jlc_parts:W25Q128JVSIQTR",        "jlc:SOIC-8_L5.3-W5.3-P1.27-LS8.0-BL",      "W25Q128JVSIQ",  "C97521",   False),
  #power
- "U8" : ("jlc_parts:TPS54202DDCR",          "jlc:SOT-23-6_L2.9-W1.6-P0.95-LS2.8-BL",    "TPS54202",      "C191884",  False),
+ #U8 is a TI LMR33630ARNXR (VQFN-12 HotRod, RNX), swapped in place
+ "U8" : ("jlc_parts:LMR33630ARNXR",         "jlc:VQFN-12_L3.0-W2.0-P0.65-BL_TI_RNX",    "LMR33630A",     "C2861505",  False),
  "U9" : ("jlc_parts:AP2112K-3_3TRG1",       "jlc:SOT-25-5_L2.9-W1.6-P0.95-LS2.8-BL",    "AP2112K-3.3",   "C51118",   False),
  "U10": ("jlc_parts:TLV75533PDBVR",         "jlc:SOT-23-5_L3.0-W1.7-P0.95-LS2.8-BR",    "TLV75533",      "C404027",  False),
  #io
- "U11": ("jlc_parts:SN65HVD230DR",          "jlc:SOIC-8_L4.9-W3.9-P1.27-LS6.0-BL",      "SN65HVD230",    "C12084",   True),
+ "U11": ("jlc_parts:SN65HVD230DR",          "jlc:SOIC-8_L4.9-W3.9-P1.27-LS6.0-BL",      "SN65HVD230",    "C12084",   False),
  "U12": ("jlc_parts:USBLC6-2SC6_C2687116",  "jlc:SOT-23-6_L2.9-W1.6-P0.95-LS2.8-BL",    "USBLC6-2SC6",   "C2687116", False),
  "J1" : ("jlc_parts:TYPE-C_16PIN_2MD(073)", "jlc:USB-C-SMD_TYPE-C-16PIN-2MD-073",       "USB-C",         "C2765186", False),
  "J2" : ("jlc_parts:SM08B-SRSS-TB(LF)(SN)", "jlc:CONN-TH_SM08B-SRSS-TB-LF-SN",                "ESC 8P",        "C160407",  False),
  "J3" : ("jlc_parts:XY-SM06B-GHS-TB",       "jlc:CONN-SMD_XY-SM06B-GHS-TB",            "GPS+I2C",       "C51940119",False),
  "J5" : ("jlc_parts:SM04B-SRSS-TB_(LF)(SN)","jlc:CONN-SMD_4P-P1.00_SM04B-SRSS-TB-LF-SN","RC IN",         "C160404",  False),
- "J6" : ("jlc_parts:XY-SM04B-GHS-TB",       "jlc:CONN-SMD_4P-P1.25_12502-04WASMT",            "CAN",           "C51940118",False),
+ "J6" : ("jlc_parts:SM04B-SRSS-TB_(LF)(SN)","jlc:CONN-SMD_4P-P1.00_SM04B-SRSS-TB-LF-SN","CAN 4P",        "C160404",  False),
  "J7" : ("jlc_parts:XY-SM04B-GHS-TB",       "jlc:CONN-SMD_4P-P1.25_12502-04WASMT",            "RNGFND",        "C51940118",False),
  "J8" : ("jlc_parts:TF-01A",                "jlc:TF-SMD_TF-01A",                        "microSD",       "C91145",   False),
  #Y1 is a passive crystal and the part number matters more than it looks
  "Y1" : ("jlc_parts:X32258MSB4SI",          "jlc:CRYSTAL-SMD_4P-L3.2-W2.5-BL",          "8MHz",          "C2682774", False),
- "D1" : ("Device:D_TVS",                    "jlc:DO-214AA_L4.4-W3.6-LS5.3-RD",                          "SMBJ18A",       "C19077573",False),
+ "D1" : ("jlc_parts:SMBJ26A_C123820",          "jlc:SMB_L4.6-W3.6-LS5.3-RD",                          "SMBJ26A",       "C123820",False),
  #SoOP receiver
  "U13": ("jlc_parts:MAX2112ETI+T",          "jlc:TQFN-28_L5.0-W5.0-P0.50-BL-EP3.3",      "MAX2112",       "C596391",  False),
  "U14": ("jlc_parts:OPA2374M{slash}TR",     "jlc:SOP-8_L4.9-W3.9-P1.27-LS6.0-BL",       "OPA2374",       "C444392",  False),
  "U15": ("jlc_parts:PSA4-5043+",            "jlc:SOT-343-4_L2.0-W1.3-P1.30-LS2.1-BR",           "PSA4-5043+",    "C5240848", True),
  "U16": ("jlc_parts:PSA4-5043+",            "jlc:SOT-343-4_L2.0-W1.3-P1.30-LS2.1-BR",           "PSA4-5043+",    "C5240848", True),
- #Y2 is an active 4-pad TCXO (OW2EL89CEIUXFMYLC-25M, YXC YSOS510TP family)
- "Y2" : ("jlc_parts:YSOS510TP",               "jlc:OSC-SMD_4P-L3.2-W2.5-BL",              "25MHz TCXO",    "C22381771",False),
+ #Y2 is an active 4-pad clipped-sine TCXO feeding U13's reference through C58
+ "Y2" : ("jlc_parts:T132S4-25000ML33DTL",     "jlc:OSC-SMD_4P-L3.2-W2.5-BL",              "25MHz TCXO",    "C5563878", False),
  "FL1": ("jlc_parts:TA1575IG",                   "jlc:FILTER-SMD_6P-L3.0-W3.0-P1.19-TR",                       "SAW 1620MHz",   "",         True),
 }
 
@@ -61,7 +63,8 @@ def add(ref, sym, fp, val, lcsc="", dnp=False):
 _p = []
 def RES(ref, val, fp=F_R0402, dnp=False): add(ref, R, fp, val, "", dnp); _p.append(ref)
 def CAP(ref, val, fp=F_C0402, dnp=False): add(ref, C, fp, val, "", dnp); _p.append(ref)
-def IND(ref, val, fp=F_L1210, dnp=False): add(ref, L, fp, val, "", dnp); _p.append(ref)
+#the default land is the 4x4 one, not F_L1210
+def IND(ref, val, fp=F_ANR4030, dnp=False): add(ref, L, fp, val, "", dnp); _p.append(ref)
 
 #MCU decoupling: one 100n per VDD pin + bulk
 for i, r in enumerate(["C1","C2","C3","C4","C5"]): CAP(r, "100n")
@@ -83,14 +86,19 @@ EN_THRESHOLD_V = {
                              "typ 1.21 V (max 1.28); the same 1.21 V is used in the "
                              "datasheet's own UVLO equations, 6.3.5. "
                              "docs/datasheets/TPS54202-SLVSD26.pdf"),
+    "LMR33630A": (1.231, True, "[D] SNVSAN3F 7.5 Electrical Characteristics, VEN-H rising "
+                               "1.2 / 1.231 / 1.26 V, hysteresis 100 mV. Note VEN-VCC "
+                               "(the internal-LDO turn-on) rising is only 1.0 V, so the "
+                               "lower threshold governs start-up. "
+                               "docs/datasheets/LMR33630-SNVSAN3F.pdf"),
 }
 
 VBAT_PART_VMAX = {
-    "TPS54202": (28.0, 30.0, True,
-                 "[D] SLVSD26 5.1 Absolute Maximum Ratings, VIN -0.3 to 30 V; "
-                 "5.3 Recommended Operating Conditions, VIN 4.5-28 V. "
-                 "docs/datasheets/TPS54202-SLVSD26.pdf"),
-    "WST4041": (30.0, 40.0, True,
+    "LMR33630A": (36.0, 42.1, True,
+                  "[D] SNVSAN3F 7.1 Absolute Maximum Ratings, VIN -0.3 to 38 V; 7.3 "
+                  "Recommended Operating Conditions, VIN 3.8-36 V. 42 V transient. "
+                  "docs/datasheets/LMR33630-SNVSAN3F.pdf"),
+    "WST4041": (30.0, 42.1, True,
                 "[D] WST4041 WINSOK datasheet: VDS -40 V, VGS +-20 V absolute max "
                 "(docs/datasheets/WST4041_WINSOK.pdf)"),
 }
@@ -142,6 +150,8 @@ LDO_SPEC = {
 #(clamping_V, standoff_V, breakdown_min_V, Ipp_A, src)
 TVS_CLAMP_V = {
     "SMBJ33A": (53.3, 33.0, 36.7, 11.3, "[D] Littelfuse SMBJ series datasheet"),
+    "SMBJ26A": (42.1, 26.0, 28.9, 14.3, "[D] Littelfuse SMBJ series datasheet"),
+    "SMBJ24A": (38.9, 24.0, 26.7, 15.4, "[D] Littelfuse SMBJ series datasheet"),
     "SMBJ20A": (32.4, 20.0, 22.2, 18.6, "[D] Littelfuse SMBJ series datasheet"),
     "SMBJ18A": (29.2, 18.0, 20.0, 20.6, "[D] Littelfuse SMBJ series datasheet"),
 }
@@ -158,6 +168,7 @@ RES("R4","392k"); RES("R5","78k7")                         #EN divider
 CAP("C21","100n")                                          #boot cap
 IND("L2", "10uH", F_ANR4030)   #4x4 land - the FNR4030 never fitted a 1210
 CAP("C22","22u", F_C1206); CAP("C23","22u", F_C1206)      #5V out
+CAP("C78","1u")                                           #U8 VCC bypass, pin 5
 RES("R6","10k2"); RES("R7","3k24")                         #-> overridden, see _VALUE_FIX
 #R8/C24/C25 COMP network deleted - TPS54202 compensates internally
 
@@ -184,7 +195,7 @@ RES("R16","5k1"); RES("R17","5k1")                         #CC1/CC2
 CAP("C42","1u", F_C0805)                                   #VBUS
 
 #battery sense
-RES("R18","10k"); RES("R19","1k")                          #11:1 divider
+RES("R18","10k", F_R0603); RES("R19","1k")                  #11:1 divider (R18 is 0603 for 6S 100mW headroom)
 CAP("C43","100n"); CAP("C44","100n")                       #v/I sense filters
 
 #LEDs + buzzer
@@ -200,10 +211,10 @@ for i,(r) in enumerate(["R22","R23","R24","R25","R26","R27"]): RES(r, "47k")  #S
 for r,v in [("C49","100n"),("C50","100n"),("C51","1u"),
             ("C52","100p"),("C56","10n"),("C57","10n")]:
     CAP(r, v, F_C0402)
-for r,v in [("R28","0R"),("R29","0R"),("R30","10k"),("R31","10k"),
+for r,v in [("R28","0R"),("R29","0R"),("R31","4k7"),
             ("R34","1k"),("R35","1k"),("R36","4k7"),("R37","4k7")]:
     RES(r, v, F_R0402)
-CAP("C58","1n", F_C0402)      #series AC coupling, Y2 output -> U13 XTAL
+CAP("C58","10n", F_C0402)     #series DC-cut, Y2 output -> U13 XTAL [D] TCXO: 0.01 uF min
 CAP("C59","100n", F_C0402)
 #connector orientation
 MATING_FACE = {
@@ -212,8 +223,16 @@ MATING_FACE = {
     "J3": (0.0, +1.0),   #GPS/I2C JST-GH 6P
     "J8": (0.0, +1.0),   #microSD card slot
     "J5": (0.0, +1.0),   #RC receiver JST-SH 4P
+    "J6": (0.0, +1.0),   #DroneCAN JST-SH 4P
     "J9": (0.0, +1.0),   #I2C port (VCC/SCL/SDA/GND) - the dedicated bus
     "J11": (0.0, +1.0),  #SERIAL2 lidar port (5V/TX/RX/GND)
+    "J14": (0.0, +1.0),  #SPI3 Optical Flow JST-SH 6P
+    "J15": (0.0, +1.0),  #WS2812 RGB LED JST-SH 3P
+    "J16": (0.0, +1.0),  #buzzer JST-SH 2P
+    "J17": (0.0, +1.0),  #TVC Servos / Actuator Header JST-SH 6P
+    "J18": (0.0, +1.0),  #pyrotechnic deployment JST-SH 2P
+    "J19": (0.0, +1.0),  #SWD Debug JST-SH 4P
+    "J20": (0.0, +1.0),  #lander touchdown microswitch JST-SH 2P
 }
 
 #how much straight
@@ -221,8 +240,16 @@ MATING_CLEARANCE = {
     "J1": 9.0,    #USB-C plug overmould
     "J2": 6.0,    #JST-SH plug plus wire bend
     "J5": 6.0,    #JST-SH class, same as J2
+    "J6": 6.0,    #JST-SH class, DroneCAN
     "J9": 6.0,    #JST-SH class, same as J2 (the dedicated I2C port)
     "J11": 6.0,   #JST-SH class, same as J2 (SERIAL2 lidar port)
+    "J14": 6.0,   #JST-SH class, Optical Flow
+    "J15": 6.0,   #JST-SH class, WS2812 LED
+    "J16": 6.0,   #JST-SH class, Buzzer
+    "J17": 6.0,   #JST-SH class, TVC Servos
+    "J18": 6.0,   #JST-SH class, Pyro
+    "J19": 6.0,   #JST-SH class, SWD
+    "J20": 6.0,   #JST-SH class, Touchdown
     "J3": 3.6,
     "J8": 14.0,   #a microSD card must come all the way out
 }
@@ -286,8 +313,35 @@ CAMERA_REC = dict(name="XIAO ESP32S3 Sense", L=21.0, W=17.5, H=13.0, g=6.0,
                       "8 MB PSRAM; [L] ~GBP 10-14 AliExpress; [A] 13 mm stacked height "
                       "and 6 g with the Sense expansion - MEASURE ON ARRIVAL")
 
+#the MOTOR / ARM / SKID bolt pattern - one number, one home
+MOTOR_JOINT = dict(
+    pitch_mm=19.0,          #[D] BrotherHobby Avenger 2806.5: M3 at 19 x 19
+    screw="M3",             #[D] same source
+    screw_dia=3.0,
+    #what the screw passes through, head first
+    layers=(
+        ("frame arm", ("FRAME", "arm_t"), 3.2,
+         "[D] So1-V6 arm 6.0 mm; [A] 3.2 mm hole - the frame's motor holes are published "
+         "as the 19x19 PATTERN, not as diameters"),
+        ("printed skid", ("SKID", "t"), 3.2,
+         "[M] design.SKID - printed, so the hole is ours to specify; 3.2 mm is standard "
+         "M3 close clearance for a 3.0 mm screw"),
+    ),
+    engages="motor tapped boss",
+    tap_dia=3.0,
+    engage_mm=4.0,          #[A] 1 x diameter for M3 in aluminium - see fasteners.py
+    boss_depth_mm=None,     #not published anywhere - see the overshoot warning below
+    src="[D] BrotherHobby Avenger 2806.5 product data (M3, 19x19); "
+        "[M] arm and skid thicknesses referenced from this file",
+)
+
+
+#(16.0, 19.0) -> '16x16 / 19x19', for doc tables and check messages
+def fmt_pattern(pitches_mm):
+    return " / ".join(f"{p:.0f}x{p:.0f}" for p in sorted(pitches_mm))
+
 #the skid is a part you print
-SKID = dict(t=3.5, drop=40.0, hole_pitch=19.0, printed=True,
+SKID = dict(t=3.5, drop=40.0, hole_pitch=MOTOR_JOINT["pitch_mm"], printed=True,
             #drop raised 25 -> 40 mm to give the LD06 a home
             src="[D] 19x19 pitch is the motor's bolt pattern (BrotherHobby Avenger); "
                 "[M] 3.5 mm thickness is a design choice for a printed part; "
@@ -297,17 +351,31 @@ SKID = dict(t=3.5, drop=40.0, hole_pitch=19.0, printed=True,
 #belly depth is SKID's drop plus its pad thickness
 BELLY_SENSOR["depth_available_mm"] = SKID["drop"] + SKID["t"]
 #the ESC this board bolts to
-#standoff length needed from the bottom plate, and the stock size to buy
-def required_standoff(board, headroom=3.0):
+TOP_PLATE_MOUNT = dict(
+    front_standoff=22.0, rear_standoff=30.0, post_od=5.0,        #[D] tbs: "30 and 22mm"
+    front_posts=((-14.6, -27.88), (14.6, -27.88), (-14.6, -52.88), (14.6, -52.88)),
+    rear_posts=((-14.6, 27.88), (14.6, 27.88), (-11.0, 80.75), (11.0, 80.75)),
+    plate_centre_y=dict(fc=-29.16, bottom=31.09, top=4.78),
+    src="[D] cad/frame-dxf.json (So1-V6-7inDC-2025-JUL-07.dxf sha 398556cd), hole "
+        "patterns per plate; [D] team-blacksheep.com prod:source1v6 'Standoff height: "
+        "30 and 22mm'; [M] 22-on-mid / 30-on-bottom forced by top-plate flatness")
+
+
+#the stack against the top plate the kit actually gives it
+def required_standoff(board, headroom=None):
     top, bot, topref, botref, _ = stack_heights(board, skip_dnp=True)
     below = FRAME["bottom_t"] + FRAME["arm_t"] + FRAME["medium_t"]
     stack = ESC["pcb"] + ESC["parts"] + MOUNTING["gap"] + bot + BOARD_T + top
-    need  = below + stack + headroom
-    stock = next((s for s in STANDOFF_STOCK if s >= need), None)
-    return dict(below=below, stack=stack, headroom=headroom, need=need, buy=stock,
+    front = TOP_PLATE_MOUNT["front_standoff"]
+    top_plate_z = below + front
+    assert abs(top_plate_z - (FRAME["bottom_t"] + TOP_PLATE_MOUNT["rear_standoff"])) < 1e-6, \
+        "22-on-mid and 30-on-bottom no longer meet at one flat top plate"
+    return dict(below=below, stack=stack, headroom=front - stack, need=below + stack,
+                buy=front, kit=True, top_plate_z=top_plate_z,
                 top=top, bot=bot, topref=topref, botref=botref,
-                slack=(stock - below - stack) if stock else None,
-                src="[M] computed from the board + FRAME + ESC + MOUNTING")
+                slack=front - stack,
+                src="[M] computed from the board + FRAME + ESC + MOUNTING against "
+                    "TOP_PLATE_MOUNT (the kit's 22 mm front standoffs on the mid plate)")
 
 BOARD_T = 1.6                       #[M] 6-layer stackup, tools/design.py
 STANDOFF_STOCK = (25, 30, 35, 40, 45)   #[L] common M3 aluminium standoff lengths
@@ -323,6 +391,8 @@ ESC = dict(name="SpeedyBee BLS 60A", L=45.6, W=44.0, pcb=1.6, parts=6.2,
            mount=30.5, conn="JST-SH 8P", cells="3-6S", amps=60,
            H=7.8, g=10.5, cont_A=60.0, burst_A=80.0, proto="DSHOT300/600",
            cur_scale_mv_per_A=40.0,
+           #the 8-pin JST-SH order as the ESC'S manual documents IT
+           pin_order=("GND", "VBAT", "M1", "M2", "M3", "M4", "CUR", "TEL"),
            src="[D] SpeedyBee BLS 60A manual")
 assert ESC["amps"] == ESC["cont_A"], "ESC amps and cont_A are the same rating"
 
@@ -359,8 +429,10 @@ FLOW = dict(
     fitted=False,
     camera="OV9281 global shutter, 22-pin CSI - NOT ordered in this pass",
     arrives_as="MAVLink OPTICAL_FLOW from the companion, FLOW_TYPE 5",
-    onboard_fallback="U6 PMW3901 is on the board but DNP - the ESC blocks its view, and "
-                     "correlation sensors of that class fail over grass",
+    onboard_fallback="there is no on-board flow part. U6 (PMW3901) was DELETED from the "
+                     "design in the Rev B re-layout - the ESC sat 3.0 mm below it and "
+                     "would have blocked its view, and correlation sensors of that class "
+                     "fail over grass anyway. Do not shop for one: there is no pad.",
     operational_note="EK3_SRC2 and EK3_SRC3 both use VELXY 5 (flow). With no flow fitted "
                      "they have no data, and they are reachable ONLY by the pilot's RC9 "
                      "source-set switch. Do not select source set 2 or 3 in flight until "
@@ -535,15 +607,22 @@ PAYLOAD = dict(
 
 #tbs source one V5 7" DC - and the reason for it is the provenance, not the geometry
 FRAME = dict(name='TBS Source One V5 7in DC', wb=320.0, size=(200.0, 230.0),
-             inner_h=30.0,
+             #22, not 30
+             inner_h=22.0,
              bottom_t=2.5, medium_t=2.0, upper_t=2.0, arm_t=6.0, cam_plate_t=2.0,
              stack="30.5x30.5 M3 and 20x20 - VERIFIED from the manufacturer DXF",
-             motor_holes="16x16 / 19x19",
+             #numeric, not the string "16x16 / 19x19"
+             motor_patterns_mm=(16.0, 19.0),
              strap=(20.0, 300.0), price_gbp=35.90, g=143.5,
              src="[D] github.com/tbs-trappy/source_one So1-V6-7inDC-2025-JUL-07.dxf, "
                  "stack patterns parsed directly 2026-09-02; [L] hobbyrc.co.uk for "
                  "standoffs 30/22 mm, plates and 143.5 g; [A] plate outline 200x230 mm "
                  "- overall footprint only, not load-bearing on any check")
+assert FRAME["inner_h"] == TOP_PLATE_MOUNT["front_standoff"], \
+    "FRAME.inner_h must be the kit's front standoff (TOP_PLATE_MOUNT) - one number"
+assert abs(FRAME["arm_t"] + FRAME["medium_t"]
+           - (TOP_PLATE_MOUNT["rear_standoff"] - TOP_PLATE_MOUNT["front_standoff"])) < 1e-6, \
+    "the two standoff sets stand on plates 8 mm apart and hold one flat top plate"
 
 #the fit question, answered from the DXF - not deferred to calipers
 PLATES = dict(
@@ -551,9 +630,8 @@ PLATES = dict(
     arm=(31.08, 185.21),
     top_m3_x=(14.60, 11.00), bottom_m3_x=(14.60, 11.00),
     battery_overhang_per_side=(47.0 - 42.50) / 2,
-    src="[M] ezdxf flatten of So1-V6-7inDC-2025-JUL-07.dxf, 2026-09-04; method validated "
-        "by reproducing the known FC plate to 2 dp. [A] which plate is top vs bottom - "
-        "inferred from length against the 138 mm battery; confirm with calipers")
+    src="[D] tools/parse_frame_dxf.py -> cad/frame-dxf.json from "
+        "So1-V6-7inDC-2025-JUL-07.dxf (sha 398556cd); re-derivable, not a one-off flatten")
 
 FRAME_CAD = dict(
     fc_plate=(48.50, 106.59),
@@ -564,7 +642,8 @@ FRAME_CAD = dict(
     nearest_standoff_candidate_y=27.90,
     src="[M] parsed from So1-V6-7inDC-2025-JUL-07.dxf, 2026-09-02")
 #weight and bolt pattern are from BrotherHobby's own Avenger 2806.5 product data
-MOTOR = dict(name="2806.5 1300KV", kv=1300, g=41.0, thrust_g=1250, holes="19x19",
+MOTOR = dict(name="2806.5 1300KV", kv=1300, g=41.0, thrust_g=1250,
+             hole_pitch_mm=MOTOR_JOINT["pitch_mm"],
              shaft_thread="M5", poles="12N14P",
              #body envelope, for the CAD
              dia_mm=28.0, h_mm=15.0,
@@ -620,12 +699,14 @@ def net(name, *pins): NETS.setdefault(name, []).extend(pins)
 net("GND",
     "U1.10","U1.26","U1.49","U1.74","U1.99","U1.19",           #VSS + VSSA
     "U2.6","U3.6","U4.3","U5.4",
-    "U8.1","U9.2","U10.2","U11.2","U12.2",
+    #pin 7 of both IMUs
+    "U2.7","U3.7",
+    "U8.1","U8.6","U8.11","U9.2","U10.2","U11.2","U12.2",   #U8: PGND 1/11 + AGND 6
     "J1.A1B12","J1.B1A12","J1.13","J1.14",
     "J2.1","J2.9","J2.10", "J3.6","J3.7","J3.8",
     "J5.4","J5.5","J5.6", "J6.4","J6.5","J6.6", "J7.4","J7.5","J7.6",
     "J8.6","J8.10","J8.11","J8.12","J8.13",
-    "Y1.2","Y1.4", "D1.1",
+    "Y1.2","Y1.4", "D1.2",
     "C1.2","C2.2","C3.2","C4.2","C5.2","C6.2","C7.2","C8.2","C9.2",
     "C10.2","C11.2","C12.2","C13.2","C14.2","C15.2","C16.2",
     "C17.2","C18.2","C19.2","C22.2","C23.2",
@@ -636,14 +717,14 @@ net("GND",
     "U4.4","U4.5",                                              #CSB + internal -> GND = addr 0x77
     )
 #the battery input is protected by Q4
-net("VBAT_IN", "J2.2", "D1.2", "Q4.3")            #Q4 pin 3 = drain
-net("VBAT", "Q4.2", "C17.1","C18.1","C19.1","U8.3","R4.1","R18.1")  #Q4 pin 2 = source
-net("+5V",  "U8.2","C22.1","C23.1","U9.1","C26.1","U10.1","C28.1",
-            "J3.1","J5.1","J6.1","J7.1","R6.1")
+net("VBAT_IN", "J2.2", "D1.1", "Q4.3")            #D1 pin 1 = cathode; Q4 pin 3 = drain
+net("VBAT", "Q4.2", "C17.1","C18.1","C19.1","U8.2","U8.10","R4.1","R18.1")  #Q4 p2 = source
+net("+5V",  "C22.1","C23.1","U9.1","C26.1","U10.1","C28.1",
+            "J3.1","J5.1","J7.1","R6.1")
 net("+3V3", "U9.5","C27.1","U1.11","U1.27","U1.50","U1.75","U1.100",
             "C1.1","C2.1","C3.1","C4.1","C5.1","C6.1","C7.1",
             "U5.8","C36.1",
-            "U11.3","C41.1","J8.4","C45.1","C46.1","L1.1",
+            "J8.4","C45.1","C46.1","L1.1",
             "R9.1","R10.1","R11.1","R12.1","R20.1","R21.1",
             "R22.1","R23.1","R24.1","R25.1","R26.1","R27.1","SW1.1")
 net("+3V3A","U10.5","C29.1","C30.1","U2.5","U2.8","C31.1","C32.1",
@@ -730,7 +811,7 @@ net("PC2_SPARE","U1.PC2_C"); net("PC3_SPARE","U1.PC3_C")
 #SoOP analogue front end (SoOP config, DNP)
 net("SOOP_I_ADC","U1.PC4","U14.1")
 net("SOOP_Q_ADC","U1.PA4","U14.7")
-net("SOOP_RSSI","U1.PC5","R30.2")
+#PC5 is free
 net("SPARE_ADC","U1.PA7")
 
 
@@ -751,17 +832,29 @@ net("VTUNE","U13.9","C56.1"); NETS["GND"] += ["C56.2"]
 net("CPOUT","U13.12","R34.1"); net("LOOP","R34.2","C57.1"); NETS["GND"] += ["C57.2"]
 net("VCOBYP","U13.8"); net("REFOUT","U13.15"); net("GC1","U13.5","R35.2")
 NETS["GND"] += ["R35.1"]
-#MAX2112 baseband -> OPA2374 difference amps -> ADC (resistor values TBD by sim)
+#MAX2112 baseband -> OPA2374 difference amplifiers -> ADC the comment here read "resistor
+for r, v in [("R47","4k7"), ("R48","10k"), ("R49","10k"), ("R50","10k"),
+             ("R51","10k"), ("R52","10k"), ("R53","10k")]:
+    RES(r, v, F_R0402)
+CAP("C75", "1u", F_C0402)
+CAP("C76", "100p", F_C0402); CAP("C77", "100p", F_C0402)
+
+#i channel: IOUT+ -> R36 -> +in A (R51 to VREF)
 net("IOUT_P","U13.19","R36.1"); net("IOUT_N","U13.20","R37.1")
-net("QOUT_P","U13.17","R30.1"); net("QOUT_N","U13.18","R31.1")
-net("OPA_IN1P","R36.2","U14.3"); net("OPA_IN1N","R37.2","U14.2")
-net("OPA_IN2P","R30.1")  #placeholder, merged below
-del NETS["OPA_IN2P"]
-net("OPA_IN2P_","U14.5"); net("OPA_IN2N_","U14.6")
-NETS["QOUT_P"] += ["U14.5"]; NETS["QOUT_N"] += ["U14.6"]
-del NETS["OPA_IN2P_"], NETS["OPA_IN2N_"]
-NETS["+3V3A"] += ["U14.8"]; NETS["GND"] += ["U14.4"]   #opamps follow the tuner
-net("IDC_P","U13.21"); net("IDC_N","U13.22"); net("QDC_P","U13.23"); net("QDC_N","U13.24")
+net("OPA_IN1P","R36.2","U14.3","R51.1"); net("OPA_IN1N","R37.2","U14.2","R50.1")
+NETS["SOOP_I_ADC"] += ["R50.2", "C76.2"]             #feedback, out A -> -IN A
+NETS["OPA_IN1N"] += ["C76.1"]                        #C76 across R50: anti-alias
+#q channel: QOUT+ -> R47 -> +in B (R49 to VREF)
+net("QOUT_P","U13.17","R47.1"); net("QOUT_N","U13.18","R31.1")
+net("OPA_IN2P","R47.2","U14.5","R49.1"); net("OPA_IN2N","R31.2","U14.6","R48.1")
+NETS["SOOP_Q_ADC"] += ["R48.2", "C77.2"]             #feedback, out B -> -IN B
+NETS["OPA_IN2N"] += ["C77.1"]                        #C77 across R48: anti-alias
+#the mid-rail reference both channels share
+net("BB_VREF","R52.2","R53.1","C75.1","R51.2","R49.2")
+NETS["+3V3A"] += ["R52.1", "U14.8"]; NETS["GND"] += ["R53.2", "C75.2", "U14.4"]
+#DC-offset servo capacitors
+net("IDC_P","U13.21","C61.1"); net("IDC_N","U13.22","C61.2")
+net("QDC_P","U13.23","C63.1"); net("QDC_N","U13.24","C63.2")
 
 #fixes
 #LED chains: MCU -> resistor -> LED anode -> GND
@@ -775,35 +868,32 @@ net("LED1_K","D3.1","R21.1"); net("LED1","R21.2","U1.PE4")
 for g in ("D2.2","D3.2"):
     if g in NETS["GND"]: NETS["GND"].remove(g)
 
-#TPS54331 5V buck - full wiring
-net("BUCK_BOOT","U8.6","C21.1")
-net("BUCK_PH",  "U8.2","C21.2","L2.1")
+#LMR33630 RNX 5V buck - full wiring
+net("BUCK_BOOT","U8.4","C21.1")                   #boot (TPS54202 pin 6)
+net("BUCK_PH",  "U8.12","U8.3","C21.2","L2.1")    #SW 12 + NC 3, tied per SNVSAN3F 10.1
+net("BUCK_VCC", "U8.5","C78.1")                   #VCC, new pin - the internal 5 V LDO
+NETS["GND"] += ["C78.2"]
 NETS["+5V"] += ["L2.2"]
-net("BUCK_EN",  "U8.5","R4.2","R5.1")
-net("BUCK_FB",  "U8.4","R6.2","R7.1")
-#no BUCK_SS and no BUCK_COMP
+net("BUCK_EN",  "U8.9","R4.2","R5.1")             #EN (TPS54202 pin 5)
+net("BUCK_FB",  "U8.7","R6.2","R7.1")             #FB (TPS54202 pin 4)
 NETS.pop("R3", None)
 
 #LDO enables tied to their inputs (always-on)
 NETS["+5V"]  += ["U9.3","U10.3"]
 
 COMPONENTS.pop("R2", None)
-NETS["GND"] += ["R31.2"]
 
 for n in ("BOOT0","+3V3","GND"):
     NETS[n] = [x for x in NETS[n] if x not in ("SW1.1","SW1.2")]
 NETS["BOOT0"] += ["SW1.2"]; NETS["+3V3"] += ["SW1.1"]
-#U8 pin 8 is the switch node only, not the 5V rail
-NETS["+5V"] = [x for x in NETS["+5V"] if x != "U8.2"]
+#no U8 pin sits on +5V: the switch node reaches it through L2 only
 COMPONENTS.pop("R3", None)
 
-#MAX2112 bypass / DC-offset caps (datasheet-required, SoOP config DNP)
-for r, v in [("C60","100n"),("C61","100n"),("C62","100n"),("C63","100n"),("C64","100n")]:
-    CAP(r, v, F_C0402, dnp=True)
-NETS["VCOBYP"] += ["C60.1"]
-NETS["IDC_P"]  += ["C61.1"]; NETS["IDC_N"] += ["C62.1"]
-NETS["QDC_P"]  += ["C63.1"]; NETS["QDC_N"] += ["C64.1"]
-NETS["GND"]    += ["C60.2","C61.2","C62.2","C63.2","C64.2"]
+#MAX2112 bypass / DC-offset caps
+for r, v in [("C60","100n"),("C61","100n"),("C63","100n")]:
+    CAP(r, v, F_C0402)
+NETS["VCOBYP"] += ["C60.1"]; NETS["GND"] += ["C60.2"]
+#C61 spans IDC_P/IDC_N and C63 spans QDC_P/QDC_N - wired
 
 #power flags: tell ERC these rails are actually driven
 PWR_FLAGS = {"VBAT":"PF1", "+5V":"PF2", "+3V3":"PF3", "+3V3A":"PF4",
@@ -812,6 +902,7 @@ PWR_FLAGS = {"VBAT":"PF1", "+5V":"PF2", "+3V3":"PF3", "+3V3A":"PF4",
 for netname, ref in PWR_FLAGS.items():
     add(ref, "power:PWR_FLAG", "", "PWR_FLAG", "", netname == "VCC_RF")
     NETS[netname].append(f"{ref}.1")
+NOT_A_PART = set()
 
 #test points
 #only signals worth the copper get a pad
@@ -825,8 +916,8 @@ for i, netname in enumerate(TESTPOINT_NETS, 1):
 #connector reduction: JST-GH -> solder pads
 PAD_FP = "TestPoint:TestPoint_Pad_1.5x1.5mm"
 _PAD_LABELS = {
- "J6": {1:"CAN_5V", 2:"CANH",   3:"CANL",   4:"CAN_GND"},
- "J7": {1:"RF_5V",  2:"RF_TX",  3:"RF_RX",  4:"RF_GND"},
+    #J6 is now a fitted JST-GH 4P connector (DroneCAN) powered from +5V_PAYLOAD
+    "J7": {1:"RF_5V",  2:"RF_TX",  3:"RF_RX",  4:"RF_GND"},
 }
 for jref, labels in _PAD_LABELS.items():
     COMPONENTS.pop(jref, None)
@@ -858,7 +949,7 @@ for _r in ("U15", "U16", "FL1", "L3", "L4"):
     COMPONENTS.pop(_r, None)
 
 #keep the SoOP receiver interface reachable from the board edge even though the RF front end
-for _i, _n in enumerate(["SOOP_I_ADC", "SOOP_Q_ADC", "SOOP_RSSI"], start=len(TESTPOINT_NETS)+1):
+for _i, _n in enumerate(["SOOP_I_ADC", "SOOP_Q_ADC"], start=len(TESTPOINT_NETS)+1):
     if _n in NETS:
         _r = f"TP{_i}"
         add(_r, "Connector:TestPoint", "TestPoint:TestPoint_Pad_1.5x1.5mm", _n, "", False)
@@ -878,62 +969,141 @@ RES("R38", "100R")       #gate series
 RES("R39", "10k")        #gate pulldown - keeps the buzzer quiet while the MCU boots
 add("PZ1", "Connector:TestPoint", PAD15, "BUZZ+", "", False)
 add("PZ2", "Connector:TestPoint", PAD15, "BUZZ-", "", False)
+add("J16", "jlc_parts:SM02B-SRSS-TB_(LF)(SN)",
+    "jlc:CONN-SMD_2P-P1.00_SM02B-SRSS-TB-LF-SN", "BUZZ 2P", "C160402", False)
 
 net("BUZZ_GATE", "R38.2", "Q1.1", "R39.1")
 NETS["BUZZER"] += ["R38.1"]                       #from U1.PA15
-NETS["GND"]    += ["Q1.2", "R39.2"]
-net("BUZZ_DRAIN", "Q1.3", "D4.2", "PZ2.1")        #D4 pin2 = anode
-NETS["+5V"]    += ["D4.1", "PZ1.1"]               #D4 pin1 = cathode
+NETS["GND"]    += ["Q1.2", "R39.2", "J16.3", "J16.4"]
+net("BUZZ_DRAIN", "Q1.3", "D4.2", "PZ2.1", "J16.2")        #D4 pin2 = anode
+NETS["+5V"]    += ["D4.1", "PZ1.1", "J16.1"]               #D4 pin1 = cathode
 
 #2
+#J19: Dedicated 4-pin SWD debug header alongside reference pads
 add("TP20", "Connector:TestPoint", PAD15, "SWD_GND", "", False)
 add("TP21", "Connector:TestPoint", PAD15, "SWD_3V3", "", False)
-NETS["GND"]  += ["TP20.1"]
-NETS["+3V3"] += ["TP21.1"]
+add("J19", "jlc_parts:SM04B-SRSS-TB_(LF)(SN)",
+    "jlc:CONN-SMD_4P-P1.00_SM04B-SRSS-TB-LF-SN", "SWD 4P", "C160404", False)
+NETS["GND"]  += ["TP20.1", "J19.4", "J19.5", "J19.6"]
+NETS["+3V3"] += ["TP21.1", "J19.1"]
+NETS["SWDIO"] += ["J19.2"]
+NETS["SWCLK"] += ["J19.3"]
 
 #3
+#second LMR33630A (TI VQFN-12 HotRod, 3A, 400 kHz), identical to U8
+add("U20", "jlc_parts:LMR33630ARNXR", "jlc:VQFN-12_L3.0-W2.0-P0.65-BL_TI_RNX",
+    "LMR33630A", "C2861505", False)
+IND("L5", "10uH", F_ANR4030)
+CAP("C66", "100n")                 #VIN hf (50V rated in PART_LCSC)
+CAP("C68", "100n")                 #bootstrap
+CAP("C79", "1u")                   #internal VCC bypass
+CAP("C69", "22u", F_C1206)         #output bulk
+CAP("C70", "22u", F_C1206)
+RES("R40", "100k"); RES("R41", "22k")       #EN divider
+RES("R42", "100k"); RES("R43", "24k9")      #1.000 V reference -> 5.016 V output
+add("PV1", "Connector:TestPoint", PAD15, "PAYLOAD_5V",  "", False)
+add("PV2", "Connector:TestPoint", PAD15, "PAYLOAD_GND", "", False)
+
+NETS["VBAT"] += ["U20.2", "U20.10", "C66.1", "R40.1"]
+net("BUCK_PAYLOAD_BOOT", "U20.4", "C68.1")
+net("BUCK_PAYLOAD_PH",   "U20.12", "U20.3", "C68.2", "L5.1")
+net("BUCK_PAYLOAD_VCC",  "U20.5", "C79.1")
+net("BUCK_PAYLOAD_EN",   "U20.9", "R40.2", "R41.1")
+net("BUCK_PAYLOAD_FB",   "U20.7", "R42.2", "R43.1")
+net("+5V_PAYLOAD", "L5.2", "C69.1", "C70.1", "R42.1", "PV1.1")
+PWR_FLAGS["+5V_PAYLOAD"] = "PF10"
+add("PF10", "power:PWR_FLAG", "", "PWR_FLAG", "", False)
+NETS["+5V_PAYLOAD"].append("PF10.1")
+NETS["GND"] += ["U20.1", "U20.6", "U20.11", "C66.2", "C79.2", "C69.2", "C70.2",
+                "R41.2", "R43.2", "PV2.1"]
+
+#4
 #the MCU drives 3.3V; a 5V WS2812 strip wants >=0.7*VDD = 3.5V on DIN
 add("U17", "jlc_parts:SN74LVC1G17DBVR", F_SOT235, "74LVC1G17", "C7836", False)
 CAP("C65", "100n")
 add("PL1", "Connector:TestPoint", PAD15, "LED_DIN", "", False)
 add("PL2", "Connector:TestPoint", PAD15, "LED_5V",  "", False)
 add("PL3", "Connector:TestPoint", PAD15, "LED_GND", "", False)
+add("J15", "jlc_parts:SH1_0MM-3P-WT",
+    "jlc:CONN-SMD_3P-P1.00_SH1.0MM-3P-WT", "LED 3P", "C53055319", False)
 NETS["WS2812"] += ["U17.2"]                       #a input, from U1.PA8
-net("WS2812_OUT", "U17.4", "PL1.1")               #y output at 5V
-NETS["+5V"] += ["U17.5", "C65.1", "PL2.1"]
-NETS["GND"] += ["U17.3", "C65.2", "PL3.1"]
-
-#4. 9V VTX BEC
-add("U18", "jlc_parts:TPS54202DDCR", "jlc:SOT-23-6_L2.9-W1.6-P0.95-LS2.8-BL",
-    "TPS54202", "C191884", False)
-IND("L5", "10uH", F_L1210)
-CAP("C66", "100n")                 #VIN hf
-CAP("C68", "100n")                 #bootstrap
-CAP("C69", "22u", F_C1206)         #output bulk
-CAP("C70", "22u", F_C1206)
-RES("R40", "392k"); RES("R41", "78k7")     #EN divider
-RES("R42", "102k"); RES("R43", "10k")      #-> overridden to 100k / 6k8, see _VALUE_FIX
-add("PV1", "Connector:TestPoint", PAD15, "VTX_9V",  "", False)
-add("PV2", "Connector:TestPoint", PAD15, "VTX_GND", "", False)
-
-NETS["VBAT"] += ["U18.3", "C66.1", "R40.1"]
-net("BUCK9_BOOT",  "U18.6", "C68.1")
-net("BUCK9_PH",    "U18.2", "C68.2", "L5.1")
-net("BUCK9_EN",    "U18.5", "R40.2", "R41.1")
-net("BUCK9_FB",    "U18.4", "R42.2", "R43.1")
-net("+9V", "L5.2", "C69.1", "C70.1", "R42.1", "PV1.1")
-NETS["GND"] += ["U18.1", "C66.2", "C69.2", "C70.2",
-                "R41.2", "R43.2", "PV2.1"]
-
+net("WS2812_OUT", "U17.4", "PL1.1", "J15.2")       #y output at 5V
+NETS["+5V"] += ["U17.5", "C65.1"]
+NETS["+5V_PAYLOAD"] += ["PL2.1", "J15.1"]
+NETS["GND"] += ["U17.3", "C65.2", "PL3.1", "J15.3", "J15.4", "J15.5"]
 
 #5
 add("Q3", "jlc_parts:AO3400A", F_SOT23, "AO3400A", "C20917", False)
-RES("R45", "10k")                       #gate pulldown: VTX on unless told otherwise
-CAP("C73", "10n")                       #EN filter, sits next to U18.3
+RES("R45", "10k")                       #gate pulldown: payload on unless asserted
+CAP("C73", "10n")                       #EN filter
 
-net("VTX_EN", "U1.PA7", "Q3.1", "R45.1")
+net("PAYLOAD_EN", "U1.PA7", "Q3.1", "R45.1")
 NETS["GND"] += ["Q3.2", "R45.2", "C73.2"]
-NETS["BUCK9_EN"] += ["Q3.3", "C73.1"]
+NETS["BUCK_PAYLOAD_EN"] += ["Q3.3", "C73.1"]
+
+#6
+#powers U11 (SN65HVD230) from +5V_PAYLOAD with rock-solid 3.3V
+add("U21", "jlc_parts:XC6206P332MR", "jlc:SOT-23-3_L2.9-W1.6-P1.90-LS2.8-BR",
+    "XC6206P332MR", "C5446", False)
+CAP("C67", "1u")
+CAP("C80", "1u")
+NETS["+5V_PAYLOAD"] += ["U21.3", "C80.1"]
+NETS["GND"] += ["U21.1", "C67.2", "C80.2"]
+net("+3V3_CAN", "U21.2", "U11.3", "C67.1")
+NETS["+5V_PAYLOAD"] += ["J6.1"]
+
+#7
+#breaks out SPI3 + PD4 (EXT_CS1) + PD11 (FLOW_MOTION) onto a 6-pin JST-SH connector
+add("J14", "jlc_parts:SH1_0MM-6P-WT",
+    "jlc:CONN-SMD_SH1.0MM-6P-WT", "FLOW 6P", "C53055322", False)
+NETS["+3V3"] += ["J14.1"]
+NETS["SPI3_SCK"] += ["J14.2"]
+NETS["SPI3_MISO"] += ["J14.3"]
+NETS["SPI3_MOSI"] += ["J14.4"]
+net("EXT_CS1", "U1.PD4", "J14.5")
+NETS["GND"] += ["J14.6", "J14.7", "J14.8"]
+net("FLOW_MOTION", "U1.PD11")
+
+#8
+#dedicated 6-pin JST-SH header on independent timer TIM4 (PWM7-10)
+add("J17", "jlc_parts:SH1_0MM-6P-WT",
+    "jlc:CONN-SMD_SH1.0MM-6P-WT", "SERVO 6P", "C53055322", False)
+net("PWM7",  "U1.PD12", "J17.1")
+net("PWM8",  "U1.PD13", "J17.2")
+net("PWM9",  "U1.PD14", "J17.3")
+net("PWM10", "U1.PD15", "J17.4")
+NETS["+5V_PAYLOAD"] += ["J17.5"]
+NETS["GND"] += ["J17.6", "J17.7", "J17.8"]
+
+#9
+#switched low-side N-FET (Q5 AO3400A) driven by PC5 with 3A PPTC fuse on VBAT
+add("J18", "jlc_parts:SM02B-SRSS-TB_(LF)(SN)",
+    "jlc:CONN-SMD_2P-P1.00_SM02B-SRSS-TB-LF-SN", "PYRO 2P", "C160402", False)
+add("Q5", "jlc_parts:AO3400A", F_SOT23, "AO3400A", "C20917", False)
+add("D5", "jlc_parts:1N4148W_C81598", F_SOD123, "1N4148W", "C81598", False)
+add("F1", "Device:Polyfuse_Small", "Fuse:Fuse_1206_3216Metric", "3A", "C14165", False)
+RES("R54", "1k")
+RES("R55", "47k")
+net("PYRO_FIRE", "U1.PC5", "R54.1")
+net("PYRO_GATE", "R54.2", "Q5.1", "R55.1")
+NETS["GND"] += ["Q5.2", "R55.2", "J18.3", "J18.4"]
+NETS["VBAT"] += ["F1.1"]
+net("VBAT_FUSED", "F1.2", "J18.1", "D5.1")
+net("PYRO_DRAIN", "Q5.3", "J18.2", "D5.2")
+
+#10
+add("J20", "jlc_parts:SM02B-SRSS-TB_(LF)(SN)",
+    "jlc:CONN-SMD_2P-P1.00_SM02B-SRSS-TB-LF-SN", "TOUCH 2P", "C160402", False)
+RES("R56", "10k")
+net("TOUCHDOWN", "U1.PD10", "J20.1", "R56.1")
+NETS["+3V3"] += ["R56.2"]
+NETS["GND"] += ["J20.2", "J20.3", "J20.4"]
+
+#11
+add("D_USB", "jlc_parts:B5819W_C8598",
+    "jlc:SOD-123_L2.7-W1.6-LS3.7-RD-1", "B5819W", "C8598", False)
+NETS["VBUS"] += ["D_USB.2"]
+NETS["+5V"] += ["D_USB.1"]
 #PA7, not PE15
 del NETS["SPARE_ADC"]                   #PA7 now has a job
 
@@ -975,7 +1145,7 @@ net("VSERVO", "TP22.1")
 #J11 is SERIAL2 (USART1) with its own power and ground
 add("J11", "jlc_parts:SM04B-SRSS-TB_(LF)(SN)",
     "jlc:CONN-SMD_4P-P1.00_SM04B-SRSS-TB-LF-SN", "SERIAL2 4P", "C160404", False)
-NETS["+5V"] += ["J11.1"]
+NETS["+5V_PAYLOAD"] += ["J11.1"]
 NETS["USART1_TX"] += ["J11.2"]
 NETS["USART1_RX"] += ["J11.3"]
 NETS["GND"] += ["J11.4", "J11.5", "J11.6"]
@@ -1004,6 +1174,17 @@ ADJACENCY = {
     #U19 is a temperature sensor and its whole value is where it sits
     "U19": ("U9", "1", 4.0),
     "C74": ("U19", "B1", 3.5),
+    #the OPA2374 difference-amplifier network
+    "R36": ("R37", "1", 8.0),  "R47": ("R31", "1", 6.0),
+    "R48": ("U14", "6", 8.0),
+    "R49": ("U14", "5", 8.0),  "R50": ("U14", "2", 8.0),
+    "R51": ("U14", "3", 8.0),
+    "C76": ("R50", "1", 12.0), "C77": ("R48", "1", 8.0),   #in parallel with them
+    "R52": ("U14", "8", 12.0),                #VREF divider: a DC reference, 1 uF at
+    "R53": ("R52", "2", 3.0),                 #the far end makes distance irrelevant
+    "C75": ("R53", "1", 3.0),
+    "C61": ("U13", "21", 3.5), "C63": ("U13", "23", 3.5),
+    "C60": ("U13", "8", 2.0),
     "C41": ("U11", "3", 1.5),
     "C42": ("J1", "A4B9", 3.0),
     "C45": ("J8", "4", 3.0), "C46": ("J8", "4", 2.0),
@@ -1011,17 +1192,22 @@ ADJACENCY = {
     "C26": ("U9", "1", 2.0), "C27": ("U9", "5", 2.0),
     "C28": ("U10", "1", 2.0), "C29": ("U10", "5", 2.0), "C30": ("U10", "5", 3.0),
     "C65": ("U17", "5", 1.5),
-    "C17": ("U8", "3", 3.0), "C18": ("U8", "3", 3.0), "C19": ("U8", "3", 1.5),
-    "C21": ("U8", "6", 1.5),
-    "R6": ("U8", "4", 2.5), "R7": ("U8", "4", 2.5),
-    "R4": ("U8", "5", 3.0), "R5": ("U8", "5", 3.0),
-    "L2": ("U8", "2", 3.0), "C22": ("U8", "2", 5.0), "C23": ("U8", "2", 5.0),
-    #9V buck, same part and the same remapping
-    "C66": ("U18", "3", 1.5), "C68": ("U18", "6", 1.5),
-    "R42": ("U18", "4", 2.5), "R43": ("U18", "4", 2.5),
-    "R40": ("U18", "5", 3.0), "R41": ("U18", "5", 3.0),
-    "L5": ("U18", "2", 5.5), "C69": ("U18", "2", 5.0), "C70": ("U18", "2", 5.0),
-    "C73": ("U18", "5", 3.0),      #EN filter, as close to the pin as the board allows
+    "C17": ("U8", "2", 3.0), "C18": ("U8", "2", 3.0), "C19": ("U8", "2", 1.5),
+    "C78": ("U8", "5", 2.0),
+    "C21": ("U8", "4", 1.5),
+    "R6": ("U8", "7", 2.5), "R7": ("U8", "7", 2.5),
+    "R4": ("U8", "9", 3.0), "R5": ("U8", "9", 3.0),
+    "L2": ("U8", "12", 3.0), "C22": ("U8", "12", 5.0), "C23": ("U8", "12", 5.0),
+    #payload 5V buck (U20 TI LMR33630A VQFN-12)
+    "C66": ("U20", "2", 3.5), "C68": ("U20", "4", 3.0),
+    "C79": ("U20", "5", 2.5),
+    "R42": ("U20", "7", 2.5), "R43": ("U20", "7", 2.5),
+    "R40": ("U20", "9", 3.0), "R41": ("U20", "9", 3.0),
+    "L5": ("U20", "12", 5.5), "C69": ("U20", "12", 5.0), "C70": ("U20", "12", 5.0),
+    "C73": ("U20", "9", 3.0),      #EN filter
+    "C67": ("U21", "2", 2.0),      #CAN 3.3V LDO output cap
+    "C80": ("U21", "3", 3.0),      #CAN 3.3V LDO input cap
+    "D_USB": ("J1", "A4B9", 6.0),  #USB desk power diode near USB-C
     #I2C pull-ups belong near the master, not scattered
     "R9": ("U1", "92", 4.0), "R10": ("U1", "93", 4.0),
     "R11": ("U1", "46", 4.0), "R12": ("U1", "47", 4.0),
@@ -1049,20 +1235,22 @@ for _r, _lim in (("C22", 3.0), ("C23", 3.0), ("C69", 3.0), ("C70", 3.0),
 
 #geometry
 #one definition
-BOARD = dict(X0=100.0, Y0=100.0, W=45.0, H=46.0, R=4.0, MOUNT=30.5, HOLE_D=4.0)
+BOARD = dict(X0=100.0, Y0=99.4, W=45.0, H=47.2, R=0.5, MOUNT=30.5, HOLE_D=4.0)
 
-_VALUE_FIX = {"R6": "37k4", "R7": "5k1", "R42": "100k", "R43": "6k8",
+_VALUE_FIX = {"R6": "100k", "R7": "24k9", "R42": "100k", "R43": "24k9",
               "R4": "100k", "R5": "22k", "R40": "100k", "R41": "22k"}
 for _r, _v in _VALUE_FIX.items():
     if _r in COMPONENTS:
-        s, f, _old, l, d = COMPONENTS[_r]; COMPONENTS[_r] = (s, f, _v, l, d)
+        _s, _f, _, _l, _d = COMPONENTS[_r]
+        COMPONENTS[_r] = (_s, _f, _v, _l, _d)
 
 PASSIVE_LCSC = {
     ("100n", F_C0402): "C1525",   ("1u",   F_C0402): "C52923",
     ("2u2",  F_C0402): "C12530",  ("4u7",  F_C0805): "C354262",
     ("10n",  F_C0402): "C15195",  ("30p",  F_C0402): "C107004",
     ("47p",  F_C0402): "C60137",  ("3n3",  F_C0402): "C26404",
-    ("10u",  F_C0805): "C1713",   ("10u",  F_C1206): "C16195875",
+    #C17/C18, the VBAT bulk caps
+    ("10u",  F_C0805): "C1713",   ("10u",  F_C1206): "C13585",
     ("1u",   F_C0805): "C91185",  ("22u",  F_C1206): "C5177178",
     ("0R",   F_R0402): "C17168",  ("100p", F_C0402): "C1546",
     ("1n",   F_C0402): "C1523",
@@ -1070,10 +1258,12 @@ PASSIVE_LCSC = {
     ("1k",   F_R0402): "C11702",  ("4k7",  F_R0402): "C25900",
     ("5k1",  F_R0402): "C25905",  ("6k8",  F_R0402): "C25917",
     ("10k",  F_R0402): "C25744",  ("22k",  F_R0402): "C25767",
+    ("10k",  F_R0603): "C25804",
     ("27k",  F_R0402): "C25771",  ("47k",  F_R0402): "C25792",
     ("100k", F_R0402): "C25741",
     ("37k4", F_R0402): "C25888",
-    ("10uH", F_L1210): "C167879",     #does not fit - see the note at L2
+    ("24k9", F_R0402): "C25874",
+    ("10uH", F_L1210): "C167879",     #FNR4030 on a 1210 land - does not fit
     ("10uH", F_ANR4030): "C167879",   #FNR4030S100MT, Isat 2.4 A, Irms 1.6 A
     ("10uH", F_ANR5040): "C354610",   #CKCS5040-10uH/M, Isat 2.5 A, Irms 2.1 A
     ("600R@100MHz", F_L0805): "C18305",
@@ -1112,9 +1302,10 @@ RATINGS = {
  "C1525":    ("100n",  16,  "X7R",     "10%",  "0402",  -55, 125, "[D] LCSC product page, 2026-08-29"),
  "C131394":  ("100n",  50,  "X7R",     "10%",  "0402",  None, None, "[D] LCSC product page, 2026-08-29"),
  "C52923":   ("1u",    25,  "X5R",     "10%",  "0402",  -55,  85, "[D] LCSC product page, 2026-08-29"),
- "C91185":   ("1u",    50,  "X7R",     "10%",  "0805",  None, None, "[D] LCSC product page, 2026-08-29"),
+ "C91185":   ("1u",    50,  "X7R",     "10%",   "0805",  None, None, "[D] LCSC product page, 2026-08-29"),
  "C1713":    ("10u",   16,  "X5R",     "10%",  "0805",  -55,  85, "[D] LCSC product page, 2026-08-29"),
  "C16195875":("10u",   35,  "X7R",     "10%",  "1206",  None, None, "[D] LCSC + jlcparts, 2026-09-03"),
+ "C13585":   ("10u",   50,  "X7R",     "10%",  "1206",  -55, 125, "[D] Samsung CL31A106KBHNNNE 10uF 50V X7R 1206, LCSC C13585"),
  "C5177178": ("22u",   16,  "X5R",     None,   "1206",  None, None, "[D] LCSC product page, 2026-08-29"),
  "C107004":  ("30p",   50,  "NP0",     "5%",   "0402",  None, None, "[D] LCSC product page, 2026-08-29"),
  "C19666":   ("4u7",   16,  "X5R",     "10%",  "0603",  -55,  85, "[D] LCSC product page, 2026-08-29"),
@@ -1135,8 +1326,23 @@ INDUCTORS = {
  "C354610":  ("10uH", 2.5, 2.1, 0.064, (5.0, 5.0, 4.0), "[D] LCSC page 2026-08-29, CKCS5040-10uH/M"),
  "C18305":   ("600R@100MHz", None, None, None, (2.0, 1.25, 0.85), "[A] 0805 ferrite bead, package typical"),
 }
-#continuous current each inductor actually carries
-INDUCTOR_LOAD_A = {"L2": 0.95, "L5": 0.60}
+#continuous current each inductor actually carries what the +5 V buck (U8) actually carries
+#one list, two derived numbers
+LOADS_5V = [
+    ("U9 (+3V3) input, = LOADS_3V3",   sum(r[1] for r in LOADS_3V3),  sum(r[2] for r in LOADS_3V3),
+     "[M] derived: LDO input current equals its output; MCU, flash, microSD, LEDs, TMP119"),
+    ("U10 (+3V3A) input, = LOADS_3V3A", sum(r[1] for r in LOADS_3V3A), sum(r[2] for r in LOADS_3V3A),
+     "[M] derived: both IMUs, the baro, the MAX2112 tuner (100 mA), OPA2374, TCXO"),
+    ("M10 GPS + QMC5883L on J3",        0.050, 0.050, "[A] docs/HARDWARE.md budget row; typical M10 module ~40-50 mA"),
+    ("ELRS receiver on J5",             0.100, 0.100, "[A] docs/HARDWARE.md budget row; ESP-based RX with telemetry"),
+    ("WS2812 strip on PL1-PL3",         0.060, 0.600, "[M] strobe duty <=10% of [D] 10x60 mA full-white peak; the 0.6 A peak is a millisecond transient"),
+    ("TFS20-L rangefinder on J9",       0.106, 0.106, "[D] 0.35 W at 3.3 V via its inline LDO - optional (stage B2), budgeted as fitted"),
+    ("GY-53-L1X upward ToF on J9",      0.020, 0.020, "[D] VL53L1X module ~20 mA - optional (stage B2), budgeted as fitted"),
+]
+LOADS_5V_CONT_A = round(sum(r[1] for r in LOADS_5V), 3)
+LOADS_5V_PEAK_A = round(sum(r[2] for r in LOADS_5V), 3)
+
+INDUCTOR_LOAD_A = {"L2": LOADS_5V_CONT_A, "L5": 0.60}
 
 #package heights, the single source of truth
 #height of each package above the board surface it sits on, mm
@@ -1149,17 +1355,23 @@ PART_HEIGHT = {
     "CRYSTAL-SMD_4P": 0.9, "SOD-123F": 1.1,
     "SOT-23-3": 1.45, "SOT-23-5": 1.45, "SOT-23-6": 1.45, "SOT-25": 1.45,
     "SW_SPST_B3U": 0.8, "TestPoint_Pad": 0.0,
-    #both 10 uH power inductors are the same part, C167879, 4.0 x 4.0 x 3.0 mm
     "L_APV_ANR4030": 3.0, "L_1210": 3.0,
     "L_0805": 1.2,        #ferrite bead
     "C_1206": 1.6, "C_0805": 1.45, "C_0402": 0.55,
     "R_0402": 0.45, "LED_0603": 0.55,
-    #rev B parts
+    #Rev B parts
     "CONN-SMD_4P-P1.00_SM04B": 2.9,   #JST SH 4P vertical (J5/J9/J11), same 2.9 as the SH 8P
     "OSC-SMD_4P": 0.9,                 #3.2 x 2.5 clipped-sine TCXO (Y2) [D] Ostar
     "SOD-123": 1.1,                    #DZ1 zener, same body as the SOD-123F already here
     "TQFN-28_L5.0": 0.8,               #U13 MAX2112, 5 x 5 QFN [D] Maxim
+    "VQFN-12_L3.0": 0.9,              #U8 LMR33630ARNXR; [D] SNVSAN3F RNX0012B "0.9 mm max height"
     "U.FL_Hirose": 1.2,                #J12 vertical U.FL [D] Hirose U.FL-R-SMT-1
+    #Rev C additions:
+    "CONN-SMD_2P-P1.00": 2.9,          #J13/J16/J18/J20 JST-SH 2P
+    "CONN-SMD_3P-P1.00": 2.9,          #J15 JST-SH 3P
+    "CONN-SMD_SH1.0MM": 2.9,           #J14/J17 JST-SH 6P
+    "SMB_L4.6": 2.4,                   #D1 SMBJ26A DO-214AA / SMB
+    "Fuse_1206": 1.0,                  #F1 1206 PPTC fuse
     "DSBGA-6": 0.525,
 }
 
@@ -1193,69 +1405,89 @@ def stack_heights(board, skip_dnp=True):
     return top, bot, top_ref, bot_ref, unknown
 
 #maximum working voltage of each net, for the ratings check
-CELLS = 4
+CELLS = 6
 NET_VMAX = {
     "VBAT": CELLS * 4.2,
-    "+9V": 9.0, "+5V": 5.0, "VBUS": 5.25, "+3V3": 3.3, "+3V3A": 3.3, "VDDA": 3.3,
+    "VBAT_IN": CELLS * 4.2,
+    "VBAT_FUSED": CELLS * 4.2,
+    "+5V_PAYLOAD": 5.0,
+    "+5V": 5.0,
+    "VBUS": 5.25,
+    "+3V3": 3.3,
+    "+3V3A": 3.3,
+    "+3V3_CAN": 3.3,
+    "VDDA": 3.3,
     "GND": 0.0,
 }
-NET_VMAX.update({"BUCK_BOOT": 8.4, "BUCK_PH": 8.4, "BUCK9_BOOT": 8.4, "BUCK9_PH": 8.4})
-
+NET_VMAX.update({
+    "BUCK_BOOT": 8.4, "BUCK_PH": 8.4,
+    "BUCK_PAYLOAD_BOOT": 8.4, "BUCK_PAYLOAD_PH": 8.4,
+})
 NET_VMAX.update({
     "NRST": 3.3, "OSC_IN": 3.3, "OSC_OUT": 3.3,
-    "BUCK_SS": 3.3, "BUCK9_SS": 3.3,
-    "BUCK_COMP": 3.3, "BUCK9_COMP": 3.3, "BUCK_FB": 3.3, "BUCK9_FB": 3.3,
+    "BUCK_FB": 3.3, "BUCK_PAYLOAD_FB": 3.3,
     "BATT_V_DIV": 3.3, "ESC_CUR": 3.3,
-    #VCAP1/2 are the H743's internal core LDO output, 1.2 V nominal
     "VCAP1": 1.5, "VCAP2": 1.5,
-    "BUCK9_EN": 3.1,
+    "BUCK_PAYLOAD_EN": 3.3,
+    "PAYLOAD_EN": 3.3,
+    "PYRO_FIRE": 3.3,
+    "PYRO_GATE": 3.3,
+    "TOUCHDOWN": 3.3,
+    "FLOW_MOTION": 3.3,
 })
 
-
-#9 V VTX buck: DNP
-VTX_BUCK_DNP = ("U18", "L5", "C67", "C68", "C69", "C70", "C71", "C72", "C73",
-                "R40", "R41", "R42", "R43", "R44", "R45", "Q3", "PV1")
-#DNP again, - the premise of the decision below turned out to be false
-POPULATE_VTX = False
-if not POPULATE_VTX:
-    for _r in VTX_BUCK_DNP:
-        if _r in COMPONENTS:
-            _s, _f, _v, _l, _d = COMPONENTS[_r]
-            COMPONENTS[_r] = (_s, _f, _v, _l, True)
-
-
-#sensors that cannot see out of this stack
+#in Rev C, both buck switchers (U8 Core 5V and U20 Payload 5V) are fully fitted
+POPULATE_VTX = True
 POPULATE_BLIND_SENSORS = False
-BLIND_SENSORS = ()
 
-
-#bare copper pads are not components
-NOT_A_PART = {r for r in COMPONENTS
-              if r.startswith("TP")
-              or (r[0] == "P" and (r[1:].isdigit() or (len(r) > 1 and r[1] in "ZLV")))}
-
-#how much current each power net actually has to carry
-NET_SOURCE = {
-    "VBAT_IN": "J2.2",   #battery connector, before the protection FET
-    "VBAT":    "Q4.2",   #after the protection FET - Q4 pin 2 = source
-    "+5V":   "L2.2",     #5 V buck output inductor
-    "+9V":   "L5.2",     #9 V buck output inductor
-    "+3V3":  "U9.5",     #AP2112 output
-    "+3V3A": "U10.5",    #TLV75533 output
-    "VBUS":  "J1.A4B9",  #USB-C
+#the two bucks, keyed on the fitted part
+VREF_V = {
+    "TPS54331": (0.800, "[D] TI TPS54331 datasheet"),
+    "TPS54202": (0.596, "[D] TI TPS54202 SLVSD26C, 'typical voltage reference is designed at 0.596 V'"),
+    "LMR33630A": (1.000, "[D] SNVSAN3F 7.5 Voltage Reference (FB pin), VFB ADJ option 0.985 / 1.000 / 1.015 V"),
 }
 
-#worst-case continuous load each rail must carry
+#(ref, rail, vout_as_fitted_V, Rtop, Rbot, inductor)
+BUCK_RAILS = (("U8",  "+5V",         5.016, "R6",  "R7",  "L2"),
+              ("U20", "+5V_PAYLOAD", 5.016, "R42", "R43", "L5"))
+
+BUCK_THERMAL = {
+    "TPS54202": dict(
+        fsw=500e3, rds_hs=0.148, rds_ls=0.078, theta_jedec=118.6, theta_evm=57.2,
+        tj_max=125.0, tj_absmax=150.0, t_shutdown=160.0,
+        src="[D] SLVSD26 5.4 Thermal Information, DDC (SOT-23-6)"),
+    "LMR33630A": dict(
+        fsw=400e3, rds_hs=0.075, rds_ls=0.050, theta_jedec=72.5, theta_evm=None,
+        tj_max=125.0, tj_absmax=150.0, t_shutdown=165.0,
+        src="[D] SNVSAN3F 7.4 Thermal Information, RNX (12-pin VQFN)"),
+}
+
+
+#true when this rail's regulator is not fitted on the build being ordered
+def buck_dnp(ref):
+    return False
+
+
+NET_SOURCE = {
+    "VBAT_IN": "J2.2",     #battery connector, before the protection FET
+    "VBAT":    "Q4.2",     #after the protection FET - Q4 pin 2 = source
+    "VBAT_FUSED": "F1.2",  #pyrotechnic fused rail
+    "+5V":   "L2.2",       #core 5 V buck output inductor
+    "+5V_PAYLOAD": "L5.2", #payload 5 V buck output inductor
+    "+3V3":  "U9.5",       #AP2112 output
+    "+3V3A": "U10.5",      #TLV75533 output
+    "+3V3_CAN": "U21.2",   #XC6206 output
+    "VBUS":  "J1.A4B9",    #USB-C
+}
+
 NET_CURRENT = {
-    "VBAT": 1.7,
+    "VBAT": 2.5,
     "+5V":  0.95,
-    #0.30 A is what this rail CAN deliver
-    "+9V":  0.30,
-    #note this is a copper budget (what the trace must carry)
+    "+5V_PAYLOAD": 1.5,
     "+3V3": 0.6,
     "+3V3A": 0.35,
-    #VBUS carries no load current
-    "VBUS": 0.05,
+    "+3V3_CAN": 0.1,
+    "VBUS": 0.5,
 }
 
 #what each MCU pin is for, in the electrical sense
@@ -1283,7 +1515,9 @@ PIN_INTENT = {
     "SPI3_SCK": dict(mcu="out", why="shared clock, PMW3901 + W25Q128"),
     "SPI3_MOSI": dict(mcu="out", why="MCU drives"),
     "SPI3_MISO": dict(mcu="in",  why="devices drive"),
+    "EXT_CS1":  dict(mcu="out", boot="high", why="optical flow PMW3901 chip select, idle high"),
     "EXT_CS2":  dict(mcu="out", boot="high", why="W25Q128 select, idle high"),
+    "FLOW_MOTION": dict(mcu="in", why="PMW3901 motion interrupt input pin"),
 
     #I2C
     "I2C1_SCL": dict(mcu="bidir", why="open-drain, 4k7 pull-up"),
@@ -1327,9 +1561,21 @@ PIN_INTENT = {
                    why="AO3400A gate; R39 pulls down so it is silent through reset"),
     "WS2812": dict(mcu="out", why="into the 74LVC1G17 level shifter"),
 
-    #VTX power
-    "VTX_EN": dict(mcu="out", boot="low",
-                   why="Q3 gate: LOW leaves the 9 V VTX rail enabled, HIGH cuts it"),
+    #payload 5V buck power
+    "PAYLOAD_EN": dict(mcu="out", boot="low",
+                       why="Q3 gate: LOW leaves the 5V Payload rail enabled, HIGH cuts it"),
+
+    #TVC servos / secondary actuators (TIM4 on J17)
+    "PWM7":  dict(mcu="out", why="TIM4_CH1 servo / actuator PWM on J17"),
+    "PWM8":  dict(mcu="out", why="TIM4_CH2 servo / actuator PWM on J17"),
+    "PWM9":  dict(mcu="out", why="TIM4_CH3 servo / actuator PWM on J17"),
+    "PWM10": dict(mcu="out", why="TIM4_CH4 servo / actuator PWM on J17"),
+
+    #lander / recovery peripherals
+    "PYRO_FIRE": dict(mcu="out", boot="low",
+                      why="AO3400A gate driving recovery / e-match pyro channel on J18"),
+    "TOUCHDOWN": dict(mcu="in",
+                      why="landing leg touchdown switch to GND with 10k pull-up on J20"),
 
     #brought out to test pads only, no device fitted
     "USART1_TX": dict(mcu="out", why="telem2 TX on test pad TP5"),
@@ -1373,41 +1619,44 @@ MODULES = {
              "end, 0.4 mm short). Moving 615 g of 1123 g AUW by 11.13 mm shifts CG 6.1 mm; "
              "displace it AWAY from the existing +3.1 mm offset and CG improves to -3.0 mm"),
     "lidar_360": dict(
-        what="LDROBOT LD06, 12 m, INDOOR ONLY", lands_on=["J11"], conn="SERIAL2 (USART1) on J11",
+        what="LDROBOT LD06, 12 m, INDOOR ONLY", lands_on=["J11"],
+        conn="SERIAL2 (USART1) on J11; its 5 V lead to the payload BEC, not J11.1", bec=True,
         #price, third and final correction
         needs_board_change=None, gbp=OFFBOARD["lidar"]["gbp"], status="later",
         ma_5v=180, counted=False,
-        note="[D] 180 mA running, but 300 mA at START-UP - the surge is what matters on a "
-             "653 mA of rail headroom. 33.30 mm tall against 28.5 mm of belly at the old 25 mm "
-             "skid drop - SKID['drop'] is now 40 mm, giving 10.20 mm of ground clearance. "
-             "NOT in check_build.LOADS_5V, which "
-             "budgets an 8x VL53L1X ring instead of this"),
+        note="[D] 180 mA running, but 300 mA at START-UP - which is why it is on the payload "
+             "BEC and not this board's buck. 33.30 mm tall against 28.5 mm of belly at the "
+             "old 25 mm skid drop - SKID['drop'] is now 40 mm, giving 10.20 mm of ground "
+             "clearance"),
     "rc_link": dict(
         what="ELRS 2.4 GHz, ESP-based", lands_on=["J5"], conn="JST-SH 4P on J5 (USART6)",
         needs_board_change=None, gbp=12, status="fitted",
         ma_5v=100, counted=True,
         note="MAVLink downlink caps at 1470 B/s - carries telemetry, never video"),
     "soop_tuner": dict(
-        what="SoOP RF front end - the point of the project",
-        lands_on=["TP9", "TP10", "TP11", "P44"], conn="solder pads (I/Q ADC pair, RSSI, PPS)",
+        what="SoOP RF front end: SAWbird+ IR (LNA+SAW) + 1620 MHz patch, at the antenna",
+        lands_on=["J12"], conn="U.FL coax into J12; micro-USB power from the payload BEC", bec=True,
         needs_board_change=None, gbp=70, status="later",
-        ma_5v=0, counted=True,
-        note="a reflash plus a bought tuner, NOT a fabrication run. "
-             "The tuner is laptop-side and takes no current from this rail"),
+        ma_5v=180, counted=False,
+        note="the LNA+SAW stage the board could not source, bought built. 180 mA [D] at "
+             "3.3-5.5 V, powered by bias tee (bench) or micro-USB from the payload BEC "
+             "(aircraft) - J12 carries no bias tee and this board's buck does not carry it"),
     "fpv": dict(
-        what="5.8 GHz camera + VTX, 25 mW EIRP", lands_on=["P41", "P46"],
-        conn="+5V / GND pads",
+        what="5.8 GHz camera + VTX, 25 mW EIRP", lands_on=[],
+        conn="5 V and GND from the payload BEC; no connection to the FC", bec=True,
         needs_board_change=None, gbp=25, status="later",
         ma_5v=300, counted=False,
-        note="a 25 mW AIO runs off the +5V rail, so it does NOT need the unroutable 9 V "
-             "block. NOTE there is no VBAT pad on this board - anything wanting 7-26 V "
-             "takes it from the battery harness, off-board"),
+        note="a 25 mW AIO runs from 5 V, so it does NOT need the unroutable 9 V block - "
+             "and from the payload BEC, not this board's buck. NOTE there is no VBAT pad "
+             "on this board - anything wanting 7-26 V takes it from the battery harness"),
     "rec_camera": dict(
-        what="XIAO ESP32-S3 Sense, records to its own SD", lands_on=["P41", "P46"], conn="two wires, +5V/GND",
+        what="XIAO ESP32-S3 Sense, records to its own SD", lands_on=[],
+        conn="two wires, 5 V and GND from the payload BEC; no connection to the FC", bec=True,
         needs_board_change=None, gbp=14, status="later",
         ma_5v=250, counted=False,
-        note="0.25 A against 0.41 A headroom; can also run standalone on a 1S cell, "
-             "which is the right answer if anything else is on the rail"),
+        note="0.25 A, on the payload BEC (or standalone on a 1S cell). It used to be wired "
+             "to P41/P46 - 250 mA on the FC's buck, which with the SAWbird+ took U8's worst "
+             "corner to 154 C. Those pads remain a 5 V tap for a bench probe, not a payload"),
     "flow_globalshutter": dict(
         what="global-shutter flow via a companion",
         lands_on=["P71", "P72", "P73", "P74"],
@@ -1425,24 +1674,17 @@ MODULES = {
              "interface on pads that already exist. Set SERIAL6_PROTOCOL 2 (MAVLink2) "
              "and SERIAL6_BAUD to match the companion"),
     "flow_pmw3901": dict(
-        what="PixArt PMW3901 flow", lands_on=[], conn="SPI3 - no socket on this board",
-        needs_board_change="U6 is deleted and SPI3 carries only the W25Q128 flash, so "
-                           "re-fitting on-board flow WOULD NEED A NEW BOARD: a SPI3 "
-                           "socket plus a PD4 re-assignment",
-        gbp=12, status="blocked",
+        what="PixArt PMW3901 flow", lands_on=["J14"], conn="JST-SH 6P on J14 (SPI3)",
+        needs_board_change=None,
+        gbp=12, status="later",
         ma_5v=0, counted=True,
-        note="U6 is deleted - it faced the ESC and could never see the ground, "
-             "and correlation flow of that class fails over grass anyway. MAVLink flow "
-             "from the companion (flow_globalshutter) is the supported path"),
-    "vtx_9v_rail": dict(
-        what="on-board 9 V buck for a VTX", lands_on=[], conn="BUCK9_PH",
-        needs_board_change="none - L5 sits on F.Cu beside U18, closing the switch-node "
-                           "loop, so the rail is routable; populate U18/L5/C68/C69/C70 to use it",
-        gbp=0, status="dnp",
+        note="External PMW3901 flow breakout connects via J14 on SPI3"),
+    "payload_5v_rail": dict(
+        what="on-board 5 V buck for payload/servos", lands_on=["J17", "J11"], conn="+5V_PAYLOAD",
+        needs_board_change=None,
+        gbp=0, status="fitted",
         ma_5v=0, counted=True,
-        note="was DNP in an earlier draft because BUCK9_PH was unroutable with L5 on the "
-             "other face. The loop is fixed; the rail stays DNP because the 25 mW VTX runs from +5V "
-             "and nothing on this build wants 9 V"),
+        note="TPS54332 5V/2.5A switching buck U20 powering servos on J17 and companion on J11"),
     "src": "[M] every lands_on asserted against real footprints by tools/check_modules.py",
 }
 
@@ -1470,7 +1712,7 @@ RF_BENCH = dict(
                  "keep the SDR off the airframe entirely - the receive chain is "
                  "laptop-side, so this board allows it"],
     src="[A] min_fraction_of_baseline is a judgement call; every other field is a slot "
-        "for an [M]easured value recorded by docs/BUILD.md T3b",
+        "for an [M]easured value recorded by runbook T3b",
 )
 
 
@@ -1478,17 +1720,22 @@ RF_BENCH = dict(
 RAIL_5V = dict(
     irms_a=1.6,          #[D] FNR4030S100MT, C167879 - the thermal limit
     isat_a=2.4,          #[D] saturation - a transient limit, not a load budget
-    fitted_load_a=0.947,  #[M] sum of check_build.LOADS_5V; = INDUCTOR_LOAD_A["L2"]
-    headroom_a=1.6 - 0.947,
-    note="L5 (the 9 V VTX buck's inductor, DNP on this build) sits on a 1210 land while "
-         "C167879 is a 4.0x4.0x3.0 mm part, so its terminal overhangs by 0.18 mm in Y. "
-         "check_ratings.py reports this as a note, not a failure - it is solderable, and "
-         "the fillet is what to inspect. L2, the fitted +5 V inductor, is on the correct "
-         "L_APV_ANR4030 land. Do not 'fix' L5 by swapping in a part the 1210 land takes "
-         "but the current does not.",
-    src="[D] Irms/Isat from the FNR4030S100MT datasheet; [M] fitted_load_a is the sum "
-        "of tools/check_build.py LOADS_5V, independently equal to INDUCTOR_LOAD_A['L2']",
+    fitted_load_a=LOADS_5V_CONT_A,   #[M] derived from LOADS_5V above, continuous
+    fitted_peak_a=LOADS_5V_PEAK_A,   #[M] the same list at its peak column (inductor Isat)
+    headroom_a=1.6 - LOADS_5V_CONT_A,
+    note="Neither fitted inductor sits on a land too small for it any more: L2 and L5 "
+         "are both 4.0x4.0x3.0 mm FNR4030s on L_APV_ANR4030. L5 was on a 1210 land until "
+         "2026-09-21, where check_ratings measured its terminal overhanging by 0.18 mm in "
+         "Y - solderable, but the wrong land for the part, and now moot. If a future "
+         "inductor is put on a 1210 land, do not 'fix' it by swapping in a part that "
+         "land takes but the current does not.",
+    src="[D] Irms/Isat from the FNR4030S100MT datasheet; [M] fitted_load_a IS the sum "
+        "of design.LOADS_5V - one list, and INDUCTOR_LOAD_A['L2'] is the same expression",
 )
 
 #the payload breakout quotes the +5 V headroom
 PAYLOAD_BREAKOUT["headroom_a"] = RAIL_5V["headroom_a"]
+
+#bare copper pads are board features
+NOT_A_PART = {ref for ref, spec in COMPONENTS.items()
+              if spec[1] == "TestPoint:TestPoint_Pad_1.5x1.5mm"}
