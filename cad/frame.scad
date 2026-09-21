@@ -56,7 +56,7 @@ fc_l_fab       = 45.00;   // centreline: what JLC routes to
 fc_w_fab       = 46.00;
 fc_pcb         = 1.60;
 fc_top_parts   = 4.4;          // tallest: J3
-fc_bot_parts   = 2.9;          // tallest: J11
+fc_bot_parts   = 3.0;          // tallest: L5
 
 esc_l          = 45.6;
 esc_w          = 44.0;
@@ -108,8 +108,8 @@ rear_posts      = [[-14.6, 27.88], [14.6, 27.88], [-11.0, 80.75], [11.0, 80.75]]
 plate_y_fc      = -29.16;    // plate centres rel. the stack centre, +y aft
 plate_y_bottom  = 31.09;
 plate_y_top     = 4.78;
-standoff_need   = 30.2;   // stack top above z = 0
-standoff_slack  = 2.3;  // headroom under the top plate
+standoff_need   = 30.3;   // stack top above z = 0
+standoff_slack  = 2.2;  // headroom under the top plate
 cam_mod_t       = 12.0;
 cam_mod_w       = 30.0;
 pi_l            = 65.0;
