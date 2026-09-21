@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import design, symlib, route
 
 BOARD = "NAVCORE-SoOP.kicad_pcb"
-RAILS = {"+3V3", "+3V3A", "+5V", "+9V", "VBAT", "VDDA", "VBUS"}
+RAILS = {"+3V3", "+3V3A", "+3V3_CAN", "+5V", "+5V_PAYLOAD", "+9V", "VBAT", "VDDA", "VBUS"}
 DECOUPLE_NEAR = 3.0        # mm; beyond this a 100n is not doing its job at 100 MHz
 DECOUPLE_FAR  = 6.0        # mm; beyond this it is decoration
 
@@ -180,7 +180,7 @@ def main():
             notes.append(f"{name}: cannot read {rtop}/{rbot}")
             continue
         vout = vref * (1 + a / b)
-        want = {"+5V": 5.0, "+9V": 9.0}[rail]
+        want = {"+5V": 5.0, "+9V": 9.0, "+5V_PAYLOAD": 5.0}[rail]
         detail = (f"{name}: {value_of(rtop)}/{value_of(rbot)} on a {vref:.3f} V "
                   f"reference -> {vout:.3f} V (design.BUCK_RAILS declares "
                   f"{vout_declared:.3f} V, nominal {want} V)")
@@ -204,7 +204,7 @@ def main():
                "LMR33630A": (3.8, "[D] SNVSAN3F 7.3 Recommended Operating Conditions, "
                                   "VIN 3.8-36 V")}
     for name, ref, rtop, rbot in (("5 V buck EN", "U8", "R4", "R5"),
-                                  ("9 V buck EN", "U18", "R40", "R41")):
+                                  ("Payload 5 V buck EN", "U20", "R40", "R41")):
         a, b = to_ohms(value_of(rtop)), to_ohms(value_of(rbot))
         if not (a and b):
             notes.append(f"{name}: cannot read {rtop}/{rbot}")

@@ -25,6 +25,8 @@ CROSS_CHECK = {
     "MS561101BA03-50":       ("Sensor_Pressure", "MS5611-01BA"),
     "AO3400A":               ("Transistor_FET", "AO3400A"),
     "TMP119AIYBGR":          ("Sensor_Temperature", "TMP119AIYBGR"),
+    # Added after this part turned out to be wired backwards on the board.
+    "XC6206P332MR":          ("Regulator_Linear", "XC6206PxxxMR"),
 }
 
 # Parts with no KiCad equivalent, verified by hand against the manufacturer document.
@@ -120,7 +122,8 @@ def variants(name):
             head = alt.split("-", 1)[0]
             if head:
                 out.add(head.replace("_", ""))
-    syn = {"VSS": "GND", "GND": "VSS", "VDD": "VCC", "VCC": "VDD"}
+    syn = {"VSS": "GND", "GND": "VSS", "VDD": "VCC", "VCC": "VDD",
+           "VI": "VIN", "VIN": "VI", "VO": "VOUT", "VOUT": "VO"}
     for v in list(out):
         if v in syn:
             out.add(syn[v])

@@ -299,7 +299,7 @@ def project(board):
         ("GPS / telemetry JST-GH",   {"J3"}),
         ("CAN transceiver",          {"U11"}),
         ("5 V buck",                 {"U8"}),
-        ("9 V buck (VTX)",           {"U18"}),
+        ("payload 5 V buck",         {"U20"}),
         ("3V3 digital LDO",          {"U9"}),
         ("3V3 analogue LDO",         {"U10"}),
         ("WS2812 level shifter",     {"U17"}),
@@ -326,7 +326,8 @@ def project(board):
         ("ESC current sense",      ("ESC_CUR",)),
         ("SoOP I/Q ADC inputs",    ("SOOP_I_ADC", "SOOP_Q_ADC")),
         ("SWD debug",              ("SWDIO", "SWCLK")),
-        ("power rails",            ("+3V3", "+5V", "+9V", "VBAT", "VBAT_IN", "GND")),
+        ("power rails",            ("+3V3", "+5V", "+5V_PAYLOAD", "+3V3_CAN", "VBAT",
+                                    "VBAT_IN", "GND")),
     ]
     for label, need in NETS:
         miss = [n for n in need if n not in nets]

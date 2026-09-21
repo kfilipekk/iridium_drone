@@ -16,6 +16,11 @@ SHARED_BY_DESIGN = {
                                 "different-address alternative, never fitted together",
 }
 
+RAIL_BY_NATURE = {
+    "payload_5v_rail": "the rail itself, not a plug - it lands on J17.5 and J11.1, where "
+                       "the servo header and the lidar take power FROM it",
+}
+
 PAD_BY_NATURE = {
     "soop_tuner": "an analogue I/Q pair, RSSI and PPS - coax and short leads, not a plug",
     "fpv":        "+5V/GND tap for a VTX; it has its own harness",
@@ -53,6 +58,8 @@ def main():
     # who else lands on each ref
     owners = {}
     for name, m in mods.items():
+        if name in RAIL_BY_NATURE:
+            continue              # a supply does not contend for a socket
         for ref in m.get("lands_on") or []:
             if not carries_signal(ref):
                 continue          # a power tap is shared by definition
@@ -65,6 +72,9 @@ def main():
         m = mods[name]
         refs = m.get("lands_on") or []
         if not refs:
+            continue
+        if name in RAIL_BY_NATURE:
+            print(f"  {name:20} {','.join(refs)[:20]:22} {'supply':10} {'n/a':10}")
             continue
         co = sorted({o for r in refs for o in owners.get(r, []) if o != name})
         dedicated = not co or all((name, r) in SHARED_BY_DESIGN for r in refs)
@@ -97,6 +107,9 @@ def main():
         print("\nSOLDER-ONLY LANDING POINTS - real and reachable, but not a plug:")
         for name, refs in soldered:
             print(f"  {name}: {','.join(refs)}")
+    for name, why in sorted(RAIL_BY_NATURE.items()):
+        if name in mods:
+            print(f"  note {name} is a supply, not a landing point - {why}")
     for name, why in sorted(PAD_BY_NATURE.items()):
         if name in mods:
             print(f"  note {name} exempt from the plug test - {why}")

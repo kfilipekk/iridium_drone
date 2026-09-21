@@ -24,7 +24,6 @@ DROP = [
     (r'^ROMFS_WILDCARD libraries/AP_OSD', "no analogue OSD fitted"),
     (r'^PA4 BATT2_VOLTAGE_SENS', "single battery; freed for the SoOP I/Q input"),
     (r'^PC4 PRESSURE_SENS',      "no airspeed sensor; freed for the SoOP I/Q input"),
-    (r'^PC5 RSSI_ADC',           "RSSI arrives over CRSF; PC5 is spare"),
     (r'^define HAL_BATT2_',      "single battery"),
     (r'^define HAL_DEFAULT_AIRSPEED_PIN', "no airspeed sensor"),
     (r'^define BOARD_RSSI_ANA_PIN', "RSSI arrives over CRSF"),
@@ -37,22 +36,27 @@ DROP = [
     (r'^PE1 UART8_TX',
      "ESC telemetry is receive-only, so UART8 needs only PE0/RX. PE1 is left "
      "unwired rather than declared and unconnected"),
-    # ---- U6 (PMW3901) and U7 (VL53L1X) are deleted -------------------------
-    (r'^PD4 EXT_CS1',      "U6 (PMW3901) is deleted, the only EXT_CS1 device; PD4 freed"),
-    (r'^PD10\s+PINIO1',    "U7 (VL53L1X) is deleted; PD10 freed"),
-    (r'^PD11\s+PINIO2',    "U7 (VL53L1X) is deleted; PD11 freed"),
-    (r'^SPIDEV pixartflow', "U6 (PMW3901) is deleted; SPI3 carries only the TLE flash"),
 ]
 
 # Lines to rewrite: pins MatekH743 uses for something else, which this board wires to real hardware.
 REPLACE = [
     (r'^PA7 BATT2_CURRENT_SENS',
-     "PA7 VTX_EN OUTPUT LOW GPIO(83)",
+     "PA7 PAYLOAD_EN OUTPUT LOW GPIO(83)",
      "MatekH743 reads PA7 as BATT2_CURRENT_SENS. This board has one battery, so the pin "
-     "was free, and it now drives Q3's gate to switch the 9 V VTX rail. LOW leaves the "
-     "rail enabled - R45 pulls the gate down as well - so the VTX fails safe towards "
+     "was free, and it now drives Q3's gate to switch the 5 V Payload rail (U20). LOW leaves "
+     "the rail enabled - R45 pulls the gate down as well - so payload fails safe towards "
      "powered. It is deliberately a pin MatekH743 only ever READS: a stock MatekH743 "
-     "binary cannot assert it and so cannot cut video."),
+     "binary cannot assert it and so cannot cut payload power."),
+    (r'^PC5 RSSI_ADC',
+     "PC5 PYRO_FIRE OUTPUT LOW GPIO(84)",
+     "PC5 drives Q5's gate via R47/R48 for recovery / e-match pyro channel on J18. "
+     "LOW keeps the channel disarmed at boot."),
+    (r'^PD10\s+PINIO1.*',
+     "PD10 TOUCHDOWN INPUT PULLUP GPIO(85)",
+     "PD10 reads the landing leg touchdown switch on J20 with 10k pull-up R49."),
+    (r'^PD11\s+PINIO2.*',
+     "PD11 FLOW_MOTION INPUT PULLDOWN GPIO(86)",
+     "PD11 is the optical flow motion interrupt line from J14.6."),
 ]
 
 EXTRA = """
