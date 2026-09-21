@@ -43,7 +43,7 @@ PB4 SPI3_MISO SPI3
 PB5 SPI3_MOSI SPI3
 
 # external CS pins
-# [removed: U6 (PMW3901) is deleted, the only EXT_CS1 device; PD4 freed] PD4 EXT_CS1 CS
+PD4 EXT_CS1 CS
 PE2 EXT_CS2 CS
 
 # SPI4 for IMU2 (ICM20602)
@@ -69,7 +69,7 @@ PB11 I2C2_SDA I2C2
 # ADC
 PC0 BATT_VOLTAGE_SENS ADC1 SCALE(1)
 PC1 BATT_CURRENT_SENS ADC1 SCALE(1)
-PA7 VTX_EN OUTPUT LOW GPIO(83)
+PA7 PAYLOAD_EN OUTPUT LOW GPIO(83)
 
 define HAL_BATT_MONITOR_DEFAULT 4
 define HAL_BATT_VOLT_PIN 10
@@ -83,7 +83,7 @@ define HAL_BATT_CURR_SCALE 40.0
 # [removed: no airspeed sensor; freed for the SoOP I/Q input] PC4 PRESSURE_SENS ADC1 scale(2)
 # [removed: no airspeed sensor] define HAL_DEFAULT_AIRSPEED_PIN 4
 
-# [removed: RSSI arrives over CRSF; PC5 is spare] PC5 RSSI_ADC ADC1
+PC5 PYRO_FIRE OUTPUT LOW GPIO(84)
 # [removed: RSSI arrives over CRSF] define BOARD_RSSI_ANA_PIN 8
 
 # LED green LED1 marked as B/E blue LED0 marked as act.
@@ -160,6 +160,8 @@ PC11 SDMMC1_D3 SDMMC1
 PC12 SDMMC1_CK SDMMC1
 PD2 SDMMC1_CMD SDMMC1
 
+PD10 TOUCHDOWN INPUT PULLUP GPIO(85)
+PD11 FLOW_MOTION INPUT PULLDOWN GPIO(86)
 
 DMA_PRIORITY S*
 
@@ -178,7 +180,7 @@ SPIDEV icm42605  SPI4 DEVID1 IMU3_CS      MODE3  2*MHZ 16*MHZ
 DMA_NOSHARE SPI1* SPI4*
 
 # SPI3 external connections
-# [removed: U6 (PMW3901) is deleted; SPI3 carries only the TLE flash] SPIDEV pixartflow   SPI3 DEVID1  EXT_CS1  MODE3   2*MHZ  2*MHZ
+SPIDEV pixartflow   SPI3 DEVID1  EXT_CS1  MODE3   2*MHZ  2*MHZ
 
 # no built-in compass, but probe the i2c bus for all possible
 # external compass types
