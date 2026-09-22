@@ -127,23 +127,26 @@ def main():
                             span = (bm - t_) if axis == "x" else (r_ - l)
                             if span > 0:
                                 tot += ipc_width(span, False)
-                    if worst is None or tot < worst[0]:
-                        worst = (tot, axis, v, len(sep))
+                    rail_load_cur = getattr(design, "LOAD_CURRENT", {}).get(netname, {})
+                    need = min(want, sum(rail_load_cur.get(r, want) for r in sep))
+                    margin = tot / need if need > 0 else 999.0
+                    if worst is None or margin < worst[4]:
+                        worst = (tot, axis, v, len(sep), margin, need)
                 v += 0.5
         if worst is None:
             continue
-        tot, axis, v, nsep = worst
+        tot, axis, v, nsep, margin, need = worst
         line = (f"{netname}: tightest cut is {axis}={v:.1f} mm carrying ~{tot:.1f} A "
-                f"with {nsep} load(s) beyond it, needs {want:.1f} A")
+                f"with {nsep} load(s) beyond it, needs {need:.1f} A")
         _pins = design.NETS.get(netname) or []
         _all_dnp = bool(_pins) and all(
             (design.COMPONENTS.get(q.split('.')[0]) or (0, 0, 0, 0, False))[4]
             for q in _pins)
         if _all_dnp:
             notes.append(line + "  [every load is DNP - rail not populated]")
-        elif tot < want:
+        elif tot < need:
             fails.append(line)
-        elif tot < want * 1.5:
+        elif tot < need * 1.5:
             warns.append(line)
         else:
             notes.append(line)

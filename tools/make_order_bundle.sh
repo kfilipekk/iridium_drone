@@ -79,7 +79,7 @@ Upload gerbers.zip as the PCB. Do NOT unzip it first.
 FABRICATION
   Layers            6          <- if the preview shows 4, STOP. The power planes
                                   are missing and the board will not work.
-  Dimensions        45.1 x 46.1 mm
+  Dimensions        45.0 x 47.2 mm
   Thickness         1.6 mm
   Outer copper      1 oz       <- 0.5 oz halves every trace's current rating and
                                   invalidates tools/check_power_cut.py

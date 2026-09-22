@@ -51,9 +51,9 @@ batt_overhang  = 2.25;   // per side, battery vs top plate
 // already disagreed once in this project (2.5 / 2.3 / 3.0); this is the fourth, and
 // it is now generated so it cannot be the fifth.
 fc_l           = 45.10;   // Edge.Cuts bbox - conservative
-fc_w           = 46.10;
+fc_w           = 47.30;
 fc_l_fab       = 45.00;   // centreline: what JLC routes to
-fc_w_fab       = 46.00;
+fc_w_fab       = 47.20;
 fc_pcb         = 1.60;
 fc_top_parts   = 4.4;          // tallest: J3
 fc_bot_parts   = 3.0;          // tallest: L5
