@@ -75,6 +75,14 @@ def render(expr, path):
     finally:
         os.unlink(tmp)
 
+def render_many(jobs):
+    """Render concurrently, preserving job order in the result."""
+    from concurrent.futures import ThreadPoolExecutor
+    n = int(os.environ.get("CADFIT_JOBS", min(8, os.cpu_count() or 4)))
+    with ThreadPoolExecutor(max_workers=n) as ex:
+        return list(ex.map(lambda j: render(*j), jobs))
+
+
 def read_stl(path):
     """ascii or binary STL -> list of (v0,v1,v2)."""
     with open(path, "rb") as f:
@@ -162,10 +170,11 @@ def main():
     parts, fails, warns = {}, [], []
     names = sorted({n for p in PAIRS for n in p[:2]})
     print("exporting parts")
-    for n in names:
-        f = os.path.join(out, n + ".stl")
-        if not render(f"{n}();", f):
+    for n, res in zip(names, render_many([(f"{n}();", os.path.join(out, n + ".stl"))
+                                          for n in names])):
+        if res is False:
             print(f"  {n:10s} FAILED to export"); return 1
+        f = os.path.join(out, n + ".stl")
         parts[n] = read_stl(f)
         print(f"  {n:10s} {len(parts[n]):6d} facets  vol {volume(parts[n]):10.1f} mm^3")
 
@@ -198,9 +207,13 @@ def main():
                          f"contact plane (need {need:.1f}) - a landing lands on it")
 
     print("\npairwise interference")
-    for a, b, need, why in PAIRS:
+    # Render every pair first (parallel), then analyse in the original order so the
+    # report and its failure list are byte-identical to the serial version.
+    pair_res = render_many([
+        (f"intersection() {{ {a}(); {b}(); }}", os.path.join(out, f"{a}-{b}.stl"))
+        for a, b, _, _ in PAIRS])
+    for (a, b, need, why), res in zip(PAIRS, pair_res):
         f = os.path.join(out, f"{a}-{b}.stl")
-        res = render(f"intersection() {{ {a}(); {b}(); }}", f)
         if res is False:
             fails.append(f"{a} x {b}: export failed"); continue
         tris = [] if res == "empty" else read_stl(f)

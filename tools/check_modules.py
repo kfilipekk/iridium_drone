@@ -115,21 +115,46 @@ uncounted = [(n, m["ma_5v"]) for n, m in mods.items()
              if not m["counted"] and m["ma_5v"] and not m.get("bec")]
 total = sum(ma for _, ma in uncounted)
 
-print(f"\n+5 V rail: {rail['fitted_load_a']:.3f} A fitted (continuous, every FC-rail sensor "
-      f"budgeted) against L2's {rail['irms_a']} A Irms -> {budget_ma:.0f} mA headroom")
+print(f"\n+5 V rail (U8): {rail['fitted_load_a']:.3f} A fitted (continuous, every FC-rail "
+      f"sensor budgeted) against L2's {rail['irms_a']} A Irms -> {budget_ma:.0f} mA headroom")
 if on_bec:
-    bec_total = sum(ma for _, ma in on_bec)
-    print(f"  on the PAYLOAD BEC, not this rail ({bec_total} mA running; LD06 surges to 300 mA):")
-    for n, ma in sorted(on_bec, key=lambda x: -x[1]):
-        print(f"    {n:20s} {ma:4d} mA")
-    if bec_total > 2000:
-        fail.append(f"payload BEC loads total {bec_total} mA - above a 3 A BEC's sensible continuous rating")
+    print(f"  payload modules on +5V_PAYLOAD (U20), not this rail: "
+          + ", ".join(f"{n} {ma} mA" for n, ma in sorted(on_bec, key=lambda x: -x[1])))
+
+# The payload rail, by MISSION.
+prail = design.RAIL_5V_PAYLOAD
+th = design.BUCK_THERMAL[next(v for r, _rail, _v, *_x in design.BUCK_RAILS if r == "U20"
+                              for v in [design.COMPONENTS["U20"][2]])]
+vout = next(v for r, _rail, v, *_x in design.BUCK_RAILS if r == "U20")
+
+
+def u20_tj(amps, eff=0.85, t_amb=40.0):
+    """Worst corner: 85 % efficiency on the datasheet's JEDEC theta_JA, as check_thermal."""
+    return t_amb + vout * amps * (1 / eff - 1) * th["theta_jedec"]
+
+
+print(f"\n+5V_PAYLOAD rail (U20): L5 {prail['irms_a']} A Irms, U20 limit {th['tj_max']:.0f} C")
+for name, prof in design.PAYLOAD_PROFILES.items():
+    a = design.PAYLOAD_MISSION_A[name]
+    tj = u20_tj(a)
+    ok = a <= prail["irms_a"] and tj <= th["tj_max"]
+    print(f"  {'ok  ' if ok else 'FAIL'} mission {name:7s} {a:5.2f} A  U20 {tj:4.0f} C worst  "
+          f"({', '.join(prof['keys'])})")
+    if not ok:
+        fail.append(f"payload mission '{name}' draws {a:.2f} A: over L5's {prail['irms_a']} A "
+                    f"Irms or U20's {th['tj_max']:.0f} C ({tj:.0f} C)")
+aw = design.PAYLOAD_ALL_WIRED_A
+if aw > prail["irms_a"] or u20_tj(aw) > th["tj_max"]:
+    print(f"  warn everything wired at once {aw:.2f} A, U20 {u20_tj(aw):.0f} C - a harness "
+          f"rule: fly one mission's payload, not all of them")
+    warn.append(f"+5V_PAYLOAD cannot carry every payload connector at once ({aw:.2f} A, "
+                f"U20 {u20_tj(aw):.0f} C); each declared mission fits")
 if uncounted:
     print(f"  modules on the FC rail but NOT in design.LOADS_5V, totalling {total} mA:")
     for n, ma in sorted(uncounted, key=lambda x: -x[1]):
         print(f"    {n:20s} {ma:4d} mA")
         fail.append(f"{n}: {ma} mA on the FC's +5 V rail but neither in design.LOADS_5V nor "
-                    f"marked bec=True - U8's thermal bracket does not include it")
+                    f"on +5V_PAYLOAD (bec=True) - U8's thermal bracket does not include it")
 if total > budget_ma:
     print(f"  -> {total} mA exceeds {budget_ma:.0f} mA: these CANNOT all run together.")
     print(f"     Fit them one or two at a time, or give one its own BEC off the battery.")

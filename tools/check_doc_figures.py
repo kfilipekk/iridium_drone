@@ -48,6 +48,17 @@ RETIRED = [
      "U8's junction bracket and the +5 V budget it was computed from (0.947 A, 653 mA headroom)",
      "design.LOADS_5V derives 0.737 A; check_thermal.py gives 63-117 C; headroom 863 mA - "
      "the old figures counted 281 mA of deleted parts and missed U10"),
+    # Revision C: figures the Rev C work left behind or introduced.
+    (r"46\.1\s?(mm|\$|x|×)|x\s?46\.1|\\times\s?46\.1|45\.1\s?[x×]\s?46", "the Rev B board outline",
+     "Revision C is 45.1 x 47.3 mm (Edge.Cuts bounding box; check_design prints it)"),
+    (r"\b14 (DNP|designators|refs)\b", "the Rev B DNP count", "Revision C fits everything but R15, the CAN terminator"),
+    (r"3S\s?[–-]{1,2}\s?6S|\b26\.1\s?V", "a 6S input rating the input TVS cannot protect",
+     "the board is 5S max: the SMBJ22A stands off 22 V and clamps at 35.5 V under the bucks' 38 V"),
+    (r"TPS54332", "a buck part this board never used", "both bucks are LMR33630 (design.BUCK_THERMAL)"),
+    (r"JST-SH 8P Gimbal|8-pin Actuator|J17\.6[`)]* \(`?\+5V", "the 8-pin J17 pinout with +5 V on pin 6",
+     "J17 is a 6-pin JST-SH: pin 5 +5V_PAYLOAD, pin 6 GND"),
+    (r"5V\s?/\s?(2\.5|3)A payload|3A continuous|5V / 3A Payload", "the payload buck's IC rating quoted as the rail's",
+     "L5 limits +5V_PAYLOAD to 1.6 A continuous"),
     (r"bootloader over SWD|no bootloader will not enumerate", "a first-flash procedure that is wrong for an H743",
      "hold BOOT (SW1) through RESET and the ROM DFU enumerates as 0483:df11 with no bootloader; SWD is the fallback"),
 ]

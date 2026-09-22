@@ -45,7 +45,7 @@ COMPONENTS = {
  "J8" : ("jlc_parts:TF-01A",                "jlc:TF-SMD_TF-01A",                        "microSD",       "C91145",   False),
  # Y1 is a passive crystal and the part number matters more than it looks.
  "Y1" : ("jlc_parts:X32258MSB4SI",          "jlc:CRYSTAL-SMD_4P-L3.2-W2.5-BL",          "8MHz",          "C2682774", False),
- "D1" : ("jlc_parts:SMBJ26A_C123820",          "jlc:SMB_L4.6-W3.6-LS5.3-RD",                          "SMBJ26A",       "C123820",False),
+ "D1" : ("jlc_parts:SMBJ22A_C113993",          "jlc:SMB_L4.6-W3.6-LS5.3-RD",                          "SMBJ22A",       "C113993",False),
  # ---- SoOP receiver. The tuner half is fitted - the H743 does the Doppler on
  "U13": ("jlc_parts:MAX2112ETI+T",          "jlc:TQFN-28_L5.0-W5.0-P0.50-BL-EP3.3",      "MAX2112",       "C596391",  False),
  "U14": ("jlc_parts:OPA2374M{slash}TR",     "jlc:SOP-8_L4.9-W3.9-P1.27-LS6.0-BL",       "OPA2374",       "C444392",  False),
@@ -94,11 +94,11 @@ EN_THRESHOLD_V = {
 }
 
 VBAT_PART_VMAX = {
-    "LMR33630A": (36.0, 42.1, True,
-                  "[D] SNVSAN3F 7.1 Absolute Maximum Ratings, VIN -0.3 to 38 V; 7.3 "
-                  "Recommended Operating Conditions, VIN 3.8-36 V. 42 V transient. "
+    "LMR33630A": (36.0, 38.0, True,
+                  "[D] SNVSAN3F 7.1 Absolute Maximum Ratings, VIN to PGND -0.3 to 38 V; 7.3 "
+                  "Recommended Operating Conditions, VIN 3.8-36 V. "
                   "docs/datasheets/LMR33630-SNVSAN3F.pdf"),
-    "WST4041": (30.0, 42.1, True,
+    "WST4041": (30.0, 40.0, True,
                 "[D] WST4041 WINSOK datasheet: VDS -40 V, VGS +-20 V absolute max "
                 "(docs/datasheets/WST4041_WINSOK.pdf)"),
 }
@@ -153,6 +153,8 @@ TVS_CLAMP_V = {
     "SMBJ33A": (53.3, 33.0, 36.7, 11.3, "[D] Littelfuse SMBJ series datasheet"),
     "SMBJ26A": (42.1, 26.0, 28.9, 14.3, "[D] Littelfuse SMBJ series datasheet"),
     "SMBJ24A": (38.9, 24.0, 26.7, 15.4, "[D] Littelfuse SMBJ series datasheet"),
+    "SMBJ22A": (35.5, 22.0, 24.4, 16.9, "[D] Littelfuse SMBJ series datasheet; JLCPCB C113993 "
+                                         "lists Vrwm 22 V, Vc 35.5 V"),
     "SMBJ20A": (32.4, 20.0, 22.2, 18.6, "[D] Littelfuse SMBJ series datasheet"),
     "SMBJ18A": (29.2, 18.0, 20.0, 20.6, "[D] Littelfuse SMBJ series datasheet"),
 }
@@ -1365,14 +1367,13 @@ LOADS_5V = [
      "[M] derived: both IMUs, the baro, the MAX2112 tuner (100 mA), OPA2374, TCXO"),
     ("M10 GPS + QMC5883L on J3",        0.050, 0.050, "[A] docs/HARDWARE.md budget row; typical M10 module ~40-50 mA"),
     ("ELRS receiver on J5",             0.100, 0.100, "[A] docs/HARDWARE.md budget row; ESP-based RX with telemetry"),
-    ("WS2812 strip on PL1-PL3",         0.060, 0.600, "[M] strobe duty <=10% of [D] 10x60 mA full-white peak; the 0.6 A peak is a millisecond transient"),
     ("TFS20-L rangefinder on J9",       0.106, 0.106, "[D] 0.35 W at 3.3 V via its inline LDO - optional (stage B2), budgeted as fitted"),
     ("GY-53-L1X upward ToF on J9",      0.020, 0.020, "[D] VL53L1X module ~20 mA - optional (stage B2), budgeted as fitted"),
 ]
 LOADS_5V_CONT_A = round(sum(r[1] for r in LOADS_5V), 3)
 LOADS_5V_PEAK_A = round(sum(r[2] for r in LOADS_5V), 3)
 
-INDUCTOR_LOAD_A = {"L2": LOADS_5V_CONT_A, "L5": 0.60}
+INDUCTOR_LOAD_A = {"L2": LOADS_5V_CONT_A}
 
 # ---- package heights, the single source of truth ---------------------------------
 # Height of each package above the board surface it sits on, mm.
@@ -1388,6 +1389,7 @@ PART_HEIGHT = {
     "L_APV_ANR4030": 3.0, "L_1210": 3.0,
     "L_0805": 1.2,        # ferrite bead
     "C_1206": 1.6, "C_0805": 1.45, "C_0402": 0.55,
+    "R_0603_1608Metric": 0.55,  # standard 0603 resistor; [D] package max typical
     "R_0402": 0.45, "LED_0603": 0.55,
     # Rev B parts.
     "CONN-SMD_4P-P1.00_SM04B": 2.9,   # JST SH 4P vertical (J5/J9/J11), same 2.9 as the SH 8P
@@ -1400,7 +1402,7 @@ PART_HEIGHT = {
     "CONN-SMD_2P-P1.00": 2.9,          # J13/J16/J18/J20 JST-SH 2P
     "CONN-SMD_3P-P1.00": 2.9,          # J15 JST-SH 3P
     "CONN-SMD_SH1.0MM": 2.9,           # J14/J17 JST-SH 6P
-    "SMB_L4.6": 2.4,                   # D1 SMBJ26A DO-214AA / SMB
+    "SMB_L4.6": 2.4,                   # D1 SMBJ22A DO-214AA / SMB
     "Fuse_1206": 1.0,                  # F1 1206 PPTC fuse
     "DSBGA-6": 0.525,
 }
@@ -1435,7 +1437,7 @@ def stack_heights(board, skip_dnp=True):
     return top, bot, top_ref, bot_ref, unknown
 
 # Maximum working voltage of each net, for the ratings check.
-CELLS = 6
+CELLS = 5
 NET_VMAX = {
     "VBAT": CELLS * 4.2,
     "VBAT_IN": CELLS * 4.2,
@@ -1519,6 +1521,58 @@ NET_CURRENT = {
     "+3V3_CAN": 0.1,
     "VBUS": 0.5,
 }
+
+# Per-load continuous currents for check_power_cut.py.
+LOAD_CURRENT = {
+    "+5V_PAYLOAD": {
+        # [M] the BEC loom wired to PV1/PV2: VTX 0.30 + XIAO 0.25 + SAWbird 0.18
+        # (docs/HARDWARE.md generated power table, BEC load 910 mA minus the LD06 row)
+        "PV1.1": 0.73,
+        # [M] WS2812 strip average, 10% duty rule (HARDWARE.md: 60 mA cont / 600 mA peak)
+        "PL2.1": 0.06,
+        "J15.1": 0.06,
+        # [D] LD06 steady 0.18 (300 mA is its start-up surge).
+        "J11.1": 0.18,
+        "J17.5": 0.50,
+        # [D] U21 is the +3V3_CAN LDO feed for the SN65HVD230; its input current equals
+        # that rail's own budget figure (NET_CURRENT["+3V3_CAN"])
+        "U21.3": 0.10,
+        # [A] one small DroneCAN node (J6 powers the bus per design.py:2098)
+        "J6.1": 0.10,
+    },
+    "+3V3A": {
+        # [D] OPA2374: 585 uA per amplifier, two amplifiers (LOADS_3V3A row)
+        "U14.8": 0.002,
+    },
+}
+
+# ---- the payload buck (U20, +5V_PAYLOAD): which loads run together ------------------
+# LOAD_CURRENT above says what each payload connector draws.
+PAYLOAD_PROFILES = {
+    "drone": dict(keys=("PV1.1", "PL2.1", "J11.1", "U21.3", "J6.1"),
+                  what="quad on GPS/SoOP: VTX + XIAO camera + SAWbird+ on PV1/PV2, "
+                       "LED strip, LD06 lidar, CAN transceiver and one node"),
+    "lander": dict(keys=("J17.5", "PL2.1", "U21.3", "J6.1"),
+                   what="TVC lander: two TVC servos running on J17 (aux servos are "
+                        "one-shot deployers), LED strip, CAN transceiver and one node"),
+}
+PAYLOAD_ALL_WIRED = tuple(k for k in LOAD_CURRENT["+5V_PAYLOAD"] if k != "J15.1")
+
+
+def payload_amps(keys):
+    return round(sum(LOAD_CURRENT["+5V_PAYLOAD"][k] for k in keys), 3)
+
+
+PAYLOAD_MISSION_A = {name: payload_amps(p["keys"]) for name, p in PAYLOAD_PROFILES.items()}
+PAYLOAD_ALL_WIRED_A = payload_amps(PAYLOAD_ALL_WIRED)
+RAIL_5V_PAYLOAD = dict(
+    irms_a=1.6, isat_a=2.4,   # [D] L5 is the same FNR4030S100MT (C167879) as L2
+    worst_mission=max(PAYLOAD_MISSION_A, key=PAYLOAD_MISSION_A.get),
+    worst_mission_a=max(PAYLOAD_MISSION_A.values()),
+    src="[D] FNR4030S100MT Irms/Isat; [M] currents are design.LOAD_CURRENT['+5V_PAYLOAD'] "
+        "keys grouped by design.PAYLOAD_PROFILES")
+INDUCTOR_LOAD_A["L5"] = RAIL_5V_PAYLOAD["worst_mission_a"]
+
 
 # ===========================================================================
 # What each MCU pin is for, in the electrical sense.
@@ -1655,7 +1709,7 @@ MODULES = {
              "displace it AWAY from the existing +3.1 mm offset and CG improves to -3.0 mm"),
     "lidar_360": dict(
         what="LDROBOT LD06, 12 m, INDOOR ONLY", lands_on=["J11"],
-        conn="SERIAL2 (USART1) on J11; its 5 V lead to the payload BEC, not J11.1", bec=True,
+        conn="SERIAL2 (USART1) on J11; J11.1 is +5V_PAYLOAD (U20) in Rev C", bec=True,
         # Price, third and final CORRECTION.
         needs_board_change=None, gbp=OFFBOARD["lidar"]["gbp"], status="later",
         ma_5v=180, counted=False,
@@ -1670,7 +1724,7 @@ MODULES = {
         note="MAVLink downlink caps at 1470 B/s - carries telemetry, never video"),
     "soop_tuner": dict(
         what="SoOP RF front end: SAWbird+ IR (LNA+SAW) + 1620 MHz patch, at the antenna",
-        lands_on=["J12"], conn="U.FL coax into J12; micro-USB power from the payload BEC", bec=True,
+        lands_on=["J12"], conn="U.FL coax into J12; micro-USB power from PV1/PV2 (+5V_PAYLOAD, U20)", bec=True,
         needs_board_change=None, gbp=70, status="later",
         ma_5v=180, counted=False,
         note="the LNA+SAW stage the board could not source, bought built. 180 mA [D] at "
@@ -1678,7 +1732,7 @@ MODULES = {
              "(aircraft) - J12 carries no bias tee and this board's buck does not carry it"),
     "fpv": dict(
         what="5.8 GHz camera + VTX, 25 mW EIRP", lands_on=[],
-        conn="5 V and GND from the payload BEC; no connection to the FC", bec=True,
+        conn="5 V and GND from PV1/PV2 (+5V_PAYLOAD, U20)", bec=True,
         needs_board_change=None, gbp=25, status="later",
         ma_5v=300, counted=False,
         note="a 25 mW AIO runs from 5 V, so it does NOT need the unroutable 9 V block - "
@@ -1686,7 +1740,7 @@ MODULES = {
              "on this board - anything wanting 7-26 V takes it from the battery harness"),
     "rec_camera": dict(
         what="XIAO ESP32-S3 Sense, records to its own SD", lands_on=[],
-        conn="two wires, 5 V and GND from the payload BEC; no connection to the FC", bec=True,
+        conn="two wires to PV1/PV2 (+5V_PAYLOAD, U20)", bec=True,
         needs_board_change=None, gbp=14, status="later",
         ma_5v=250, counted=False,
         note="0.25 A, on the payload BEC (or standalone on a 1S cell). It used to be wired "

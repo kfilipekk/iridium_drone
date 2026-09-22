@@ -49,7 +49,7 @@ REPLACE = [
      "binary cannot assert it and so cannot cut payload power."),
     (r'^PC5 RSSI_ADC',
      "PC5 PYRO_FIRE OUTPUT LOW GPIO(84)",
-     "PC5 drives Q5's gate via R47/R48 for recovery / e-match pyro channel on J18. "
+     "PC5 drives Q5's gate via R54 (1k series) with R55 (47k pull-down) for the recovery / e-match pyro channel on J18. "
      "LOW keeps the channel disarmed at boot."),
     (r'^PD10\s+PINIO1.*',
      "PD10 TOUCHDOWN INPUT PULLUP GPIO(85)",

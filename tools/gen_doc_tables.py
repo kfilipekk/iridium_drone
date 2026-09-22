@@ -91,10 +91,6 @@ def load_frame():
     raise SystemExit("FAIL: no FRAME assignment in tools/design.py")
 
 
-F_CAD_W = 1.70
-F_CAD_L = 1.04
-
-
 def npairs():
     """Ask check_cad_fit how many pairs it tests - do not restate the number."""
     sys.path.insert(0, str(REPO / "tools"))
@@ -119,6 +115,12 @@ def spatial_table():
     motor_off = F["wb"] / 2 / math.sqrt(2)
     prop_gap = motor_off * 2 - P["dia_mm"]
     cam_margin = S["drop"] + S["t"] - C["mod_t"] - C["lens_len"]
+    import pcbnew
+    bb = pcbnew.LoadBoard(str(REPO / "NAVCORE-SoOP.kicad_pcb")).GetBoardEdgesBoundingBox()
+    bw, bh = sorted((pcbnew.ToMM(bb.GetWidth()), pcbnew.ToMM(bb.GetHeight())))
+    fc = design.FRAME_CAD
+    tight = min(fc["stack_from_edges"]) - bh / 2        # long board side across the plate
+    endc = (fc["fc_plate"][1] - bw) / 2
     rows = [
         ("stack height", f"**{s['below']+s['stack']:.1f} mm** "
          f"({s['below']:.1f} frame + {s['stack']:.1f} stack)",
@@ -129,8 +131,9 @@ def spatial_table():
          f"to the top plate, tallest part `{s['topref']}`"),
         ("FC/ESC mounting", f"{design.MOUNTING['pitch']} x {design.MOUNTING['pitch']} mm",
          "shared pattern, boards concentric"),
-        ("board envelope", "45.10 x 46.10 mm",
-         f"{F_CAD_W:.2f} mm clear per side, {F_CAD_L:.2f} mm at the nearer end"),
+        ("board envelope", f"{bw:.2f} x {bh:.2f} mm",
+         f"{tight:.2f} mm clear on the FC plate's tight side (worst-case orientation), "
+         f"{endc:.2f} mm at each end - same geometry as check_mechanical.py"),
         ("motor pattern",
          f"{design.MOTOR_JOINT['pitch_mm']:.0f} x "
          f"{design.MOTOR_JOINT['pitch_mm']:.0f} mm",
@@ -414,7 +417,7 @@ def runbook_order():
 
 
 def power_table():
-    """The +5 V budget, from design.LOADS_5V and design.MODULES - never retyped."""
+    """The +5 V and +5V_PAYLOAD budgets, from design.py - never retyped."""
     sys.path.insert(0, str(REPO / "tools"))
     import design
     rail = design.RAIL_5V
@@ -427,13 +430,20 @@ def power_table():
     out.append(f"| **headroom to L2's {rail['irms_a']} A Irms** | "
                f"**{rail['headroom_a']*1000:.0f} mA** | | Isat {rail['isat_a']} A is the peak limit |")
     bec = [(k, m) for k, m in design.MODULES.items() if isinstance(m, dict) and m.get("bec")]
+    prail = design.RAIL_5V_PAYLOAD
+    lc = design.LOAD_CURRENT["+5V_PAYLOAD"]
+    out += ["", f"**The payload rail, +5V_PAYLOAD (U20, on board since Rev C)** - "
+            f"L5 {prail['irms_a']} A Irms. Budgeted per MISSION, because every connector "
+            f"on it at once ({design.PAYLOAD_ALL_WIRED_A:.2f} A) is over the inductor; "
+            "`check_modules.py` fails any declared mission that does not fit:", "",
+            "| mission | loads (from design.LOAD_CURRENT) | continuous |", "|---|---|---:|"]
+    for name, prof in design.PAYLOAD_PROFILES.items():
+        loads = ", ".join(f"{k} {lc[k]*1000:.0f} mA" for k in prof["keys"])
+        out.append(f"| **{name}** - {prof['what']} | {loads} | "
+                   f"**{design.PAYLOAD_MISSION_A[name]*1000:.0f} mA** |")
     if bec:
-        out += ["", "On the **payload 5 V BEC** (stage B2), and therefore **not** on U8 - "
-                "`check_modules.py` fails any module that is on neither list:", "",
-                "| payload | running | note |", "|---|---:|---|"]
-        for k, m in sorted(bec, key=lambda kv: -kv[1]["ma_5v"]):
-            out.append(f"| {m['what']} | {m['ma_5v']} mA | {m['conn']} |")
-        out.append(f"| **BEC load** | **{sum(m['ma_5v'] for _, m in bec)} mA** | LD06 surges to 300 mA at start-up |")
+        out += ["", "Payload modules on this rail: " + ", ".join(
+            f"{m['what']} ({m['ma_5v']} mA)" for _, m in sorted(bec, key=lambda kv: -kv[1]["ma_5v"])) + "."]
     return "\n".join(out)
 
 
