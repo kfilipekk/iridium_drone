@@ -69,7 +69,7 @@
 
 \begin{tabular}{@{}ll@{}}
 \toprule
-Board & 45.1 $\times$ 46.1 mm, 6-layer, STM32H743VIT6 \\
+Board & 45.1 $\times$ 47.3 mm, 6-layer, STM32H743VIT6, Revision C \\
 Gate verdict & \good{READY TO ORDER} --- every gated prerequisite proven (the gate prints the count) \\
 Hardware verdict & \flag{NOT READY TO FLY} --- 6 items need hardware, none of which can change what is ordered \\
 Toolchain & KiCad 9.0.8, ArduPilot Copter-4.7.0, Python 3 + pcbnew \\
@@ -189,7 +189,7 @@ The power planes are missing and the board will not work. It must show six.
 \textbf{Setting} & \textbf{Value} & \textbf{Why} \\
 \midrule
 Layers & \textbf{6} & In1 is a solid GND plane; In4 carries the rails \\
-Dimensions & 45.1 $\times$ 46.1 mm & \\
+Dimensions & 45.1 $\times$ 47.3 mm & Edge.Cuts bounding box; Revision C \\
 Thickness & 1.6 mm & 30.5 mm stack standard \\
 Outer copper & \textbf{1 oz} & every current figure assumes it \\
 Surface finish & ENIG & 0402s and LGA-14s want a flat finish \\
@@ -239,16 +239,16 @@ gated check --- fails if any pair disagrees with the board.
 \toprule
 \textbf{Variant} & \textbf{BOM lines} & \textbf{Placements} & \textbf{Difference from default} \\
 \midrule
-\file{NAVCORE-SoOP} (default) & 68 & \textbf{129} & --- \\
-\file{NAVCORE-SoOP-economic} & 68 & \textbf{128} & omits \file{U3} only \\
-\file{NAVCORE-SoOP-nofpv} & 68 & \textbf{129} & \textbf{none --- byte-identical} \\
+\file{NAVCORE-SoOP} (default) & 70 & \textbf{162} & --- \\
+\file{NAVCORE-SoOP-economic} & 70 & \textbf{161} & omits \file{U3} only \\
+\file{NAVCORE-SoOP-nofpv} & 70 & \textbf{162} & \textbf{none --- byte-identical} \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-\file{-nofpv} is byte-identical to the default pair because the 9 V VTX block is DNP
-\emph{either way} (\file{design.POPULATE\_VTX} is \cmd{False}). It is a label, not a
-saving. Choosing Economic only makes sense if you want to hand-fit the second IMU.
+\file{-nofpv} is byte-identical to the default pair: Revision C removed the 9 V VTX block it
+used to omit (\file{L5} is now the payload buck's inductor, and a VTX runs from
+\file{+5V\_PAYLOAD}). It is a label, not a saving. Choosing Economic only makes sense if you want to hand-fit the second IMU.
 
 \subsection{Parts worth checking before you pay}
 
@@ -268,42 +268,27 @@ to \textbf{1 unit} with no published restock date when \file{check\_stock.py} wa
 
 \subsection{The DNP list --- derived, never typed}
 
-\textbf{14 designators ship unpopulated:}
-\file{C68 C69 C70 C73 L5 Q3 R15 R40 R41 R42 R43 R45 U11 U18}.
+\textbf{One designator ships unpopulated: \file{R15}}, the 120\,$\Omega$ CAN bus terminator.
+A CAN bus is terminated at its two \emph{ends}; fit \file{R15} (0402, across \file{CANH}
+and \file{CANL}) only if this board is the last node on the bus. Revision C fits everything
+else, including the CAN transceiver \file{U11} (on its own \file{+3V3\_CAN} LDO, \file{U21},
+fed from the payload rail) and the payload buck \file{U20}.
 
-\begin{center}
-\begin{tabular}{@{}p{0.30\textwidth}p{0.62\textwidth}@{}}
-\toprule
-\textbf{Block} & \textbf{Why it is not fitted} \\
-\midrule
-The 9 V VTX buck (\file{L5}, \file{Q3}, \file{U18}, \file{C68}--\file{C73},
-\file{R41}--\file{R45}) &
-\file{POPULATE\_VTX} is \cmd{False} because its switch node could not be closed on this
-placement. A VTX runs from +5 V instead. \\
-\file{U11}, the CAN transceiver &
-a \emph{thermal} decision, not a CAN one: it was fitted but never enabled in
-\file{defaults.parm}. Removing it dropped \file{U9}'s peak from 445 mA / 179\degC{} to
-375 mA / 157\degC{}. \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-Both have pads, and the gate prints \file{[NOT FITTED]} for each on every run. Do not type
-this list --- \file{make\_order\_bundle.sh} derives it from the BOM into
+Do not type this list --- \file{make\_order\_bundle.sh} derives it from the BOM into
 \file{HOW-TO-ORDER.txt}.
 
 \subsection{Check these on screen at upload}
 \label{sec:upload}
 
 \begin{itemize}
-\item Outline and board size: \textbf{45.1 $\times$ 46.1 mm}
+\item Outline and board size: \textbf{45.1 $\times$ 47.3 mm}
 \item Copper layer count: \textbf{6}
 \item Drill count and the 0.20 mm minimum
 \item \textbf{CPL orientation against their preview render} --- the one thing no local tool
 substitutes for
 \item \textbf{1 oz outer copper}, explicitly
 \item \textbf{Panel by JLCPCB.} Standard assembly requires a single PCB of at least
-$70 \times 70$~mm and this board is $45.1 \times 46.1$~mm, so the panel and its breakaway
+$70 \times 70$~mm and this board is $45.1 \times 47.3$~mm, so the panel and its breakaway
 rails have to come from somewhere. Their own panelisation is the low-risk answer: you then
 confirm the panel outline in the same preview as the CPL.
 \end{itemize}
@@ -331,7 +316,7 @@ budget is staged, this is the order. The table is generated from \file{docs/PART
 provenance and price tags.
 
 % BEGIN GENERATED ORDER
-\subsubsection*{A1 --- The board, and its bench} 8 lines, about GBP 262.
+\subsubsection*{A1 --- The board, and its bench} 7 lines, about GBP 257.
 Power it, flash it, prove it - no aircraft. Runbook Parts 7-10 (T1-T3a).
 
 \begin{longtable}{@{}P{0.50\textwidth}P{0.12\textwidth}rP{0.22\textwidth}@{}}
@@ -342,7 +327,6 @@ Power it, flash it, prove it - no aircraft. Runbook Parts 7-10 (T1-T3a).
 \endfoot
 NAVCORE-SoOP PCB + assembly & 1 order & 190 & JLCPCB \\
 ST-Link V2 programmer & 1 & 4 & AliExpress \\
-Pogo pins or 0.1mm enamelled wire & 1 & 5 & AliExpress \\
 microSD card, 32GB & 1 & 8 & AliExpress / anywhere \\
 USB-C cable, data-capable & 1 & 3 & anywhere \\
 JST-SH 1.0mm 8-pin pigtail (spare J2 ESC lead) & 2 & 3 & AliExpress \\
@@ -363,13 +347,13 @@ The receive chain the board cannot supply, and the bench reference receiver for 
 Nooelec SAWbird+ IR (1620MHz LNA+SAW) & 1 & 35 & Nooelec \\
 Nooelec 1620MHz Iridium patch antenna & 1 & 25 & Nooelec \\
 SMA-male to U.FL (IPEX MHF1) coax pigtail, 10-15 cm & 2 & 4 & AliExpress \\
-micro-USB power lead for the SAWbird+ (5 V from the payload BEC) & 1 & 2 & AliExpress \\
+micro-USB power lead for the SAWbird+ (5 V from PV1/PV2) & 1 & 2 & AliExpress \\
 RTL-SDR Blog V4 (R820T2, with bias tee) & 1 & 30 & AliExpress / RTL-SDR Blog \\
 gr-iridium + iridium-toolkit (software) & 1 & 0 & GitHub (muccc) \\
 \end{longtable}
 Already have: Raspberry Pi 5.
 
-\subsubsection*{B1 --- The aircraft - minimum to fly on GPS} 21 lines, about GBP 331.
+\subsubsection*{B1 --- The aircraft - minimum to fly on GPS} 22 lines, about GBP 333.
 Frame, propulsion, radio, GPS, fasteners, looms. Every optional sensor ships disabled, so nothing in B2 is needed for a GPS flight.
 
 \begin{longtable}{@{}P{0.50\textwidth}P{0.12\textwidth}rP{0.22\textwidth}@{}}
@@ -399,10 +383,11 @@ M3 socket screw assortment (10/12/14/16/20 mm) + M3 washers & 1 kit & 5 & AliExp
 M3 silicone grommets, spare set (30.5 mm stack) & 1 pack & 2 & AliExpress \\
 JST-SH 1.0mm 4-pin pigtails (the sensor and RC leads) & 1 pack of 10 & 5 & AliExpress \\
 JST-GH 1.25mm 6-pin spare lead (J3 GPS port) & 1 & 2 & AliExpress \\
+JST-SH 1.0mm 3-pin pigtail (J15 LED strip) & 1 & 2 & AliExpress \\
 \end{longtable}
 Already have: 4S LiPo packs, LiPo balance charger.
 
-\subsubsection*{B2 --- Aircraft sensors and payload - optional} 6 lines, about GBP 73.
+\subsubsection*{B2 --- Aircraft sensors and payload - optional} 5 lines, about GBP 68.
 RNGFNDn\_TYPE and PRX1\_TYPE ship at 0; enable each one at the bench after it is fitted. The +5 V rail cannot carry all of these AND the SAWbird+ at once - check\_modules.py prints the budget.
 
 \begin{longtable}{@{}P{0.50\textwidth}P{0.12\textwidth}rP{0.22\textwidth}@{}}
@@ -416,10 +401,9 @@ VL53L1X ToF module (GY-53-L1X) & 1 & 6 & AliExpress \\
 LDROBOT LD06 360 lidar (INDOOR USE ONLY) & 1 & 14 & eBay - Okdo Lidar Hat kit (use the LIDAR UNIT only) \\
 XIAO ESP32S3 Sense (recording camera) & 1 & 14 & AliExpress \\
 Camera power: thin silicone wire + 2-pin JST pigtails & 1 kit & 2 & AliExpress \\
-Payload 5 V BEC, 3 A (SAWbird+, camera, FPV, lidar) & 1 & 5 & AliExpress / Matek \\
 \end{longtable}
 
-Total, everything to buy: about GBP 762. Generated from \file{docs/PARTS.csv} by \file{tools/gen\_doc\_tables.py}; every row's reasoning and link is in the CSV, and \file{docs/BUYING.md} is the same list with prices and provenance tags.
+Total, everything to buy: about GBP 754. Generated from \file{docs/PARTS.csv} by \file{tools/gen\_doc\_tables.py}; every row's reasoning and link is in the CSV, and \file{docs/BUYING.md} is the same list with prices and provenance tags.
 % END GENERATED ORDER
 
 \flag{Do not buy a bare PMW3901 or VL53L1X chip to hand-fit.} Both were deleted from the
@@ -550,7 +534,7 @@ not to cross, while 4544 free IDs sit below it.
 \item \textbf{Read the two screw warnings in Section~\ref{sec:screws} twice.} They are the
 ones that strip a frame.
 \item \textbf{Print \file{docs/img/padmap.svg} and the F.Silkscreen gerber 1:1 on paper.}
-Nine pads arrive with no label (Section~\ref{sec:T3d}).
+Eleven pads arrive with no label (Section~\ref{sec:T3d}).
 \item \textbf{Decide the USB edge orientation before cutting any loom.} All four edges
 carry a connector; there may be exactly one orientation that works.
 \item \textbf{Dry-run the SITL suite} if you have a Linux box:
@@ -607,11 +591,12 @@ Every figure here is recomputed by \cmd{python3 tools/check\_mechanical.py}; if 
 has moved since this was compiled, run it rather than trust the table.
 
 \begin{itemize}
-\item \textbf{Centre-plate opening} clears 45.1 $\times$ 46.1 mm plus the plug protrusions
-below. The FC plate is 48.50 mm across the binding axis, so the board has \textbf{1.15 mm}
-on the tight side in the worst-case orientation.
+\item \textbf{Centre-plate opening} clears 45.1 $\times$ 47.3 mm plus the plug protrusions
+below. The FC plate is 48.50 mm across the binding axis, so the board has only
+\flag{0.55 mm} on the tight side in the worst-case orientation --- Revision C grew the
+board 1.2 mm on that axis, and this was 1.15 mm before. Check it with the real plate.
 \item \textbf{\file{J1} USB-C --- the tight one.} Its mouth is flush with the board edge, and
-the plug needs \textbf{6.4 mm clear beyond the top edge} at z 25.9--29.1 mm. A standoff on
+the plug needs \textbf{5.8 mm clear beyond the top edge} at z 25.9--29.1 mm. A standoff on
 another plate, a plate lip or the battery strap across that edge makes the port unusable,
 and it is the only way to flash the board.
 \item \textbf{\file{J2} ESC lead} needs 3.6 mm clear beyond the left edge, and its body sits
@@ -621,7 +606,7 @@ lead away from that corner, not over it.
 a derived 3.6 mm. Test-fit the received plug; a bulky moulded boot is the one thing that can
 spoil it.
 \item \textbf{microSD} ejects on the \textbf{bottom} side, toward the bottom edge, and needs
-about \textbf{10.4 mm} of travel through a gap only 3.0 mm tall. Assume you will pull the
+about \textbf{9.8 mm} of travel through a gap only 3.0 mm tall. Assume you will pull the
 board to change the card, and decide now whether that is acceptable.
 \item \textbf{Board rotation.} All four edges carry a connector, so there may be exactly one
 orientation that works. Decide it before cutting a loom.
@@ -682,7 +667,7 @@ this line.
 
 \begin{enumerate}
 \item \textbf{Inspect the boards} (Section 4.1).
-\item \textbf{Print the fab drawing and silkscreen 1:1.} Nine unlabelled pads ---
+\item \textbf{Print the fab drawing and silkscreen 1:1.} Eleven unlabelled pads ---
 Section~\ref{sec:T3d}.
 \item \textbf{Dry-fit the FC into the centre plate.} Confirm nothing blocks the bottom
 edge where the microSD ejects.
@@ -710,9 +695,16 @@ clearance, and it is the kit's geometry that gives it.
 GPS + compass & \file{J3}, JST-GH 6P & the module's own lead, latched \\
 ELRS receiver & \file{J5}, JST-SH 4P & 5 V, TX, RC\_IN, GND \\
 I2C rangefinders & \file{J9}, JST-SH 4P & 5 V, SCL, SDA, GND \\
-360 lidar (later) & \file{J11}, JST-SH 4P & 5 V, TX, RX, GND \\
-SoOP antenna chain & \file{J12}, U.FL & coax from the SAWbird+; its power from \file{P41}/\file{P46} \\
-recording camera & \file{P41}/\file{P46} & 5 V and GND, two wires \\
+360 lidar (later) & \file{J11}, JST-SH 4P & \file{+5V\_PAYLOAD}, TX, RX, GND \\
+SoOP antenna chain & \file{J12}, U.FL & coax from the SAWbird+; its power from \file{PV1}/\file{PV2} \\
+recording camera, FPV & \file{PV1}/\file{PV2} & \file{+5V\_PAYLOAD} and GND, soldered \\
+LED strip & \file{J15}, JST-SH 3P & \file{+5V\_PAYLOAD}, data, GND --- or solder to \file{PL1}--\file{PL3} \\
+buzzer & \file{J16}, JST-SH 2P & +5 V, drain --- or solder to \file{PZ1}/\file{PZ2} \\
+CAN / DroneCAN & \file{J6}, JST-SH 4P & \file{+5V\_PAYLOAD}, CANH, CANL, GND \\
+SWD (fallback flash) & \file{J19}, JST-SH 4P & +3V3, SWDIO, SWCLK, GND \\
+TVC servos (lander) & \file{J17}, JST-SH \textbf{6P} & PWM7, PWM8, PWM9, PWM10, \file{+5V\_PAYLOAD}, GND \\
+pyro / e-match (lander) & \file{J18}, JST-SH 2P & \file{VBAT\_FUSED}, drain --- \flag{arming switch in series} \\
+touchdown switch (lander) & \file{J20}, JST-SH 2P & \file{TOUCHDOWN}, GND \\
 companion (deferred) & \file{P71}--\file{P74} + \file{P44} & 5 V, UART4 TX, UART4 RX, GND; PPS on \file{P44} \\
 \bottomrule
 \end{tabular}
@@ -720,6 +712,28 @@ companion (deferred) & \file{P71}--\file{P74} + \file{P44} & 5 V, UART4 TX, UART
 
 \textbf{Mount the compass as far from the ESC and the battery leads as the frame allows.}
 There is no magnetometer on the FC by design: one 15 mm from a 60 A 4-in-1 is useless.
+
+\flag{\file{J17} is six pins, not eight.} Servo power is \emph{pin 5 only}; pin 6 is GND.
+\file{docs/LANDER-COMPATIBILITY.md} described an 8-pin header with +5 V on pins 5 and 6
+until 2026-09-22 --- a loom built to that table shorts the payload rail to ground.
+
+\textbf{The payload rail is budgeted per mission.} \file{U20} and its inductor \file{L5}
+carry 1.6 A continuous. The drone's payload (VTX, camera, SAWbird+, LD06, LED, CAN) is
+1.17 A; the lander's (two TVC servos, LED, CAN) is 0.76 A. \flag{Wire one mission's payload,
+not all of it}: every payload connector at once is 1.67 A, over the inductor and about
+147\,\degC{} at \file{U20}'s worst corner. \file{check\_modules.py} fails any declared
+mission that does not fit.
+
+\subsection{The pyro channel (lander only) --- arming is not optional}
+
+\file{J18} fires an e-match from \file{VBAT\_FUSED} (3 A fuse \file{F1}) through the
+low-side MOSFET \file{Q5}. Between the MCU and a firing there is exactly \emph{one} GPIO
+(\file{PC5}): \file{R55} (47\,k$\Omega$) holds the gate off through reset and under stock
+MatekH743 firmware, and the NAVCORE firmware ships \file{PYRO\_FIRE} \cmd{OUTPUT LOW} ---
+but a single firmware fault still fires it. \flag{Put a physical arming switch or a removable
+shunt plug in series with the e-match in the \file{J18} lead, open until the vehicle is on
+the pad.} It is on \file{docs/PARTS.csv} for that reason. Do not bench-test the channel with
+an e-match connected; use a resistor or an LED.
 
 \subsection{The harness --- six runs, and how not to make a nest of them}
 
@@ -757,9 +771,11 @@ each other.
 hard-case pack on build day.
 \item The frame offers 16 $\times$ 16 and 19 $\times$ 19 motor patterns. The motors are 19 $\times$ 19.
 \item Measure both tapped depths before committing sixteen screws.
-\item Nine pads are unlabelled, and one of them is 5 V.
+\item Eleven pads are unlabelled, and three of them are live supply pads.
 \item The ESC cable is a gamble until you buzz it.
-\item \file{U18} is not fitted: the 9 V rail is DNP by design.
+\item \file{J17} is six pins: servo power is pin 5 only, pin 6 is GND.
+\item The board is \textbf{5S maximum} --- the input TVS sets it (Part~1).
+\item Wire one mission's payload onto \file{+5V\_PAYLOAD}, not every payload at once.
 \item Confirm 1 oz outer copper on the order; 0.5 oz halves every trace's rating.
 \end{itemize}
 
@@ -797,14 +813,16 @@ available on this aircraft.
 Everything else plugs in.
 
 \begin{itemize}
-\item \textbf{Buzzer} --- \file{PZ1} (+) and \file{PZ2} ($-$). Must be a \textbf{passive}
+\item \textbf{Buzzer} --- plug into \file{J16}, or solder to \file{PZ1} (+) and \file{PZ2} ($-$). Must be a \textbf{passive}
 piezo: PA15 is a timer channel and ArduPilot generates the tone patterns itself. An active
 buzzer has its own oscillator and loses every arming and failsafe pattern.
-\item \textbf{LED strip, optional} --- \file{PL1} = data, \file{PL2} = +5 V,
-\file{PL3} = GND. \flag{\file{PL3} has no label.} 5 V WS2812B.
-\item \flag{\file{P41} is 5 V and unlabelled.} The camera's and the SAWbird+'s power
-leads land on it, so identify it on the printed gerber before the iron touches it --- never
-by counting from a neighbour.
+\item \textbf{LED strip, optional} --- plug into \file{J15}, or solder \file{PL1} = data,
+\file{PL2} = \file{+5V\_PAYLOAD}, \file{PL3} = GND. \flag{\file{PL1} and \file{PL2} have no
+label.} 5 V WS2812B. One landing, not both.
+\item \flag{\file{P41} and \file{PZ1} are +5 V and unlabelled; \file{PL2} is \file{+5V\_PAYLOAD}
+and unlabelled.} The camera's and the SAWbird+'s power leads land on \file{PV1}/\file{PV2}
+(the payload rail), \emph{not} on \file{P41}. Identify every pad on the printed gerber
+before the iron touches it --- never by counting from a neighbour.
 \end{itemize}
 
 % =============================================================================
@@ -826,11 +844,12 @@ ESC instead works, but the ESC's own draw then sits inside the 80 mA below.
 \textbf{\#} & \textbf{Check} & \textbf{Expect} & \textbf{If wrong} \\
 \midrule
 1.1 & current at power-on & \textbf{$<$ 80 mA} & something is shorted: kill it and inspect
-\file{U8} and the bulk caps (\file{U18} is not fitted) \\
-1.2 & \file{+5V} rail & \textbf{5.02 V} $\pm$0.2 & \file{U8} LMR33630ARNXR, \file{L1}, feedback divider \\
+\file{U8}, \file{U20} and the bulk caps \\
+1.2 & \file{+5V} rail & \textbf{5.02 V} $\pm$0.2 & \file{U8} LMR33630ARNXR, \file{L2}, divider \file{R6}/\file{R7} \\
 1.3 & \file{+3V3} rail & 3.3 V $\pm$0.1 & \file{U9} AP2112 \\
 1.4 & \file{+3V3A} rail & 3.3 V $\pm$0.1 & \file{U10} TLV75533 \\
-1.5 & \file{+9V} rail & \textbf{not populated} & \file{U18} is DNP by design \\
+1.5 & \file{+5V\_PAYLOAD} rail (\file{PV1}) & \textbf{5.02 V} $\pm$0.2, on at power-on & \file{U20} LMR33630ARNXR, \file{L5}, divider \file{R42}/\file{R43}; if dead, \file{Q3} is holding \file{U20}'s EN low --- check \file{R45} \\
+1.6 & \file{+3V3\_CAN} rail & 3.3 V $\pm$0.1 & \file{U21} XC6206, fed from \file{+5V\_PAYLOAD} \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -882,8 +901,9 @@ hand.} The build script does not package it into the \file{.apj}. Without it,
 \file{FS\_EKF\_ACTION 0} ships with no GPS-loss response at all.
 \end{enumerate}
 
-\textbf{SWD, if DFU never appears.} An ST-Link V2 on \file{TP1} (SWDIO), \file{TP2} (SWCLK),
-\file{TP20} (GND) and \file{TP21} (+3V3 as the target-voltage reference), with
+\textbf{SWD, if DFU never appears.} An ST-Link V2 on \file{J19} (JST-SH 4P: 1 +3V3 as the
+target-voltage reference, 2 SWDIO, 3 SWCLK, 4 GND) through a 4-pin pigtail --- or on the
+\file{TP1}/\file{TP2}/\file{TP20}/\file{TP21} pads, which carry the same four nets --- with
 \cmd{st-flash write Tools/bootloaders/NAVCORE\_SoOP\_bl.bin 0x08000000} or
 STM32CubeProgrammer. It gets the same bootloader onto the same address; from step 4 on
 nothing differs.
@@ -1044,21 +1064,22 @@ Do this with the \textbf{stack assembled}, not the board in free air, because th
 \emph{is} the thermal environment.
 
 % =============================================================================
-\section{Part 13 --- T3d: the nine unlabelled pads}
+\section{Part 13 --- T3d: the eleven unlabelled pads}
 \label{sec:T3d}
 
-Of the \textbf{30} pad and test-point references that exist on the board, \textbf{21} get a
-silkscreen label. These \textbf{9} have no clean position at the board's own 0.80 mm
+Of the \textbf{26} pad and test-point references that exist on the board, \textbf{15} get a
+silkscreen label. These \textbf{11} have no clean position at the board's own 0.80 mm
 minimum text height, so \file{tools/silk\_labels.py} leaves them \textbf{blank rather than
 printing something illegible} --- a wrong label on a board is worse than a blank pad,
 because it will be trusted:
 
 \begin{center}
-\file{P41}\quad \file{P44}\quad \file{P62}\quad \file{P72}\quad \file{PL3}\quad
-\file{TP4}\quad \file{TP6}\quad \file{TP7}\quad \file{TP9}
+\file{P41}\quad \file{P44}\quad \file{P72}\quad \file{PL1}\quad \file{PL2}\quad \file{PZ1}\quad
+\file{TP2}\quad \file{TP3}\quad \file{TP4}\quad \file{TP6}\quad \file{TP7}
 \end{center}
 
-\flag{\file{P41} is 5 V.} \file{TP6} is \file{USART1\_RX}. Never identify a gold square by
+\flag{\file{P41} and \file{PZ1} are +5 V; \file{PL2} is \file{+5V\_PAYLOAD}.} \file{TP6} is
+\file{USART1\_RX}, \file{TP2} is \file{SWCLK}. Never identify a gold square by
 counting from its neighbour --- use the printed gerber and \file{docs/img/padmap.svg}. The
 gate reprints this list on every run, so treat any other number you read as stale.
 
@@ -1104,9 +1125,9 @@ The board is machine-assembled, so the soldering is deliberately minimal. What r
 \toprule
 \textbf{Item} & \textbf{Joints} & \textbf{Risk and mitigation} \\
 \midrule
-Buzzer, \file{PZ1}/\file{PZ2} & 2 & low. Must be a \textbf{passive} piezo; fitting an active
+Buzzer, \file{J16} or \file{PZ1}/\file{PZ2} & 0--2 & low. Must be a \textbf{passive} piezo; fitting an active
 one costs you every arming and failsafe tone pattern, which you will only notice in the air \\
-LED strip, \file{PL1}/\file{PL2}/\file{PL3} & 3 & low, and optional. \file{PL3} is unlabelled
+LED strip, \file{J15} or \file{PL1}/\file{PL2}/\file{PL3} & 0--3 & low, and optional. \file{PL1}/\file{PL2} are unlabelled
 --- see Section~\ref{sec:T3d} \\
 \file{U3}, second IMU & 14-pin LGA & \flag{only if you chose Economic.} An LGA-14 has no
 accessible leads, so it needs hot air or a stencil, not an iron. Standard assembly fits it
@@ -1138,7 +1159,7 @@ is why the screw length is not a fixed number \\
 Board connectors & the GPS, RC, I2C, lidar and ESC leads all plug in; no crimping except
 the spare pigtails \\
 The first flash & the H743's ROM DFU needs only USB and the \file{BOOT} button
-(Part~8). SWD --- four wires to \file{TP1}/\file{TP2}/\file{TP20}/\file{TP21} --- is the
+(Part~8). SWD --- the \file{J19} socket, or the four test pads --- is the
 fallback, not the route \\
 The GPS-loss applet & \file{copter-deadreckon-home.lua} must be copied to the microSD by
 hand; the build does not package it into the \file{.apj} \\
@@ -1162,7 +1183,7 @@ Shell half-width 2.6 mm plus 1.0 mm of handling margin is 3.6 mm, so 5.30 mm cle
 and a via fence leave no position in the span that yields 6.0 mm, so there was never a fix
 available there. The residual risk is a bulky moulded boot, which is why a spare JST-GH lead
 is on the order list and T2 fits the plug \emph{before} the headers are soldered.
-\item \flag{The board is 45.1 $\times$ 46.1 mm, below JLCPCB's 70 $\times$ 70 mm Standard
+\item \flag{The board is 45.1 $\times$ 47.3 mm, below JLCPCB's 70 $\times$ 70 mm Standard
 minimum.} Confirmed against their capability page: Standard single-PCB assembly runs
 70 $\times$ 70 mm to 460 $\times$ 500 mm, while Economic runs 10 $\times$ 10 mm up. So
 Standard needs the board panelled with breakaway rails --- an extra fabrication step and an
@@ -1249,11 +1270,12 @@ can be fixed, and one of them (\file{U8}) may force one anyway.
 \begin{itemize}
 \item \textbf{USB cannot power the board.} VBUS runs the PHY only. Every bench session needs
 a VBAT supply, which is why T1 exists at all.
-\item \textbf{Nine pads arrive unlabelled} (Section~\ref{sec:T3d}) because a three-character
+\item \textbf{Eleven pads arrive unlabelled} (Section~\ref{sec:T3d}) because a three-character
 label at the 0.80 mm minimum height covers a 2.84 mm pitch pad and its neighbours. More
 silkscreen real estate, or fewer test pads, would remove a bench session.
-\item \textbf{14 DNP designators still have pads and copper.} Correct for reversibility, but
-it is unused copper on two rails.
+\item \textbf{The payload rail cannot carry every payload connector at once} (1.67 A against
+\file{L5}'s 1.6 A). A 5 $\times$ 5 mm inductor would lift that to 2.1 A, but not on this
+placement.
 \item \textbf{\file{-nofpv} is byte-identical to the default pair.} A variant that ships the
 same bytes as another is a place for someone to pick the wrong file.
 \item \textbf{The Economic variant saves one part and not the feeder fees}, which makes it a
@@ -1345,7 +1367,7 @@ that is the number T3b is really trying to meet.
 \item \cmd{bash tools/make\_order\_bundle.sh} --- regenerate everything
 \item Upload \file{fab/NAVCORE-SoOP-order-bundle.zip}, or the gerbers plus the default
 BOM/CPL pair
-\item 6 layers, 45.1 $\times$ 46.1 mm, 1.6 mm, \textbf{1 oz} outer, ENIG, 4 mil, via
+\item 6 layers, 45.1 $\times$ 47.3 mm, 1.6 mm, \textbf{1 oz} outer, ENIG, 4 mil, via
 0.45/0.20
 \item 5 bare boards, 2 assembled. Standard panelised 2 $\times$ 2 unless you want to
 hand-fit \file{U3}
@@ -1359,7 +1381,7 @@ Do not buy a bare PMW3901 or VL53L1X chip
 \item T1 current-limited rails $\rightarrow$ T2 bootloader over USB DFU (\file{BOOT} +
 \file{RESET}) $\rightarrow$ T3 sensors, props off
 \item T3a thermal (\file{U8} needs a probe) $\rightarrow$ T3c IMU temp cal $\rightarrow$ T3d
-nine unlabelled pads
+eleven unlabelled pads
 \item T3b before any position-hold claim: measure the real sigma
 \item SITL scenarios $\rightarrow$ tethered hover $\rightarrow$ GPS Loiter. \textbf{Props on
 last}
