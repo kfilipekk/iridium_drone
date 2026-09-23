@@ -5,7 +5,7 @@ Usage:  python3 tools/check_electrical.py [-v]
 """
 import os, re, sys, math
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import design, symlib, route
+import design, symlib
 
 BOARD = "NAVCORE-SoOP.kicad_pcb"
 RAILS = {"+3V3", "+3V3A", "+3V3_CAN", "+5V", "+5V_PAYLOAD", "+9V", "VBAT", "VDDA", "VBUS"}

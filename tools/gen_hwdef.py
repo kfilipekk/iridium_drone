@@ -119,6 +119,7 @@ RNGFND3_ORIENT 24
 RNGFND3_MIN 0.04
 RNGFND3_MAX 3.60
 
+# Keep FLOW_TYPE 5 while any EK3_SRCn_VELXY is 5 (optical flow), or the EKF refuses to arm.
 FLOW_TYPE 5
 # Whatever produces the flow, its X/Y axes are not necessarily the vehicle's.
 FLOW_ORIENT_YAW 0
@@ -163,6 +164,8 @@ RELAY1_PIN 83
 RELAY1_DEFAULT 0
 
 FS_EKF_THRESH 1.0
+# FS_EKF_ACTION 0 relies on the dead-reckoning script (DR_ENABLE 1). If the script is not
+# on the SD card, set it back to 1 - these change together with FS_THR_ENABLE and DR_ENABLE.
 FS_EKF_ACTION 0
 
 # Radio failsafe -> RTL.
@@ -177,6 +180,8 @@ SCR_ENABLE 1
 # enough and the script aborts at load with an out-of-memory error.
 SCR_HEAP_SIZE 80000
 # DR_ENABLE 1: arm the applet.
+# The DR_* values document the dead-reckoning script's settings. The script creates these
+# parameters after boot, so this file cannot set them; set them from the GCS.
 DR_ENABLE 1
 DR_ENABLE_DIST 30
 DR_GPS_SACC_MAX 0.8
