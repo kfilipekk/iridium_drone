@@ -48,6 +48,9 @@ NAVCORE-SoOP-backups/
 #application notes, kept locally
 SPONSORSHIP.md
 
+#the send-folder for a sponsorship application
+sponsorship/
+
 #every markdown file except the top-level README is held back for now
 cad/README.md
 sim/README.md
