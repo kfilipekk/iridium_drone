@@ -60,6 +60,12 @@ NAVCORE-SoOP-backups/
 # Application notes, kept locally.
 SPONSORSHIP.md
 
+# The send-folder for a sponsorship application: gerber/render/BOM copies collected so
+# nothing has to be gathered at the moment of sending. Every file in it is a copy of a
+# tracked artefact, so committing it would just be a second copy to keep in sync.
+# Rebuild: bash tools/make_order_bundle.sh && bash tools/render_boards.sh
+sponsorship/
+
 # Every markdown file except the top-level README is held back for now.
 # They are all still on disk and the tooling reads them; they just aren't published.
 # (fab/ORDER.md and fab/README.md were folded into docs/navcore-runbook.tex on 2026-09-19.)

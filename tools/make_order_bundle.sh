@@ -42,16 +42,20 @@ for f in BOM-NAVCORE-SoOP.csv CPL-NAVCORE-SoOP.csv \
 done
 
 # The DNP list in the instructions is derived from the BOM that ships, like the placement counts.
-DNPLIST=$(python3 - <<'PY'
+DNP_WRAP=$(python3 - <<'PY'
 import csv
-refs = []
+out = []
 for r in csv.DictReader(open("fab/BOM-NAVCORE-SoOP.csv")):
     if r.get("DNP", "").strip():
-        refs += [x for x in r["Designator"].split(",") if x.strip()]
-print(", ".join(sorted(refs)))
+        for x in r["Designator"].split(","):
+            if x.strip():
+                out.append(f"      {x.strip():5s} {r['Comment']}")
+if not out:
+    out = ["      (none - every line in the BOM is placed)"]
+print("\n".join(out))
 PY
 )
-[ -n "$DNPLIST" ] || { echo "REFUSING: could not read the DNP list from the BOM" >&2; exit 1; }
+[ -n "$DNP_WRAP" ] || { echo "REFUSING: could not read the DNP list from the BOM" >&2; exit 1; }
 
 STOCKLINE=$(python3 - <<'PY'
 import json, os
@@ -100,20 +104,18 @@ ASSEMBLY
   Variants, if you want them instead of the default:
     *-economic.csv  U3 (second IMU) left off for hand-fitting. That is the ONLY
                     difference from the default pair.
-    *-nofpv.csv     9 V VTX buck omitted. That block is DNP by default anyway, so
-                    today this variant is byte-identical to the default one.
+    *-nofpv.csv     byte-identical to the default pair: Revision C removed the 9 V
+                    VTX block this variant used to omit. Use the default pair.
 
 BEFORE YOU PAY - the things no offline check can confirm
   - Accept JLCPCB's free DFM review. It is the only thing that checks pad LAND
     SIZE and paste apertures; tools/check_footprints.py verifies pad count,
     package family and pitch, but not those.
   - Confirm the quote says 1 oz outer copper.
-  - ABSENT BY DESIGN. The placement preview must agree - if any of these is
-    placed, the wrong BOM went up:
+  - ABSENT BY DESIGN, read straight out of the BOM in this bundle (ref + value):
 @@DNP@@
-    U11 is the CAN transceiver: pads provisioned, deliberately unfitted, so this
-    board does NOT speak CAN as ordered. The rest is the 9 V VTX block, DNP
-    because its switch node could not be routed on this placement.
+    The placement preview must agree with that list exactly: a part on it that is
+    placed, or a part that is placed and is not on it, means the wrong BOM went up.
   - SOLE SOURCE, from the dated stock snapshot in this repo. Confirm them in the
     quote tool and buy spares if the count looks tight:
       @@STOCK@@
@@ -134,7 +136,6 @@ if [ "$TOPN" -eq 0 ] || [ "$BOTN" -eq 0 ]; then
 fi
 sed -i "s/@@SIDES@@/$TOPN top, $BOTN bottom/" "$STAGE/HOW-TO-ORDER.txt"
 
-DNP_WRAP=$(printf '%s' "$DNPLIST" | fold -s -w 62 | sed 's/^/      /')
 export DNP_WRAP STOCKLINE
 python3 - "$STAGE/HOW-TO-ORDER.txt" <<'PY'
 import os, sys
