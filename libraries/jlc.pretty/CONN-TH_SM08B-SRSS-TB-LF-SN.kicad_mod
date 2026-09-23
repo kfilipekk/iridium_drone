@@ -43,7 +43,7 @@
     (effects (font (size 1 1) (thickness 0.15)))
   )
   (model "${JLC_LIB}/packages3d/CONN-TH_SM08B-SRSS-TB-LF-SN.step"
-    (at (xyz 0 -0.006663 0))
+    (at (xyz -0.137795 -0.035827 0))
     (scale (xyz 1 1 1))
     (rotate (xyz 0 0 0))
   )
