@@ -75,7 +75,7 @@ Layer 6 (B.Cu):    Sensors, RF receiver circuitry, DroneCAN, buck converters
 
 ```
 ├── NAVCORE-SoOP.kicad_pcb   # 6-layer KiCad PCB artwork
-├── NAVCORE-SoOP.kicad_sch   # Multi-sheet schematic
+├── NAVCORE-SoOP.kicad_sch   # Schematic (generated from tools/design.py)
 ├── fab/                     # JLCPCB manufacturing bundle (Gerbers, drill, BOM, CPL, stock snapshot)
 ├── firmware/NAVCORE_SoOP/   # ArduPilot hardware definition (hwdef.dat, defaults.parm)
 ├── tools/                   # Automated validation suite (DRC, ERC, placement, clearance gates)
@@ -119,6 +119,6 @@ Recommended JLCPCB ordering parameters:
 - **Layers**: 6 Layers
 - **Dimensions**: 45.0 × 47.2 mm (Panel by JLCPCB, 2 × 2 recommended for SMT)
 - **Base Material**: FR-4 (TG155)
-- **Impedance**: JLC7628 Stackup
+- **Impedance control**: none
 - **Surface Finish**: ENIG (Electroless Nickel Immersion Gold recommended for LGA-14 IMUs)
 - **Assembly**: Top + Bottom SMT

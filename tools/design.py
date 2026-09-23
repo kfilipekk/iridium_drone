@@ -1833,3 +1833,23 @@ PAYLOAD_BREAKOUT["headroom_a"] = RAIL_5V["headroom_a"]
 # Every test point and every solder pad added above is copper.
 NOT_A_PART = {ref for ref, spec in COMPONENTS.items()
               if spec[1] == "TestPoint:TestPoint_Pad_1.5x1.5mm"}
+
+
+# ---- silkscreen: the function name printed beside each connector -----------------
+SILK_NAMES = {
+    "J18": "PYRO", "J1": "USB", "J2": "ESC", "J3": "GPS", "J5": "RC", "J6": "CAN",
+    "J9": "I2C", "J11": "UART2", "J12": "ANT", "J14": "FLOW", "J15": "LED", "J16": "BUZZ",
+    "J17": "SERVO", "J19": "SWD", "J20": "TOUCH",
+}
+SILK_TITLE = ["IRIDIUM NAV", "KRYSTIAN FILIPEK"]
+SILK_TITLE_SIDE = {"IRIDIUM NAV": "bottom", "KRYSTIAN FILIPEK": "top"}
+
+# ---- 3D models: bodies that legitimately sit off their outline or reach into the board --
+MODEL_EXPECTED = {
+    "J1": (0.04, 0.75),    # USB-C: the plug end projects past the board edge
+    "J8": (0.00, -3.95),   # push-push microSD: the card slot extends past the silkscreen
+}
+MODEL_EXPECTED_SINK = {
+    "J1": 0.78,            # USB-C shell legs in their slots
+    "J8": 0.61,            # microSD locating posts in their holes
+}

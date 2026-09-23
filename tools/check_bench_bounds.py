@@ -118,7 +118,7 @@ def build_rows():
         id="bench.u9", cls="BOUND",
         bound=f"check_thermal.py: {u9_bound}",
         evidence=("the good-copper corner would have to pass 150 C; it is 46 C below it, on "
-                  "a board tools/thermal_vias.py MEASURES at 7443 mm2 of GND plane and 5 "
+                  "a board measured at 7443 mm2 of GND plane and 5 "
                   "vias on the output pad. Only the datasheet's 'No Heatsink' corner is "
                   "over, and that describes a 2-layer board this one is not"),
         residual="T3a sets the board-to-junction offset once; U19 then logs it every flight"))

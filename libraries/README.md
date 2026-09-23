@@ -21,7 +21,7 @@ stays a description of this board rather than a mirror of a fetch cache.
 ## What is deliberately NOT here
 
 `packages3d/*.step` — ~56 MB of 3D bodies. No correctness check reads them; they are used
-only by `tools/export_3d.sh` (visualisation) and `tools/fill_missing_models.py`. This repo
+only by `tools/export_3d.sh` and `tools/render_boards.sh` (visualisation). This repo
 already keeps its own 66 MB `cad/*.step` exports out of git for the same reason. They stay
 in the fetch directory and are located through the `JLC_LIB` environment variable, i.e.
 `MODEL_ROOT` in `tools/jlcpaths.py`.

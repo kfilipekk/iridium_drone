@@ -29,6 +29,7 @@ fp-info-cache
 
 # KiCad backup written next to the board by an interrupted save.
 *.kicad_pcb.bak
+*.movebak
 
 # The same, for the vendored symbol library. Nothing reads it and it differs from the
 # live library by bytes, so committing it would just be a second copy to keep in sync.

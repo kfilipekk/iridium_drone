@@ -122,7 +122,6 @@ upload preview --- those are Sections~\ref{sec:upload} onward.
 \toprule
 \cmd{python3 tools/preflight.py} & the gate; must say READY TO ORDER \\
 \cmd{bash tools/make\_order\_bundle.sh} & regenerate \file{fab/} and zip the order \\
-\cmd{bash tools/finish.sh} & the whole design pipeline, ending in the fab outputs \\
 \cmd{bash tools/build\_firmware.sh} & build \file{arducopter.apj}, pinned to Copter-4.7.0 \\
 \bottomrule
 \end{tabular}
@@ -189,7 +188,7 @@ The power planes are missing and the board will not work. It must show six.
 \textbf{Setting} & \textbf{Value} & \textbf{Why} \\
 \midrule
 Layers & \textbf{6} & In1 is a solid GND plane; In4 carries the rails \\
-Dimensions & 45.1 $\times$ 47.3 mm & Edge.Cuts bounding box; Revision C \\
+Dimensions & 45.1 $\times$ 47.3 mm & KiCad's box; JLCPCB shows 45.0 $\times$ 47.2 \\
 Thickness & 1.6 mm & 30.5 mm stack standard \\
 Outer copper & \textbf{1 oz} & every current figure assumes it \\
 Surface finish & ENIG & 0402s and LGA-14s want a flat finish \\
@@ -197,6 +196,7 @@ Min track / spacing & \textbf{0.1016 mm (4 mil)} & should be free tier \\
 Min via / drill & \textbf{0.45 mm / 0.20 mm} & \\
 Impedance control & No & USB is a plain differential pair \\
 Stencil & not needed & everything machine-placed but Section~\ref{sec:solder} \\
+Mark on PCB & \textbf{Remove Mark} & no JLC marker on the board; small fee \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -284,8 +284,11 @@ Do not type this list --- \file{make\_order\_bundle.sh} derives it from the BOM 
 \item Outline and board size: \textbf{45.1 $\times$ 47.3 mm}
 \item Copper layer count: \textbf{6}
 \item Drill count and the 0.20 mm minimum
-\item \textbf{CPL orientation against their preview render} --- the one thing no local tool
-substitutes for
+\item \textbf{The placement preview: nothing should need turning.} Every rotation and centre
+in the CPL is fitted to JLCPCB's own footprint for that LCSC part
+(\file{tools/jlc\_orientation.py}, 160 of 163 agreeing with the rule-based rotation it
+replaced). A part that still looks turned is a finding --- report it rather than rotating
+it by hand
 \item \textbf{1 oz outer copper}, explicitly
 \item \textbf{Panel by JLCPCB.} Standard assembly requires a single PCB of at least
 $70 \times 70$~mm and this board is $45.1 \times 47.3$~mm, so the panel and its breakaway
@@ -533,8 +536,12 @@ free but it is above the \#7199 ceiling that \file{board\_types.txt} explicitly 
 not to cross, while 4544 free IDs sit below it.
 \item \textbf{Read the two screw warnings in Section~\ref{sec:screws} twice.} They are the
 ones that strip a frame.
-\item \textbf{Print \file{docs/img/padmap.svg} and the F.Silkscreen gerber 1:1 on paper.}
-Eleven pads arrive with no label (Section~\ref{sec:T3d}).
+\item \textbf{Print \file{docs/img/padmap.svg} and the assembly drawings
+\file{fab/assembly-top.svg} and \file{fab/assembly-bottom.svg}.} The silkscreen names every
+connector by function (ESC, GPS, RC, CAN, I2C, UART2, SERVO, PYRO, TOUCH, LED, BUZZ, SWD,
+USB, ANT, FLOW) and prints only the labels that sit unambiguously beside their part; every
+reference designator is on the assembly drawings. Seven pads arrive with no label
+(Section~\ref{sec:T3d}).
 \item \textbf{Decide the USB edge orientation before cutting any loom.} All four edges
 carry a connector; there may be exactly one orientation that works.
 \item \textbf{Dry-run the SITL suite} if you have a Linux box:
@@ -667,7 +674,7 @@ this line.
 
 \begin{enumerate}
 \item \textbf{Inspect the boards} (Section 4.1).
-\item \textbf{Print the fab drawing and silkscreen 1:1.} Eleven unlabelled pads ---
+\item \textbf{Print the assembly drawings and the pad map.} Seven unlabelled pads ---
 Section~\ref{sec:T3d}.
 \item \textbf{Dry-fit the FC into the centre plate.} Confirm nothing blocks the bottom
 edge where the microSD ejects.
@@ -771,7 +778,7 @@ each other.
 hard-case pack on build day.
 \item The frame offers 16 $\times$ 16 and 19 $\times$ 19 motor patterns. The motors are 19 $\times$ 19.
 \item Measure both tapped depths before committing sixteen screws.
-\item Eleven pads are unlabelled, and three of them are live supply pads.
+\item Seven pads are unlabelled, and two are supply pads: \file{P41} is +5\,V and \file{PV2} is payload ground.
 \item The ESC cable is a gamble until you buzz it.
 \item \file{J17} is six pins: servo power is pin 5 only, pin 6 is GND.
 \item The board is \textbf{5S maximum} --- the input TVS sets it (Part~1).
@@ -1064,18 +1071,20 @@ Do this with the \textbf{stack assembled}, not the board in free air, because th
 \emph{is} the thermal environment.
 
 % =============================================================================
-\section{Part 13 --- T3d: the eleven unlabelled pads}
+\section{Part 13 --- T3d: the seven unlabelled pads}
 \label{sec:T3d}
 
-Of the \textbf{26} pad and test-point references that exist on the board, \textbf{15} get a
-silkscreen label. These \textbf{11} have no clean position at the board's own 0.80 mm
-minimum text height, so \file{tools/silk\_labels.py} leaves them \textbf{blank rather than
-printing something illegible} --- a wrong label on a board is worse than a blank pad,
-because it will be trusted:
+Of the \textbf{27} pad and test-point references on the board, \textbf{20} carry a
+silkscreen label. A label is printed only where it is legal silkscreen \emph{and} sits
+nearer its own pad than any other part --- \file{tools/check\_silk\_owner.py} gates that
+--- because a label that reads as its neighbour's is worse than a blank pad: it will be
+trusted. These \textbf{7} have no such spot at the board's own 0.80 mm minimum text height,
+so they are blank on the board and named on \file{docs/img/padmap.svg} and the assembly
+drawings:
 
 \begin{center}
-\file{P41}\quad \file{P44}\quad \file{P72}\quad \file{PL1}\quad \file{PL2}\quad \file{PZ1}\quad
-\file{TP2}\quad \file{TP3}\quad \file{TP4}\quad \file{TP6}\quad \file{TP7}
+\file{P41}\quad \file{P44}\quad \file{P73}\quad \file{PV2}\quad \file{TP1}\quad
+\file{TP3}\quad \file{TP10}
 \end{center}
 
 \flag{\file{P41} and \file{PZ1} are +5 V; \file{PL2} is \file{+5V\_PAYLOAD}.} \file{TP6} is
@@ -1270,8 +1279,9 @@ can be fixed, and one of them (\file{U8}) may force one anyway.
 \begin{itemize}
 \item \textbf{USB cannot power the board.} VBUS runs the PHY only. Every bench session needs
 a VBAT supply, which is why T1 exists at all.
-\item \textbf{Eleven pads arrive unlabelled} (Section~\ref{sec:T3d}) because a three-character
-label at the 0.80 mm minimum height covers a 2.84 mm pitch pad and its neighbours. More
+\item \textbf{Seven pads arrive unlabelled} (Section~\ref{sec:T3d}) because a three-character
+label at the 0.80 mm minimum height, placed where it reads as its own pad's, has nowhere to
+go on a 2.84 mm pitch. More
 silkscreen real estate, or fewer test pads, would remove a bench session.
 \item \textbf{The payload rail cannot carry every payload connector at once} (1.67 A against
 \file{L5}'s 1.6 A). A 5 $\times$ 5 mm inductor would lift that to 2.1 A, but not on this
@@ -1368,7 +1378,7 @@ that is the number T3b is really trying to meet.
 \item Upload \file{fab/NAVCORE-SoOP-order-bundle.zip}, or the gerbers plus the default
 BOM/CPL pair
 \item 6 layers, 45.1 $\times$ 47.3 mm, 1.6 mm, \textbf{1 oz} outer, ENIG, 4 mil, via
-0.45/0.20
+0.45/0.20, Mark on PCB \textbf{Remove Mark}
 \item 5 bare boards, 2 assembled. Standard panelised 2 $\times$ 2 unless you want to
 hand-fit \file{U3}
 \item Confirm \file{Y1} = \file{C2682774} and \file{Y2} = \file{C5563878}; refresh the stock
@@ -1381,7 +1391,7 @@ Do not buy a bare PMW3901 or VL53L1X chip
 \item T1 current-limited rails $\rightarrow$ T2 bootloader over USB DFU (\file{BOOT} +
 \file{RESET}) $\rightarrow$ T3 sensors, props off
 \item T3a thermal (\file{U8} needs a probe) $\rightarrow$ T3c IMU temp cal $\rightarrow$ T3d
-eleven unlabelled pads
+seven unlabelled pads
 \item T3b before any position-hold claim: measure the real sigma
 \item SITL scenarios $\rightarrow$ tethered hover $\rightarrow$ GPS Loiter. \textbf{Props on
 last}

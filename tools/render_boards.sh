@@ -7,11 +7,7 @@ JLC=${JLC_LIB:-$(cd .. && pwd)/.libraries/jlc.pretty}
 [ -d "$JLC/packages3d" ] || { echo "no packages3d under $JLC - set JLC_LIB" >&2; exit 1; }
 export JLC_LIB="$JLC"
 
-echo "=== 1. every part gets a body that loads ==="
-python3 tools/fill_missing_models.py --apply | grep -v '^$' | tail -2
-python3 tools/fix_model_offsets.py --apply | grep -E 'offset' | tail -1
-
-echo; echo "=== 2. the tracked renders ==="
+echo "=== 1. the tracked renders ==="
 mkdir -p docs/img
 render () {   # <output> <side> [extra kicad-cli args...]
   local out="$1" side="$2"; shift 2
@@ -28,11 +24,11 @@ render docs/img/render-bottom-flat.png bottom "${PRES[@]}"
 render docs/img/render-iso.png         top    "${PRES[@]}" --rotate -45,0,45 --perspective
 render docs/img/render-iso-bottom.png  bottom "${PRES[@]}" --rotate -45,0,45 --perspective
 
-echo; echo "=== 3. does every body sit on its own footprint? ==="
+echo; echo "=== 2. does every body sit on its own footprint? ==="
 # Measured in the exported GLB, which is what the viewer draws.
 python3 tools/check_model_alignment.py | grep -v '^$' | tail -4
 
-echo; echo "=== 4. did any parts actually render? ==="
+echo; echo "=== 3. did any parts actually render? ==="
 python3 - "$JLC" <<'PY'
 import os, sys
 sys.path.insert(0, 'tools')

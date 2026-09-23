@@ -5,7 +5,7 @@ Usage:  python3 tools/preflight.py [board.kicad_pcb]
 """
 import os, sys, re, csv, math, glob, hashlib, subprocess
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import pcbnew, design, route, readiness
+import pcbnew, design, readiness
 
 BOARD = sys.argv[1] if len(sys.argv) > 1 else "NAVCORE-SoOP.kicad_pcb"
 SCH   = "NAVCORE-SoOP.kicad_sch"
@@ -80,7 +80,7 @@ def fabrication(board):
                  if os.path.getmtime(f) < b_mtime]
         check("fabrication", "gerbers match the board", not stale,
               (f"{len(stale)} file(s) older than {BOARD} - REGENERATE before ordering "
-               f"(tools/finish.sh): {', '.join(sorted(stale)[:4])}"
+               f"(bash tools/make_order_bundle.sh): {', '.join(sorted(stale)[:4])}"
                + ("..." if len(stale) > 4 else "")) if stale else
               f"all {len(fab_files)} fab files newer than the board file")
 
@@ -261,17 +261,23 @@ def integrity(board):
 # --------------------------------------------------------------- silkscreen ---
 def silkscreen(board):
     """Report how many pad/test-point labels made it onto the silkscreen."""
+    # Count what is printed, not what silk_labels could place.
     try:
-        import silk_labels
-        placed, skipped = silk_labels.place_labels(board)
+        placed, skipped = [], []
+        for fp in board.GetFootprints():
+            if "TestPoint" not in fp.GetFPIDAsString():
+                continue
+            r = fp.Reference()
+            (placed if r.IsVisible() and r.GetLayer() in (pcbnew.F_SilkS, pcbnew.B_SilkS)
+             else skipped).append(fp.GetReference())
     except Exception as e:
         check("fabrication", "pad silkscreen labels", False,
               f"could not evaluate: {e}", hard=False)
         return
     total = len(placed) + len(skipped)
     ok = not skipped
-    detail = (f"{len(placed)}/{total} pad labels have a clean silkscreen position"
-              + (f" - no clean position for: {', '.join(sorted(skipped))}" if skipped
+    detail = (f"{len(placed)}/{total} pad labels printed on the board"
+              + (f" - blank (on padmap.svg and the assembly drawings): {', '.join(sorted(skipped))}" if skipped
                  else ""))
     check("fabrication", "pad silkscreen labels", ok, detail, hard=False)
 
@@ -360,6 +366,21 @@ def firmware(board):
     check("fabrication", "datasheet-required externals present", rc == 0,
           "every IC has the external components its datasheet requires" if rc == 0 else
           "a required component is ABSENT - see tools/check_topology.py")
+
+    rc, out = run("check_backside.py")
+    m = re.search(r'(\d+) through-holes checked', out)
+    check("fabrication", "no pin lands under a part on the other side", rc == 0,
+          (f"{m.group(1) if m else '?'} through-holes clear of every opposite-side body"
+           if rc == 0 else
+           "a through-hole pin or post lands under a part - see tools/check_backside.py"))
+
+    # A label nearer a neighbour than its own part is read as the neighbour's.
+    rc, out = run("check_silk_owner.py")
+    m = re.search(r'(\d+) printed labels checked', out)
+    check("fabrication", "every label reads as its own part's", rc == 0,
+          (f"{m.group(1) if m else '?'} printed labels, each nearest the part it names"
+           if rc == 0 else
+           "a label sits nearer another part - see tools/check_silk_owner.py"))
 
     rc, out = run("check_build.py")
     m = re.search(r'BUILD CHECKS PASS - (\d+) checks across (\d+)', out)

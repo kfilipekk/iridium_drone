@@ -5,10 +5,10 @@ Usage:  python3 tools/check_power_cut.py [-v]
 """
 import os, sys, math
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import pcbnew, route, design, island_route as ir
+import pcbnew, design, pcbutil
 
 BOARD = "NAVCORE-SoOP.kicad_pcb"
-TOMM  = route.TOMM
+TOMM  = pcbutil.TOMM
 INNER = {"In1.Cu", "In2.Cu", "In3.Cu", "In4.Cu"}
 
 
@@ -46,8 +46,8 @@ def poly_span(pts, axis, v):
 def main():
     verbose = "-v" in sys.argv
     b = pcbnew.LoadBoard(BOARD)
-    route.set_rules(b)
-    route.fill(b)
+    pcbutil.set_rules(b)
+    pcbutil.fill(b)
     BD = design.BOARD
 
     pads = {}
@@ -100,7 +100,7 @@ def main():
                     o = sh.Outline(i)
                     pts = [(TOMM(o.CPoint(k).x), TOMM(o.CPoint(k).y))
                            for k in range(o.PointCount())]
-                    if ir.area(pts) > 1.0:
+                    if pcbutil.area(pts) > 1.0:
                         zones.append((pts, inner))
 
         worst = None

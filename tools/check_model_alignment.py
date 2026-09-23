@@ -10,16 +10,10 @@ import pcbnew
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-EXPECTED = {
-    "J1": (0.04, 1.07),    # USB-C receptacle: the plug end projects past the board edge
-    "J8": (0.00, -3.95),   # push-push microSD: the card slot extends past the silkscreen
-}
-# A body must also sit on its side of the board, not in it.
+import design
+EXPECTED = design.MODEL_EXPECTED
 SINK_TOL = 0.15
-EXPECTED_SINK = {
-    "J1": 0.78,    # USB-C: the four shell legs go 0.78 mm into their slots
-    "J8": 0.61,    # microSD: two locating posts go 0.61 mm into their holes
-}
+EXPECTED_SINK = design.MODEL_EXPECTED_SINK
 BOARD = os.path.join(REPO, "NAVCORE-SoOP.kicad_pcb")
 T = pcbnew.ToMM
 

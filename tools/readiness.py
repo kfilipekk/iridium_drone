@@ -35,6 +35,10 @@ PREREQUISITES = [
          claim="no signal copper sits on the In1/In4 plane layers"),
     dict(id="fab.limits", cls=GATED, check="JLCPCB 6-layer limits",
          claim="track, via and drill sizes are inside JLCPCB's free-tier capability"),
+    dict(id="fab.backside", cls=GATED, tool="check_backside.py",
+         claim="no through-hole pin or post lands under a part on the other side"),
+    dict(id="fab.silkowner", cls=GATED, tool="check_silk_owner.py",
+         claim="every printed label sits nearer the part it names than any other part"),
     dict(id="fab.bundle", cls=GATED, tool="check_order_bundle.py",
          claim="the bundle you upload matches the verified BOM, CPL and gerbers"),
 
@@ -126,8 +130,8 @@ PREREQUISITES = [
              "copper, and this board is between them. No desk calculation narrows it; "
              "T3a measures it. U19 logs the board beside U9 every flight in the meantime."),
     dict(id="adv.silk", cls=ADVISORY, check="pad silkscreen labels",
-         why="an unlabelled pad costs a bench session, not a board, and silk_labels.py "
-             "leaves a label off rather than print it wrong at 0.80 mm on 1.5 mm pads."),
+         why="an unlabelled pad costs a bench session, not a board, and a label is left off "
+             "rather than printed where it would read as another part's."),
     dict(id="adv.in4rails", cls=ADVISORY, check="In4.Cu rails not fragmented",
          why="separate pours around separate pad groups, each tied to its rail - a note "
              "about shape, not a defect in connectivity."),
@@ -177,7 +181,7 @@ PREREQUISITES = [
          bound="104 C peak on good copper against 150 C - 46 C of margin",
          claim="U9's board-to-junction offset",
          why="BOUND. Only the datasheet's '(No Heatsink)' corner is over, and that corner "
-             "describes a 2-layer board - this one is MEASURED by tools/thermal_vias.py "
+             "describes a 2-layer board - this one has "
              "at 7443 mm2 of GND plane and 5 vias on the output pad. What the bench sets "
              "is the offset between TEMP[0] and the junction, a constant U19 then carries "
              "forward every flight.",

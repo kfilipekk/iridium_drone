@@ -6,11 +6,11 @@ Usage:  python3 tools/check_cpl.py [-v] [--svg DIR]
 """
 import os, sys, csv, math, collections
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import pcbnew, route
+import pcbnew, pcbutil
 
 BOARD = "NAVCORE-SoOP.kicad_pcb"
 CPL   = "fab/CPL-NAVCORE-SoOP.csv"
-TOMM  = route.TOMM
+TOMM  = pcbutil.TOMM
 TOL   = 12.0        # degrees; footprints place pin 1 on a coarse grid of directions
 
 
