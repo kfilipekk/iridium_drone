@@ -27,11 +27,8 @@ EDITS = [
      "#endif  // AP_SIM_GPS_ENABLED\n        // none of these GPSs have initialisation blobs\n",
      "    case GPS_TYPE_SOOP:\n"),
     ("libraries/AP_GPS/AP_GPS.cpp",
-     "#if AP_SIM_GPS_ENABLED\n    case GPS_TYPE_SITL:\n"
-     "        return NEW_NOTHROW AP_GPS_SITL(*this, params[instance], state[instance], port);\n"
-     "#endif  // AP_SIM_GPS_ENABLED\n",
-     "\n    case GPS_TYPE_SOOP:\n"
-     "        return NEW_NOTHROW AP_GPS_SoOP(*this, params[instance], state[instance], port);\n"),
+     "    case GPS_TYPE_MAV:\n#if AP_GPS_MAV_ENABLED\n        dstate->auto_detected_baud = false; // specified, not detected\n        return NEW_NOTHROW AP_GPS_MAV(*this, params[instance], state[instance], nullptr);\n#endif //AP_GPS_MAV_ENABLED\n",
+     "    case GPS_TYPE_SOOP:\n        dstate->auto_detected_baud = false;\n        return NEW_NOTHROW AP_GPS_SoOP(*this, params[instance], state[instance], port);\n"),
     ("libraries/AP_GPS/AP_GPS.cpp",
      "            if (type == GPS_TYPE_MAV ||\n",
      "                type == GPS_TYPE_SOOP ||\n"),
