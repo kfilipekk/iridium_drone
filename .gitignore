@@ -25,6 +25,7 @@ fp-info-cache
 
 #KiCad backup written next to the board by an interrupted save
 *.kicad_pcb.bak
+*.movebak
 
 #the same, for the vendored symbol library
 *.kicad_sym.bak
