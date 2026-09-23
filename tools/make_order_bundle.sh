@@ -16,6 +16,14 @@ kicad-cli pcb export drill --output fab/gerbers/ --format excellon \
   --drill-origin absolute --excellon-units mm --generate-map --map-format gerberx2 \
   "$BOARD" >/dev/null
 
+# Assembly drawings: every reference designator, on the Fab layers.
+kicad-cli pcb export svg --mode-single --layers F.Fab,Edge.Cuts --fit-page-to-board \
+  --exclude-drawing-sheet --sketch-pads-on-fab-layers --crossout-DNP-footprints-on-fab-layers \
+  --black-and-white --drill-shape-opt 0 -o fab/assembly-top.svg "$BOARD" >/dev/null
+kicad-cli pcb export svg --mode-single --layers B.Fab,Edge.Cuts --fit-page-to-board --mirror \
+  --exclude-drawing-sheet --sketch-pads-on-fab-layers --crossout-DNP-footprints-on-fab-layers \
+  --black-and-white --drill-shape-opt 0 -o fab/assembly-bottom.svg "$BOARD" >/dev/null
+
 n_cu=$(ls fab/gerbers/ | grep -c "_Cu.gbr")
 if [ "$n_cu" -ne 6 ]; then
   echo "REFUSING: $n_cu copper layers exported, expected 6." >&2
@@ -40,6 +48,7 @@ for f in BOM-NAVCORE-SoOP.csv CPL-NAVCORE-SoOP.csv \
   fi
   cp "fab/$f" "$STAGE/"
 done
+cp fab/assembly-top.svg fab/assembly-bottom.svg "$STAGE/"
 
 # The DNP list in the instructions is derived from the BOM that ships, like the placement counts.
 DNP_WRAP=$(python3 - <<'PY'
@@ -92,6 +101,10 @@ FABRICATION
                                         the design rules drifted
   Min via / drill   0.45 / 0.20 mm
   Impedance control No
+  Mark on PCB       "Remove Mark" (no order number). The silkscreen carries no
+                    JLCJLCJLCJLC marker, so any other choice prints JLC's number
+                    wherever it fits - possibly across a label. JLC may charge a
+                    small fee for this; it is shown in the quote.
 
 ASSEMBLY
   Quantity          5 bare PCBs, 2 assembled  (5 is the multilayer minimum,
@@ -100,6 +113,10 @@ ASSEMBLY
   Side              BOTH sides are populated - @@SIDES@@. Two stencils.
   BOM               BOM-NAVCORE-SoOP.csv
   CPL               CPL-NAVCORE-SoOP.csv
+  Placement preview Nothing should need turning. Every rotation and centre in the
+                    CPL is fitted to JLCPCB's own footprint for that LCSC part
+                    (tools/jlc_orientation.py). A part that still shows turned
+                    is a real finding - report it rather than just rotating it.
 
   Variants, if you want them instead of the default:
     *-economic.csv  U3 (second IMU) left off for hand-fitting. That is the ONLY

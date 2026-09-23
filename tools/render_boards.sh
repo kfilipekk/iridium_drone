@@ -28,7 +28,11 @@ render docs/img/render-bottom-flat.png bottom "${PRES[@]}"
 render docs/img/render-iso.png         top    "${PRES[@]}" --rotate -45,0,45 --perspective
 render docs/img/render-iso-bottom.png  bottom "${PRES[@]}" --rotate -45,0,45 --perspective
 
-echo; echo "=== 3. did any parts actually render? ==="
+echo; echo "=== 3. does every body sit on its own footprint? ==="
+# Measured in the exported GLB, which is what the viewer draws.
+python3 tools/check_model_alignment.py | grep -v '^$' | tail -4
+
+echo; echo "=== 4. did any parts actually render? ==="
 python3 - "$JLC" <<'PY'
 import os, sys
 sys.path.insert(0, 'tools')

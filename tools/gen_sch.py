@@ -7,6 +7,13 @@ import symlib, design, jlcpaths
 JLC   = jlcpaths.SYMBOLS
 STOCK = "/usr/share/kicad/symbols"
 U = lambda: str(uuid.uuid4())
+# The printed sheet's identity - the PDF is what a reviewer opens first.
+TITLE_BLOCK = ['\t(title_block', '\t\t(title "NAVCORE-SoOP flight controller")',
+               '\t\t(date "2026-09-23")', '\t\t(rev "C")',
+               '\t\t(company "Krystian Filipek - University of Cambridge / CUSF")',
+               '\t\t(comment 1 "6-layer STM32H743 flight controller with Iridium SoOP Doppler navigation")',
+               '\t\t(comment 2 "Generated from tools/design.py by tools/gen_sch.py - edit the source, not this file")',
+               '\t)']
 
 def raw_symbol(libpath, name):
     """Return the verbatim (symbol "name" ...) block from a .kicad_sym file."""
@@ -91,7 +98,7 @@ def main():
 
     out = ['(kicad_sch', '\t(version 20231120)', '\t(generator "navcore-gen")',
            '\t(generator_version "9.0")', f'\t(uuid "{U()}")', '\t(paper "User" 1100 850)',
-           '\t(lib_symbols']
+           *TITLE_BLOCK, '\t(lib_symbols']
     for lid in sorted(lib):
         out.append("\t\t" + lib[lid][0].replace("\n", "\n\t\t"))
     out.append('\t)')

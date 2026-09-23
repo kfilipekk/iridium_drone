@@ -3,6 +3,7 @@
 import os, re, sys, csv
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import pcbnew, design
+import jlc_orientation
 
 BOARD = "NAVCORE-SoOP.kicad_pcb"
 OUT = "fab"
@@ -16,9 +17,7 @@ STANDARD_ONLY = {
 # is already in JLCPCB's orientation.
 JLC_FP = re.compile(r'_L\d|^CONN-|^SENSORS-|^OPTO-|^TF-SMD|^COB-|^USB-C-SMD|^CRYSTAL-SMD')
 
-KICAD_FP_ROTATION = [
-    (re.compile(r'^SW_SPST_B3'), 90),
-]
+KICAD_FP_ROTATION = []
 
 
 def cpl_rotation(fp):
@@ -74,7 +73,8 @@ def main():
             w.writerow([val, ",".join(sorted(refs)), fpn, lcsc, len(refs),
                         "DNP" if dnp else ""])
 
-    n_cpl = 0
+    n_cpl = n_fit = 0
+    jlc_db = jlc_orientation.load()
     with open(f"{OUT}/CPL-NAVCORE-SoOP{suffix}.csv", "w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["Designator", "Mid X", "Mid Y", "Layer", "Rotation"])
@@ -85,9 +85,15 @@ def main():
             _c = design.COMPONENTS.get(ref)
             if _c and is_dnp(ref, _c[4]): continue
             p = fp.GetPosition()
-            w.writerow([ref, f"{pcbnew.ToMM(p.x):.4f}mm", f"{-pcbnew.ToMM(p.y):.4f}mm",
+            x, y, rot = pcbnew.ToMM(p.x), -pcbnew.ToMM(p.y), cpl_rotation(fp)[0]
+            fit = (jlc_orientation.solve(fp, jlc_db[_c[3]])
+                   if _c and _c[3] in jlc_db else None)
+            if fit:
+                rot, (x, y) = round(fit[0]) % 360, fit[1]
+                n_fit += 1
+            w.writerow([ref, f"{x:.4f}mm", f"{y:.4f}mm",
                         "bottom" if fp.GetLayerName() == "B.Cu" else "top",
-                        f"{cpl_rotation(fp)[0]:.1f}"])
+                        f"{rot:.1f}"])
             n_cpl += 1
 
     n_lines = len(groups)
@@ -97,7 +103,8 @@ def main():
                if not l or str(l).startswith("LOOKUP:")]
     print(f"BOM: {n_lines} lines, {n_parts} parts ({n_dnp} DNP)")
     # Count the rows actually written, not the footprints that are not test pads.
-    print(f"CPL: {n_cpl} placements")
+    print(f"CPL: {n_cpl} placements, {n_fit} placed from JLCPCB's own footprint "
+          f"(tools/jlc_orientation.py), {n_cpl - n_fit} from the footprint rules")
     if no_fpv:
         print(f"NO-FPV variant - the 9 V VTX buck is left off ({len(vtx)} parts):")
         print(f"   {', '.join(sorted(vtx))}")
