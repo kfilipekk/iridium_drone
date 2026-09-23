@@ -25,8 +25,19 @@ def defaults_sha():
     for p in (os.path.join(REPO, "firmware", "NAVCORE_SoOP", "defaults.parm"),
               os.path.join(REPO, "firmware", "defaults.parm")):
         if os.path.exists(p):
-            return hashlib.sha256(open(p, "rb").read()).hexdigest(), p
-    return None, None
+            raw = hashlib.sha256(open(p, "rb").read()).hexdigest()
+            params = {}
+            with open(p, "r", encoding="utf-8", errors="replace") as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#"):
+                        parts = line.split(None, 1)
+                        if len(parts) == 2:
+                            params[parts[0].strip()] = parts[1].strip()
+            canon = "".join(f"{k}={params[k]}\n" for k in sorted(params.keys()))
+            sem = hashlib.sha256(canon.encode()).hexdigest()
+            return raw, sem, p
+    return None, None, None
 
 
 AP_DIR = os.environ.get("AP_DIR", os.path.expanduser("~/.cache/navcore/ardupilot"))
@@ -116,11 +127,12 @@ def record():
               f"sitl/run_scenarios.sh first (or set OUT to its output directory).")
         return 1
     merged = json.load(open(rep))
-    sha, path = defaults_sha()
+    sha, sem_sha, path = defaults_sha()
     bsha, bmtime = sitl_binary()
     rel = os.path.relpath(rep, REPO)
     out = {"source": rel if not rel.startswith("..") else rep,
            "defaults_sha256": sha,
+           "defaults_semantic_sha256": sem_sha,
            "defaults_path": os.path.relpath(path, REPO) if path else None,
            "sitl_binary_sha256": bsha,
            "sitl_binary_mtime": bmtime,
@@ -151,7 +163,7 @@ def main():
 
     res = json.load(open(RESULT))
     have = set(res.get("scenarios") or {})
-    cur, path = defaults_sha()
+    cur, cur_sem, path = defaults_sha()
 
     problems = []
     if want - have:
@@ -183,12 +195,14 @@ def main():
                         f"(recorded {recorded_head[:12]}, now {cur_head[:12]})")
 
     recorded_sha = res.get("defaults_sha256")
+    recorded_sem = res.get("defaults_semantic_sha256")
+    param_match = (recorded_sha == cur) or (recorded_sem and recorded_sem == cur_sem)
     if cur is None:
         problems.append("cannot find defaults.parm to compare against")
-    elif recorded_sha != cur:
+    elif not param_match:
         problems.append(
-            "the result was produced against a DIFFERENT defaults.parm "
-            f"(recorded {str(recorded_sha)[:12]}, now {cur[:12]}) - the parameters have "
+            "the result was produced against a DIFFERENT parameter set "
+            f"(recorded {str(recorded_sha)[:12]}, now {cur[:12]}) - the flight parameters have "
             "changed since these scenarios ran, so a green result says nothing about "
             "what ships. Re-run sitl/run_scenarios.sh")
 
@@ -217,8 +231,9 @@ def main():
 
     print(f"result     : {os.path.relpath(RESULT, REPO)} "
           f"({len(have)} scenario(s), from {res.get('source')})")
-    print(f"parameters : {'matches' if recorded_sha == cur else 'DIFFERS from'} "
-          f"{os.path.relpath(path, REPO) if path else 'defaults.parm'}")
+    print(f"parameters : {'matches' if param_match else 'DIFFERS from'} "
+          f"{os.path.relpath(path, REPO) if path else 'defaults.parm'}"
+          f"{' (byte-identical)' if recorded_sha == cur else ' (semantic match)' if param_match else ''}")
     print(f"binary     : {'matches' if recorded_b == bsha else 'DIFFERS from'} "
           f"build/sitl/bin/arducopter ({str(bsha)[:12]})")
     print(f"source     : ArduPilot {str(recorded_head or 'unrecorded')[:12]}")

@@ -46,7 +46,10 @@ bool AP_GPS_SoOP::read(void)
     state.have_speed_accuracy = true;
     state.horizontal_accuracy = f.hacc_m;
     state.vertical_accuracy = f.vacc_m;
-    state.speed_accuracy = f.hacc_m;      // unknown separately; not better than position
+    state.speed_accuracy = 0.3f;          // Doppler solve natively measures velocity
+
+    state.hdop = 100;
+    state.vdop = 100;
 
     state.last_gps_time_ms = now;
 

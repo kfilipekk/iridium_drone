@@ -17,6 +17,8 @@ HOME = "51.5074,-0.1278,20,0"
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--seconds", type=float, default=120.0)
+    ap.add_argument("--disable-backend", action="store_true",
+                    help="negative control: disable all GPS sources")
     a = ap.parse_args()
 
     try:
@@ -31,7 +33,13 @@ def main():
     work = tempfile.mkdtemp(prefix="soop_sitl_")
     parm = os.path.join(work, "soop.parm")
     with open(parm, "w") as f:
-        f.write("GPS_TYPE 27\n")            # GPS_TYPE_SOOP, forced
+        if a.disable_backend:
+            f.write("GPS1_TYPE 0\n")
+            f.write("GPS_TYPE 0\n")
+            f.write("SIM_GPS1_ENABLE 0\n")
+        else:
+            f.write("GPS1_TYPE 27\n")           # GPS_TYPE_SOOP, forced (ArduPilot 4.6+)
+            f.write("GPS_TYPE 27\n")            # legacy parameter name
 
     logf = open(os.path.join(work, "sitl.log"), "w")
     proc = subprocess.Popen(
@@ -57,7 +65,7 @@ def main():
                 fix_type = msg.fix_type
             elif t == "GLOBAL_POSITION_INT" and (msg.lat or msg.lon):
                 pos = (msg.lat * 1e-7, msg.lon * 1e-7, msg.alt * 1e-3)
-            if fix_type == 3 and pos is not None:
+            if fix_type is not None and fix_type >= 3 and pos is not None:
                 break
     finally:
         proc.terminate()
@@ -68,8 +76,9 @@ def main():
         logf.close()
 
     near_home = pos is not None and abs(pos[0] - 51.5074) < 0.02 and abs(pos[1] + 0.1278) < 0.02
-    ok = fix_type == 3 and near_home
-    print(f"  {'ok  ' if fix_type == 3 else 'FAIL'}  GPS_RAW_INT reported a 3D fix "
+    has_3d_fix = fix_type is not None and fix_type >= 3
+    ok = has_3d_fix and near_home
+    print(f"  {'ok  ' if has_3d_fix else 'FAIL'}  GPS_RAW_INT reported a 3D fix "
           f"from the SoOP backend (fix_type={fix_type})")
     print(f"  {'ok  ' if near_home else 'FAIL'}  the EKF published a global position near "
           f"home: {pos if pos else 'none'}")

@@ -415,6 +415,16 @@ def firmware(board):
           "the SGP4/TLE ephemeris or the TEME->ECEF frame conversion does not hold - "
           "see tools/check_soop_ephemeris.py")
 
+    # The C SGP4 propagator, gated.
+    rc, out = run("check_soop_sgp4.py")
+    m = re.search(r'(\d+) checks against Python reference \(tol: (\d+) m', out)
+    check("firmware", "C SGP4 propagator agrees with Python reference and builds for the target",
+          rc == 0,
+          (f"{m.group(1)} checks, tol {m.group(2)} m, cross-compiled Cortex-M7"
+           if m else "see tools/check_soop_sgp4.py") if rc == 0 else
+          "the C SGP4 propagator disagrees with Python sgp4.api.Satrec or does not "
+          "cross-compile - see tools/check_soop_sgp4.py")
+
     # The burst-DSP prerequisite, gated.
     rc, out = run("check_soop_burst.py")
     m = re.search(r'BURST DSP OK - (\d+)/(\d+) assertions, p90 ([\d.]+) Hz < 5 Hz '
@@ -447,6 +457,11 @@ def firmware(board):
            f"firmwares" if m else "see tools/check_soop_backend.py") if rc == 0 else
           "the SoOP backend is not registered or not in the firmware - see "
           "tools/check_soop_backend.py")
+
+    rc, out = run("check_soop_sitl.py")
+    check("firmware", "SoOP fix reaches the EKF", rc == 0,
+          "GPS_RAW_INT has a 3D SoOP fix and EKF publishes global position"
+          if rc == 0 else "see tools/check_soop_sitl.py")
 
     rc, out = run("check_bench_bounds.py")
     n = re.search(r'^(\d+) items accounted for: (.*)$', out, re.M)

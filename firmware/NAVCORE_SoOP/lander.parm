@@ -1,0 +1,31 @@
+# NAVCORE-SoOP Revision C lander profile This is not the multirotor defaults.parm.
+
+FRAME_CLASS 9
+FRAME_TYPE 1
+MOT_PWM_TYPE 6
+
+# AP_MotorsCoax drives motor functions 5/6 as the two lift motors.
+SERVO1_FUNCTION 37
+SERVO2_FUNCTION 38
+# Its four actuator functions are the coax roll/pitch flap pairs.
+SERVO7_FUNCTION 33
+SERVO8_FUNCTION 34
+SERVO9_FUNCTION 35
+SERVO10_FUNCTION 36
+
+# Touchdown switch: PD10 / GPIO(85), active low through the hardware pull-up.
+
+# Pyro is mapped through AP_Parachute's relay function, not a free-running GPIO.
+# PC5 is GPIO(84), and the board hardware keeps it low during reset.
+RELAY1_FUNCTION 3
+RELAY1_PIN 84
+RELAY1_DEFAULT 0
+RELAY1_INVERTED 0
+# Disabled at boot.
+CHUTE_ENABLED 0
+CHUTE_TYPE 0
+CHUTE_ALT_MIN 10
+
+# Never require a safety button that this board does not fit.
+BRD_SAFETY_DEFLT 0
+
