@@ -35,7 +35,7 @@
     (effects (font (size 1 1) (thickness 0.15)))
   )
   (model "${JLC_LIB}/packages3d/CONN-SMD_3P-P1.00_SH1.0MM-3P-WT.step"
-    (at (xyz 0 -0.010317 0))
+    (at (xyz -0.007598 0.048346 0.059449))
     (scale (xyz 1 1 1))
     (rotate (xyz 0 0 0))
   )
