@@ -220,21 +220,20 @@ PREREQUISITES = [
          claim="I/Q gives a carrier estimate inside the solver's 5 Hz target"),
     #the solve is ported to C and gated (solver.c below)
     dict(id="build.firmware", cls=BUILD,
-         claim="the flight firmware: I/Q capture, an in-C ephemeris and the EKF hand-off on the H743",
-         why="the solve is ported and agrees with the Python reference (solver.c), but "
-             "nothing yet samples the MAX2112, runs SGP4 in C, or hands a fix to the EKF "
-             "on the aircraft."),
+         claim="the flight firmware: I/Q capture, SGP4-to-ECEF framing, and the EKF hand-off on the H743",
+         why="the solve and SGP4 are ported to C (solver.c, build.sgp4), but nothing yet "
+             "samples the MAX2112 or hands a fix to the EKF on the aircraft."),
     dict(id="solver.c", cls=GATED,
          check="the C solver agrees with the Python reference and builds for the target",
          claim="the Doppler solve is ported to C, matches the Python reference and "
                "cross-compiles for the H743"),
-    #the BACKEND now exists and is gated (ekf.backend below)
-    dict(id="build.ekf", cls=BUILD,
-         claim="the solved fix reaches the EKF end-to-end, and the on-board solve drives the backend",
-         why="the backend is written, registered and compiled (ekf.backend), and a SITL "
-             "harness for the hand-off exists (tools/soop_sitl_test.py) - but it is not "
-             "yet passing, so 'the fix reaches the EKF' is NOT claimed. The solve task "
-             "that calls AP_SoOPFix::set() is also unwritten."),
+    dict(id="build.sgp4", cls=GATED,
+         check="C SGP4 propagator agrees with Python reference and builds for the target",
+         claim="SGP4 is ported to C, tested on 80 real Iridium TLEs at ±3 days, and "
+               "cross-compiled for the H743 (fpv5-d16 FPU, 4.7 kB .text)"),
+    dict(id="build.ekf", cls=GATED,
+         check="SoOP fix reaches the EKF",
+         claim="the solved fix reaches the EKF end-to-end in SITL"),
     dict(id="ekf.backend", cls=GATED,
          check="the SoOP GPS backend is registered and compiled into the firmware",
          claim="an in-process AP_GPS backend carries the on-board Doppler fix, so the "
