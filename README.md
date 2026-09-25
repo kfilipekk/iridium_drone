@@ -119,6 +119,9 @@ Recommended JLCPCB ordering parameters:
 - **Layers**: 6 Layers
 - **Dimensions**: 45.0 × 47.2 mm (Panel by JLCPCB, 2 × 2 recommended for SMT)
 - **Base Material**: FR-4 (TG155)
+- **Outer copper**: 1 oz (every current rating assumes it)
 - **Impedance control**: none
+- **Via covering**: Epoxy Filled & Capped (31 vias sit inside SMD pads)
 - **Surface Finish**: ENIG (Electroless Nickel Immersion Gold recommended for LGA-14 IMUs)
+- **Mark on PCB**: Remove Mark
 - **Assembly**: Top + Bottom SMT

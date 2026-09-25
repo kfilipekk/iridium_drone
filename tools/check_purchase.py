@@ -81,7 +81,7 @@ def main():
           f"receiver MUST be {rx.get('mcu')}-based, firmware >= {rx.get('min_fw')}. "
           f"An STM32-based ELRS receiver CANNOT carry MAVLink, so there would be no "
           f"telemetry link to a laptop and no fix in software", rx["src"])
-    check(True, "ELRS RX <-> P51-P54", rx["note"], rx["src"])
+    check(True, "ELRS RX <-> J5", rx["note"], rx["src"])
 
     bz = O["buzzer"]
     check(bz["must_be"] == "passive", "buzzer TYPE",

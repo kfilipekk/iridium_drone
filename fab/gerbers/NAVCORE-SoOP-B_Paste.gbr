@@ -1,12 +1,12 @@
 %TF.GenerationSoftware,KiCad,Pcbnew,9.0.8+dfsg-1*%
-%TF.CreationDate,2026-09-23T15:18:59+01:00*%
+%TF.CreationDate,2026-09-25T19:28:36+01:00*%
 %TF.ProjectId,NAVCORE-SoOP,4e415643-4f52-4452-9d53-6f4f502e6b69,rev?*%
 %TF.SameCoordinates,Original*%
 %TF.FileFunction,Paste,Bot*%
 %TF.FilePolarity,Positive*%
 %FSLAX46Y46*%
 G04 Gerber Fmt 4.6, Leading zero omitted, Abs format (unit mm)*
-G04 Created by KiCad (PCBNEW 9.0.8+dfsg-1) date 2026-09-23 15:18:59*
+G04 Created by KiCad (PCBNEW 9.0.8+dfsg-1) date 2026-09-25 19:28:36*
 %MOMM*%
 %LPD*%
 G01*
@@ -718,6 +718,11 @@ D45*
 %TO.C,C70*%
 X119811600Y-121768800D03*
 X122761600Y-121768800D03*
+%TD*%
+D14*
+%TO.C,R58*%
+X143510000Y-109150000D03*
+X142490000Y-109150000D03*
 %TD*%
 D13*
 %TO.C,C21*%
