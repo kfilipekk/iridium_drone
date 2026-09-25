@@ -101,6 +101,9 @@ FABRICATION
                                         the design rules drifted
   Min via / drill   0.45 / 0.20 mm
   Impedance control No
+  Via covering      Epoxy Filled & Capped   <- 31 vias sit inside SMD pads (four on
+                                               U1's pins); left open they drain the
+                                               solder out of the joint
   Mark on PCB       "Remove Mark" (no order number). The silkscreen carries no
                     JLCJLCJLCJLC marker, so any other choice prints JLC's number
                     wherever it fits - possibly across a label. JLC may charge a
