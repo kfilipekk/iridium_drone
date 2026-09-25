@@ -212,10 +212,10 @@ for i,(r) in enumerate(["R22","R23","R24","R25","R26","R27"]): RES(r, "47k")  # 
 
 # RF section passives.
 for r,v in [("C49","100n"),("C50","100n"),("C51","1u"),
-            ("C52","100p"),("C56","10n"),("C57","10n")]:
+            ("C52","100p"),("C56","100p"),("C57","100n")]:
     CAP(r, v, F_C0402)
 for r,v in [("R28","0R"),("R29","0R"),("R31","4k7"),
-            ("R34","1k"),("R35","1k"),("R36","4k7"),("R37","4k7")]:
+            ("R34","330R"),("R35","1k"),("R36","4k7"),("R37","4k7")]:
     RES(r, v, F_R0402)
 CAP("C58","10n", F_C0402)     # series DC-cut, Y2 output -> U13 XTAL [D] TCXO: 0.01 uF min
 CAP("C59","100n", F_C0402)
@@ -840,10 +840,23 @@ NETS["+3V3A"] += ["Y2.4", "C59.1"]            # VDD + decoupling, on the quiet r
 NETS["GND"]  += ["Y2.2", "Y2.1", "C59.2"]    # both ground pins to ground
 net("TUNER_ADDR","U13.28","R29.2"); NETS["GND"] += ["R29.1"]
 NETS["I2C2_SDA"] += ["U13.26"]; NETS["I2C2_SCL"] += ["U13.27"]
-net("VTUNE","U13.9","C56.1"); NETS["GND"] += ["C56.2"]
-net("CPOUT","U13.12","R34.1"); net("LOOP","R34.2","C57.1"); NETS["GND"] += ["C57.2"]
-net("VCOBYP","U13.8"); net("REFOUT","U13.15"); net("GC1","U13.5","R35.2")
-NETS["GND"] += ["R35.1"]
+# PLL loop filter, third order as in the MAX2112 typical application circuit: C81 and
+# R34+C57 at CPOUT, R57 from CPOUT to VTUNE, C56 at VTUNE. Sized for a ~50 kHz loop at
+# ICP 600 uA over the VCO's 50-175 MHz/V (LO-referred): 75-77 deg phase margin.
+CAP("C81", "1n", F_C0402); RES("R57", "470R", F_R0402)
+net("VTUNE","U13.9","C56.1","R57.2"); NETS["GND"] += ["C56.2"]
+net("CPOUT","U13.12","R34.1","C81.1","R57.1"); net("LOOP","R34.2","C57.1")
+NETS["GND"] += ["C57.2", "C81.2"]
+net("VCOBYP","U13.8"); net("REFOUT","U13.15")
+# GC1 needs 0.5-2.7 V (0.5 V = maximum gain): R58/R35 from VCC_RF gives 0.58 V.
+RES("R58", "4k7", F_R0402)
+net("GC1","U13.5","R35.2","R58.2"); NETS["GND"] += ["R35.1"]; NETS["VCC_RF"] += ["R58.1"]
+# 1 nF beside the LO/VCO (pins 6-7) and synthesizer (pin 13) supplies, which set the
+# VCO's phase noise and the PLL's spurs. The datasheet asks for one at every VCC pin;
+# the RF, digital and baseband pins have no room within 3 mm and share C49/C50/C51.
+for _c, _pin in (("C84", 6), ("C86", 13)):
+    CAP(_c, "1n", F_C0402)
+    NETS["GND"] += [f"{_c}.2"]; NETS["VCC_RF"] += [f"{_c}.1"]
 # ---- MAX2112 baseband -> OPA2374 difference amplifiers -> ADC ------------------------
 # The comment here read "resistor values TBD by sim" and nothing ever came back to it.
 for r, v in [("R47","4k7"), ("R48","10k"), ("R49","10k"), ("R50","10k"),
@@ -1286,6 +1299,7 @@ PASSIVE_LCSC = {
     ("1n",   F_C0402): "C1523",
     ("100R", F_R0402): "C25076",  ("120R", F_R0402): "C25862",
     ("1k",   F_R0402): "C11702",  ("4k7",  F_R0402): "C25900",
+    ("330R", F_R0402): "C25104",  ("470R", F_R0402): "C25117",
     ("5k1",  F_R0402): "C25905",  ("6k8",  F_R0402): "C25917",
     ("10k",  F_R0402): "C25744",  ("22k",  F_R0402): "C25767",
     ("10k",  F_R0603): "C25804",
@@ -1335,7 +1349,7 @@ RATINGS = {
  "C91185":   ("1u",    50,  "X7R",     "10%",   "0805",  None, None, "[D] LCSC product page, 2026-08-29"),
  "C1713":    ("10u",   16,  "X5R",     "10%",  "0805",  -55,  85, "[D] LCSC product page, 2026-08-29"),
  "C16195875":("10u",   35,  "X7R",     "10%",  "1206",  None, None, "[D] LCSC + jlcparts, 2026-09-03"),
- "C13585":   ("10u",   50,  "X7R",     "10%",  "1206",  -55, 125, "[D] Samsung CL31A106KBHNNNE 10uF 50V X7R 1206, LCSC C13585"),
+ "C13585":   ("10u",   50,  "X5R",     "10%",  "1206",  -55,  85, "[D] Samsung CL31A106KBHNNNE (A = X5R) 10uF 50V 1206, LCSC C13585"),
  "C5177178": ("22u",   16,  "X5R",     None,   "1206",  None, None, "[D] LCSC product page, 2026-08-29"),
  "C107004":  ("30p",   50,  "NP0",     "5%",   "0402",  None, None, "[D] LCSC product page, 2026-08-29"),
  "C19666":   ("4u7",   16,  "X5R",     "10%",  "0603",  -55,  85, "[D] LCSC product page, 2026-08-29"),
@@ -1853,3 +1867,16 @@ MODEL_EXPECTED_SINK = {
     "J1": 0.78,            # USB-C shell legs in their slots
     "J8": 0.61,            # microSD locating posts in their holes
 }
+
+# ---- board frame: which edge is forward ------------------------------------------------
+# The reference forward is the TOP edge in KiCad's top view (the USB-C / antenna / SWD edge),
+# marked by the arrow on the silkscreen. The hwdef's IMU rotations are derived against it;
+# a board mounted any other way sets AHRS_ORIENTATION.
+BOARD_FORWARD = (0, -1)      # KiCad (x right, y down) direction of "forward"
+# TDK LGA-14 axes, from the datasheet's top view: +X from the pin 1-4 side to the pin 8-11
+# side, +Y from pins 5-7 to pins 12-14, +Z out of the top face.
+IMU_AXES = {
+    "U2": ("icm42688", ("1", "2", "3", "4"), ("8", "9", "10", "11"), ("5", "6", "7"), ("12", "13", "14")),
+    "U3": ("icm42605", ("1", "2", "3", "4"), ("8", "9", "10", "11"), ("5", "6", "7"), ("12", "13", "14")),
+}
+SILK_ARROW = {"side": "top", "direction": BOARD_FORWARD, "length": 2.5, "label": None}

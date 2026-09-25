@@ -9,6 +9,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
 NET = "/tmp/nav/net.net"
 SCH = os.path.join(REPO, "NAVCORE-SoOP.kicad_sch")
+if "--sch" in sys.argv:                      # check another schematic (negative tests)
+    SCH = sys.argv[sys.argv.index("--sch") + 1]
+    NET = "/tmp/nav/net-alt.net"
 
 fails = []
 
@@ -22,7 +25,7 @@ def check(ok, name, detail, cite=""):
 
 
 def netlist():
-    if not os.path.exists(NET) or os.path.getmtime(NET) < os.path.getmtime(SCH):
+    if "--sch" in sys.argv or not os.path.exists(NET) or os.path.getmtime(NET) < os.path.getmtime(SCH):
         os.makedirs(os.path.dirname(NET), exist_ok=True)
         subprocess.run(["kicad-cli", "sch", "export", "netlist", "--format", "kicadsexpr",
                         "-o", NET, SCH], capture_output=True, timeout=600)
@@ -44,6 +47,15 @@ def tps54331_catch_diode(nets, comps, ref, ph_net):
     diodes = {r for r in (n.split(".")[0] for n in on_ph)
               if r.startswith("D") and comps.get(r, "") not in ("BLUE", "GREEN", "RED")}
     return diodes
+
+
+def ohms(v):
+    """'4k7' -> 4700, '330R' -> 330, '1k' -> 1000, '10' -> 10."""
+    m = re.fullmatch(r"(\d+)([kKmMR]?)(\d*)", v.strip())
+    if not m:
+        return None
+    mult = {"k": 1e3, "K": 1e3, "m": 1e6, "M": 1e6, "R": 1, "": 1}[m.group(2)]
+    return float(f"{m.group(1)}.{m.group(3) or 0}") * mult
 
 
 def main():
@@ -167,6 +179,57 @@ def main():
         check(bool(src and drn and "VBAT" in src and "VBAT_IN" in drn),
               f"{ref} ({part}) oriented drain->battery, source->load",
               f"source on {', '.join(src)}, drain on {', '.join(drn)}", AND90146)
+
+    # The PLL shipped with its loop filter hanging off CPOUT and VTUNE on a capacitor of its
+    # own - the two never met, so the VCO could not be steered and the tuner never locks.
+    # Every consistency check passed it, because design.py itself had the two nets apart.
+    print("\n=== MAX2112 tuner: PLL loop filter and gain control ===")
+    MAX2112 = ('[D] MAX2112 datasheet, Pin Description: "VTUNE: connect the PLL loop filter '
+               'output directly to this pin"; "CPOUT: connect to the PLL loop filter input"; '
+               '"GC1: 0.5 V to 2.7 V operating range". Typical Application Circuit: shunt C '
+               'and series R-C at CPOUT, series R to VTUNE, shunt C at VTUNE.')
+    for ref in [r for r, v in comps.items() if v.startswith("MAX2112")]:
+        def pin_net(p):
+            return next((n for n, pins in nets.items() if f"{ref}.{p}" in pins), None)
+        cp, vt, gc = pin_net(12), pin_net(9), pin_net(5)
+        gnd = nets.get("GND", set())
+        def two_pin(r, a, b):
+            pa = {x for x in nets.get(a, set()) if x.split(".")[0] == r}
+            pb = {x for x in nets.get(b, set()) if x.split(".")[0] == r}
+            return pa and pb
+        refs_on = lambda n: {x.split(".")[0] for x in nets.get(n, set())}
+        linked = cp is not None and (cp == vt or any(
+            r.startswith("R") and two_pin(r, cp, vt) for r in refs_on(cp)))
+        check(linked, f"{ref} VTUNE driven by the loop filter",
+              f"CPOUT {cp} -> VTUNE {vt}" if linked else
+              f"NOT CONNECTED - CPOUT ({cp}) has no path to VTUNE ({vt}); the VCO cannot "
+              "be steered and the PLL never locks", MAX2112)
+        c1 = sorted(r for r in refs_on(cp) if r.startswith("C") and two_pin(r, cp, "GND"))
+        check(bool(c1), f"{ref} CPOUT shunt capacitor", f"found {c1}" if c1 else "MISSING")
+        zero = []
+        for r in refs_on(cp):
+            if not r.startswith("R"):
+                continue
+            other = [n for n, pins in nets.items() if any(x.startswith(r + ".") for x in pins)
+                     and n not in (cp, vt)]      # R3 into VTUNE is not the zero
+            for o in other:
+                if any(c.startswith("C") and two_pin(c, o, "GND") for c in refs_on(o)):
+                    zero.append(r)
+        check(bool(zero), f"{ref} CPOUT series R-C (the loop zero)",
+              f"found {sorted(zero)}" if zero else "MISSING - without the zero the loop is "
+              "unstable")
+        c3 = sorted(r for r in refs_on(vt) if r.startswith("C") and two_pin(r, vt, "GND"))
+        check(bool(c3), f"{ref} VTUNE shunt capacitor", f"found {c3}" if c3 else "MISSING")
+        # GC1 bias from its divider: resistors to GND against resistors to the RF supply.
+        down = [ohms(comps[r]) for r in refs_on(gc) if r.startswith("R") and two_pin(r, gc, "GND")]
+        up = [ohms(comps[r]) for r in refs_on(gc) if r.startswith("R")
+              and any(two_pin(r, gc, n) for n in ("VCC_RF", "+3V3A", "+3V3"))]
+        par = lambda rs: 1 / sum(1 / x for x in rs) if rs and all(rs) else None
+        rd, ru = par(down), par(up)
+        v = 3.3 * rd / (rd + ru) if rd and ru else (0.0 if rd else None)
+        ok = v is not None and 0.5 <= v <= 2.7
+        check(ok, f"{ref} GC1 within 0.5-2.7 V",
+              f"{v:.2f} V from the divider" if v is not None else "undriven")
 
     print("\n=== LDOs: a wrong or absent output cap makes an LDO oscillate ===")
     for ref, part, vin, vout in (("U9", "AP2112K-3.3", "+5V", "+3V3"),

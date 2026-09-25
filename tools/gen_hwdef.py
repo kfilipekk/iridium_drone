@@ -53,10 +53,10 @@ REPLACE = [
      "LOW keeps the channel disarmed at boot."),
     (r'^PD10\s+PINIO1.*',
      "PD10 TOUCHDOWN INPUT PULLUP GPIO(85)",
-     "PD10 reads the landing leg touchdown switch on J20 with 10k pull-up R49."),
+     "PD10 reads the landing leg touchdown switch on J20 with 10k pull-up R56."),
     (r'^PD11\s+PINIO2.*',
      "PD11 FLOW_MOTION INPUT PULLDOWN GPIO(86)",
-     "PD11 is the optical flow motion interrupt line from J14.6."),
+     "PD11 is reserved for an optical flow motion interrupt. It is not wired on Rev C (J14.6 is GND), so the pull-down holds it idle."),
 ]
 
 EXTRA = """
@@ -232,7 +232,7 @@ def _rot(roll, pitch, yaw):
                 "z": [[c, -s, 0], [s, c, 0], [0, 0, 1]]}[axis]
     return mul(R("z", yaw), mul(R("y", pitch), R("x", roll)))
 
-# The subset of ArduPilot's enum reachable by flipping a yaw-only placement.
+# ArduPilot's named rotations that a flat part on either side of the board can need.
 _NAMED = {"NONE": (0, 0, 0), "YAW_90": (0, 0, 90), "YAW_180": (0, 0, 180),
           "YAW_270": (0, 0, 270), "ROLL_180": (180, 0, 0),
           "ROLL_180_YAW_90": (180, 0, 90), "PITCH_180": (0, 180, 0),
@@ -240,15 +240,44 @@ _NAMED = {"NONE": (0, 0, 0), "YAW_90": (0, 0, 90), "YAW_180": (0, 0, 180),
 _MATRIX = {n: _rot(*rpy) for n, rpy in _NAMED.items()}
 
 
-def flipped_rotation(name):
-    """ROTATION_<name> as declared for a top-side part, corrected for bottom-side."""
-    m = _rot(0, 180, 0)
-    t = _MATRIX[name]
-    got = [[sum(m[i][k] * t[k][j] for k in range(3)) for j in range(3)] for i in range(3)]
-    for n, R in _MATRIX.items():
-        if all(got[i][j] == R[i][j] for i in range(3) for j in range(3)):
-            return n
-    raise SystemExit(f"flipping ROTATION_{name} is not a named ArduPilot rotation")
+def imu_rotation(board, ref):
+    """ROTATION_<name> for an IMU, from its pads, the datasheet axes and BOARD_FORWARD.
+
+    The chip's axes are measured from its pad positions (design.IMU_AXES), so the side it is
+    on and its rotation are both taken from the copper. The body frame is ArduPilot's: X
+    forward, Y right, Z down - a level board at rest reads (0, 0, -g), and the driver applies
+    no axis remap of its own (AP_InertialSensor_Invensensev3), so the hwdef rotation is the
+    whole of the sensor-to-body transform."""
+    import pcbnew, math
+    T = pcbnew.ToMM
+    fp = board.FindFootprintByReference(ref)
+    _dev, xneg, xpos, yneg, ypos = design.IMU_AXES[ref]
+
+    def centre(nums):
+        ps = [p for p in fp.Pads() if p.GetNumber() in nums]
+        # right-handed board frame: x right, y UP (KiCad's y is down), z out of the top side
+        return (sum(T(p.GetPosition().x) for p in ps) / len(ps),
+                -sum(T(p.GetPosition().y) for p in ps) / len(ps))
+
+    def unit(a, b):
+        v = (b[0] - a[0], b[1] - a[1], 0.0)
+        m = math.hypot(v[0], v[1])
+        return tuple(round(c / m) for c in v)
+
+    x = unit(centre(xneg), centre(xpos))
+    y = unit(centre(yneg), centre(ypos))
+    z = (x[1] * y[2] - x[2] * y[1], x[2] * y[0] - x[0] * y[2], x[0] * y[1] - x[1] * y[0])
+    fwd = (design.BOARD_FORWARD[0], -design.BOARD_FORWARD[1], 0)
+    down = (0, 0, -1)
+    right = (down[1] * fwd[2] - down[2] * fwd[1], down[2] * fwd[0] - down[0] * fwd[2],
+             down[0] * fwd[1] - down[1] * fwd[0])
+    dot = lambda a, b: sum(i * j for i, j in zip(a, b))
+    cols = [(dot(v, fwd), dot(v, right), dot(v, down)) for v in (x, y, z)]
+    m = [[cols[j][i] for j in range(3)] for i in range(3)]
+    for name, R in _MATRIX.items():
+        if all(m[i][j] == R[i][j] for i in range(3) for j in range(3)):
+            return name
+    raise SystemExit(f"{ref}: its orientation is not a named ArduPilot rotation")
 
 
 def imu_sides(pcb):
@@ -270,10 +299,35 @@ def _wrap(text, width=76):
     return out
 
 
+# SPI pads of the TDK LGA-14 IMUs (ICM-42688-P and ICM-42605 datasheets, pin table).
+IMU_SPI_PADS = {"cs": "12", "sck": "13", "miso": "1", "mosi": "14"}
+
+
+def imu_spi_ports(board, ref):
+    """The MCU port wired to each SPI pad of IMU `ref`, read from the board.
+
+    MatekH743 puts its ICM-42605 on PC13 (IMU3_CS); this board wires U3 to PE11, the pin
+    Matek gives the ICM-20602. Copying the reference SPIDEV line left U3 unreachable.
+    """
+    import symlib
+    h7 = {p["num"]: p["name"].split("-")[0] for p in symlib.load()["STM32H743VIT6_C114409"]}
+    ports = {}
+    for pad in board.FindFootprintByReference("U1").Pads():
+        ports.setdefault(pad.GetNetname(), []).append(h7.get(pad.GetNumber()))
+    fp = board.FindFootprintByReference(ref)
+    out = {}
+    for role, num in IMU_SPI_PADS.items():
+        net = next(p.GetNetname() for p in fp.Pads() if p.GetNumber() == num)
+        hit = ports.get(net, [])
+        out[role] = hit[0] if len(hit) == 1 else None
+    return out
+
+
 def main():
     src = open(REF).read().split("\n")
     out, dropped, rotated, replaced = [], [], [], []
-    SIDE = imu_sides(PCB)
+    import pcbnew
+    BOARD = pcbnew.LoadBoard(PCB)
     IMU_REF = {"icm42688": "U2", "icm42605": "U3"}
     for ln in src:
         hit = next((why for pat, why in DROP if re.match(pat, ln)), None)
@@ -294,15 +348,29 @@ def main():
             out.append(f"APJ_BOARD_ID AP_HW_NAVCORE_SOOP    # {BOARD_ID}, unregistered")
             continue
         if ln.startswith("# for Matek H743-WING"):
-            out.append("# for NAVCORE-SoOP (45 x 46 mm, 30.5 mm stack)")
+            out.append("# for NAVCORE-SoOP (45 x 47 mm, 30.5 mm stack)")
+            continue
+        m = re.match(r'^SPIDEV\s+(\S+)(\s+\S+\s+\S+\s+)(\S+)(.*)$', ln)
+        if m and IMU_REF.get(m.group(1)):
+            ref = IMU_REF[m.group(1)]
+            port = imu_spi_ports(BOARD, ref)["cs"]
+            label = next((re.match(rf'^{port}\s+(\S+)', x).group(1) for x in src
+                          if port and re.match(rf'^{port}\s+\S+', x)), None)
+            if label is None:
+                raise SystemExit(f"{ref}'s CS pad is not wired to a single MCU pin the hwdef declares")
+            if label != m.group(3):
+                out.append(f"# [was: {ln.strip()}]")
+                out.append(f"# {ref}'s CS pad is wired to {port} ({label}), read from the board.")
+                replaced.append((ln.strip(), label))
+            out.append(f"SPIDEV {m.group(1)}{m.group(2)}{label}{m.group(4)}")
             continue
         m = re.match(r'^IMU (\S+) (?:\w+:)?(\S+) ROTATION_(\S+)\s*$', ln)
-        if m and IMU_REF.get(m.group(2)) and SIDE.get(IMU_REF[m.group(2)]):
+        if m and IMU_REF.get(m.group(2)):
             was = m.group(3)
-            now = flipped_rotation(was)
             ref = IMU_REF[m.group(2)]
+            now = imu_rotation(BOARD, ref)
             out.append(f"IMU {m.group(1)} SPI:{m.group(2)} ROTATION_{now}"
-                       f"    # {ref} is on the bottom: was ROTATION_{was} on MatekH743")
+                       f"    # {ref}, from its pads; forward is the top edge")
             rotated.append((ref, m.group(2), was, now))
             continue
         out.append(ln)
@@ -317,6 +385,8 @@ def main():
                 bl, flags=re.M)
     bl = bl.replace("# for Matek H743-WING bootloader",
                     "# for NAVCORE-SoOP bootloader")
+    # MatekH743's bootloader drives PD10 low as PINIO1; here it is the touchdown input.
+    bl = re.sub(r'^PD10\s+PINIO1.*$', "PD10 TOUCHDOWN INPUT PULLUP", bl, flags=re.M)
     bl = bl.replace("PB12 MAX7456_CS CS",
                     "# [removed: no analogue OSD fitted] PB12 MAX7456_CS CS")
     open(f"{OUT}/hwdef-bl.dat", "w").write(
@@ -331,7 +401,7 @@ def main():
     print(f"lines rewritten for this board's hardware: {len(replaced)}")
     for was, now in replaced:
         print(f"   {was[:44]:<46} -> {now}")
-    print(f"IMU rotations corrected for bottom-side mounting: {len(rotated)}")
+    print(f"IMU rotations derived from the board: {len(rotated)}")
     for ref, dev, was, now in rotated:
         print(f"   {ref} {dev:<10} ROTATION_{was} -> ROTATION_{now}")
 
