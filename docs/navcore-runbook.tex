@@ -194,7 +194,8 @@ Outer copper & \textbf{1 oz} & every current figure assumes it \\
 Surface finish & ENIG & 0402s and LGA-14s want a flat finish \\
 Min track / spacing & \textbf{0.1016 mm (4 mil)} & should be free tier \\
 Min via / drill & \textbf{0.45 mm / 0.20 mm} & \\
-Impedance control & No & USB is a plain differential pair \\
+Impedance control & No & USB is a plain pair; the RF run loses $<$1.5 dB \\
+Via covering & \textbf{Epoxy Filled \& Capped} & 31 vias sit in SMD pads \\
 Stencil & not needed & everything machine-placed but Section~\ref{sec:solder} \\
 Mark on PCB & \textbf{Remove Mark} & no JLC marker on the board; small fee \\
 \bottomrule
@@ -616,7 +617,9 @@ spoil it.
 about \textbf{9.8 mm} of travel through a gap only 3.0 mm tall. Assume you will pull the
 board to change the card, and decide now whether that is acceptable.
 \item \textbf{Board rotation.} All four edges carry a connector, so there may be exactly one
-orientation that works. Decide it before cutting a loom.
+orientation that works. Decide it before cutting a loom. The firmware assumes the
+silkscreen arrow (it points at the USB edge) faces the nose; any other way round needs
+\file{AHRS\_ORIENTATION} set to match.
 \item \textbf{Grommets} must hold 3.0 mm between the ESC's parts and this board's under
 compression: 12.2 mm PCB face to PCB face, which is what the 12 mm spacer sets. The
 compressed height of the rubber is the one \emph{assumed} figure in the stack.
@@ -684,7 +687,9 @@ anything is powered.
 Thread all four screws by hand before tightening any; tighten diagonally.
 \item \textbf{The stack, bottom to top: ESC, grommets, FC.} Fit the silicone grommets into
 the FC's four mounting holes; ESC into the frame on its 30.5 mm pattern; FC on top with
-USB-C facing the direction you will actually plug from.
+the silkscreen arrow toward the nose. If USB-C has to face somewhere else, turn the board
+and set \file{AHRS\_ORIENTATION} (\file{Yaw90}, \file{Yaw180}, \file{Yaw270}) to the arrow's
+direction.
 \item \textbf{4 $\times$ M3 $\times$ 30 through the stack}, with the four 12 mm
 female-female spacers setting the ESC-to-FC separation.
 \item \textbf{The top plate on the kit's own standoffs} --- 22 mm at the front, over the
@@ -716,6 +721,21 @@ companion (deferred) & \file{P71}--\file{P74} + \file{P44} & 5 V, UART4 TX, UART
 \bottomrule
 \end{tabular}
 \end{center}
+
+\textbf{Serial leads cross over.} The board's TX goes to the module's RX and the board's RX
+to the module's TX: on \file{J5}, pin 2 (TX) to the receiver's RX and pin 3
+(\file{RC\_IN}) to its TX. A Pixhawk GPS lead on \file{J3} is already crossed. DroneCAN
+nodes ship with JST-GH leads; \file{J6} is JST-SH in the same pin order, so make a GH-to-SH
+lead.
+
+\textbf{Hobby servos on \file{J17}.} Servo plugs are 3-pin 2.54 mm females: signal
+(orange, yellow or white), + (red, middle), ground (brown or black). Make a lead from a
+6-pin JST-SH pigtail and two 3-pin male headers: \file{J17} pin 1 (\file{PWM7}) and pin 2
+(\file{PWM8}) to the two signal pins, pin 6 to both grounds. For two 9\,g micro servos, pin 5
+can feed both red wires. Anything bigger goes on its own 5--6\,V BEC, with the BEC's ground
+joined to pin 6 and pin 5 left unconnected. A JST-SH contact is rated 1\,A, and
+\file{+5V\_PAYLOAD} budgets 0.5\,A for \file{J17}. \file{lander.parm} already drives
+\file{SERVO7}/\file{SERVO8}; check the travel direction with the props off.
 
 \textbf{Mount the compass as far from the ESC and the battery leads as the frame allows.}
 There is no magnetometer on the FC by design: one 15 mm from a 60 A 4-in-1 is useless.
@@ -876,8 +896,11 @@ than a series diode. Use the XT60 keying and check twice.
 \end{quote}
 
 \begin{quote}
-\flag{USB cannot power this board.} VBUS runs the USB PHY only; the rails come from VBAT.
-That would need a respin. For bench work, supply VBAT even to configure it.
+\textbf{USB powers the logic, not the whole board.} \file{D\_USB} feeds VBUS into the +5\,V
+rail at about 4.7\,V, which runs both 3.3\,V rails, the MCU and the sensors --- enough to
+configure and flash it. The payload rail stays off (its buck needs about 6.6\,V), and
+through \file{U8}'s internal diode USB also lifts \file{VBAT}, and via \file{Q4} the ESC's
+battery pin, to about 4\,V. Do the first power-up (this Part) on \file{VBAT} regardless.
 \end{quote}
 
 % =============================================================================
@@ -890,8 +913,8 @@ debug probe. Earlier drafts said ``bootloader over SWD first, a board with no bo
 will not enumerate'' --- that was wrong for this MCU. SWD is the \emph{fallback}.
 
 \begin{enumerate}
-\item Supply on \file{VBAT} (Section~\ref{sec:T1}); USB does not power the board. Data-capable
-USB-C cable --- charge-only leads enumerate nothing.
+\item Supply on \file{VBAT} (Section~\ref{sec:T1}), as the board will be in flight; USB alone
+would also run the MCU. Data-capable USB-C cable --- charge-only leads enumerate nothing.
 \item \textbf{Hold \file{BOOT} (\file{SW1}), tap \file{RESET} (\file{SW2}), release \file{BOOT}.}
 \cmd{lsusb} shows \file{0483:df11 STM32 BOOTLOADER}. If it does not, check \file{Y1} first
 (the passive crystal --- Section~\ref{sec:order-board}), then fall back to SWD below.
@@ -929,8 +952,8 @@ nothing differs.
 \endhead
 \bottomrule
 \endfoot
-3.1 & IMU1 (\file{U2}) orientation & roll/pitch, watch the horizon & \textbf{asserted in hwdef,
-never measured} \\
+3.1 & IMU1 (\file{U2}) orientation & roll/pitch, watch the horizon & \textbf{worked out from the
+pads, never measured} \\
 3.2 & IMU2 (\file{U3}) orientation & same, \file{INS\_USE2} & only if \file{U3} was fitted \\
 3.3 & Barometer & tracks a 1 m lift & \\
 3.4 & Battery voltage & against a meter & \file{BATT\_VOLT\_MULT 11.000}, should be close \\
@@ -945,6 +968,9 @@ BLHeli\_S ESC \\
 3.10 & TFS20-L, if fitted & tape measure at 1 / 5 / 10 m & \file{RNGFND1\_TYPE 46} \\
 3.11 & Compass & calibrate, away from the ESC and the pack & it lives in the GPS module ---
 mount it as far from the 60 A ESC as the frame allows \\
+3.12 & Tuner (\file{U13}) PLL lock & \file{0x60} on I2C2; tune to 1626 MHz and read the
+lock-detect bit; a meter on \file{C56} (\file{VTUNE}) & \file{VTUNE} should sit between the
+rails, not pinned to 0 V or 3.3 V. Pinned means the loop filter is not doing its job \\
 \end{longtable}
 
 \textbf{Everything optional ships disabled in \file{defaults.parm} and must be turned on
@@ -1233,8 +1259,8 @@ means a dead board or a smoked one & a multimeter, both ends, \textbf{before any
 the headers are soldered \\
 \file{BATT\_AMP\_PERVLT} & battery failsafe and consumed-mAh. Ships 25.0; it is a property of
 the ESC's shunt, not of this board & a known load at T3.5 \\
-IMU orientations & \file{ROTATION\_ROLL\_180} is asserted in the hwdef, never measured. A
-mirrored axis means it does not fly & roll and pitch it, watch the horizon (T3.1) \\
+IMU orientations & \file{ROTATION\_YAW\_270} on both, worked out from the pads and
+re-checked by \file{check\_hwdef.py}, never measured. A mirrored axis means it does not fly & roll and pitch it, watch the horizon (T3.1) \\
 \file{U8} junction temperature & 70--87\degC{} modelled against a 125\degC{} recommended
 max, on an honest budget \emph{and a swapped part} since 2026-09-20; the worst corner has
 38\degC{} of margin. If the board measures well past its bracket the fix is a \textbf{respin}
@@ -1277,8 +1303,8 @@ These do not affect this order. They are recorded because a respin is the only p
 can be fixed, and one of them (\file{U8}) may force one anyway.
 
 \begin{itemize}
-\item \textbf{USB cannot power the board.} VBUS runs the PHY only. Every bench session needs
-a VBAT supply, which is why T1 exists at all.
+\item \textbf{USB runs the logic but not the payload rail}, and back-feeds about 4\,V onto
+\file{VBAT} and the ESC's battery pin through \file{U8} and \file{Q4}.
 \item \textbf{Seven pads arrive unlabelled} (Section~\ref{sec:T3d}) because a three-character
 label at the 0.80 mm minimum height, placed where it reads as its own pad's, has nowhere to
 go on a 2.84 mm pitch. More
@@ -1378,7 +1404,7 @@ that is the number T3b is really trying to meet.
 \item Upload \file{fab/NAVCORE-SoOP-order-bundle.zip}, or the gerbers plus the default
 BOM/CPL pair
 \item 6 layers, 45.1 $\times$ 47.3 mm, 1.6 mm, \textbf{1 oz} outer, ENIG, 4 mil, via
-0.45/0.20, Mark on PCB \textbf{Remove Mark}
+0.45/0.20, vias \textbf{epoxy filled and capped}, Mark on PCB \textbf{Remove Mark}
 \item 5 bare boards, 2 assembled. Standard panelised 2 $\times$ 2 unless you want to
 hand-fit \file{U3}
 \item Confirm \file{Y1} = \file{C2682774} and \file{Y2} = \file{C5563878}; refresh the stock

@@ -157,8 +157,11 @@ PREREQUISITES = [
              "check_footprints.py verifies pad count, package and pitch but not those."),
     dict(id="act.impedance", cls=ORDER_ACTION,
          claim="leave impedance control OFF",
-         why="none is specified - USB is a plain differential pair, and there is no RF "
-             "copper on this board. Ordering it would be paying for a claim not made."),
+         why="none is specified. USB is a plain differential pair, and the 1.62 GHz "
+             "J12 -> U13 run is 0.10 mm track across four layers, roughly 60-90 ohm on "
+             "JLC's default stack: at worst ~1.5 dB of mismatch behind the SAWbird+'s "
+             "~40 dB of gain, which moves the system noise figure by ~0.02 dB. Ordering "
+             "impedance control would not change the drawn geometry."),
     dict(id="act.quantity", cls=ORDER_ACTION,
          claim="5 bare PCBs / 2 assembled, BOTH sides",
          why="5 is the multilayer minimum and 2 the SMT minimum; both sides are populated "
@@ -166,7 +169,7 @@ PREREQUISITES = [
     dict(id="act.panel", cls=ORDER_ACTION,
          claim="Panel by JLCPCB, 2 x 2 (not a committed panel file)",
          why="Standard assembly requires a single PCB of at least 70 x 70 mm and this is "
-             "45.1 x 46.1 mm, so the board must be panelled to be assembled at all. "
+             "45.1 x 47.3 mm, so the board must be panelled to be assembled at all. "
              "2 x 2 gives roughly 93 x 95 mm. Do NOT commit a panelised .kicad_pcb: the "
              "board files stay exactly as verified, so nothing has to be re-checked."),
 

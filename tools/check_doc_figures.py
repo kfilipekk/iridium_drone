@@ -14,7 +14,8 @@ os.chdir(REPO)
 
 # Only live, actionable prose.
 EXEMPT = ("docs/HISTORY.md",)
-SCAN = ["README.md", "docs/*.md", "docs/*.tex", "fab/*.md", "tools/README.md", "docs/PARTS.csv"]
+SCAN = ["README.md", "docs/*.md", "docs/*.tex", "fab/*.md", "tools/README.md", "docs/PARTS.csv",
+        "firmware/NAVCORE_SoOP/Readme.md"]
 
 RETIRED = [
     (r"\b52\.7\b", "the BATT_AMP_PERVLT value from a different SpeedyBee stack",
@@ -55,12 +56,17 @@ RETIRED = [
     (r"3S\s?[–-]{1,2}\s?6S|\b26\.1\s?V", "a 6S input rating the input TVS cannot protect",
      "the board is 5S max: the SMBJ22A stands off 22 V and clamps at 35.5 V under the bucks' 38 V"),
     (r"TPS54332", "a buck part this board never used", "both bucks are LMR33630 (design.BUCK_THERMAL)"),
+    (r"USB cannot power", "a claim the board contradicts - D_USB feeds VBUS into +5 V",
+     "USB runs the logic through D_USB; the payload rail still needs VBAT"),
     (r"JST-SH 8P Gimbal|8-pin Actuator|J17\.6[`)]* \(`?\+5V", "the 8-pin J17 pinout with +5 V on pin 6",
      "J17 is a 6-pin JST-SH: pin 5 +5V_PAYLOAD, pin 6 GND"),
     (r"5V\s?/\s?(2\.5|3)A payload|3A continuous|5V / 3A Payload", "the payload buck's IC rating quoted as the rail's",
      "L5 limits +5V_PAYLOAD to 1.6 A continuous"),
     (r"bootloader over SWD|no bootloader will not enumerate", "a first-flash procedure that is wrong for an H743",
      "hold BOOT (SW1) through RESET and the ROM DFU enumerates as 0483:df11 with no bootloader; SWD is the fallback"),
+    (r"ROTATION\\?_ROLL\\?_180(?!\\?_YAW)|AHRS\\?_ORIENTATION`?\*{0,2} to `?Pitch180",
+     "an IMU rotation that reads the board upside down",
+     "both IMUs are ROTATION_YAW_270 (gen_hwdef.imu_rotation, forward = the top edge)"),
 ]
 
 # A retirement marker is a word that says the reader should not act on this value.
