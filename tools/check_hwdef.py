@@ -72,6 +72,39 @@ def main():
                                 f"A hand edit here is reverted by the next regeneration "
                                 f"- move the change into gen_hwdef.py and re-run it")
 
+    #each IMU's rotation
+    import pcbnew, gen_hwdef
+    brd = pcbnew.LoadBoard(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                                        "NAVCORE-SoOP.kicad_pcb"))
+    for ref, (dev, *_axes) in design.IMU_AXES.items():
+        m = re.search(rf"^IMU \S+ SPI:{dev} ROTATION_(\S+)", txt, re.M)
+        want = gen_hwdef.imu_rotation(brd, ref)
+        if not m:
+            errs.append(f"{ref} ({dev}) has no IMU line in the hwdef")
+        elif m.group(1) != want:
+            errs.append(f"{ref} ({dev}) is ROTATION_{m.group(1)} in the hwdef but its pads say "
+                        f"ROTATION_{want} (forward = design.BOARD_FORWARD)")
+        else:
+            print(f"IMU {ref:3s} rotation    : ROTATION_{want}, matches its pads")
+
+    #each IMU's SPI lines, followed from its pads to the MCU
+    for ref, (dev, *_axes) in design.IMU_AXES.items():
+        m = re.search(rf"^SPIDEV\s+{dev}\s+(\S+)\s+\S+\s+(\S+)", txt, re.M)
+        if not m:
+            errs.append(f"{ref} ({dev}) has no SPIDEV line in the hwdef")
+            continue
+        bus, cs = m.groups()
+        wired = gen_hwdef.imu_spi_ports(brd, ref)
+        want = {"cs": cs, "sck": f"{bus}_SCK", "miso": f"{bus}_MISO", "mosi": f"{bus}_MOSI"}
+        bad = [f"{role} pad goes to {wired[role] or 'no single MCU pin'} "
+               f"({pins.get(wired[role], {}).get('label', 'undeclared')}), hwdef expects {lab}"
+               for role, lab in want.items()
+               if pins.get(wired[role], {}).get("label") != lab]
+        if bad:
+            errs.append(f"{ref} ({dev}) SPI wiring disagrees with the hwdef: " + "; ".join(bad))
+        else:
+            print(f"IMU {ref:3s} SPI         : {bus}, CS {cs} on {wired['cs']}, matches its pads")
+
     print(f"hwdef pins declared : {len(pins)}")
     print(f"netlist MCU pins    : {len(used)}")
     print(f"SPI devices         : {len(spidevs)}  ({', '.join(sorted(spidevs))})")
