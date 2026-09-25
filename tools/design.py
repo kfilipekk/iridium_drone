@@ -105,7 +105,7 @@ LOADS_3V3 = [   #through U9, AP2112K-3.3
     #not zero continuous
     ("microSD card (logging)",         0.040, 0.100, "[A] ~40 mA average while ArduPilot "
                                                      "logs; [D] 100 mA write peak"),
-    #U11 is DNP (see its COMPONENTS entry) so it draws nothing
+    #U11 (CAN) runs from +3V3_CAN through U21, not from this rail
     ("status LEDs D2/D3",              0.010, 0.010, "[A] 2 x ~5 mA through their resistors"),
     ("TMP119 temp sensor (U19)",       0.000, 0.000, "[D] TMP119: 3.5 uA active, "
                                                      "1.25 uA at the 1 Hz default rate"),
@@ -175,8 +175,8 @@ CAP("C36","100n")                                          #flash
 RES("R9","4k7"); RES("R10","4k7")                          #I2C1 pullups
 RES("R11","4k7"); RES("R12","4k7")                         #I2C2 pullups
 
-#CAN
-CAP("C41","100n"); RES("R14","10k")                        #HVD230 Rs slope
+CAP("C41","100n")                                          #HVD230 VCC, on +3V3_CAN below
+RES("R14","10k")                                           #HVD230 Rs slope
 RES("R15","120R")                                          #termination (DNP by default)
 COMPONENTS["R15"] = (R, F_R0402, "120R", "", True)
 
@@ -964,7 +964,7 @@ CAP("C67", "1u")
 CAP("C80", "1u")
 NETS["+5V_PAYLOAD"] += ["U21.3", "C80.1"]
 NETS["GND"] += ["U21.1", "C67.2", "C80.2"]
-net("+3V3_CAN", "U21.2", "U11.3", "C67.1")
+net("+3V3_CAN", "U21.2", "U11.3", "C67.1", "C41.1")
 NETS["+5V_PAYLOAD"] += ["J6.1"]
 
 #breaks out SPI3 + PD4 (EXT_CS1) + PD11 (FLOW_MOTION) onto a 6-pin JST-SH connector
@@ -1418,6 +1418,14 @@ LOAD_CURRENT = {
     "+3V3A": {
         #[D] OPA2374: 585 uA per amplifier, two amplifiers (LOADS_3V3A row)
         "U14.8": 0.002,
+    },
+    #the +5V rows of LOADS_5V, per pad
+    "+5V": {
+        "U9.1": 0.294, "U9.3": 0.0,     #U9 (+3V3 LDO) input; pin 3 is EN
+        "U10.1": 0.107, "U10.3": 0.0,   #U10 (+3V3A LDO) input; pin 3 is EN
+        "J3.1": 0.05,                   #M10 GPS + compass
+        "J5.1": 0.1,                    #ELRS receiver
+        "J9.1": 0.126,                  #TFS20-L 0.106 + upward ToF 0.02
     },
 }
 
