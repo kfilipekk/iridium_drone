@@ -118,6 +118,29 @@ def main():
             if fp.GetValue() != comp[2]:
                 errors.append(f"{ref}: board says {fp.GetValue()!r}, "
                               f"design.py says {comp[2]!r}")
+
+        # Pad by pad. The part and value comparisons passed while C41's pad 1 sat on
+        # +3V3 on the board and on no net at all in design.py.
+        pad_diff = []
+        for fp in _b.GetFootprints():
+            ref = fp.GetReference()
+            if ref not in design.COMPONENTS:
+                continue
+            for pad in fp.Pads():
+                num = pad.GetNumber()
+                if not num:
+                    continue
+                have = pad.GetNetname()
+                if have.startswith(("unconnected-", "Net-(")):
+                    have = ""
+                want = owner.get((ref, num), "")
+                if have != want:
+                    pad_diff.append(f"{ref}.{num} is {have or 'unconnected'} on the board, "
+                                    f"{want or 'unconnected'} in design.py")
+        if pad_diff:
+            errors.append(f"BOARD AND design.py DISAGREE on {len(pad_diff)} pad(s) - "
+                          + "; ".join(sorted(set(pad_diff))[:6])
+                          + (" ..." if len(set(pad_diff)) > 6 else ""))
     except ImportError:
         warnings.append("pcbnew unavailable - board value fields NOT checked")
 

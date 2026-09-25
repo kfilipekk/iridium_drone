@@ -43,6 +43,38 @@ def poly_span(pts, axis, v):
     return sum(xs[k+1] - xs[k] for k in range(0, len(xs) - 1, 2))
 
 
+def drop_dead_ends(b, code, segs):
+    """Copper that leads nowhere carries no current. Drop every segment with an end that
+    touches no pad, via, zone fill or other live segment of its net, until none are left.
+
+    Counting everything that crosses a cut passed +5V_PAYLOAD on a 0.35 mm track whose
+    via to the In4 pour was missing, and +3V3A on a spur that ended in bare board.
+    """
+    vias = [v for v in b.GetTracks() if v.Type() == pcbnew.PCB_VIA_T and v.GetNetCode() == code]
+    pads = [p for fp in b.GetFootprints() for p in fp.Pads() if p.GetNetCode() == code]
+    zones = [z for z in b.Zones() if z.GetNetCode() == code]
+
+    def anchored(t, pt, live):
+        lay = t.GetLayer()
+        here = (TOMM(pt.x), TOMM(pt.y))
+        if any(v.IsOnLayer(lay) and math.dist(here, (TOMM(v.GetPosition().x), TOMM(v.GetPosition().y)))
+               <= TOMM(v.GetWidth(lay)) / 2 for v in vias):
+            return True
+        if any(p.IsOnLayer(lay) and p.HitTest(pt) for p in pads):
+            return True
+        if any(z.IsOnLayer(lay) and z.HitTestFilledArea(lay, pt) for z in zones):
+            return True
+        return any(o is not t and o.GetLayer() == lay and o.HitTest(pt, 0) for o in live)
+
+    live = list(segs)
+    while True:
+        dead = [t for t in live
+                if not (anchored(t, t.GetStart(), live) and anchored(t, t.GetEnd(), live))]
+        if not dead:
+            return live
+        live = [t for t in live if t not in dead]
+
+
 def main():
     verbose = "-v" in sys.argv
     b = pcbnew.LoadBoard(BOARD)
@@ -81,9 +113,9 @@ def main():
             continue
 
         tracks = []
-        for t in b.GetTracks():
-            if t.GetNetCode() != code or t.Type() == pcbnew.PCB_VIA_T:
-                continue
+        segs = [t for t in b.GetTracks()
+                if t.GetNetCode() == code and t.Type() != pcbnew.PCB_VIA_T]
+        for t in drop_dead_ends(b, code, segs):
             tracks.append(((TOMM(t.GetStart().x), TOMM(t.GetStart().y)),
                            (TOMM(t.GetEnd().x), TOMM(t.GetEnd().y)),
                            TOMM(t.GetWidth()),
