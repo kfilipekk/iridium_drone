@@ -4981,7 +4981,7 @@
 				)
 			)
 		)
-		(property "Value" "1u"
+		(property "Value" "2u2"
 			(at 0 1.16 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -5017,7 +5017,7 @@
 				)
 			)
 		)
-		(property "LCSC" "C52923"
+		(property "LCSC" "C12530"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
