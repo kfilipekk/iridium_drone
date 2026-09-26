@@ -164,7 +164,7 @@ RES("R6","10k2"); RES("R7","3k24")                         #-> overridden, see _
 
 #LDOs
 CAP("C26","1u"); CAP("C27","1u")                           #AP2112 in/out
-CAP("C28","1u"); CAP("C29","1u")                           #TLV75533 in/out
+CAP("C28","1u"); CAP("C29","2u2")                          #TLV75533 out; 2u2
 CAP("C30","100n")                                          #3V3A local
 
 #sensors
