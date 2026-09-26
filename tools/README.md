@@ -83,7 +83,9 @@ used to place, route and tidy the board are kept separately, in `kicad-tools`.
 - `hwdef_pinmap.py` – Parse an ArduPilot hwdef.dat into a canonical {pin: signal} map
 - `navcore_deltas.json`
 
-## Editing the board in place
+## Editing the schematic and the board in place
+
+- `sync_lcsc_props.py` – Rewrite the LCSC property of every symbol and footprint from design.py; reports drift, `--write` fixes it
 
 
 ## Silkscreen and 3D
