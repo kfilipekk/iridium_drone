@@ -686,6 +686,12 @@ edge where the microSD ejects.
 anything is powered.
 \item \textbf{Sit a skid under each arm}, holes aligned. Motor on top, wires inboard.
 Thread all four screws by hand before tightening any; tighten diagonally.
+\item \textbf{Solder the ESC's capacitor first.} The ESC comes with a low-ESR electrolytic
+capacitor in the box. Solder it across the ESC's battery pads, observing the polarity
+marking, with the legs as short as possible. It soaks up the spike when the battery is
+plugged in and the ESC's own switching spikes. Without it the board still survives a 5S
+plug-in (32.5 V peak in simulation against the regulators' 38 V limit), but the margin
+shrinks to 5.5 V. If the box has none, buy a 35 V, 470--1000\,\textmu F low-ESR part.
 \item \textbf{The stack, bottom to top: ESC, grommets, FC.} Fit the silicone grommets into
 the FC's four mounting holes; ESC into the frame on its 30.5 mm pattern; FC on top with
 the silkscreen arrow toward the nose. If USB-C has to face somewhere else, turn the board
@@ -884,6 +890,18 @@ ESC instead works, but the ESC's own draw then sits inside the 80 mA below.
 
 Raise the limit to 500 mA only once every rail is correct.
 
+\textbf{Then load both bucks.} A regulator on the edge of stability reads a perfect 5.02 V
+at no load. Each buck has 2 $\times$ 22\,\textmu F on its output where TI's reference uses
+4 $\times$ 22\,\textmu F, so check them under load before trusting them. Raise the limit
+to 2 A. Put a 5\,$\Omega$, 10 W resistor across \file{PV1}/\file{PV2} (1 A from
+\file{+5V\_PAYLOAD}) and a 10\,$\Omega$, 5 W one across \file{P71}/\file{P74} (0.5 A from
+\file{+5V}). Both rails must stay 4.9--5.1 V, and \file{L2}, \file{L5}, \file{U8} and
+\file{U20} must not whine or get too hot to touch within a minute. With a scope, connecting
+the load should give one dip that settles within about 100\,\textmu s, not a ring or a
+steady oscillation. \flag{If either rail rings or whines}, solder a 22\,\textmu F 16 V 1206
+ceramic on top of each output cap (\file{C22}/\file{C23} for \file{+5V}, \file{C69}/\file{C70}
+for the payload rail) and test again. That is rework, not a respin.
+
 \begin{quote}
 \textbf{If a rail is dead with a correct supply, look at \file{R46} before the buck.} It is
 \file{Q4}'s gate pull-down. Without it the gate floats, the FET never turns on, and the
@@ -971,7 +989,9 @@ BLHeli\_S ESC \\
 mount it as far from the 60 A ESC as the frame allows \\
 3.12 & Tuner (\file{U13}) PLL lock & \file{0x60} on I2C2; tune to 1626 MHz and read the
 lock-detect bit; a meter on \file{C56} (\file{VTUNE}) & \file{VTUNE} should sit between the
-rails, not pinned to 0 V or 3.3 V. Pinned means the loop filter is not doing its job \\
+rails, not pinned to 0 V or 3.3 V. Pinned means the loop filter is not doing its job.
+The driver must set the charge pump to 600\,\textmu A (\file{CPS}=0, \file{ICP}=0): the loop
+filter keeps 39--76\degree{} of phase margin there, but only 23\degree{} at 1200\,\textmu A \\
 \end{longtable}
 
 \textbf{Everything optional ships disabled in \file{defaults.parm} and must be turned on
