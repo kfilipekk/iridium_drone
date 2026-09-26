@@ -527,6 +527,14 @@ def firmware(board):
           f"dividers, decoupling and pull-ups check out"
           + (f"; {w.group(1)} warning(s)" if w else ""))
 
+    #the SPICE suite simulates the analogue blocks from design.py and fails on a bound
+    rc, out = run("check_sim.py")
+    m = re.search(r'SIM OK - (\d+)/(\d+) assertions across (\d+) deck', out)
+    check("firmware", "analogue blocks simulate inside their limits", rc == 0,
+          (f"{m.group(1)}/{m.group(2)} assertions across {m.group(3)} decks" if m
+           else "the suite printed no tally - see sim/run_suite.py") if rc == 0 else
+          "a simulation bound is violated, or a deck did not run - see sim/run_suite.py")
+
     rc, out = run("check_params.py")
     fw = re.search(r'^firmware\s+:\s+(.+?)\s+\(tag (\S+)\)', out, re.M)
     check("firmware", "parameters exist in the target build", rc == 0,
