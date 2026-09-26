@@ -19,6 +19,9 @@ PREREQUISITES = [
          claim="every active part's symbol pinout matches KiCad's library or its datasheet"),
     dict(id="design.library", cls=GATED, tool="check_libraries.py",
          claim="the vendored library is complete and its footprints equal the board's"),
+    dict(id="design.lcscprops", cls=GATED, tool="sync_lcsc_props.py",
+         claim="every symbol and footprint carries the LCSC code design.py assigns "
+               "that reference - the artwork agrees with the BOM, not just the order"),
 
     # -- the board is physically manufacturable -------------------------------------
     dict(id="fab.drc", cls=GATED, check="DRC errors",
