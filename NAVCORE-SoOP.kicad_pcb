@@ -23001,7 +23001,7 @@
 				(justify mirror)
 			)
 		)
-		(property "Value" "100n"
+		(property "Value" "47n"
 			(at 0 -1.16 180)
 			(layer "B.Fab")
 			(hide yes)
@@ -30308,7 +30308,7 @@
 				(justify mirror)
 			)
 		)
-		(property "Value" "100n"
+		(property "Value" "47n"
 			(at 0 -1.16 180)
 			(layer "B.Fab")
 			(hide yes)
