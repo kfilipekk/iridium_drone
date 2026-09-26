@@ -918,7 +918,11 @@ NETS["BOOT0"] += ["SW1.2"]; NETS["+3V3"] += ["SW1.1"]
 COMPONENTS.pop("R3", None)
 
 # ---- MAX2112 bypass / DC-offset caps ---------------------------------------------
-for r, v in [("C60","100n"),("C61","100n"),("C63","100n")]:
+# C60 is a supply bypass. C61/C63 set the IDC/QDC DC-offset correction loop, which the
+# datasheet caps at 47 nF: "Keep the value of the external capacitor less than 47 nF to
+# form a typical highpass corner of 250 Hz." 100 nF halves that corner to ~120 Hz, so
+# these two are 47 nF even though 100 nF is used everywhere else.
+for r, v in [("C60","100n"),("C61","47n"),("C63","47n")]:
     CAP(r, v, F_C0402)
 NETS["VCOBYP"] += ["C60.1"]; NETS["GND"] += ["C60.2"]
 # C61 spans IDC_P/IDC_N and C63 spans QDC_P/QDC_N - wired where the nets are declared
@@ -1289,6 +1293,7 @@ for _r, _v in _VALUE_FIX.items():
 
 PASSIVE_LCSC = {
     ("100n", F_C0402): "C1525",   ("1u",   F_C0402): "C52923",
+    ("47n",  F_C0402): "C82219",  # MAX2112 IDC/QDC offset caps, datasheet < 47 nF
     ("2u2",  F_C0402): "C12530",  ("4u7",  F_C0805): "C354262",
     ("10n",  F_C0402): "C15195",  ("30p",  F_C0402): "C107004",
     ("47p",  F_C0402): "C60137",  ("3n3",  F_C0402): "C26404",
@@ -1345,6 +1350,7 @@ if _unpriced:
 RATINGS = {
  # LCSC        value   V    dielectric  tol     package  Tmin Tmax  source
  "C1525":    ("100n",  16,  "X7R",     "10%",  "0402",  -55, 125, "[D] LCSC product page, 2026-08-29"),
+ "C82219":   ("47n",   50,  "X7R",     "10%",  "0402",  -55, 125, "[L] JLCPCB part API: FH 0402B473K500NT 47nF 50V X7R 0402, 2026-09-26"),
  "C131394":  ("100n",  50,  "X7R",     "10%",  "0402",  None, None, "[D] LCSC product page, 2026-08-29"),
  "C52923":   ("1u",    25,  "X5R",     "10%",  "0402",  -55,  85, "[D] LCSC product page, 2026-08-29"),
  "C91185":   ("1u",    50,  "X7R",     "10%",   "0805",  None, None, "[D] LCSC product page, 2026-08-29"),
