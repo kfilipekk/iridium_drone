@@ -19,7 +19,7 @@ if HERE not in sys.path:
 
 from checks import Checks          # noqa: E402
 
-MODULES = ("power", "hotplug", "pyro", "pll", "baseband", "sense")
+MODULES = ("power", "hotplug", "pyro", "pll", "baseband", "sense", "ldo")
 
 
 def run(names=None):
