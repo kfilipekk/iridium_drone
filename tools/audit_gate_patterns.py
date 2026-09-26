@@ -22,6 +22,12 @@ def capture(outdir):
     for f in os.listdir(outdir):
         os.unlink(os.path.join(outdir, f))
 
+    def _text(x):
+        """kicad-cli writes BYTES to stdout; tee it instead of dropping the run."""
+        if isinstance(x, bytes):
+            return x.decode("utf-8", "replace")
+        return x or ""
+
     _real_run = subprocess.run
     seen = {}
 
@@ -38,10 +44,10 @@ def capture(outdir):
             with open(os.path.join(outdir, f"{label}.txt"), "a",
                       encoding="utf-8", errors="replace") as fh:
                 fh.write(f"\n##### argv={' '.join(argv)} rc={r.returncode}\n")
-                fh.write(r.stdout or "")
+                fh.write(_text(r.stdout))
                 if r.stderr:
                     fh.write("\n##### stderr\n")
-                    fh.write(r.stderr)
+                    fh.write(_text(r.stderr))
         except Exception as e:                                  # never break the gate
             print(f"capture failed: {e}", file=sys.stderr)
         return r

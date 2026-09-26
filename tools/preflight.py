@@ -168,10 +168,19 @@ def assembly(board):
     if cpl:
         rows = list(csv.DictReader(open(cpl[0])))
         lk = next((k for k in rows[0] if "layer" in k.lower()), None)
-        top = sum(1 for r in rows if r[lk].lower().startswith("t"))
-        bot = len(rows) - top
-        check("assembly", "two-sided assembly", True,
-              f"{top} top / {bot} bottom - needs a stencil for BOTH sides", hard=False)
+        top = sum(1 for r in rows if (r.get(lk) or "").strip().lower()[:1] == "t")
+        bot = sum(1 for r in rows if (r.get(lk) or "").strip().lower()[:1] == "b")
+        unknown = len(rows) - top - bot
+        # The claim is two-sided assembly: every row says which side it is on, and both
+        # sides carry parts. This was an unconditional `True` with hard=False - a gated
+        # prerequisite that could neither fail nor block. tools/fault_injection.py found
+        # it; the assertion is what it always said it was.
+        check("assembly", "two-sided assembly",
+              bool(lk) and unknown == 0 and top > 0 and bot > 0,
+              (f"{top} top / {bot} bottom - needs a stencil for BOTH sides"
+               + (f"; {unknown} row(s) name no layer" if unknown else "")
+               if lk else
+               "CPL has no Layer column - nothing says which side a part is on"))
 
     holes = [(d.GetCenter().x/1e6, d.GetCenter().y/1e6)
              for d in board.GetDrawings()
