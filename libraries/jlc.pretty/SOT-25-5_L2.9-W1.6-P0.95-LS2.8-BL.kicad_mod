@@ -39,7 +39,7 @@
     (effects (font (size 1 1) (thickness 0.15)))
   )
   (model "${JLC_LIB}/packages3d/SOT-25-5_L2.9-W1.6-P0.95-LS2.8-BL.step"
-    (at (xyz 0 0 0))
+    (at (xyz 0 0 0.006299))
     (scale (xyz 1 1 1))
     (rotate (xyz 0 0 0))
   )

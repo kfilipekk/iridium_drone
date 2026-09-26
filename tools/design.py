@@ -114,7 +114,7 @@ LOADS_3V3 = [   #through U9, AP2112K-3.3
     #not zero continuous
     ("microSD card (logging)",         0.040, 0.100, "[A] ~40 mA average while ArduPilot "
                                                      "logs; [D] 100 mA write peak"),
-    #U11 is DNP (see its COMPONENTS entry) so it draws nothing
+    #U11 (CAN) runs from +3V3_CAN through U21, not from this rail
     ("status LEDs D2/D3",              0.010, 0.010, "[A] 2 x ~5 mA through their resistors"),
     ("TMP119 temp sensor (U19)",       0.000, 0.000, "[D] TMP119: 3.5 uA active, "
                                                      "1.25 uA at the 1 Hz default rate"),
@@ -176,7 +176,7 @@ RES("R6","10k2"); RES("R7","3k24")                         #-> overridden, see _
 
 #LDOs
 CAP("C26","1u"); CAP("C27","1u")                           #AP2112 in/out
-CAP("C28","1u"); CAP("C29","1u")                           #TLV75533 in/out
+CAP("C28","1u"); CAP("C29","2u2")                          #TLV75533 out; 2u2
 CAP("C30","100n")                                          #3V3A local
 
 #sensors
@@ -187,8 +187,8 @@ CAP("C36","100n")                                          #flash
 RES("R9","4k7"); RES("R10","4k7")                          #I2C1 pullups
 RES("R11","4k7"); RES("R12","4k7")                         #I2C2 pullups
 
-#CAN
-CAP("C41","100n"); RES("R14","10k")                        #HVD230 Rs slope
+CAP("C41","100n")                                          #HVD230 VCC, on +3V3_CAN below
+RES("R14","10k")                                           #HVD230 Rs slope
 RES("R15","120R")                                          #termination (DNP by default)
 COMPONENTS["R15"] = (R, F_R0402, "120R", "", True)
 
@@ -211,10 +211,10 @@ for i,(r) in enumerate(["R22","R23","R24","R25","R26","R27"]): RES(r, "47k")  #S
 
 #RF section passives
 for r,v in [("C49","100n"),("C50","100n"),("C51","1u"),
-            ("C52","100p"),("C56","10n"),("C57","10n")]:
+            ("C52","100p"),("C56","100p"),("C57","100n")]:
     CAP(r, v, F_C0402)
 for r,v in [("R28","0R"),("R29","0R"),("R31","4k7"),
-            ("R34","1k"),("R35","1k"),("R36","4k7"),("R37","4k7")]:
+            ("R34","330R"),("R35","1k"),("R36","4k7"),("R37","4k7")]:
     RES(r, v, F_R0402)
 CAP("C58","10n", F_C0402)     #series DC-cut, Y2 output -> U13 XTAL [D] TCXO: 0.01 uF min
 CAP("C59","100n", F_C0402)
@@ -830,10 +830,19 @@ NETS["+3V3A"] += ["Y2.4", "C59.1"]            #VDD + decoupling, on the quiet ra
 NETS["GND"]  += ["Y2.2", "Y2.1", "C59.2"]    #both ground pins to ground
 net("TUNER_ADDR","U13.28","R29.2"); NETS["GND"] += ["R29.1"]
 NETS["I2C2_SDA"] += ["U13.26"]; NETS["I2C2_SCL"] += ["U13.27"]
-net("VTUNE","U13.9","C56.1"); NETS["GND"] += ["C56.2"]
-net("CPOUT","U13.12","R34.1"); net("LOOP","R34.2","C57.1"); NETS["GND"] += ["C57.2"]
-net("VCOBYP","U13.8"); net("REFOUT","U13.15"); net("GC1","U13.5","R35.2")
-NETS["GND"] += ["R35.1"]
+#PLL loop filter
+CAP("C81", "1n", F_C0402); RES("R57", "470R", F_R0402)
+net("VTUNE","U13.9","C56.1","R57.2"); NETS["GND"] += ["C56.2"]
+net("CPOUT","U13.12","R34.1","C81.1","R57.1"); net("LOOP","R34.2","C57.1")
+NETS["GND"] += ["C57.2", "C81.2"]
+net("VCOBYP","U13.8"); net("REFOUT","U13.15")
+#GC1 needs 0.5-2.7 V (0.5 V = maximum gain)
+RES("R58", "4k7", F_R0402)
+net("GC1","U13.5","R35.2","R58.2"); NETS["GND"] += ["R35.1"]; NETS["VCC_RF"] += ["R58.1"]
+#1 nF beside the LO/VCO (pins 6-7) and synthesizer (pin 13) supplies
+for _c, _pin in (("C84", 6), ("C86", 13)):
+    CAP(_c, "1n", F_C0402)
+    NETS["GND"] += [f"{_c}.2"]; NETS["VCC_RF"] += [f"{_c}.1"]
 #MAX2112 baseband -> OPA2374 difference amplifiers -> ADC the comment here read "resistor
 for r, v in [("R47","4k7"), ("R48","10k"), ("R49","10k"), ("R50","10k"),
              ("R51","10k"), ("R52","10k"), ("R53","10k")]:
@@ -892,7 +901,8 @@ NETS["BOOT0"] += ["SW1.2"]; NETS["+3V3"] += ["SW1.1"]
 COMPONENTS.pop("R3", None)
 
 #MAX2112 bypass / DC-offset caps
-for r, v in [("C60","100n"),("C61","100n"),("C63","100n")]:
+#C60 is a supply bypass
+for r, v in [("C60","100n"),("C61","47n"),("C63","47n")]:
     CAP(r, v, F_C0402)
 NETS["VCOBYP"] += ["C60.1"]; NETS["GND"] += ["C60.2"]
 #C61 spans IDC_P/IDC_N and C63 spans QDC_P/QDC_N - wired
@@ -1051,7 +1061,7 @@ CAP("C67", "1u")
 CAP("C80", "1u")
 NETS["+5V_PAYLOAD"] += ["U21.3", "C80.1"]
 NETS["GND"] += ["U21.1", "C67.2", "C80.2"]
-net("+3V3_CAN", "U21.2", "U11.3", "C67.1")
+net("+3V3_CAN", "U21.2", "U11.3", "C67.1", "C41.1")
 NETS["+5V_PAYLOAD"] += ["J6.1"]
 
 #7
@@ -1086,9 +1096,11 @@ add("D5", "jlc_parts:1N4148W_C81598", F_SOD123, "1N4148W", "C81598", False)
 add("F1", "Device:Polyfuse_Small", "Fuse:Fuse_1206_3216Metric", "3A", "C14165", False)
 RES("R54", "1k")
 RES("R55", "47k")
+#C87 holds the gate down against Q5's Crss when the battery is plugged
+CAP("C87", "10n")
 net("PYRO_FIRE", "U1.PC5", "R54.1")
-net("PYRO_GATE", "R54.2", "Q5.1", "R55.1")
-NETS["GND"] += ["Q5.2", "R55.2", "J18.3", "J18.4"]
+net("PYRO_GATE", "R54.2", "Q5.1", "R55.1", "C87.1")
+NETS["GND"] += ["Q5.2", "R55.2", "J18.3", "J18.4", "C87.2"]
 NETS["VBAT"] += ["F1.1"]
 net("VBAT_FUSED", "F1.2", "J18.1", "D5.1")
 net("PYRO_DRAIN", "Q5.3", "J18.2", "D5.2")
@@ -1207,6 +1219,7 @@ ADJACENCY = {
     "R40": ("U20", "9", 3.0), "R41": ("U20", "9", 3.0),
     "L5": ("U20", "12", 5.5), "C69": ("U20", "12", 5.0), "C70": ("U20", "12", 5.0),
     "C73": ("U20", "9", 3.0),      #EN filter
+    "C87": ("Q5", "1", 3.0),       #pyro gate hold-down
     "C67": ("U21", "2", 2.0),      #CAN 3.3V LDO output cap
     "C80": ("U21", "3", 3.0),      #CAN 3.3V LDO input cap
     "D_USB": ("J1", "A4B9", 6.0),  #USB desk power diode near USB-C
@@ -1248,6 +1261,7 @@ for _r, _v in _VALUE_FIX.items():
 
 PASSIVE_LCSC = {
     ("100n", F_C0402): "C1525",   ("1u",   F_C0402): "C52923",
+    ("47n",  F_C0402): "C82219",  #MAX2112 IDC/QDC offset caps, datasheet < 47 nF
     ("2u2",  F_C0402): "C12530",  ("4u7",  F_C0805): "C354262",
     ("10n",  F_C0402): "C15195",  ("30p",  F_C0402): "C107004",
     ("47p",  F_C0402): "C60137",  ("3n3",  F_C0402): "C26404",
@@ -1258,6 +1272,7 @@ PASSIVE_LCSC = {
     ("1n",   F_C0402): "C1523",
     ("100R", F_R0402): "C25076",  ("120R", F_R0402): "C25862",
     ("1k",   F_R0402): "C11702",  ("4k7",  F_R0402): "C25900",
+    ("330R", F_R0402): "C25104",  ("470R", F_R0402): "C25117",
     ("5k1",  F_R0402): "C25905",  ("6k8",  F_R0402): "C25917",
     ("10k",  F_R0402): "C25744",  ("22k",  F_R0402): "C25767",
     ("10k",  F_R0603): "C25804",
@@ -1302,12 +1317,13 @@ if _unpriced:
 RATINGS = {
  #LCSC value V dielectric tol package Tmin Tmax source
  "C1525":    ("100n",  16,  "X7R",     "10%",  "0402",  -55, 125, "[D] LCSC product page, 2026-08-29"),
+ "C82219":   ("47n",   50,  "X7R",     "10%",  "0402",  -55, 125, "[L] JLCPCB part API: FH 0402B473K500NT 47nF 50V X7R 0402, 2026-09-26"),
  "C131394":  ("100n",  50,  "X7R",     "10%",  "0402",  None, None, "[D] LCSC product page, 2026-08-29"),
  "C52923":   ("1u",    25,  "X5R",     "10%",  "0402",  -55,  85, "[D] LCSC product page, 2026-08-29"),
  "C91185":   ("1u",    50,  "X7R",     "10%",   "0805",  None, None, "[D] LCSC product page, 2026-08-29"),
  "C1713":    ("10u",   16,  "X5R",     "10%",  "0805",  -55,  85, "[D] LCSC product page, 2026-08-29"),
  "C16195875":("10u",   35,  "X7R",     "10%",  "1206",  None, None, "[D] LCSC + jlcparts, 2026-09-03"),
- "C13585":   ("10u",   50,  "X7R",     "10%",  "1206",  -55, 125, "[D] Samsung CL31A106KBHNNNE 10uF 50V X7R 1206, LCSC C13585"),
+ "C13585":   ("10u",   50,  "X5R",     "10%",  "1206",  -55,  85, "[D] Samsung CL31A106KBHNNNE (A = X5R) 10uF 50V 1206, LCSC C13585"),
  "C5177178": ("22u",   16,  "X5R",     None,   "1206",  None, None, "[D] LCSC product page, 2026-08-29"),
  "C107004":  ("30p",   50,  "NP0",     "5%",   "0402",  None, None, "[D] LCSC product page, 2026-08-29"),
  "C19666":   ("4u7",   16,  "X5R",     "10%",  "0603",  -55,  85, "[D] LCSC product page, 2026-08-29"),
@@ -1511,6 +1527,14 @@ LOAD_CURRENT = {
     "+3V3A": {
         #[D] OPA2374: 585 uA per amplifier, two amplifiers (LOADS_3V3A row)
         "U14.8": 0.002,
+    },
+    #the +5V rows of LOADS_5V, per pad
+    "+5V": {
+        "U9.1": 0.294, "U9.3": 0.0,     #U9 (+3V3 LDO) input; pin 3 is EN
+        "U10.1": 0.107, "U10.3": 0.0,   #U10 (+3V3A LDO) input; pin 3 is EN
+        "J3.1": 0.05,                   #M10 GPS + compass
+        "J5.1": 0.1,                    #ELRS receiver
+        "J9.1": 0.126,                  #TFS20-L 0.106 + upward ToF 0.02
     },
 }
 
@@ -1790,3 +1814,33 @@ PAYLOAD_BREAKOUT["headroom_a"] = RAIL_5V["headroom_a"]
 #bare copper pads are board features
 NOT_A_PART = {ref for ref, spec in COMPONENTS.items()
               if spec[1] == "TestPoint:TestPoint_Pad_1.5x1.5mm"}
+
+
+#silkscreen: the function name printed beside each connector
+SILK_NAMES = {
+    "J18": "PYRO", "J1": "USB", "J2": "ESC", "J3": "GPS", "J5": "RC", "J6": "CAN",
+    "J9": "I2C", "J11": "UART2", "J12": "ANT", "J14": "FLOW", "J15": "LED", "J16": "BUZZ",
+    "J17": "SERVO", "J19": "SWD", "J20": "TOUCH",
+}
+SILK_TITLE = ["IRIDIUM NAV", "KRYSTIAN FILIPEK"]
+SILK_TITLE_SIDE = {"IRIDIUM NAV": "bottom", "KRYSTIAN FILIPEK": "top"}
+
+#3D models: bodies that legitimately sit off their outline or reach into the board
+MODEL_EXPECTED = {
+    "J1": (0.04, 0.75),    #USB-C: the plug end projects past the board edge
+    "J8": (0.00, -3.95),   #push-push microSD: the card slot extends past the silkscreen
+}
+MODEL_EXPECTED_SINK = {
+    "J1": 0.78,            #USB-C shell legs in their slots
+    "J8": 0.61,            #microSD locating posts in their holes
+}
+
+#board frame: which edge is forward
+#the reference forward is the TOP edge in KiCad's top view (the USB-C / antenna / SWD edge)
+BOARD_FORWARD = (0, -1)      #KiCad (x right, y down) direction of "forward"
+#TDK LGA-14 axes, from the datasheet's top view
+IMU_AXES = {
+    "U2": ("icm42688", ("1", "2", "3", "4"), ("8", "9", "10", "11"), ("5", "6", "7"), ("12", "13", "14")),
+    "U3": ("icm42605", ("1", "2", "3", "4"), ("8", "9", "10", "11"), ("5", "6", "7"), ("12", "13", "14")),
+}
+SILK_ARROW = {"side": "top", "direction": BOARD_FORWARD, "length": 2.5, "label": None}
