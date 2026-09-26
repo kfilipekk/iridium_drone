@@ -1,5 +1,6 @@
 #battery hot-plug transient: can the input overshoot exceed the parts' limits?
 import ngspice
+from checks import Checks
 from circuits import design
 
 D = design()
@@ -7,6 +8,7 @@ VBAT_4S, VBAT_5S = 4 * 4.2, 5 * 4.2
 TVS_VC, _TVS_VRWM, TVS_VBR, TVS_IPP = D.TVS_CLAMP_V["SMBJ22A"][:4]
 TVS_RS = (TVS_VC - TVS_VBR) / (TVS_IPP - 1e-3)
 ABSMAX_V = D.VBAT_PART_VMAX["LMR33630A"][1]   #LMR33630A abs max VIN
+Q4_ABSMAX_V = D.VBAT_PART_VMAX["WST4041"][1]   #Q4 drain-source abs max
 
 
 def case(vbat, lead_nh, esc_bulk_uF):
@@ -45,9 +47,10 @@ Cin3 vbat 0 0.2u
     return max(r["vbat"]), max(r["vin"]), i_harness
 
 
-def main():
+def main(chk=None):
+    chk = chk or Checks()
     print(f"Hot-plug input transient; LMR33630A abs max VIN = {ABSMAX_V:.0f} V, "
-          f"TVS clamp {TVS_VC:.1f} V")
+          f"Q4 abs max {Q4_ABSMAX_V:.0f} V, TVS clamp {TVS_VC:.1f} V")
     print(f"  worst case is 5S = {VBAT_5S:.1f} V with 150-250 nH of harness")
     for vbat, cells in ((VBAT_4S, "4S"), (VBAT_5S, "5S")):
         for lead in (150, 250):
@@ -57,9 +60,18 @@ def main():
                 print(f"  {cells} {vbat:4.1f} V  lead {lead:3d} nH  {bn:16s}: "
                       f"VBAT peak {v:5.1f} V  (input {vin:5.1f} V, harness "
                       f"{ih:5.1f} A){flag}")
-    print(f"\n  worst peak is {case(VBAT_5S, 250, 0)[0]:.1f} V, "
-          f"{ABSMAX_V - case(VBAT_5S, 250, 0)[0]:.1f} V under abs max; "
+                #bounds: the regulators' and Q4's absolute-maximum input voltages
+                chk.ok(v < ABSMAX_V,
+                       f"hot-plug {cells} {lead} nH {bn}: VBAT peak under the buck abs max",
+                       f"{v:.1f} V vs {ABSMAX_V:.0f} V")
+                chk.ok(vin < Q4_ABSMAX_V,
+                       f"hot-plug {cells} {lead} nH {bn}: input peak under Q4 abs max",
+                       f"{vin:.1f} V vs {Q4_ABSMAX_V:.0f} V")
+    worst = case(VBAT_5S, 250, 0)[0]
+    print(f"\n  worst peak is {worst:.1f} V, "
+          f"{ABSMAX_V - worst:.1f} V under abs max; "
           "fitting the ESC 470 uF removes the overshoot entirely")
+    return chk
 
 
 if __name__ == "__main__":
