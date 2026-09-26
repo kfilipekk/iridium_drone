@@ -604,6 +604,17 @@ def firmware(board):
           "netlist, pin coverage and hwdef agree"
           + (f"; {w.group(1)} unconnected-pin note(s)" if w else ""))
 
+    #the artwork's own LCSC fields
+    rc, out = run("sync_lcsc_props.py")
+    n = re.search(r'^(\S+): (\d+) LCSC field\(s\) disagree', out, re.M)
+    check("fabrication", "artwork LCSC fields match design.py", rc == 0,
+          ("every symbol and footprint carries the code design.py assigns"
+           if rc == 0 else
+           (f"{n.group(2)} LCSC field(s) in {n.group(1)} disagree with design.py - "
+            f"run python3 tools/sync_lcsc_props.py --write" if n else
+            "artwork part numbers disagree with design.py - run "
+            "python3 tools/sync_lcsc_props.py --write")))
+
     rc, out = run("gen_doc_tables.py --check")
     check("firmware", "generated doc tables match the code", rc == 0,
           "sitl/README.md scenarios and docs/HARDWARE.md frame table are current" if rc == 0

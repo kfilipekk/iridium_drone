@@ -85,7 +85,7 @@ used to place, route and tidy the board are kept separately, in `kicad-tools`.
 
 ## Editing the schematic and the board in place
 
-- `sync_lcsc_props.py` – Rewrite the LCSC property of every symbol and footprint from design.py; reports drift, `--write` fixes it
+- `sync_lcsc_props.py` – Rewrite the LCSC property of every symbol and footprint from design.py; reports drift, `--write` fixes it. Gated: preflight runs it and blocks the order when any field disagrees (`design.lcscprops` in readiness.py).
 
 
 ## Silkscreen and 3D
