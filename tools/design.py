@@ -997,9 +997,11 @@ add("D5", "jlc_parts:1N4148W_C81598", F_SOD123, "1N4148W", "C81598", False)
 add("F1", "Device:Polyfuse_Small", "Fuse:Fuse_1206_3216Metric", "3A", "C14165", False)
 RES("R54", "1k")
 RES("R55", "47k")
+#C87 holds the gate down against Q5's Crss when the battery is plugged
+CAP("C87", "10n")
 net("PYRO_FIRE", "U1.PC5", "R54.1")
-net("PYRO_GATE", "R54.2", "Q5.1", "R55.1")
-NETS["GND"] += ["Q5.2", "R55.2", "J18.3", "J18.4"]
+net("PYRO_GATE", "R54.2", "Q5.1", "R55.1", "C87.1")
+NETS["GND"] += ["Q5.2", "R55.2", "J18.3", "J18.4", "C87.2"]
 NETS["VBAT"] += ["F1.1"]
 net("VBAT_FUSED", "F1.2", "J18.1", "D5.1")
 net("PYRO_DRAIN", "Q5.3", "J18.2", "D5.2")
@@ -1114,6 +1116,7 @@ ADJACENCY = {
     "R40": ("U20", "9", 3.0), "R41": ("U20", "9", 3.0),
     "L5": ("U20", "12", 5.5), "C69": ("U20", "12", 5.0), "C70": ("U20", "12", 5.0),
     "C73": ("U20", "9", 3.0),      #EN filter
+    "C87": ("Q5", "1", 3.0),       #pyro gate hold-down
     "C67": ("U21", "2", 2.0),      #CAN 3.3V LDO output cap
     "C80": ("U21", "3", 3.0),      #CAN 3.3V LDO input cap
     "D_USB": ("J1", "A4B9", 6.0),  #USB desk power diode near USB-C
