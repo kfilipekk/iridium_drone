@@ -207,12 +207,11 @@ def main():
          "gate-charge, dead-time and Coss losses are not modelled at all - which is why "
          "the efficiency-band figure, not this one, drives the verdict")
     line("note", "theta_JA is JEDEC-board, not THIS board",
-         "each part carries the RthetaJA its own datasheet gives, keyed in "
-         "design.BUCK_THERMAL: the fitted LMR33630A has ONE (72.5 C/W, RNX on a "
-         "4-layer JEDEC board - no EVM figure, so one honest number rather than a "
-         "bracket invented from two), while U18's TPS54202 has two (118.6 C/W JEDEC "
-         "and 57.2 C/W on TI's EVM). The copper under U8 here differs from all of "
-         "them, so treat the figure as what the T3 measurement validates, not gospel")
+         "the fitted LMR33630A carries ONE theta_JA from its own datasheet (72.5 C/W, "
+         "RNX on a 4-layer JEDEC board - no EVM figure, so one honest number rather "
+         "than a bracket invented from two). The copper under U8 and U20 here differs "
+         "from that JEDEC board, so treat the figure as what the T3 measurement "
+         "validates, not gospel")
     line("note", "airflow is assumed to be NONE",
          "the stack sits between the ESC and the battery. A hovering quad moves air "
          "downward past it, which helps, but by an amount nobody here has measured")

@@ -61,10 +61,13 @@ LOADS_5V = [(n, cont, src) for n, cont, _peak, src in _d.LOADS_5V]
 PI_OWN_BEC = (_d.PI["name"], 2.000,
               "[D] peak for the Zero 2 W; the Pi 5 needs up to 5 A")
 
-I2C1 = [("VL53L1X on U7 (DEFERRED - DNP on the Economic order)", 0x29, "[D] fixed"),
+I2C1 = [("VL53L1X on U7 (DELETED - on-board ToF removed, no pads on this board)", 0x29,
+         "[D] fixed"),
         ("TFS20-L rangefinder",                              0x10, "[D] AP_RangeFinder_Benewake_TFS20L.h:32"),
         ("compass inside the GPS module",                    0x0D, "[A] QMC5883L default"),
-        ("upward VL53L1X (RNGFND3, top ToF, ceiling work)",  0x29, "[D] fixed - 0x29 clash with U7 is not real: U7 is DNP, fit one or the other")]
+        ("upward VL53L1X (RNGFND3, top ToF, ceiling work)",  0x29,
+         "[D] fixed - the 0x29 clash with U7 is not real: U7 no longer exists, so only "
+         "one external 0x29 device is fitted")]
 
 
 def board_facts():
@@ -139,8 +142,12 @@ def power(loads):
           f"{total:.2f} A of L2's {ir} A Irms - {total / ir:.0%}, "
           f"{(ir - total) * 1000:.0f} mA spare",
           "[D] FNR4030S100MT C167879; Isat 2.4 A is a transient rating, NOT this budget")
-    check("power", "TPS54202 5 V regulator", total <= 2.0,
-          f"{total:.2f} A of the regulator's 2.0 A rating", "[D] TPS54202DDCR C191884")
+    # The fitted part is the LMR33630A (C2861505), a 3 A IC. It used to say TPS54202
+    # and cite C191884, which is not on the board; L2's 1.6 A Irms above is the binding
+    # limit either way.
+    check("power", "LMR33630A 5 V regulator", total <= 3.0,
+          f"{total:.2f} A of the regulator's 3.0 A rating",
+          "[D] LMR33630ARNXR C2861505, SNVSAN3F")
     pk = _d.RAIL_5V["fitted_peak_a"]
     check("power", "L2 saturation at the peak column", pk <= _d.RAIL_5V["isat_a"],
           f"{pk:.2f} A peak (WS2812 full-white transient) of L2's {_d.RAIL_5V['isat_a']} A Isat",
@@ -271,7 +278,7 @@ def buses():
                  f"{name} and {seen[addr]} - only one may be fitted", src)
         seen.setdefault(addr, name)
     check("buses", "I2C1 addresses distinct among FITTED parts", not clash or True,
-          "TFS20-L 0x10; one VL53L1X at 0x29 - the upward RNGFND3 module (U7 stays DNP); "
+          "TFS20-L 0x10; one VL53L1X at 0x29 - the upward RNGFND3 module (U7 is deleted); "
           "the 8-sensor ToF ring lives behind the MCU sensor hub, NOT on this bus",
           "[D] driver headers")
     note("buses", "ESC telemetry on J2.8",
