@@ -15,6 +15,7 @@ measures the gain, the DC range at the ADC, and the common-mode rejection.
 import math
 
 import ngspice
+from checks import Checks
 from circuits import design, value
 
 D = design()
@@ -66,7 +67,8 @@ def ac_analysis():
     return gain, f[k], abs(r2["adc"][0])
 
 
-def main():
+def main(chk=None):
+    chk = chk or Checks()
     vd, vout = dc_transfer()
     # gain from the two points either side of zero
     z = min(range(len(vd)), key=lambda i: abs(vd[i]))
@@ -84,14 +86,33 @@ def main():
           f"+/-{span/gain:.3f} V")
     g, corner, cm_gain = ac_analysis()
     print(f"  AC differential gain {g:.3f}, -3 dB corner {corner/1e3:.1f} kHz")
-    print(f"  common-mode gain {cm_gain*1e3:.4f} mV/V -> CMRR "
-          f"{20*math.log10(gain/max(cm_gain,1e-12)):.0f} dB")
+    cMRR = 20 * math.log10(gain / max(cm_gain, 1e-12))
+    print(f"  common-mode gain {cm_gain*1e3:.4f} mV/V -> CMRR {cMRR:.0f} dB")
     print("\n  datasheet: AC-couple IOUT/QOUT with 47 nF. This board DC-couples.")
     print("  The common-mode DC is rejected by the difference amp, but any")
     print(f"  differential DC offset is amplified by {gain:.2f} with no high-pass,")
     print(f"  so the tuner's IDC/QDC loop must null it: {gain:.2f} x 10 mV offset")
     print("  costs 21 mV of ADC range. The 47 nF coupling in the datasheet is")
     print("  the app note's demodulator input, not this op-amp stage.")
+    # Bounds: the four-resistor difference amp's own arithmetic (gain must equal
+    # Rf/Rin), a reference that centres the ADC, enough headroom for the tuner's
+    # 1 Vpp differential output, common-mode rejection, and the anti-alias corner
+    # chosen to sit below the H743's sample rate but above the burst bandwidth.
+    chk.ok(abs(gain - RF / RIN) / (RF / RIN) < 0.02,
+           "baseband gain equals Rf/Rin",
+           f"sim {gain:.3f} vs Rf/Rin {RF/RIN:.3f}")
+    chk.ok(abs(at_zero - (VADC_MIN + VADC_MAX) / 2) < 0.1,
+           "baseband output quiescent at ADC mid-scale",
+           f"{at_zero:.3f} V vs {(VADC_MIN+VADC_MAX)/2:.3f} V")
+    chk.ok(span / gain >= 0.5,
+           "baseband headroom covers the tuner's 1 Vpp output",
+           f"+/-{span/gain:.3f} V vs +/-0.5 V")
+    chk.ok(cMRR >= 80.0, "baseband common-mode rejection above 80 dB",
+           f"{cMRR:.0f} dB")
+    chk.ok(100e3 <= corner <= 250e3,
+           "baseband anti-alias corner between 100 and 250 kHz",
+           f"{corner/1e3:.1f} kHz")
+    return chk
 
 
 if __name__ == "__main__":

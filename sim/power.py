@@ -7,6 +7,7 @@ current, output ripple); it says nothing about the regulator's own loop, which i
 internally compensated and not modelled here.
 """
 import ngspice
+from checks import Checks
 from circuits import design
 
 D = design()
@@ -81,7 +82,8 @@ Rload vin 0 1e6
     return max(abs(i) for i in r["vbat#branch"]), r["vin"][-1]
 
 
-def main():
+def main(chk=None):
+    chk = chk or Checks()
     print("Battery inrush at the XT60 (C17/C18/C19, lead 300 nH / 20 mOhm):")
     i_pk, v_fin = inrush()
     print(f"  peak inrush current: {i_pk:5.1f} A, settles to {v_fin:.3f} V\n")
@@ -109,6 +111,19 @@ def main():
             print("    *** peak exceeds inductor saturation")
         if r["hand_i_rms"] > r["i_rated"]:
             print("    *** RMS exceeds inductor rating")
+        # Bounds: the fitted inductor's Isat / Irms (design.RAIL_5V), and 25 %
+        # agreement between the hand expression and the transient, which is how
+        # much the two independent methods are allowed to differ.
+        chk.ok(r["sim_i_pk"] < r["i_sat"],
+               f"{name}: peak inductor current below Isat",
+               f"sim {r['sim_i_pk']:.3f} A vs Isat {r['i_sat']:.1f} A")
+        chk.ok(r["hand_i_rms"] < r["i_rated"],
+               f"{name}: inductor RMS below its rating",
+               f"{r['hand_i_rms']:.3f} A vs rated {r['i_rated']:.1f} A")
+        chk.ok(abs(r["sim_i_pk"] - r["hand_i_pk"]) / r["hand_i_pk"] < 0.25,
+               f"{name}: hand analysis agrees with ngspice on peak current",
+               f"hand {r['hand_i_pk']:.3f} A vs sim {r['sim_i_pk']:.3f} A")
+    return chk
 
 
 if __name__ == "__main__":

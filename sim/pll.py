@@ -13,6 +13,7 @@ import cmath
 import math
 
 import ngspice
+from checks import Checks
 from circuits import design
 
 D = design()
@@ -60,7 +61,8 @@ def analyse():
     return rows
 
 
-def main():
+def main(chk=None):
+    chk = chk or Checks()
     print(f"MAX2112 PLL at LO {LO_HZ/1e6:.0f} MHz, Fref {FREF_HZ/1e6:.0f} MHz, N = {N:.2f}")
     print(f"  loop filter: C81 {C81} / R34 {R34} + C57 {C57} / R57 {R57} + C56 {C56}")
     print("  (stable above ~30 deg; good design 45-70; bandwidth must stay "
@@ -71,10 +73,24 @@ def main():
               f"bandwidth {bw/1e3:7.1f} kHz, phase margin {pm:5.1f} deg"
               + ("   *** below 30 deg" if pm < 30 else ""))
         worst = min(worst, pm)
-    print(f"\n  worst phase margin {worst:.1f} deg. The default registers leave "
+        # Bound 1: the loop bandwidth must sit well under the reference
+        # comparison rate (Fref/10), or the loop samples its own ripple.
+        chk.ok(bw < FREF_HZ / 10,
+               f"PLL bandwidth below Fref/10 at Icp {icp*1e6:.0f} uA, Kv {kv/1e6:.0f} MHz/V",
+               f"{bw/1e3:.1f} kHz vs {FREF_HZ/10e6:.1f} MHz")
+        # Bound 2: the NOMINAL charge-pump current (600 uA, the ICP=0 setting)
+        # must hold 30 deg across the whole VCO-gain range. The 1200 uA corner
+        # is reported below; it is not the default register state.
+        if icp == ICP_OPTIONS[0]:
+            chk.ok(pm >= 30.0,
+                   f"PLL phase margin at nominal Icp 600 uA, Kv {kv/1e6:.0f} MHz/V",
+                   f"{pm:.1f} deg vs 30 deg")
+    print(f"\n  worst phase margin {worst:.1f} deg over every corner. The default "
+          "registers leave "
           "CPS = VAS (charge-pump current chosen by the VCO autoselect), which\n"
           "  avoids the 1200 uA corner; forcing ICP = 1 (1200 uA) at high Kv is "
           "the case that goes marginal.")
+    return chk
 
 
 if __name__ == "__main__":

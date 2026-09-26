@@ -10,6 +10,7 @@ for a millisecond) to fire. Gate charge, the gate pull-down and the MCU's ESD
 diodes are all modelled.
 """
 import ngspice
+from checks import Checks
 from circuits import design
 
 D = design()
@@ -20,6 +21,9 @@ R54 = float(D.COMPONENTS["R54"][2].rstrip("k")) * 1e3   # 1k
 R55 = float(D.COMPONENTS["R55"][2].rstrip("k")) * 1e3   # 47k
 EMATCH_OHM = 1.5
 FIRING_UJ = 1000.0   # ~1 mJ
+# The gate asserts 5x margin below the firing energy: a false fire is a
+# one-way failure, so a corner this close is treated as needing headroom.
+SAFE_UJ = FIRING_UJ / 5.0
 
 
 def fire(lead_nh=250, esc_bulk_uF=0, clamp=True, vto=0.65):
@@ -68,7 +72,8 @@ R54 gate pin {R54}
     return max(r["gate"]), max(i), e
 
 
-def main():
+def main(chk=None):
+    chk = chk or Checks()
     print(f"Pyro false-fire on hot-plug (5S = {VBAT_STEP:.1f} V, no ESC electrolytic); "
           f"an e-match needs ~{FIRING_UJ/1000:.0f} mJ to fire")
     for clamp, cn in ((True, "MCU unpowered (pin clamped by ESD diodes)"),
@@ -77,10 +82,17 @@ def main():
             vg, ipk, e = fire(clamp=clamp, vto=vto)
             print(f"  {cn:40s} Vth {vto:.2f}: gate {vg:4.2f} V, "
                   f"e-match peak {ipk*1000:7.1f} mA, energy {e*1e6:8.2f} uJ")
+            chk.ok(e * 1e6 < SAFE_UJ,
+                   f"pyro no-fire margin, {cn}, Vth {vto:.2f}",
+                   f"{e*1e6:.2f} uJ vs {SAFE_UJ:.0f} uJ safe bound")
     vg, ipk, e = fire(esc_bulk_uF=470, clamp=False, vto=0.65)
     print(f"  {'with the ESC 470 uF, pin floating':40s} Vth 0.65: gate {vg:4.2f} V, "
           f"e-match {ipk*1000:7.1f} mA, energy {e*1e6:8.2f} uJ")
+    chk.ok(e * 1e6 < SAFE_UJ,
+           "pyro no-fire margin, ESC 470 uF, pin floating, Vth 0.65",
+           f"{e*1e6:.2f} uJ vs {SAFE_UJ:.0f} uJ safe bound")
     print(f"\n  worst energy is ~140 uJ, {FIRING_UJ/140:.0f}x below the firing energy")
+    return chk
 
 
 if __name__ == "__main__":

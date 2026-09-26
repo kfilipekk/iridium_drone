@@ -60,6 +60,11 @@ PREREQUISITES = [
          claim="copper carries each rail's current at every axis-aligned cut"),
     dict(id="elec.traces", cls=GATED, tool="check_traces.py",
          claim="trace lengths, differential skew and crystal stray capacitance are in limit"),
+    dict(id="elec.sim", cls=GATED, tool="check_sim.py",
+         claim="the analogue blocks - the buck output filters, the battery hot-plug "
+               "transient, the pyro gate, the MAX2112 PLL loop filter, the baseband "
+               "difference amp and the battery sense chain - simulate inside their "
+               "datasheet and design bounds (sim/)"),
 
     # -- mechanically sound --------------------------------------------------------
     dict(id="mech.connectors", cls=GATED, tool="check_connectors.py",
