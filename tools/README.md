@@ -10,6 +10,7 @@ used to place, route and tidy the board are kept separately, in `kicad-tools`.
 - `readiness.py` – Every prerequisite for ordering this board, what proves it, and what cannot be proven here
 - `prove_readiness.py` – Prove the readiness manifest blocks, instead of trusting its docstring
 - `audit_gate_patterns.py` – Every regex in the gate, tested against the text the tools actually print
+- `fault_injection.py` – Prove every gated check can FAIL: one injected fault per tool, plus declared inline faults
 
 ## Checks
 
