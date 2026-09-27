@@ -7,7 +7,7 @@ import random
 import sys
 
 C = 299_792_458.0
-F_IRIDIUM = 1_626_270_000.0      #Ring Alert channel, Hz
+F_IRIDIUM = 1_626_270_833.0      #Ring Alert channel, Hz
 R_EARTH = 6_378_137.0
 MU = 3.986004418e14              #WGS84 gravitational parameter
 IRIDIUM_ALT = 780_000.0
@@ -278,8 +278,9 @@ def sat_state_ecef(sat, dt):
     s = sat_eci(sat, dt)
     if s is None:
         return None
-    jd, _ = _jday(dt)
-    return teme_to_ecef(s[0], s[1], gmst_rad(jd))
+    jd, fr = _jday(dt)
+    #jday splits the time into a day number and a fraction; GMST needs both
+    return teme_to_ecef(s[0], s[1], gmst_rad(jd + fr))
 
 
 #n_obs usable observations from real orbits
@@ -361,6 +362,28 @@ def ephemeris_test(seeds=6, sigma_hz=5.0, n_obs=60, fail_m=1000.0):
     print(f"  {'ok  ' if good else 'FAIL'}  radii {lo:.0f}-{hi:.0f} km, all near-circular; "
           f"ECEF speed differs from TEME by the Earth-rotation term"
           + (f"; SGP4 failed for {bad}" if bad else ""))
+
+    #3. An outside reference, not a round trip
+    tv = (datetime.datetime(2004, 4, 6, 7, 51, 28, 386009, tzinfo=datetime.timezone.utc)
+          - datetime.timedelta(seconds=0.4399619))
+    jd, fr = _jday(tv)
+    re_, ve_ = teme_to_ecef((5094.18016210e3, 6127.64465950e3, 6380.34453270e3),
+                            (-4.746131487e3, 0.785818041e3, 5.531931288e3),
+                            gmst_rad(jd + fr))
+    dr = math.dist(re_, (-1033.4793830e3, 7901.2952754e3, 6380.3565958e3))
+    dv = math.dist(ve_, (-3.225636520e3, -2.872451450e3, 5.531924446e3))
+    good = dr < 50.0 and dv < 0.1
+    checks.append(good)
+    print(f"  {'ok  ' if good else 'FAIL'}  Vallado TEME->ITRF example: {dr:.1f} m, "
+          f"{dv*1000:.0f} mm/s (limits 50 m, 100 mm/s)")
+    #and the path the solver actually uses, at a time that is not midnight
+    tn = datetime.datetime(2024, 3, 1, 12, 0, 0, tzinfo=datetime.timezone.utc)
+    jn, fn = _jday(tn)
+    good = abs((math.degrees(gmst_rad(jn + fn)) - math.degrees(gmst_rad(jn)) - 180.4928)
+               % 360.0) < 0.01
+    checks.append(good)
+    print(f"  {'ok  ' if good else 'FAIL'}  GMST advances ~180.49 deg between 00:00 and "
+          f"12:00 UT (the day fraction reaches the rotation)")
 
     r = (4.1e6, 3.2e6, 4.9e6)
     v = (-4.0e3, 5.1e3, -1.0e3)
