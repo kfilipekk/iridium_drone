@@ -459,6 +459,30 @@ def firmware(board):
           "the burst detector or the carrier estimator does not meet the solver's "
           "precision - see tools/check_soop_burst.py")
 
+    #the on-board DSP in C
+    rc, out = run("check_soop_dsp.py")
+    m = re.search(r'SOOP-DSP OK - (\d+)/(\d+) assertions', out)
+    p = re.search(r'carrier error p90 ([\d.]+) Hz at >= (\d+) dB-Hz', out)
+    check("firmware", "the on-board DSP finds bursts and meets 5 Hz on a simulated sky",
+          rc == 0,
+          (f"{m.group(1)}/{m.group(2)} assertions, p90 {p.group(1)} Hz at >= {p.group(2)} dB-Hz, "
+           f"C built for the H743" if m and p else
+           "see tools/check_soop_dsp.py") if rc == 0 else
+          "the C burst DSP misses, invents or mis-measures bursts on the simulated sky - "
+          "see tools/check_soop_dsp.py")
+
+    #the on-board navigation in C
+    rc, out = run("check_soop_nav.py")
+    m = re.search(r'SOOP-NAV OK - (\d+)/(\d+) assertions', out)
+    e = re.search(r'median (\d+) m, p95 (\d+) m, max (\d+) m', out)
+    check("firmware", "the on-board navigation holds position through simulated denied flights",
+          rc == 0,
+          (f"{m.group(1)}/{m.group(2)} assertions, median {e.group(1)} m, p95 {e.group(2)} m "
+           f"over the denied flights, C built for the H743" if m and e else
+           "see tools/check_soop_nav.py") if rc == 0 else
+          "the C navigation loses position, reports an accuracy it does not have, or "
+          "credits bursts to the wrong satellite - see tools/check_soop_nav.py")
+
     #the C port of the solve, gated
     rc, out = run("check_soop_c.py")
     m = re.search(r'SOOP-C OK - C solver agrees with Python to ([\d.eE+-]+) m', out)

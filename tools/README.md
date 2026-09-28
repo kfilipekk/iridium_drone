@@ -27,7 +27,6 @@ used to place, route and tidy the board are kept separately, in `kicad-tools`.
 - `check_fit.py` – The bolted joints, checked as joints rather than as prose
 - `check_footprints.py` – Every footprint's pad count, against JLCPCB's own joint count for that part number
 - `check_hwdef.py` – Cross-check the generated hwdef against the netlist it is supposed to describe
-- `check_lcsc_stock.py` – Check every LCSC code on the BOM against JLCPCB's own parts library
 - `check_libraries.py` – The vendored JLC library is present, complete, and identical to the board it rebuilds
 - `check_links.py` – Buying links: recoverability offline, liveness online
 - `check_mechanical.py` – Mechanical fit of the board in the stack and the frame
@@ -48,7 +47,9 @@ used to place, route and tidy the board are kept separately, in `kicad-tools`.
 - `check_soop_backend.py` – Gate the SoOP GPS backend: registered in the tree, and really in the firmware
 - `check_soop_burst.py` – Gate the burst DSP: detection and carrier-frequency estimation from I/Q
 - `check_soop_c.py` – Prove the on-board C solver agrees with the Python reference, and compiles for the H743
+- `check_soop_dsp.py` – Gate the on-board burst DSP against a simulated sky, and bench recordings through it
 - `check_soop_ephemeris.py` – Gate the real Iridium ephemeris: SGP4 + TLE, with the TEME->ECEF frame conversion
+- `check_soop_nav.py` – Gate the on-board navigation against simulated GNSS-denied flights
 - `check_soop_sgp4.py` – tools/check_soop_sgp4.py - Gate: C SGP4 agrees with Python sgp4.api.Satrec
 - `check_soop_sitl.py` – Gate the SoOP backend's fix reaching the EKF in SITL
 - `check_stock.py` – Every BOM line is buyable, and each LCSC code resolves to the part the design intends
@@ -69,7 +70,6 @@ used to place, route and tidy the board are kept separately, in `kicad-tools`.
 - `jlc_orientation.py` – Solve each part's JLCPCB rotation and centre from JLCPCB's own footprint, not a table
 - `record_sitl_result.py` – Record sitl/sitl-results.json from a fresh scenario run
 - `parse_frame_dxf.py` – Parse the tbs Source One V6 7in DC flat pattern into cad/frame-dxf.json
-- `make_box_step.py` – Emit a minimal AP214 STEP solid for a rectangular part body
 
 ## Design model and helpers
 
@@ -105,6 +105,9 @@ used to place, route and tidy the board are kept separately, in `kicad-tools`.
 
 ## SoOP (Iridium Doppler navigation)
 
+- `iridium_sig.py` – Iridium simplex-channel facts and this board's capture plan, in one place
+- `soop_bench.py` – Run a bench recording of the real Iridium sky through the flight code, and measure it
+- `soop_scenario.py` – A sky to test the Iridium chain against, with the truth written alongside
 - `soop_burst.py` – Burst detection and carrier-frequency estimation from I/Q: the DSP the solver requires
 - `soop_sitl_test.py` – Prove the SoOP backend's fix actually reaches the EKF, in SITL
 - `soop_solver.py` – Doppler positioning from signals of opportunity: the solver, and proof it works

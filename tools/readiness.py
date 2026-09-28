@@ -233,11 +233,22 @@ PREREQUISITES = [
     dict(id="solver.burst", cls=GATED,
          check="burst detection and carrier estimation meet the 5 Hz target",
          claim="I/Q gives a carrier estimate inside the solver's 5 Hz target"),
+    dict(id="solver.dsp", cls=GATED,
+         check="the on-board DSP finds bursts and meets 5 Hz on a simulated sky",
+         claim="the flight DSP in C (soop_dsp.c) detects Iridium simplex bursts and measures "
+               "their carriers inside the solver's 5 Hz, on a sky built with the board's "
+               "impairments, and builds for the H743"),
+    dict(id="solver.nav", cls=GATED,
+         check="the on-board navigation holds position through simulated denied flights",
+         claim="the flight navigation in C (soop_nav.c) associates bursts to satellites, "
+               "tracks the TCXO, the TLE errors and the flight EKF's velocity drift, and "
+               "holds a fix with an honest accuracy through 15-30 min denied flights on "
+               "real orbits, and builds for the H743"),
     #the solve is ported to C and gated (solver.c below)
     dict(id="build.firmware", cls=BUILD,
-         claim="the flight firmware: I/Q capture, SGP4-to-ECEF framing, and the EKF hand-off on the H743",
-         why="the solve and SGP4 are ported to C (solver.c, build.sgp4), but nothing yet "
-             "samples the MAX2112 or hands a fix to the EKF on the aircraft."),
+         claim="the flight firmware: MAX2112 control, I/Q capture and the EKF hand-off on the H743",
+         why="the DSP, ephemeris and navigation are in C and gated (solver.dsp, solver.nav), "
+             "but nothing yet tunes the MAX2112, samples its I/Q or runs them on the aircraft."),
     dict(id="solver.c", cls=GATED,
          check="the C solver agrees with the Python reference and builds for the target",
          claim="the Doppler solve is ported to C, matches the Python reference and "

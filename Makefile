@@ -27,6 +27,8 @@ test-soop:
 	cd firmware/soop && $(MAKE) host
 	$(PY) tools/check_soop_sgp4.py
 	$(PY) tools/check_soop_c.py
+	$(PY) tools/check_soop_dsp.py
+	$(PY) tools/check_soop_nav.py
 
 arm-soop:
 	cd firmware/soop && $(MAKE) arm
