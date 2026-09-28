@@ -1,4 +1,9 @@
 //soop_solve.c - see soop_solve.h
+//ArduPilot compiles every source with -fsingle-precision-constant
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("no-single-precision-constant")
+#endif
+typedef char soop_needs_double_constants[((long)299792458.0 == 299792458L) ? 1 : -1];
 #include "soop_solve.h"
 #include <math.h>
 

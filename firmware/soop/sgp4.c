@@ -1,10 +1,14 @@
 //sgp4.c - Near-Earth SGP4 propagator, direct C port of Vallado 2006
 
+//ArduPilot compiles every source with -fsingle-precision-constant
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("no-single-precision-constant")
+#endif
+typedef char soop_needs_double_constants[((long)299792458.0 == 299792458L) ? 1 : -1];
 #include "sgp4.h"
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
-#include <stdio.h>
 
 //WGS-72 constants (Vallado uses WGS-72 for SGP4)
 #define PI         3.14159265358979323846
@@ -38,7 +42,7 @@ static double packed_exp(const char *s)
     char mbuf[8]; int mi = 0;
     while (*s && *s != '-' && *s != '+' && mi < 6) mbuf[mi++] = *s++;
     mbuf[mi] = '\0';
-    double mant = msign * atof(mbuf) * pow(10.0, -(double)mi);
+    double mant = msign * strtod(mbuf, NULL) * pow(10.0, -(double)mi);
     int esign = 1;
     if      (*s == '-') { esign = -1; s++; }
     else if (*s == '+') { s++; }
@@ -47,35 +51,46 @@ static double packed_exp(const char *s)
     return mant * pow(10.0, esign * exp);
 }
 
+//one fixed-width TLE field as a number ---- A TLE is defined by column
+static double tle_field(const char *line, int col, int width)
+{
+    char buf[24];
+    int n = 0;
+    for (int i = 0; i < width && n < 23; i++)
+        buf[n++] = line[col - 1 + i];
+    buf[n] = '\0';
+    return strtod(buf, NULL);
+}
+
 int sgp4_parse_tle(const char *l1, const char *l2, sgp4_tle_t *t)
 {
     if (!l1 || !l2 || !t) return SGP4_ERR_PARSE;
     if (l1[0] != '1' || l2[0] != '2') return SGP4_ERR_PARSE;
+    if (strlen(l1) < 61 || strlen(l2) < 63) return SGP4_ERR_PARSE;
     memset(t, 0, sizeof(*t));
 
-    //line 1: epoch
-    int yr2; double epoch_day;
-    if (sscanf(l1 + 18, "%2d%12lf", &yr2, &epoch_day) != 2) return SGP4_ERR_PARSE;
+    //line 1: epoch, columns 19-20 (year) and 21-32 (day of year)
+    const int yr2 = (int)tle_field(l1, 19, 2);
+    const double epoch_day = tle_field(l1, 21, 12);
+    if (epoch_day < 1.0 || epoch_day >= 367.0) return SGP4_ERR_PARSE;
     int yr = (yr2 < 57) ? (2000 + yr2) : (1900 + yr2);
     double jd_jan0 = sgp4_jday(yr, 1, 0, 0, 0, 0.0);  //JD of Dec 31.0 of yr-1
     t->epoch_jd      = jd_jan0;
     t->epoch_jd_frac = epoch_day;
 
-    { char buf[12]; strncpy(buf, l1 + 33, 10); buf[10] = '\0'; t->ndot = atof(buf); }
+    //ndot/2 (34-43), nddot/6 packed (45-52), bstar packed (54-61)
+    t->ndot = tle_field(l1, 34, 10);
     { char buf[10]; strncpy(buf, l1 + 44, 8); buf[8] = '\0'; t->nddot = packed_exp(buf); }
     { char buf[10]; strncpy(buf, l1 + 53, 8); buf[8] = '\0'; t->bstar = packed_exp(buf); }
 
-    //line 2
-    double inc_deg, raan_deg, ecc_raw, argp_deg, ma_deg, no_rev;
-    if (sscanf(l2 + 8, "%8lf %8lf %7lf %8lf %8lf %11lf",
-               &inc_deg, &raan_deg, &ecc_raw, &argp_deg, &ma_deg, &no_rev) != 6)
-        return SGP4_ERR_PARSE;
-
-    t->inclo    = inc_deg  * DEG2RAD;
-    t->nodeo    = raan_deg * DEG2RAD;
-    t->ecco     = ecc_raw * 1.0e-7;
-    t->argpo    = argp_deg * DEG2RAD;
-    t->mo       = ma_deg   * DEG2RAD;
+    //line 2: inclination 9-16, RAAN 18-25
+    const double no_rev = tle_field(l2, 53, 11);
+    if (no_rev <= 0.0) return SGP4_ERR_PARSE;
+    t->inclo    = tle_field(l2, 9, 8) * DEG2RAD;
+    t->nodeo    = tle_field(l2, 18, 8) * DEG2RAD;
+    t->ecco     = tle_field(l2, 27, 7) * 1.0e-7;
+    t->argpo    = tle_field(l2, 35, 8) * DEG2RAD;
+    t->mo       = tle_field(l2, 44, 8) * DEG2RAD;
     t->no_kozai = no_rev * TWOPI / 1440.0;   //rev/day -> rad/min
     return SGP4_OK;
 }

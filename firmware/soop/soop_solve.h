@@ -4,7 +4,7 @@
 
 #include <stddef.h>
 
-#define SOOP_F_IRIDIUM 1626270000.0   //Hz, Iridium Ring Alert
+#define SOOP_F_IRIDIUM 1626270833.0   //Hz, Iridium Ring Alert
 #define SOOP_CLIGHT    299792458.0    //m/s
 #define SOOP_MAX_ITERS 40
 #define SOOP_TOL       1e-4           //m, convergence on the position step
