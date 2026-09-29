@@ -51,8 +51,19 @@ void AP_SoOP::update()
         return;
     }
 
+    if (_guard_state == SOOP_G_SPOOFED && !_spoof_handled) {
+        //the real GPS disagrees with Iridium: stop the autopilot following it
+        _spoof_handled = true;
+        GCS_SEND_TEXT(MAV_SEVERITY_CRITICAL, "SoOP: GPS spoofed, %.0f m from Iridium - using SoOP",
+                      double(_guard_dist));
+        if (!AP_Param::set_by_name("GPS_AUTO_SWITCH", 0) || !AP_Param::set_by_name("GPS_PRIMARY", 1)) {
+            GCS_SEND_TEXT(MAV_SEVERITY_CRITICAL, "SoOP: could not switch GPS - take manual control");
+        }
+    }
+
     veh_t v {};
     v.t = AP_HAL::micros64() / double(1000000);
+    v.armed = hal.util->get_soft_armed();
 
     Vector3f vel;
     const AP_AHRS &ahrs = AP::ahrs();
@@ -64,7 +75,8 @@ void AP_SoOP::update()
     //the real GPS, only while it is good enough to calibrate against
     const AP_GPS &gps = AP::gps();
     float hacc = 99.0f, und = 0.0f;
-    const bool good = gps.status(0) >= AP_GPS::GPS_OK_FIX_3D && gps.num_sats(0) >= 6
+    const bool good = _guard_state != SOOP_G_SPOOFED
+                      && gps.status(0) >= AP_GPS::GPS_OK_FIX_3D && gps.num_sats(0) >= 6
                       && gps.horizontal_accuracy(0, hacc) && hacc < 5.0f;
     if (good) {
         if (gps.get_undulation(0, und)) {
@@ -117,6 +129,8 @@ void AP_SoOP::load_config()
         { "mask_deg", &c.mask_deg }, { "max_tle_age_d", &c.max_tle_age_d },
         { "fix_max_hacc", &c.fix_max_hacc },
         { "along_m_per_day", &c.orbit[SOOP_ORBIT_TLE].along_m_per_day },
+        { "guard_k", &_gcfg.k }, { "guard_floor_m", &_gcfg.floor_m },
+        { "guard_hold_s", &_gcfg.hold_s }, { "guard_free_vel", &_gcfg.free_vel_sigma },
     };
     //no scanf here: ArduPilot's C library has none with floating point
     char *save = nullptr;
@@ -192,9 +206,10 @@ int AP_SoOP::load_catalogue()
 bool AP_SoOP::setup()
 {
     _dsp = (soop_dsp_t *)hal.util->malloc_type(sizeof(soop_dsp_t), AP_HAL::Util::MEM_FAST);
-    _nav = (soop_nav_t *)calloc(1, sizeof(soop_nav_t));
+    _guard = (soop_guard_t *)calloc(1, sizeof(soop_guard_t));
+    _nav = _guard ? &_guard->main : nullptr;
     _block = (int16_t *)calloc(2 * SOOP_CAPTURE_BLOCK, sizeof(int16_t));
-    if (!_dsp || !_nav || !_block) {
+    if (!_dsp || !_guard || !_block) {
         GCS_SEND_TEXT(MAV_SEVERITY_ERROR, "SoOP: out of memory");
         return false;
     }
@@ -203,6 +218,7 @@ bool AP_SoOP::setup()
     soop_nav_cfg_t cfg;
     soop_nav_default_cfg(&cfg);
     _nav->cfg = cfg;
+    soop_guard_default_cfg(&_gcfg);
     load_config();
     cfg = _nav->cfg;
 
@@ -232,7 +248,7 @@ bool AP_SoOP::setup()
         GCS_SEND_TEXT(MAV_SEVERITY_INFO, "SoOP: tuner locked, VCO %u, %d satellites",
                       tuner.vco(), _n_cat);
     }
-    soop_nav_init(_nav, &cfg, _cat, _n_cat, 0.0);
+    soop_guard_init(_guard, &cfg, &_gcfg, _cat, _n_cat, 0.0);
     _fs = SOOP_FS;
     return true;
 }
@@ -338,7 +354,7 @@ void AP_SoOP::feed_until(double horizon)
         if (bi >= 0 && (!have_v || _bq[bi].t < v.t)) {
             const burst_t b = _bq[bi];
             _bq[bi] = _bq[--_bq_n];
-            const int res = soop_nav_burst(_nav, b.t, b.f, b.sigma);
+            const int res = soop_guard_burst(_guard, b.t, b.f, b.sigma);
             AP::logger().WriteStreaming("SOB", "TimeUS,T,F,Sig,CN0,Res,Sat,Ch,Inn",
                                         "QdfffBIbf", AP_HAL::micros64(), b.t, b.f, b.sigma, b.cn0,
                                         uint8_t(res), uint32_t(res == SOOP_B_FUSED ? _nav->last_sat : 0),
@@ -353,14 +369,20 @@ void AP_SoOP::feed_until(double horizon)
             WITH_SEMAPHORE(_sem);
             _veh_tail = (_veh_tail + 1) % AP_SOOP_VEH_QUEUE;
         }
+        if (v.armed && !_was_armed) {
+            soop_guard_arm(_guard, v.t);    //from here the GPS is checked against Iridium
+        }
+        _was_armed = v.armed;
         if (v.vel_ok) {
-            soop_nav_velocity(_nav, v.t, v.vn, v.ve, v.vd);
+            soop_guard_velocity(_guard, v.t, v.vn, v.ve, v.vd);
         }
         if (v.gps_ok) {
-            soop_nav_gps(_nav, v.t, v.gps_utc, v.gps_ecef);
+            soop_guard_gps(_guard, v.t, v.gps_utc, v.gps_ecef);
+            _guard_dist = float(_guard->dist_m);
+            _guard_state = uint8_t(_guard->state);
         }
         if (v.baro_ok) {
-            soop_nav_baro(_nav, v.t, v.baro_h);
+            soop_guard_baro(_guard, v.t, v.baro_h);
         }
     }
 }
@@ -368,7 +390,7 @@ void AP_SoOP::feed_until(double horizon)
 void AP_SoOP::publish(double t)
 {
     soop_fix_t f;
-    const bool valid = soop_nav_fix(_nav, t, &f);
+    const bool valid = soop_guard_fix(_guard, t, &f);
     AP::logger().WriteStreaming("SOF", "TimeUS,Lat,Lng,Alt,HAcc,VAcc,SAcc,NIS,NT,V",
                                 "QLLffffBB" "B", AP_HAL::micros64(),
                                 int32_t(f.lat_deg * 10000000), int32_t(f.lon_deg * 10000000),
@@ -403,12 +425,13 @@ void AP_SoOP::log_status(double t)
     if (_capturing) {
         tuner.check_lock();
     }
-    AP::logger().WriteStreaming("SOS", "TimeUS,CPU,Bps,Ovr,Lock,VT,NT,Clk,Fused,Amb,Unm",
-                                "QfHIBBBfIII", AP_HAL::micros64(), cpu, uint16_t(_bursts_s),
+    AP::logger().WriteStreaming("SOS", "TimeUS,CPU,Bps,Ovr,Lock,VT,NT,Clk,Fused,Amb,Unm,G,GD,GL",
+                                "QfHIBBBfIIIBff", AP_HAL::micros64(), cpu, uint16_t(_bursts_s),
                                 capture.overruns(), uint8_t(tuner.locked()), tuner.vtune_adc(),
                                 uint8_t(_nav->n_track), float(_nav->x[6]),
                                 _nav->count[SOOP_B_FUSED], _nav->count[SOOP_B_AMBIGUOUS],
-                                _nav->count[SOOP_B_UNMATCHED]);
+                                _nav->count[SOOP_B_UNMATCHED], uint8_t(_guard->state),
+                                float(_guard->dist_m), float(_guard->limit_m));
     _cpu_us = 0;
     _samples_s = 0;
     _bursts_s = 0;

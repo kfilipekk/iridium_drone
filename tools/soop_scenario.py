@@ -306,7 +306,8 @@ ORBIT_ERR = {
 #A flight under the real constellation
 def make_obs(outdir, seed=1, gps_min=5.0, denial_min=15.0, speed=15.0, tle_age_d=1.0,
              lat=52.2053, lon=0.1218, h=160.0, rate=1.0, vel_sigma=1.0, beta_sigma=50.0,
-             orbits="tle", false_rate=0.05, outlier_frac=0.01, static=False):
+             orbits="tle", false_rate=0.05, outlier_frac=0.01, static=False, arm_s=60.0,
+             spoof=None, back_min=0.0):
     import soop_solver as sol
     rng = random.Random(seed)
     os.makedirs(outdir, exist_ok=True)
@@ -314,7 +315,9 @@ def make_obs(outdir, seed=1, gps_min=5.0, denial_min=15.0, speed=15.0, tle_age_d
     t_utc0 = max(ep for _, _, ep in tles) + datetime.timedelta(days=tle_age_d)
     jd0, fr0 = sol._jday(t_utc0)
     gps_s, denial_s = gps_min * 60.0, denial_min * 60.0
-    traj = trajectory(rng, lat, lon, h, gps_s, denial_s, 0.0 if static else speed)
+    back_s = gps_s + denial_s                        #the GPS returns here, for back_min
+    traj = trajectory(rng, lat, lon, h, gps_s, denial_s + back_min * 60.0,
+                      0.0 if static else speed)
     dt_tr = traj[1][0] - traj[0][0]
 
     def truth_at(t):
@@ -378,7 +381,7 @@ def make_obs(outdir, seed=1, gps_min=5.0, denial_min=15.0, speed=15.0, tle_age_d
         return math.degrees(math.asin(-sum(d[k] * dn[k] for k in range(3)) / rho)), rho
 
     #bursts
-    t_end = gps_s + denial_s
+    t_end = gps_s + denial_s + back_min * 60.0
     bursts, truth_bursts = [], []
     mcu_err = lambda t: mcu0 + mcu_ramp * t
     board = lambda t: boot + t * (1 + mcu0) + 0.5 * mcu_ramp * t * t
@@ -447,19 +450,33 @@ def make_obs(outdir, seed=1, gps_min=5.0, denial_min=15.0, speed=15.0, tle_age_d
     vel_err = [GaussMarkov(rng, vel_sigma, 300.0, 0.0), GaussMarkov(rng, vel_sigma, 300.0, 0.0),
                GaussMarkov(rng, 0.3, 60.0, 0.0)]
     baro_err = GaussMarkov(rng, 3.0, 600.0, 0.0)
+    #the spoofer's offset at scenario time t: north, east (m) and their rates
+    def spoofed(t):
+        if not spoof or t < spoof["start_s"]:
+            return 0.0, 0.0, 0.0, 0.0
+        b = math.radians(spoof.get("bearing_deg", 90.0))
+        rate = spoof.get("rate", 0.0)
+        d = spoof.get("jump_m", 0.0) + rate * (t - spoof["start_s"])
+        return d * math.cos(b), d * math.sin(b), rate * math.cos(b), rate * math.sin(b)
+
     lines = [f"# soop_scenario obs: seed {seed}, {gps_min:g} min GPS then {denial_min:g} min "
              f"denied, {0 if static else speed:g} m/s, {orbits} orbits {tle_age_d:g} d old",
              f"H {jd0:.1f} {fr0:.12f}"]
+    lines.append(f"R {board(arm_s):.6f}")
     for t, la, lo, hh, vn, ve, vd in traj[::1]:
         tb = board(t)
-        denied = t >= gps_s
+        denied = gps_s <= t < back_s
         ve_ = [vel_err[i].step(dt_tr) if denied else 0.02 * rng.gauss(0, 1) for i in range(3)]
-        lines.append(f"E {tb:.6f} {vn + ve_[0]:.4f} {ve + ve_[1]:.4f} {vd + ve_[2]:.4f}")
+        sn, se, svn, sve = spoofed(t) if not denied else (0.0, 0.0, 0.0, 0.0)
+        lines.append(f"E {tb:.6f} {vn + ve_[0] + svn:.4f} {ve + ve_[1] + sve:.4f} "
+                     f"{vd + ve_[2]:.4f}")
         if round(t / dt_tr) % 2 == 0:
             b = baro_err.step(2 * dt_tr) if denied else 0.0
             lines.append(f"A {tb:.6f} {hh + b + rng.gauss(0, 0.3):.3f}")
         if not denied and round(t / dt_tr) % 2 == 0:
-            r = sol.geodetic_to_ecef(la, lo, hh)
+            n_, e_, _ = ned_axes(la, lo)
+            r = [c + sn * n_[k] + se * e_[k]
+                 for k, c in enumerate(sol.geodetic_to_ecef(la, lo, hh))]
             lines.append(f"G {tb:.6f} {t + gps_lag + rng.gauss(0, 0.002):.6f} "
                          + " ".join(f"{r[k] + rng.gauss(0, 1.5):.3f}" for k in range(3)))
     order = sorted(range(len(bursts)), key=lambda i: bursts[i][0])
@@ -473,7 +490,7 @@ def make_obs(outdir, seed=1, gps_min=5.0, denial_min=15.0, speed=15.0, tle_age_d
     truth = dict(seed=seed, jd0=jd0 + fr0, t_utc0=t_utc0.isoformat(), gps_s=gps_s,
                  denial_s=denial_s, boot=boot, mcu0=mcu0, mcu_ramp=mcu_ramp, gps_lag=gps_lag,
                  tcxo0_hz=-f_lo * tcxo0, speed=0 if static else speed, tle_age_d=tle_age_d,
-                 rate=rate, vel_sigma=vel_sigma, orbits=orbits,
+                 rate=rate, vel_sigma=vel_sigma, orbits=orbits, arm_s=arm_s, spoof=spoof,
                  sats={str(k): dict(name=v["name"].strip(), age_d=v["age_d"],
                                     along_m=v["along_m"], cross_m=v["cross_m"],
                                     radial_m=v["radial_m"], beta_hz=v["beta_hz"])

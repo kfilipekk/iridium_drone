@@ -60,7 +60,8 @@ FILES = ["AP_SoOPFix.h", "AP_SoOPFix.cpp", "AP_GPS_SoOP.h", "AP_GPS_SoOP.cpp"]
 SOOP_TASK = ["AP_SoOP.h", "AP_SoOP.cpp", "AP_SoOP_MAX2112.h", "AP_SoOP_MAX2112.cpp",
              "AP_SoOP_Capture.h", "AP_SoOP_Capture.cpp"]
 SOOP_CORE = ["soop_signal.h", "soop_dsp.h", "soop_dsp.c", "sgp4.h", "sgp4.c",
-             "soop_ephem.h", "soop_ephem.c", "soop_nav.h", "soop_nav.c"]
+             "soop_ephem.h", "soop_ephem.c", "soop_nav.h", "soop_nav.c", "soop_guard.h",
+             "soop_guard.c"]
 
 
 def main():

@@ -5,7 +5,7 @@
 
 extern "C" {
 #include "soop_dsp.h"
-#include "soop_nav.h"
+#include "soop_guard.h"
 }
 
 #define AP_SOOP_VEH_QUEUE 64
@@ -27,6 +27,7 @@ private:
         float  baro_h;           //ellipsoid-referenced height from the baro
         bool   baro_ok;
         bool   gps_ok;           //the real GPS, trusted this instant
+        bool   armed;
         double gps_utc;          //UTC s since J2000
         double gps_ecef[3];
     };
@@ -53,7 +54,13 @@ private:
 
     //set up in the thread
     soop_dsp_t *_dsp;
-    soop_nav_t *_nav;
+    soop_guard_t *_guard;
+    soop_nav_t *_nav;            //the guard's main filter
+    soop_guard_cfg_t _gcfg;
+    bool       _was_armed;
+    volatile uint8_t _guard_state;   //SOOP_G_*, written by the thread
+    volatile float _guard_dist;      //m, the GPS from the GPS-free filter
+    bool       _spoof_handled;
     soop_sat_t *_cat;
     int16_t    *_block;
     int        _n_cat;

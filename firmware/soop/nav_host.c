@@ -1,5 +1,5 @@
-//nav_host.c - run the on-board navigation (soop_nav.c) on a desktop
-#include "soop_nav.h"
+//nav_host.c - run the on-board navigation
+#include "soop_guard.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,7 +8,8 @@
 #define MAX_SATS 128
 
 static soop_sat_t cat[MAX_SATS];
-static soop_nav_t nav;
+static soop_guard_t guard;
+static soop_nav_t *const nav_ = &guard.main;
 
 static char *slurp(const char *path)
 {
@@ -80,7 +81,9 @@ int main(int argc, char **argv)
             cfg.vel_sigma = atof(argv[++k]);
         }
     }
-    soop_nav_init(&nav, &cfg, cat, n_cat, 0.0);
+    soop_guard_cfg_t gcfg;
+    soop_guard_default_cfg(&gcfg);
+    soop_guard_init(&guard, &cfg, &gcfg, cat, n_cat, 0.0);
 
     printf("kind,t,a,b,c,d,e,f,g,h,i,j,k\n");
     char line[256];
@@ -92,22 +95,23 @@ int main(int argc, char **argv)
                 utc0 = soop_jd_to_j2000(a, b);
             continue;
         }
-        if (!strchr("EAGDPU", line[0]) || sscanf(line + 1, "%lf", &t) != 1)
+        if (!strchr("EAGDPUR", line[0]) || sscanf(line + 1, "%lf", &t) != 1)
             continue;
         if (next_fix < 0.0)
             next_fix = t;
         while (t >= next_fix) {                  //fixes due before this record
             soop_fix_t fx;
-            soop_nav_fix(&nav, next_fix, &fx);
-            printf("F,%.3f,%.9f,%.9f,%.2f,%.3f,%.3f,%.3f,%.1f,%.1f,%.2f,%d,%d\n", fx.t,
-                   fx.lat_deg, fx.lon_deg, fx.h_m, fx.vn, fx.ve, fx.vd, fx.hacc_m, fx.vacc_m,
-                   fx.nis, fx.n_track, fx.valid);
+            soop_guard_fix(&guard, next_fix, &fx);
+            printf("F,%.3f,%.9f,%.9f,%.2f,%.3f,%.3f,%.3f,%.1f,%.1f,%.2f,%d,%d,%d,%.1f,%.1f\n",
+                   fx.t, fx.lat_deg, fx.lon_deg, fx.h_m, fx.vn, fx.ve, fx.vd, fx.hacc_m,
+                   fx.vacc_m, fx.nis, fx.n_track, fx.valid, guard.state, guard.dist_m,
+                   guard.limit_m);
             if (sats && fmod(next_fix - 1.0, 10.0) < 1.0 - 1e-9)
-                for (int k = 0; k < nav.n_track; k++) {
+                for (int k = 0; k < nav_->n_track; k++) {
                     const int o = SOOP_NAV_NBASE + SOOP_NAV_NS * k;
                     printf("T,%.3f,%u,%.2f,%.2f,%.5f,%.5f\n", fx.t,
-                           (unsigned)cat[nav.track[k]].norad, nav.x[o], sqrt(nav.P[o][o]),
-                           nav.x[o + 1], sqrt(nav.P[o + 1][o + 1]));
+                           (unsigned)cat[nav_->track[k]].norad, nav_->x[o], sqrt(nav_->P[o][o]),
+                           nav_->x[o + 1], sqrt(nav_->P[o + 1][o + 1]));
                 }
             next_fix += 1.0;
         }
@@ -115,44 +119,48 @@ int main(int argc, char **argv)
         case 'P': {
             double r[3];
             if (sscanf(line + 1, "%lf %lf %lf %lf %lf", &t, &r[0], &r[1], &r[2], &a) == 5)
-                soop_nav_set_position(&nav, t, r, a);
+                soop_guard_set_position(&guard, t, r, a);
             break;
         }
         case 'U':
             if (sscanf(line + 1, "%lf %lf", &t, &a) == 2)
-                soop_nav_set_time(&nav, t, utc0 + a);
+                soop_guard_set_time(&guard, t, utc0 + a);
             break;
         case 'E':
             if (sscanf(line + 1, "%lf %lf %lf %lf", &t, &a, &b, &c) == 4)
-                soop_nav_velocity(&nav, t, (float)a, (float)b, (float)c);
+                soop_guard_velocity(&guard, t, (float)a, (float)b, (float)c);
             break;
         case 'A':
             if (sscanf(line + 1, "%lf %lf", &t, &a) == 2)
-                soop_nav_baro(&nav, t, a);
+                soop_guard_baro(&guard, t, a);
             break;
         case 'G': {
             double r[3];
             if (sscanf(line + 1, "%lf %lf %lf %lf %lf", &t, &a, &r[0], &r[1], &r[2]) == 5)
-                soop_nav_gps(&nav, t, utc0 + a, r);
+                soop_guard_gps(&guard, t, utc0 + a, r);
             break;
         }
+        case 'R':
+            soop_guard_arm(&guard, t);
+            break;
         case 'D':
             if (sscanf(line + 1, "%lf %lf %lf %lf", &t, &a, &b, &d) == 4) {
-                const int res = soop_nav_burst(&nav, t, a, b);
+                const int res = soop_guard_burst(&guard, t, a, b);
                 printf("B,%.6f,%d,%d,%d,%.2f,%.2f\n", t, res,
-                       res == SOOP_B_FUSED ? nav.last_sat : 0,
-                       res == SOOP_B_FUSED ? nav.last_ch : -1,
-                       res == SOOP_B_FUSED ? nav.last_y : 0.0,
-                       res == SOOP_B_FUSED ? nav.last_sd : 0.0);
+                       res == SOOP_B_FUSED ? nav_->last_sat : 0,
+                       res == SOOP_B_FUSED ? nav_->last_ch : -1,
+                       res == SOOP_B_FUSED ? nav_->last_y : 0.0,
+                       res == SOOP_B_FUSED ? nav_->last_sd : 0.0);
             }
             break;
         }
     }
     fclose(f);
     fprintf(stderr, "catalogue %d; bursts fused %u ambiguous %u unmatched %u pending %u "
-            "acquiring %u no-time %u; resets %u; clock tries %u\n", n_cat,
-            nav.count[SOOP_B_FUSED], nav.count[SOOP_B_AMBIGUOUS], nav.count[SOOP_B_UNMATCHED],
-            nav.count[SOOP_B_PENDING], nav.count[SOOP_B_ACQUIRING], nav.count[SOOP_B_NO_TIME],
-            nav.n_resets, nav.n_acq_tries);
+            "acquiring %u no-time %u; resets %u; clock tries %u; gps jumps %u; guard %d "
+            "at %.1f\n", n_cat,
+            nav_->count[SOOP_B_FUSED], nav_->count[SOOP_B_AMBIGUOUS], nav_->count[SOOP_B_UNMATCHED],
+            nav_->count[SOOP_B_PENDING], nav_->count[SOOP_B_ACQUIRING], nav_->count[SOOP_B_NO_TIME],
+            nav_->n_resets, nav_->n_acq_tries, guard.n_jumps, guard.state, guard.t_spoofed);
     return 0;
 }
