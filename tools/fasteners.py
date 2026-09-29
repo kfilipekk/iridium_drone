@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 #every threaded joint in the aircraft, with the thickness stack each length comes from
 #Usage: python3 tools/fasteners.py [--md]
-import os, sys
+import math, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import design
 
@@ -24,15 +24,15 @@ def std(x):
     return None
 
 
-#warn when rounding up to a stock length could bottom the screw out
-def overshoot_note(needed, ordered, engage):
-    if ordered is None:
+#warn when rounding up to a stock length could bottom the screw out in a tapped hole
+def overshoot_note(needed, ordered, engage, dia=3.0, tapped=True):
+    if ordered is None or not tapped:
         return None
     extra = ordered - needed
     if extra < 0.25:
         return None
     total = engage + extra
-    return (f"rounding {needed:.1f} -> M{'3'} x{ordered} puts {total:.1f} mm into the "
+    return (f"rounding {needed:.1f} -> M{dia:g}x{ordered} puts {total:.1f} mm into the "
             f"thread, not {engage:.1f}. MEASURE THE TAPPED DEPTH before fitting: if it "
             f"is shallower than {total:.1f} mm the screw bottoms out and clamps nothing. "
             f"A {ordered - 2} mm screw plus a washer is the usual fix.")
@@ -42,12 +42,18 @@ ROWS = []
 
 
 #layers: [(name, mm, src)] the screw passes through before engaging
-def joint(where, dia, layers, qty, note=""):
+def joint(where, dia, layers, qty, note="", engage=None, material="steel", limit=None):
     total = sum(t for _, t, _ in layers)
-    need = total + ENGAGE[dia]
+    engage = ENGAGE[dia] if engage is None else engage
+    need = total + engage
     L = std(need)
-    ROWS.append(dict(where=where, dia=dia, qty=qty, through=total,
-                     engage=ENGAGE[dia], need=need, L=L, layers=layers, note=note))
+    if limit is not None and L is not None and L - total > limit + 1e-9:
+        note = (note + "; " if note else "") + (
+            f"M{dia:g}x{L} would put {L - total:.1f} mm into a {limit:.1f} mm bore - "
+            f"bottoms out: use M{dia:g}x{L - 1 if L - 1 >= need else L} or a washer")
+    ROWS.append(dict(where=where, dia=dia, qty=qty, through=total, engage=engage,
+                     need=need, L=L, layers=layers, note=note, material=material,
+                     tapped=limit is None and engage == ENGAGE[dia]))
 
 
 _MJ = design.MOTOR_JOINT
@@ -65,15 +71,72 @@ _BOT = design.stack_heights(_pcbnew.LoadBoard(os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "NAVCORE-SoOP.kicad_pcb")),
     skip_dnp=True)[1]
 joint("FC to ESC to frame, the 30.5 mm stack bolt", 3.0,
-      [("FC PCB", FC_PCB[0], FC_PCB[1]),
+      [("nylon washer under the head", design.FC_HOLE_HARDWARE["top"][0]["t"],
+        "[L] M3 nylon washer - keeps the steel head off the pads (design.FC_HOLE_HARDWARE)"),
+       ("FC PCB", FC_PCB[0], FC_PCB[1]),
        ("ESC-to-FC spacer", round(design.ESC["parts"] + GAP[0] + _BOT, 1),
         f"[M] ESC parts {design.ESC['parts']:.1f} + air {GAP[0]:.1f} + board bottom "
         f"parts {_BOT:.1f} (design.stack_heights, measured)"),
        ("ESC PCB", ESC_PCB[0], ESC_PCB[1]),
        ("mid plate", F["medium_t"], "[D] TBS: middle plate 2 mm"),
        ("arm root", F["arm_t"], "[D] TBS: arm 6 mm")],
-      4, "into the bottom plate's press nut (kit, 8 pcs); buy 4 x M3 female standoff "
-         "12 mm for the ESC-to-FC spacer - a grommet cannot hold 12.1 mm")
+      4, "into the bottom plate's press nut (kit, 8 pcs); buy 4 x M3 nylon female standoff 12 mm for the ESC-to-FC spacer - a grommet cannot hold 12.1 mm")
+
+#the printed mounts (design.MOUNTS): every part off the board
+import gen_scad_mounts as _gm
+
+_G = _gm.G
+_DERIVED = {"antenna_tower": {"gps.lid_under_head": _G["tower"]["lid_under_head"],
+                              "gps.pod_h": _G["tower"]["pod_h"]},
+            "range_cradle": {"body_h": _G["range"]["body_h"]}}
+_GPS = (0.0, _G["tower"]["gps_y"], (_G["tower"]["gps_bot"] + _G["tower"]["gps_top"]) / 2)
+_NUT_H = {2.0: 1.6, 2.5: 2.0, 3.0: 2.4}          #ISO 4032
+
+
+#A joint layer's thickness: a number, or a dimension named in design.py
+def _dim(mount, ref):
+    if not isinstance(ref, str):
+        return ref, "[D] design.FRAME - TBS plate thicknesses"
+    if "-" in ref:
+        a, b = ref.split("-")
+        return (_dim(mount, a)[0] - _dim(mount, b)[0],
+                f"[M] {mount}.{a} less {b} (gen_scad_mounts)")
+    if ref in _DERIVED.get(mount, {}):
+        return _DERIVED[mount][ref], f"[M] derived in tools/gen_scad_mounts.py ({ref})"
+    head, _, key = ref.partition(".")
+    spec = design.MOUNTS[mount]
+    if not key:
+        return spec[head], f"[M] design.MOUNTS['{mount}']"
+    if head in spec and key in spec[head]:
+        return spec[head][key], f"[M] design.MOUNTS['{mount}']['{head}']"
+    if head in design.MOUNTED:
+        return design.MOUNTED[head][key], design.MOUNTED[head]["src"]
+    return design.OFFBOARD[head][key], design.OFFBOARD[head]["src"][:80]
+
+
+for _m, _spec in design.MOUNTS.items():
+    for _j in _spec["joints"]:
+        _size = _j["size"]
+        _dia = design.INSERTS[_size]["dia"] if _size in design.INSERTS else float(_size[1:])
+        _layers = []
+        for _name, _ref in _j["layers"]:
+            _t, _src = _dim(_m, _ref)
+            _layers.append((_name, round(_t, 2), _src))
+        #brass near the compass: a joint at a known place is measured to the GPS
+        _near = (min(math.dist(p, _GPS) for p in _j["at"]) < design.NONMAG_RADIUS_MM
+                 if "at" in _j else "gps" in _spec["carries"])
+        _mat = "brass" if _near else "steel"
+        if _j["into"] == "insert":
+            _ins = design.INSERTS[_size]
+            joint(_j["where"], _dia, _layers, _j["qty"],
+                  f"into {_size.rstrip('s')} x {_ins['L']:g} heat-set inserts",
+                  engage=min(ENGAGE[_dia], _ins["L"]), material=_mat, limit=_ins["L"] + 1.0)
+        elif _j["into"] == "nut":
+            joint(_j["where"], _dia, _layers, _j["qty"], "nylon-insert lock nut on top",
+                  engage=_NUT_H[_dia] + 1.0, material=_mat)
+        else:
+            joint(_j["where"], _dia, _layers, _j["qty"],
+                  "into the kit's threaded standoff", material=_mat)
 
 UNKNOWN = [
     ("Frame assembly - top plate to standoffs", "M3",
@@ -101,10 +164,10 @@ def main():
         warns = []
         for r in ROWS:
             thru = " + ".join(f"{n} {t:.1f}" for n, t, _ in r["layers"])
-            _ov = overshoot_note(r["need"], r["L"], r["engage"])
+            _ov = overshoot_note(r["need"], r["L"], r["engage"], r["dia"], r.get("tapped", True))
             print(f"| {r['where']} | M{r['dia']:.0f} | {r['qty']} | {thru} "
                   f"= {r['through']:.1f} mm | {r['engage']:.1f} mm | "
-                  f"**M{r['dia']:.0f}x{r['L']}**{' &#9888;' if _ov else ''} |")
+                  f"**M{r['dia']:g}x{r['L']}** {r['material']}{' &#9888;' if _ov else ''} |")
             if _ov:
                 warns.append(f"- **{r['where']}** &#9888; {_ov}")
         if warns:
@@ -123,10 +186,10 @@ def main():
         for n, t, s in r["layers"]:
             print(f"      {n:22s} {t:5.1f} mm   {s}")
         print(f"      {'thread engagement':22s} {r['engage']:5.1f} mm   "
-              f"[A] 1 x diameter into soft material")
+              f"[A] {'1 x diameter into soft material' if r['engage'] == ENGAGE[r['dia']] else 'the insert, or a nut and a thread past it'}")
         print(f"      {'':22s} {'':5s}      -> needs {r['need']:.1f} mm, "
-              f"order M{r['dia']:.0f}x{r['L']}  x{r['qty']}")
-        _ov = overshoot_note(r["need"], r["L"], r["engage"])
+              f"order M{r['dia']:g}x{r['L']} {r['material']}  x{r['qty']}")
+        _ov = overshoot_note(r["need"], r["L"], r["engage"], r["dia"], r.get("tapped", True))
         if _ov:
             print(f"      WARN: {_ov}")
         if r["note"]:

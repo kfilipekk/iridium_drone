@@ -12,9 +12,6 @@ OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
 F, MO, B, P = design.FRAME, design.MOTOR, design.BATT, design.PROP
 M = design.MOUNTING
 PL = design.PLATES
-CR = design.CAMERA_REC
-BS = design.BELLY_SENSOR
-L = design.OFFBOARD["lidar"]   #LD06, [D] datasheet dimensions
 E, S, C, PI = design.ESC, design.SKID, design.CAMERA, design.PI
 
 #stack heights are measured from the board, not restated
@@ -58,6 +55,7 @@ motor_h        = {MO['h_mm']};
 prop_dia       = {P['dia_mm']:.1f};
 
 batt_l = {B['L']}; batt_w = {B['W']}; batt_h = {B['H']};
+batt_y = {design.BATT_POS['y']};   // forward of centre, so the rear posts stay free
 
 // ---- PLATE OUTLINES, PARSED FROM THE MANUFACTURER DXF ---------------------
 // drone.scad drew ALL THREE plates as one 50 mm square, from a variable whose own
@@ -98,27 +96,6 @@ esc_parts      = {E['parts']};
 skid_t          = {S['t']};
 cam_drop        = {S['drop']};
 
-// Nose recording camera - XIAO ESP32S3 Sense. rec_cam_y is how far forward it sits;
-// the prop discs clear the nose by 24-71 mm anywhere along it, so this is free choice.
-rec_cam_l       = {CR['L']};
-rec_cam_w       = {CR['W']};
-rec_cam_h       = {CR['H']};
-rec_cam_y       = {CR['nose_y_mm']};
-
-// Belly sensor - the downward rangefinder now, a flow+range module later. Mounts UNDER
-// the bottom plate because that is the only place anything can see the ground.
-belly_h         = {BS['typical_module_h']};
-belly_l         = {BS['l_mm']};
-belly_w         = {BS['w_mm']};
-
-// 360 lidar (LDROBOT LD06), belly-mounted upside-down - PRX1_ORIENT 1. Dimensions are
-// [D] datasheet, not guessed, and they are the reason SKID['drop'] went 25 -> 40 mm
-// (35 was tried first and rejected - 5.20 mm clearance; see the SKID note in design.py):
-// at 25 mm the belly had 28.5 mm of depth against a 33.30 mm lidar.
-lidar_l         = {L['L_mm']};
-lidar_w         = {L['W_mm']};
-lidar_h         = {L['H_mm']};
-lidar_y         = {L['mount_y_mm']};   // aft of the downward rangefinder at y=+18
 skid_hole_pitch = {S['hole_pitch']};
 gap             = {M['gap']};    // compressed grommet - [A], re-measure on assembly
 grommet_dia     = {M['grommet_d']};

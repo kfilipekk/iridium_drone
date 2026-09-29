@@ -355,6 +355,16 @@ def required_standoff(board, headroom=None):
                 src="[M] computed from the board + FRAME + ESC + MOUNTING against "
                     "TOP_PLATE_MOUNT (the kit's 22 mm front standoffs on the mid plate)")
 
+#what touches this board's faces at the four stack holes, outermost first
+FC_HOLE_HARDWARE = dict(
+    top=[dict(name="M3 nylon washer, under the stack bolt's head", reach_d=7.0, t=0.8,
+              conductive=False),
+         dict(name="M3 steel cap head", reach_d=5.5, t=3.0, conductive=True)],
+    bottom=[dict(name="M3 nylon hex spacer, 12 mm", reach_d=5.5 / 0.8660254, t=12.0,
+                 conductive=False)],
+    shank_d=3.0,
+    src="[D] ISO 4762 M3 head 5.5 mm; DIN 125 M3 washer 7.0 mm OD; [L] nylon washers 0.8 mm thick; [D] a 5.5 mm-AF hex reaches 6.35 mm across its corners")
+
 BOARD_T = 1.6                       #[M] 6-layer stackup, tools/design.py
 STANDOFF_STOCK = (25, 30, 35, 40, 45)   #[L] common M3 aluminium standoff lengths
 
@@ -483,8 +493,9 @@ OFFBOARD = dict(
                #the height of the optical window above the mounting base
                scan_plane_height_mm=None,
     gbp=13.99,
-    #position on the belly, mm aft of centre (negative = aft)
-    mount_y_mm=-22.0,     #[A] measure on arrival
+    #position on the belly: set from MOUNTS
+    mount_y_mm=None,
+               #power comes off the SERIAL6 pad group's 5V/GND pins
                wiring={"TX": "TP6 (USART1_RX)", "5V": "P71", "GND": "P74"},
                params={"SERIAL2_PROTOCOL": 11, "SERIAL2_BAUD": 230, "PRX1_TYPE": 16,
                        "PRX1_ORIENT": 1, "BRD_SER2_RTSCTS": 0},
@@ -574,6 +585,126 @@ PROP = dict(name="7040", dia_mm=178.43, g=7.9, bore_mm=5.0, mount="M5",
             src="[D] Gemfan Flash 7040-3 published spec: 5 mm centre hole, 178.43 mm disc, 7.9 g, PC. Bore matches the [D] M5 motor shaft")
 
 
+#mounts: every part off the board has a printed mount and screws coordinates as the CAD
+
+#heat-set inserts: CNC Kitchen's published sizes
+INSERTS = {
+    "M2":   dict(dia=2.0, L=3.0, od=3.6, bore=3.2),
+    "M2.5": dict(dia=2.5, L=4.0, od=4.6, bore=4.0),
+    "M3":   dict(dia=3.0, L=5.7, od=4.6, bore=4.0),
+    "M3s":  dict(dia=3.0, L=3.0, od=4.6, bore=4.0),     #the short M3, for thin walls
+}
+INSERT_WALL = 1.6
+INSERT_SRC = ("[L] CNC Kitchen heat-set insert range as listed by kb-3d.com: M2 x 3.0 in a 3.2 mm bore, M2.5 x 4.0 and M3 x 3.0 / 5.7 in 4.0 mm")
+#hardware this close to the compass (inside the GPS) is brass or nylon
+NONMAG_RADIUS_MM = 50.0
+
+#the parts the mounts carry: envelopes
+MOUNTED = dict(
+    gps=dict(name="Matek M10Q-5883 (M10 GNSS + QMC5883L)", L=20.0, W=20.0, H=12.4, g=8.0,
+             src="[L] Matek M10Q-5883 listings (RMRC, GetFPV): 20 x 20 x 12.4 mm, 8 g; no "
+                 "mounting holes, so it sits in a pocket under a screwed lid"),
+    iridium_patch=dict(name="Iridium passive patch, 1616-1626.5 MHz", L=82.0, W=80.0, H=15.0,
+                       g=25.0, flange_t=2.0, holes=((-35.0, -34.0), (35.0, 34.0)),
+                       src="[L] 82 x 80 x 15 mm, 25 g, side SMA; [A] the two diagonal corner holes and the 2 mm flange - size and position unpublished"),
+    sawbird=dict(name="Nooelec SAWbird+ IR (barebones)", L=38.0, W=23.0, H=8.0, g=8.0,
+                 pcb_t=1.6, holes=((0.0, -15.0), (0.0, 15.0)),
+                 src="[A] outline, height, mass and the two M3 holes - Nooelec publishes "
+                     "none of them for the barebones board; MEASURE ON ARRIVAL"),
+    rx=dict(name="RadioMaster RP3 (ELRS 2.4 GHz, two antennas)", L=22.0, W=13.0, H=4.0,
+            g=1.6, src="[L] RadioMaster RP3 listing: 22 x 13 x 4 mm; no holes, so it sits "
+                       "in a pocket under a screwed cover"),
+    elrs_antenna=dict(name="ELRS 2.4 GHz T antenna", L=65.0, dia=3.0,
+                      src="[L] the RP3's two T antennas, ~65 mm; [A] 3 mm across the "
+                          "sleeve"),
+    xiao=dict(name=CAMERA_REC["name"], L=17.5, W=13.0, H=21.0, lens_dia=8.0,
+              src=CAMERA_REC["src"] + "; stands on edge, board facing forward, so the "
+                                      "Sense lens looks ahead"),
+    lidar=dict(name="LDROBOT LD06", hole_diag_mm=(28.2, 28.2), hole_depth_mm=5.8,
+               src="[D] LDROBOT LD06 datasheet: two M2.5 holes in the base on a 28.2 x 28.2 "
+                   "mm diagonal, 5.8 mm deep with 4.8 mm counterbores"),
+    range_down=dict(name="Benewake TFS20-L", L=15.0, W=21.0, H=7.87, g=1.35,
+                    src="[D] Benewake TFS20-L datasheet: 21 x 15 mm board, 7.87 mm tall, "
+                        "1.35 g, no mounting holes, so it sits in a cradle under a lid"),
+)
+
+_TOP_Z = FRAME["bottom_t"] + TOP_PLATE_MOUNT["rear_standoff"] + FRAME["upper_t"]
+_MID_Z = FRAME["bottom_t"] + FRAME["arm_t"]            #the mid plate's underside
+#the battery on the top plate, pushed forward
+BATT_POS = dict(y=-4.0, z=_TOP_Z,
+                src="[M] the 138 mm pack runs y -73 to +65; the top plate runs -75.4 to "
+                    "+84.9 (cad/frame-dxf.json) and the antenna tower's foot starts at +68.8")
+
+#each mount: where it sits, what it carries
+MOUNTS = dict(
+    antenna_tower=dict(
+        carries=("iridium_patch", "gps", "sawbird"),
+        foot=dict(x=36.0, y=24.0, t=4.0, y0=TOP_PLATE_MOUNT["rear_posts"][3][1]),
+        column=dict(x=24.0, y=14.0, wall=2.4),
+        #the deck clears the battery by 8 mm: the strap and a finger
+        deck=dict(x=86.0, y=84.0, t=3.0, y0=62.0, z=_TOP_Z + BATT["H"] + 8.0),
+        #the GPS sits behind the patch with its top 2 mm above the patch's
+        gps=dict(y0=118.0, pod_y=28.0, top_above_patch=2.0, pocket=8.0, lid_t=2.0,
+                 lid_cbore=2.0),       #sinks the heads so an M2x20 takes the insert's 3 mm
+        sawbird=dict(standoff=3.0, z0=67.0),
+        joints=[dict(where="antenna tower to top plate, at the rear posts", size="M3", qty=2,
+                     at=[(x, y, _TOP_Z) for x, y in TOP_PLATE_MOUNT["rear_posts"][2:]],
+                     layers=[("tower foot", "foot.t"), ("top plate", FRAME["upper_t"])],
+                     into="standoff"),
+                dict(where="Iridium patch to the tower deck", size="M3", qty=2,
+                     layers=[("patch flange", "iridium_patch.flange_t")], into="insert"),
+                dict(where="GPS lid and pod to the tower's tongue", size="M2", qty=2,
+                     layers=[("lid, under the recessed head", "gps.lid_under_head"),
+                             ("GPS pod", "gps.pod_h")], into="insert"),
+                dict(where="SAWbird+ IR to the tower column", size="M3s", qty=2,
+                     layers=[("SAWbird PCB", "sawbird.pcb_t")], into="insert")],
+        print_note="deck on the bed; PETG"),
+    nose_mount=dict(
+        carries=("xiao", "rx", "elrs_antenna"),
+        plate=dict(x=48.0, y0=-47.0, y1=-106.0, t=3.0),     #the front arms start at x=25
+        cradle=dict(y0=-97.0, wall=2.0, lid_t=2.0),
+        rx_pocket=dict(y0=-71.0, wall=1.6, cover_t=1.5),    #aft of the post screw heads
+        #one antenna vertical, one horizontal pointing forward
+        antenna_v=dict(x=19.0, y=-90.0),
+        antenna_h=dict(x=-19.0, y=-106.0, z=0.0),
+        joints=[dict(where="nose mount to mid plate, under the front posts", size="M3",
+                     qty=2, at=[(x, y, _MID_Z) for x, y in TOP_PLATE_MOUNT["front_posts"][2:]],
+                     layers=[("nose mount plate", "plate.t"),
+                             ("mid plate", FRAME["medium_t"])], into="standoff"),
+                dict(where="XIAO lid to its cradle", size="M2", qty=2,
+                     layers=[("lid", "cradle.lid_t")], into="insert"),
+                dict(where="RP3 cover to the nose mount", size="M2", qty=2,
+                     layers=[("cover", "rx_pocket.cover_t")], into="insert")],
+        print_note="the face against the mid plate on the bed"),
+    lidar_bracket=dict(
+        carries=("lidar",),
+        plate=dict(x=44.0, y0=3.0, y1=48.0, t=5.0, cbore=3.2),
+        #24, not centred on the posts
+        lidar_y0=24.0,
+        joints=[dict(where="lidar bracket to bottom plate, at the rear posts", size="M3",
+                     qty=2, at=[(x, y, 0.0) for x, y in TOP_PLATE_MOUNT["rear_posts"][:2]],
+                     layers=[("bracket, under the recessed head", "plate.t-plate.cbore"),
+                             ("bottom plate", FRAME["bottom_t"])], into="standoff"),
+                dict(where="lidar bracket to bottom plate, front pair of the 20x20 M2 holes",
+                     size="M2", qty=2, at=[(-10.0, 43.5, 0.0), (10.0, 43.5, 0.0)],
+                     layers=[("bracket, under the recessed head", "plate.t-plate.cbore"),
+                             ("bottom plate", FRAME["bottom_t"])], into="nut"),
+                dict(where="LD06 to its bracket", size="M2.5", qty=2,
+                     layers=[("LD06 base", "lidar.hole_depth_mm")], into="insert")],
+        print_note="flat"),
+    range_cradle=dict(
+        carries=("range_down",),
+        y0=63.5, x=28.0, y=26.0, top_t=1.5, lid_t=1.5,
+        joints=[dict(where="TFS20-L lid, cradle and bottom plate, rear pair of the 20x20 "
+                           "M2 holes", size="M2", qty=2,
+                     at=[(-10.0, 63.5, 0.0), (10.0, 63.5, 0.0)],
+                     layers=[("lid", "lid_t"), ("cradle", "body_h"),
+                             ("bottom plate", FRAME["bottom_t"])], into="nut")],
+        print_note="top down"),
+)
+OFFBOARD["lidar"]["mount_y_mm"] = MOUNTS["lidar_bracket"]["lidar_y0"]
+
+
 #mass, one source of truth
 MASS_ITEMS = [
     ("frame",                            FRAME["g"],      FRAME["src"]),
@@ -582,8 +713,13 @@ MASS_ITEMS = [
     ("this board",                       20,              "[A]"),
     ("4x props",                         4 * PROP["g"],   PROP["src"]),
     ("battery",                          BATT["g"],       BATT["src"]),
-    ("GPS",                              15,              "[A]"),
-    ("RX",                               3,               "[A]"),
+    ("GPS",                              MOUNTED["gps"]["g"], MOUNTED["gps"]["src"]),
+    ("RX",                               MOUNTED["rx"]["g"], MOUNTED["rx"]["src"]),
+    ("Iridium patch",                    MOUNTED["iridium_patch"]["g"],
+     MOUNTED["iridium_patch"]["src"]),
+    ("SAWbird+ IR",                      MOUNTED["sawbird"]["g"], MOUNTED["sawbird"]["src"]),
+    ("XIAO nose camera",                 CAMERA_REC["g"], CAMERA_REC["src"]),
+    ("printed mounts, inserts, screws",  45,              "[A] PETG at ~30% infill"),
     #PI["src"] is the DATASHEET source for the 65x30 mm outline and the 5V/2A rating
     (PI["name"],                         PI["g"],
      "[A] ~12 g, not published by Radxa - same 65x30 mm PCB class as a Pi Zero (11 g) "
