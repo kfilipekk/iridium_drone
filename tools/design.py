@@ -591,11 +591,9 @@ PROP = dict(name="7040", dia_mm=178.43, g=7.9, bore_mm=5.0, mount="M5",
 INSERTS = {
     "M2":   dict(dia=2.0, L=3.0, od=3.6, bore=3.2),
     "M2.5": dict(dia=2.5, L=4.0, od=4.6, bore=4.0),
-    "M3":   dict(dia=3.0, L=5.7, od=4.6, bore=4.0),
-    "M3s":  dict(dia=3.0, L=3.0, od=4.6, bore=4.0),     #the short M3, for thin walls
 }
 INSERT_WALL = 1.6
-INSERT_SRC = ("[L] CNC Kitchen heat-set insert range as listed by kb-3d.com: M2 x 3.0 in a 3.2 mm bore, M2.5 x 4.0 and M3 x 3.0 / 5.7 in 4.0 mm")
+INSERT_SRC = ("[L] CNC Kitchen heat-set insert range as listed by kb-3d.com: M2 x 3.0 in a 3.2 mm bore, M2.5 x 4.0 in 4.0 mm")
 #hardware this close to the compass (inside the GPS) is brass or nylon
 NONMAG_RADIUS_MM = 50.0
 
@@ -604,13 +602,14 @@ MOUNTED = dict(
     gps=dict(name="Matek M10Q-5883 (M10 GNSS + QMC5883L)", L=20.0, W=20.0, H=12.4, g=8.0,
              src="[L] Matek M10Q-5883 listings (RMRC, GetFPV): 20 x 20 x 12.4 mm, 8 g; no "
                  "mounting holes, so it sits in a pocket under a screwed lid"),
-    iridium_patch=dict(name="Iridium passive patch, 1616-1626.5 MHz", L=82.0, W=80.0, H=15.0,
-                       g=25.0, flange_t=2.0, holes=((-35.0, -34.0), (35.0, 34.0)),
-                       src="[L] 82 x 80 x 15 mm, 25 g, side SMA; [A] the two diagonal corner holes and the 2 mm flange - size and position unpublished"),
-    sawbird=dict(name="Nooelec SAWbird+ IR (barebones)", L=38.0, W=23.0, H=8.0, g=8.0,
-                 pcb_t=1.6, holes=((0.0, -15.0), (0.0, 15.0)),
-                 src="[A] outline, height, mass and the two M3 holes - Nooelec publishes "
-                     "none of them for the barebones board; MEASURE ON ARRIVAL"),
+    #the Iridium antenna: an active quadrifilar helix
+    iridium_antenna=dict(name="Tallysman HC610 active Iridium helix", dia=33.3, dia_top=28.5,
+                         H=54.2, g=24.0, hole_pcd=20.0, hole_depth=6.0,
+                         src="[D] Tallysman HC610 datasheet: RHCP quadrifilar helix, 3.7 dBic at zenith, pre-filter then 28 dB LNA, NF 2.0 dB"),
+    #J12 carries no DC
+    bias_tee=dict(name="SMA bias tee, 10 MHz-6 GHz", L=42.0, W=32.0, H=12.0, g=20.0,
+                  src="[L] generic 10 MHz-6 GHz listings: 32 x 42 x 12 mm, <1.2 dB insertion "
+                      "loss, 1-50 V; [A] 20 g - weigh on arrival"),
     rx=dict(name="RadioMaster RP3 (ELRS 2.4 GHz, two antennas)", L=22.0, W=13.0, H=4.0,
             g=1.6, src="[L] RadioMaster RP3 listing: 22 x 13 x 4 mm; no holes, so it sits "
                        "in a pocket under a screwed cover"),
@@ -631,34 +630,41 @@ MOUNTED = dict(
 _TOP_Z = FRAME["bottom_t"] + TOP_PLATE_MOUNT["rear_standoff"] + FRAME["upper_t"]
 _MID_Z = FRAME["bottom_t"] + FRAME["arm_t"]            #the mid plate's underside
 #the battery on the top plate, pushed forward
-BATT_POS = dict(y=-4.0, z=_TOP_Z,
-                src="[M] the 138 mm pack runs y -73 to +65; the top plate runs -75.4 to "
-                    "+84.9 (cad/frame-dxf.json) and the antenna tower's foot starts at +68.8")
+BATT_POS = dict(y=-6.0, z=_TOP_Z,
+                src="[M] the 138 mm pack runs y -75 to +63; the top plate runs -75.4 to "
+                    "+84.9 (cad/frame-dxf.json) and the Iridium helix starts at +67.4")
 
 #each mount: where it sits, what it carries
 MOUNTS = dict(
     antenna_tower=dict(
-        carries=("iridium_patch", "gps", "sawbird"),
+        carries=("iridium_antenna", "gps", "bias_tee"),
         foot=dict(x=36.0, y=24.0, t=4.0, y0=TOP_PLATE_MOUNT["rear_posts"][3][1]),
-        column=dict(x=24.0, y=14.0, wall=2.4),
-        #the deck clears the battery by 8 mm: the strap and a finger
-        deck=dict(x=86.0, y=84.0, t=3.0, y0=62.0, z=_TOP_Z + BATT["H"] + 8.0),
-        #the GPS sits behind the patch with its top 2 mm above the patch's
-        gps=dict(y0=118.0, pod_y=28.0, top_above_patch=2.0, pocket=8.0, lid_t=2.0,
-                 lid_cbore=2.0),       #sinks the heads so an M2x20 takes the insert's 3 mm
-        sawbird=dict(standoff=3.0, z0=67.0),
+        #narrow enough that the foot screws' heads clear it
+        column=dict(x=15.0, y=16.0, wall=2.4, y0=84.0),
+        #the helix stands on the seat, its SMA down the hollow column
+        seat=dict(x=40.0, y_front=68.0, y_back=104.0, t=4.0, z=64.0, y0=84.0),
+        #the arm runs aft to the GPS pod, a T with its web below
+        arm=dict(x=44.0, y_end=178.0, t=4.0, web=3.0, web_h=16.0),
+        #the GPS 80 mm behind the helix's axis, its top between the heights
+        gps=dict(y0=164.0, top_z=105.5, pod_y=28.0, pocket=8.0, lid_t=2.0, lid_cbore=2.0,
+                 wall=2.0),
+        bias=dict(y0=126.0, strap_x=10.0, strap_t=3.0),
         joints=[dict(where="antenna tower to top plate, at the rear posts", size="M3", qty=2,
                      at=[(x, y, _TOP_Z) for x, y in TOP_PLATE_MOUNT["rear_posts"][2:]],
                      layers=[("tower foot", "foot.t"), ("top plate", FRAME["upper_t"])],
                      into="standoff"),
-                dict(where="Iridium patch to the tower deck", size="M3", qty=2,
-                     layers=[("patch flange", "iridium_patch.flange_t")], into="insert"),
-                dict(where="GPS lid and pod to the tower's tongue", size="M2", qty=2,
-                     layers=[("lid, under the recessed head", "gps.lid_under_head"),
-                             ("GPS pod", "gps.pod_h")], into="insert"),
-                dict(where="SAWbird+ IR to the tower column", size="M3s", qty=2,
-                     layers=[("SAWbird PCB", "sawbird.pcb_t")], into="insert")],
-        print_note="deck on the bed; PETG"),
+                dict(where="Iridium helix to the tower seat", size="M2.5", qty=2,
+                     at=[(0.0, 74.0, 64.0), (0.0, 94.0, 64.0)],
+                     layers=[("tower seat", "seat.t")], into="thread",
+                     limit="iridium_antenna.hole_depth"),
+                dict(where="GPS pod to the tower arm", size="M2", qty=2,
+                     layers=[("tower arm", "arm.t")], into="insert"),
+                dict(where="GPS lid to its pod", size="M2", qty=2,
+                     layers=[("lid, under the recessed head", "gps.lid_under_head")],
+                     into="insert"),
+                dict(where="bias tee strap to the tower arm", size="M2", qty=2,
+                     layers=[("strap foot", "bias.strap_t")], into="insert")],
+        print_note="seat and arm on the bed; PETG"),
     nose_mount=dict(
         carries=("xiao", "rx", "elrs_antenna"),
         plate=dict(x=48.0, y0=-47.0, y1=-106.0, t=3.0),     #the front arms start at x=25
@@ -715,9 +721,9 @@ MASS_ITEMS = [
     ("battery",                          BATT["g"],       BATT["src"]),
     ("GPS",                              MOUNTED["gps"]["g"], MOUNTED["gps"]["src"]),
     ("RX",                               MOUNTED["rx"]["g"], MOUNTED["rx"]["src"]),
-    ("Iridium patch",                    MOUNTED["iridium_patch"]["g"],
-     MOUNTED["iridium_patch"]["src"]),
-    ("SAWbird+ IR",                      MOUNTED["sawbird"]["g"], MOUNTED["sawbird"]["src"]),
+    ("Iridium antenna (HC610)",          MOUNTED["iridium_antenna"]["g"],
+     MOUNTED["iridium_antenna"]["src"]),
+    ("bias tee",                         MOUNTED["bias_tee"]["g"], MOUNTED["bias_tee"]["src"]),
     ("XIAO nose camera",                 CAMERA_REC["g"], CAMERA_REC["src"]),
     ("printed mounts, inserts, screws",  45,              "[A] PETG at ~30% infill"),
     #PI["src"] is the DATASHEET source for the 65x30 mm outline and the 5V/2A rating
@@ -1545,7 +1551,7 @@ NET_CURRENT = {
 LOAD_CURRENT = {
     "+5V_PAYLOAD": {
         #[M] the BEC loom wired to PV1/PV2
-        "PV1.1": 0.73,
+        "PV1.1": 0.565,
         #[M] WS2812 strip average, 10% duty rule (HARDWARE.md: 60 mA cont / 600 mA peak)
         "PL2.1": 0.06,
         "J15.1": 0.06,
@@ -1574,7 +1580,7 @@ LOAD_CURRENT = {
 #the payload buck (U20, +5V_PAYLOAD)
 PAYLOAD_PROFILES = {
     "drone": dict(keys=("PV1.1", "PL2.1", "J11.1", "U21.3", "J6.1"),
-                  what="quad on GPS/SoOP: VTX + XIAO camera + SAWbird+ on PV1/PV2, "
+                  what="quad on GPS/SoOP: VTX + XIAO camera + Iridium antenna on PV1/PV2, "
                        "LED strip, LD06 lidar, CAN transceiver and one node"),
     "lander": dict(keys=("J17.5", "PL2.1", "U21.3", "J6.1"),
                    what="TVC lander: two TVC servos running on J17 (aux servos are "
@@ -1733,11 +1739,12 @@ MODULES = {
         ma_5v=100, counted=True,
         note="MAVLink downlink caps at 1470 B/s - carries telemetry, never video"),
     "soop_tuner": dict(
-        what="SoOP RF front end: SAWbird+ IR (LNA+SAW) + 1620 MHz patch, at the antenna",
-        lands_on=["J12"], conn="U.FL coax into J12; micro-USB power from PV1/PV2 (+5V_PAYLOAD, U20)", bec=True,
-        needs_board_change=None, gbp=70, status="later",
-        ma_5v=180, counted=False,
-        note="the LNA+SAW stage the board could not source, bought built. 180 mA [D] at 3.3-5.5 V"),
+        what="SoOP RF front end: Tallysman HC610 active helix (filter + LNA), at the antenna",
+        lands_on=["J12"], conn="U.FL coax into J12 through an inline bias tee; its DC from "
+                               "PV1/PV2 (+5V_PAYLOAD, U20)", bec=True,
+        needs_board_change=None, gbp=115, status="later",
+        ma_5v=15, counted=False,
+        note="the filter+LNA stage the board could not source, bought built into the antenna. 15 mA [D] at 2.2-12 V through a bias tee"),
     "fpv": dict(
         what="5.8 GHz camera + VTX, 25 mW EIRP", lands_on=[],
         conn="5 V and GND from PV1/PV2 (+5V_PAYLOAD, U20)", bec=True,
@@ -1779,7 +1786,7 @@ RF_BENCH = dict(
     results="fab/rf-bench-results.json",
     band_mhz=(1616.0, 1626.5),
     steps=[
-        ("baseline", "SAWbird+ IR + RTL-SDR + patch, outdoors, clear sky, AIRCRAFT OFF",
+        ("baseline", "HC610 helix on the RTL-SDR's bias tee, outdoors, clear sky, AIRCRAFT OFF",
          "the reference. Needs no aircraft - do it the week the SDR parts arrive"),
         ("board_powered", "board powered, motors off, same position and same sky",
          "any drop is the flight controller: its two switchers and the H7"),
@@ -1793,7 +1800,7 @@ RF_BENCH = dict(
     #a step keeping this fraction of baseline bursts is a pass
     min_fraction_of_baseline=0.5,
     mitigations=["antenna placement and separation", "ferrites on the motor leads",
-                 "shielding the SAWbird",
+                 "ferrite on the bias tee's DC lead",
                  "keep the SDR off the airframe entirely - the receive chain is "
                  "laptop-side, so this board allows it"],
     src="[A] min_fraction_of_baseline is a judgement call; every other field is a slot "
@@ -1831,8 +1838,6 @@ SILK_TITLE_SIDE = {"IRIDIUM NAV": "bottom", "KRYSTIAN FILIPEK": "top"}
 
 #3D models: bodies that legitimately sit off their outline or reach into the board
 MODEL_EXPECTED = {
-    "J1": (0.04, 0.75),    #USB-C: the plug end projects past the board edge
-    "J8": (0.00, -3.95),   #push-push microSD: the card slot extends past the silkscreen
 }
 MODEL_EXPECTED_SINK = {
     "J1": 0.78,            #USB-C shell legs in their slots

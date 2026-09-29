@@ -86,8 +86,7 @@ joint("FC to ESC to frame, the 30.5 mm stack bolt", 3.0,
 import gen_scad_mounts as _gm
 
 _G = _gm.G
-_DERIVED = {"antenna_tower": {"gps.lid_under_head": _G["tower"]["lid_under_head"],
-                              "gps.pod_h": _G["tower"]["pod_h"]},
+_DERIVED = {"antenna_tower": {"gps.lid_under_head": _G["tower"]["lid_under_head"]},
             "range_cradle": {"body_h": _G["range"]["body_h"]}}
 _GPS = (0.0, _G["tower"]["gps_y"], (_G["tower"]["gps_bot"] + _G["tower"]["gps_top"]) / 2)
 _NUT_H = {2.0: 1.6, 2.5: 2.0, 3.0: 2.4}          #ISO 4032
@@ -129,8 +128,11 @@ for _m, _spec in design.MOUNTS.items():
         if _j["into"] == "insert":
             _ins = design.INSERTS[_size]
             joint(_j["where"], _dia, _layers, _j["qty"],
-                  f"into {_size.rstrip('s')} x {_ins['L']:g} heat-set inserts",
+                  f"into {_size} x {_ins['L']:g} heat-set inserts",
                   engage=min(ENGAGE[_dia], _ins["L"]), material=_mat, limit=_ins["L"] + 1.0)
+        elif _j["into"] == "thread":
+            joint(_j["where"], _dia, _layers, _j["qty"], "into the part's own threaded holes",
+                  material=_mat, limit=_dim(_m, _j["limit"])[0])
         elif _j["into"] == "nut":
             joint(_j["where"], _dia, _layers, _j["qty"], "nylon-insert lock nut on top",
                   engage=_NUT_H[_dia] + 1.0, material=_mat)
