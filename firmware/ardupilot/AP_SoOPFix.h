@@ -14,6 +14,7 @@ public:
         float    alt_m;          //AMSL
         float    vn, ve, vd;     //m/s, NED
         float    hacc_m, vacc_m;
+        float    sacc_ms;        //the fix's velocity is the flight EKF's plus a Doppler correction
         uint8_t  num_sats;
         uint8_t  fix_type;       //0 none, 3 = 3D, aligned with AP_GPS::GPS_Status
         //GPS time, which the solve knows from the TLE epoch

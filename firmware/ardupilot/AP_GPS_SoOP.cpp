@@ -2,6 +2,10 @@
 
 #include "AP_SoOPFix.h"
 
+#if CONFIG_HAL_BOARD != HAL_BOARD_SITL
+#include <AP_SoOP/AP_SoOP.h>
+#endif
+
 bool AP_GPS_SoOP::read(void)
 {
     const uint32_t now = AP_HAL::millis();
@@ -9,6 +13,9 @@ bool AP_GPS_SoOP::read(void)
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
     //stand-in for the solve task; see AP_SoOPFix.cpp
     AP_SoOPFix::get_singleton()->update_from_sitl(now);
+#else
+    //hand the navigation what it needs from the vehicle
+    AP::soop()->update();
 #endif
 
     AP_SoOPFix::fix_t f {};
@@ -44,7 +51,8 @@ bool AP_GPS_SoOP::read(void)
     state.have_speed_accuracy = true;
     state.horizontal_accuracy = f.hacc_m;
     state.vertical_accuracy = f.vacc_m;
-    state.speed_accuracy = 0.3f;          //Doppler solve natively measures velocity
+    //the velocity is the flight EKF's own, corrected
+    state.speed_accuracy = f.sacc_ms;
 
     state.hdop = 100;
     state.vdop = 100;

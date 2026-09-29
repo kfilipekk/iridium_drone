@@ -23,6 +23,7 @@ motor_h        = 15.0;
 prop_dia       = 178.4;
 
 batt_l = 138; batt_w = 47; batt_h = 48;
+batt_y = -4.0;   // forward of centre, so the rear posts stay free
 
 // ---- PLATE OUTLINES, PARSED FROM THE MANUFACTURER DXF ---------------------
 // drone.scad drew ALL THREE plates as one 50 mm square, from a variable whose own
@@ -66,27 +67,6 @@ esc_parts      = 6.2;
 skid_t          = 3.5;
 cam_drop        = 40.0;
 
-// Nose recording camera - XIAO ESP32S3 Sense. rec_cam_y is how far forward it sits;
-// the prop discs clear the nose by 24-71 mm anywhere along it, so this is free choice.
-rec_cam_l       = 21.0;
-rec_cam_w       = 17.5;
-rec_cam_h       = 13.0;
-rec_cam_y       = 78.0;
-
-// Belly sensor - the downward rangefinder now, a flow+range module later. Mounts UNDER
-// the bottom plate because that is the only place anything can see the ground.
-belly_h         = 12.0;
-belly_l         = 36.0;
-belly_w         = 16.0;
-
-// 360 lidar (LDROBOT LD06), belly-mounted upside-down - PRX1_ORIENT 1. Dimensions are
-// [D] datasheet, not guessed, and they are the reason SKID['drop'] went 25 -> 40 mm
-// (35 was tried first and rejected - 5.20 mm clearance; see the SKID note in design.py):
-// at 25 mm the belly had 28.5 mm of depth against a 33.30 mm lidar.
-lidar_l         = 38.59;
-lidar_w         = 38.59;
-lidar_h         = 33.3;
-lidar_y         = -22.0;   // aft of the downward rangefinder at y=+18
 skid_hole_pitch = 19.0;
 gap             = 3.0;    // compressed grommet - [A], re-measure on assembly
 grommet_dia     = 6.0;

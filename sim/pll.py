@@ -13,7 +13,7 @@ C57 = D.COMPONENTS["C57"][2]
 R57 = D.COMPONENTS["R57"][2]
 C56 = D.COMPONENTS["C56"][2]
 
-LO_HZ = 1626e6          #iridium downlink, inside the MAX2112's 925-2175 MHz range
+LO_HZ = 1626e6          #Iridium downlink, inside the MAX2112's 925-2175 MHz range
 FREF_HZ = 25e6          #Y2 TCXO
 N = LO_HZ / FREF_HZ
 #Icp from Table 8 (600 uA or 1200 uA)
