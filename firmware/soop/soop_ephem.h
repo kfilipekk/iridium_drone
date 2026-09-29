@@ -12,8 +12,16 @@ extern "C" {
 #define SOOP_J2000_JD      2451545.0
 #define SOOP_OMEGA_EARTH   7.2921150e-5     //rad/s
 
+//where a satellite's elements came
+enum {
+    SOOP_ORBIT_TLE = 0,     //public GP elements, fitted by 18 SDS to radar tracking
+    SOOP_ORBIT_OPERATOR,    //CelesTrak's supplemental sets
+    SOOP_ORBIT_N
+};
+
 typedef struct {
     uint32_t norad;
+    uint8_t  orbit;         //SOOP_ORBIT_
     double   epoch_s;       //TLE epoch, UTC s since J2000.0
     sgp4_t   sgp;
     char     name[25];

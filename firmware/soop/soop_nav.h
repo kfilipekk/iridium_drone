@@ -19,6 +19,13 @@ extern "C" {
 #define SOOP_NAV_PEND        8                   //satellites being confirmed at once
 #define SOOP_NAV_PEND_N      6
 
+//how far a satellite's elements are off, 1 sigma, growing with their age
+typedef struct {
+    double along0_m, along_m_per_day;
+    double cross0_m, cross_m_per_day;
+    double radial0_m, radial_m_per_day;
+} soop_orbit_err_t;
+
 typedef struct {
     double vel_sigma, vel_tau;       //flight-EKF horizontal velocity error: m/s, s
     double velz_sigma, velz_tau;     //and vertical
@@ -29,7 +36,7 @@ typedef struct {
     double dt_sigma0;                //GPS time-tag error, s
     double baro_sigma, baro_bias_sigma, baro_bias_tau;
     double beta_sigma;               //satellite transmit offset, Hz
-    double along0_m, along_m_per_day, cross_m, radial_m;   //TLE error vs age
+    soop_orbit_err_t orbit[SOOP_ORBIT_N];  //by where the elements came from
     double max_tle_age_d;            //refuse satellites with older elements
     double gps_sigma;                //m
     double sig_floor;                //Hz, added to the DSP's sigma

@@ -118,6 +118,7 @@ void AP_SoOPFix::update_from_sitl(uint32_t now_ms)
     f.vd = sitl->state.speedD;
     f.hacc_m = hacc;
     f.vacc_m = vacc;
+    f.sacc_ms = 1.0f;
     f.num_sats = 10;                      //Iridium sats in the arc
     f.fix_type = 3;
     get_gps_time(&f.time_week, &f.time_week_ms);

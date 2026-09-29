@@ -237,18 +237,18 @@ static int estimate(soop_dsp_t *d, const soop_pending_t *p, soop_burst_t *o)
     float f = f_pre, s_f = s_pre, epoch = e_pre;
     o->used_data = 0;
     if (len >= 256) {
-        float tot = 0;
+        float tot4 = 0;
         for (int n = 0; n < len; n++) {
             float a = zi[n], b = zq[n];
             float r2 = a * a - b * b, i2 = 2 * a * b;
             float r4 = r2 * r2 - i2 * i2, i4 = 2 * r2 * i2;
             zi[n] = r4; zq[n] = i4;
-            tot += r4 * r4 + i4 * i4;
+            tot4 += r4 * r4 + i4 * i4;
         }
         float w = fmaxf(5.0f * s_pre, 60.0f) * 4.0f;
         float p4;
         float f4 = peak_freq(zi, zq, len, -w, w, &p4);
-        float coh = p4 / ((float)len * tot);
+        float coh = p4 / ((float)len * tot4);
         if (coh > 0.02f && coh < 0.999f) {
             float rho4 = coh / (1.0f - coh);
             float s4 = FSD * sqrtf(6.0f / (rho4 * (float)len * len * len)) / (2.0f * PI_F) / 4.0f;

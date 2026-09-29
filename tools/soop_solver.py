@@ -353,7 +353,8 @@ def ephemeris_test(seeds=6, sigma_hz=5.0, n_obs=60, fail_m=1000.0):
         s_eci = math.sqrt(sum(c * c for c in eci[1]))
         s_ecef = math.sqrt(sum(c * c for c in ecef[1]))
         speeds.append((rmag, s_eci, s_ecef, eci[0][2] / rmag))
-    in_band = all(7.0e6 < rm < 7.35e6 and 7.2e3 < se < 7.8e3 for rm, se, _, _ in speeds)
+    #the spares sit in storage orbits ~150 km below the 780 km shell (semi-major axis ~7007 km)
+    in_band = all(6.95e6 < rm < 7.35e6 and 7.2e3 < se < 7.8e3 for rm, se, _, _ in speeds)
     rot_seen = all(abs(se - sc) > 1.0 for _, se, sc, _ in speeds)
     good = not bad and in_band and rot_seen
     checks.append(good)

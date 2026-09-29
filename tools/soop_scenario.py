@@ -294,10 +294,19 @@ def trajectory(rng, lat0, lon0, h0, gps_s, denial_s, speed, dt=0.1):
     return out
 
 
+#how far each kind of element set is off, 1 sigma, growing with its age
+ORBIT_ERR = {
+    "tle": dict(along0_m=300.0, along_m_per_day=470.0, cross0_m=65.0, cross_m_per_day=12.0,
+                radial0_m=75.0, radial_m_per_day=56.0),
+    "operator": dict(along0_m=50.0, along_m_per_day=150.0, cross0_m=20.0, cross_m_per_day=10.0,
+                     radial0_m=20.0, radial_m_per_day=10.0),
+}
+
+
 #A flight under the real constellation
 def make_obs(outdir, seed=1, gps_min=5.0, denial_min=15.0, speed=15.0, tle_age_d=1.0,
              lat=52.2053, lon=0.1218, h=160.0, rate=1.0, vel_sigma=1.0, beta_sigma=50.0,
-             along0_m=300.0, along_km_per_day=1.0, radial_m=100.0, cross_m=200.0, false_rate=0.05, outlier_frac=0.01, static=False):
+             orbits="tle", false_rate=0.05, outlier_frac=0.01, static=False):
     import soop_solver as sol
     rng = random.Random(seed)
     os.makedirs(outdir, exist_ok=True)
@@ -329,14 +338,21 @@ def make_obs(outdir, seed=1, gps_min=5.0, denial_min=15.0, speed=15.0, tle_age_d
     gps_lag = rng.uniform(-0.02, 0.02)                  #GPS time-tag error, s
 
     #the constellation's errors
+    oe = ORBIT_ERR[orbits]
     sats = {}
     for name, sat, ep in tles:
         age = (t_utc0 - ep).total_seconds() / 86400.0
         sats[sat.satnum] = dict(
             name=name, sat=sat, age_d=age,
-            along_m=rng.gauss(0, along0_m + along_km_per_day * 1000.0 * age),
-            radial_m=rng.gauss(0, radial_m), cross_m=rng.gauss(0, cross_m),
+            along_m=rng.gauss(0, oe["along0_m"] + oe["along_m_per_day"] * age),
+            radial_m=rng.gauss(0, oe["radial0_m"] + oe["radial_m_per_day"] * age),
+            cross_m=rng.gauss(0, oe["cross0_m"] + oe["cross_m_per_day"] * age),
             beta_hz=rng.gauss(0, beta_sigma))
+    #the catalogue as the aircraft would load it
+    cls = "C" if orbits == "operator" else "U"
+    cat = [ln[:7] + cls + ln[8:] if ln.startswith("1 ") else ln
+           for ln in open(sol.TLE_PATH).read().splitlines()]
+    open(os.path.join(outdir, "iridium.tle"), "w").write("\n".join(cat) + "\n")
 
     #ECEF state of the real satellite at scenario time t (s after t_utc0)
     def sat_true(s, t):
@@ -432,7 +448,7 @@ def make_obs(outdir, seed=1, gps_min=5.0, denial_min=15.0, speed=15.0, tle_age_d
                GaussMarkov(rng, 0.3, 60.0, 0.0)]
     baro_err = GaussMarkov(rng, 3.0, 600.0, 0.0)
     lines = [f"# soop_scenario obs: seed {seed}, {gps_min:g} min GPS then {denial_min:g} min "
-             f"denied, {0 if static else speed:g} m/s, TLE age {tle_age_d:g} d",
+             f"denied, {0 if static else speed:g} m/s, {orbits} orbits {tle_age_d:g} d old",
              f"H {jd0:.1f} {fr0:.12f}"]
     for t, la, lo, hh, vn, ve, vd in traj[::1]:
         tb = board(t)
@@ -457,7 +473,7 @@ def make_obs(outdir, seed=1, gps_min=5.0, denial_min=15.0, speed=15.0, tle_age_d
     truth = dict(seed=seed, jd0=jd0 + fr0, t_utc0=t_utc0.isoformat(), gps_s=gps_s,
                  denial_s=denial_s, boot=boot, mcu0=mcu0, mcu_ramp=mcu_ramp, gps_lag=gps_lag,
                  tcxo0_hz=-f_lo * tcxo0, speed=0 if static else speed, tle_age_d=tle_age_d,
-                 rate=rate, vel_sigma=vel_sigma,
+                 rate=rate, vel_sigma=vel_sigma, orbits=orbits,
                  sats={str(k): dict(name=v["name"].strip(), age_d=v["age_d"],
                                     along_m=v["along_m"], cross_m=v["cross_m"],
                                     radial_m=v["radial_m"], beta_hz=v["beta_hz"])
@@ -505,6 +521,8 @@ def main():
     p.add_argument("--tle-age", type=float, default=1.0, help="days, at take-off")
     p.add_argument("--rate", type=float, default=1.0, help="bursts/s per satellite")
     p.add_argument("--vel-sigma", type=float, default=1.0, help="EKF velocity error, m/s")
+    p.add_argument("--orbits", choices=sorted(ORBIT_ERR), default="tle",
+                   help="public TLEs, or Iridium's own orbits (CelesTrak supplemental)")
     a = ap.parse_args()
     if a.mode == "iq":
         t = make_iq(a.outdir, a.slots, a.seed, a.cn0[0], a.cn0[1], a.noise_counts)
@@ -515,7 +533,7 @@ def main():
         print(f"{len(t['bursts'])} bursts in {a.seconds:g} s -> {a.outdir}/rec.cu8 + truth.json")
     else:
         t = make_obs(a.outdir, a.seed, a.gps_min, a.minutes, a.speed, a.tle_age,
-                     rate=a.rate, vel_sigma=a.vel_sigma, static=a.static)
+                     rate=a.rate, vel_sigma=a.vel_sigma, orbits=a.orbits, static=a.static)
         n_false = sum(b["false"] for b in t["bursts"])
         print(f"{len(t['bursts'])} bursts ({n_false} false) from "
               f"{len({b['sat'] for b in t['bursts']} - {0})} satellites -> "
