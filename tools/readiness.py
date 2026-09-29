@@ -38,6 +38,9 @@ PREREQUISITES = [
          claim="no through-hole pin or post lands under a part on the other side"),
     dict(id="fab.silkowner", cls=GATED, tool="check_silk_owner.py",
          claim="every printed label sits nearer the part it names than any other part"),
+    dict(id="fab.models", cls=GATED, tool="check_model_alignment.py",
+         claim="every part's 3D body sits on its footprint - pegged parts with their pegs "
+               "in the holes - and no two bodies occupy the same space"),
     dict(id="fab.bundle", cls=GATED, tool="check_order_bundle.py",
          claim="the bundle you upload matches the verified BOM, CPL and gerbers"),
 
@@ -76,7 +79,7 @@ PREREQUISITES = [
          claim="every bolted joint fits by declaration: pattern, hole, screw length, "
                "stack under the kit's top plate, standoff posts clear of the boards"),
     dict(id="mech.mounts", cls=GATED, check="every part off the board is mounted, with screws",
-         claim="the GPS, Iridium patch, SAWbird+, receiver and antennas, nose camera, lidar "
+         claim="the GPS, Iridium helix and its bias tee, receiver and antennas, nose camera, lidar "
                "and rangefinder each sit on a printed mount that fits the printer, held by "
                "screws the buy list sells, with the two patches clear to the sky"),
     dict(id="mech.frame", cls=GATED, check="CAD frame matches design.FRAME",
@@ -169,8 +172,9 @@ PREREQUISITES = [
          claim="leave impedance control OFF",
          why="none is specified. USB is a plain differential pair, and the 1.62 GHz "
              "J12 -> U13 run is 0.10 mm track across four layers, roughly 60-90 ohm on "
-             "JLC's default stack: at worst ~1.5 dB of mismatch behind the SAWbird+'s "
-             "~40 dB of gain, which moves the system noise figure by ~0.02 dB. Ordering "
+             "JLC's default stack: at worst ~1.5 dB of mismatch behind the HC610's "
+             "28 dB of gain, which moves the system noise figure by a few tenths of a dB "
+             "at most. Ordering "
              "impedance control would not change the drawn geometry."),
     dict(id="act.quantity", cls=ORDER_ACTION,
          claim="5 bare PCBs / 2 assembled, BOTH sides",
@@ -206,11 +210,11 @@ PREREQUISITES = [
              "it in position hold.",
          refresh="check the sign before position hold, runbook Part 14"),
     dict(id="bench.rf", cls=BENCH,
-         bound="Pr >= -110 dBm at 2 dB system NF, met by the bought SAWbird+ IR",
+         bound="Pr >= -110 dBm at 2 dB system NF, met by the bought HC610 (NF 2.0 dB)",
          claim="that this antenna and front end can produce a usable Iridium fix",
          why="MODULE. sitl/ proves what ArduPilot does with a fix of a GIVEN quality; it "
              "cannot prove the receiver can produce one. But the receiver IS a bought "
-             "part - the Nooelec SAWbird+ IR, >=30 dB gain with the SAW at the antenna - "
+             "part - the Tallysman HC610, a filter then 28 dB of LNA inside the antenna - "
              "and a desense result is fixed by placement, ferrites and shielding. The one "
              "board-side lever, an on-board LNA+SAW, was DELETED in favour of that module, "
              "so it is not a lever any more.",

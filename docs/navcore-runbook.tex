@@ -339,7 +339,7 @@ Thermocouple meter or IR thermometer & 1 & 14 & AliExpress \\
 \end{longtable}
 Already have: Soldering iron and basic tools, Multimeter with continuity buzzer.
 
-\subsubsection*{A2 --- Iridium navigation, no aircraft} 6 lines, about GBP 96.
+\subsubsection*{A2 --- Iridium navigation, no aircraft} 6 lines, about GBP 186.
 The receive chain the board cannot supply, and the bench reference receiver for T3b step 1. The tuner (U13) is on the board; this is what feeds it.
 
 \begin{longtable}{@{}P{0.50\textwidth}P{0.12\textwidth}rP{0.22\textwidth}@{}}
@@ -348,10 +348,10 @@ The receive chain the board cannot supply, and the bench reference receiver for 
 \endhead
 \bottomrule
 \endfoot
-Nooelec SAWbird+ IR (1620MHz LNA+SAW) & 1 & 35 & Nooelec \\
-Nooelec 1620MHz Iridium patch antenna & 1 & 25 & Nooelec \\
-SMA-male to U.FL (IPEX MHF1) coax pigtail, 10-15 cm & 2 & 4 & AliExpress \\
-micro-USB power lead for the SAWbird+ (5 V from PV1/PV2) & 1 & 2 & AliExpress \\
+Tallysman HC610 active Iridium helical antenna & 1 & 130 & DigiKey \\
+SMA bias tee, 10 MHz-6 GHz (powers the HC610) & 1 & 15 & AliExpress \\
+Antenna coax: SMA jumper 10 cm + SMA-male to U.FL pigtail 20 cm & 1 set & 8 & AliExpress \\
+U.FL retention clip + ferrite for the bias tee's DC lead & 1 each & 3 & AliExpress \\
 RTL-SDR Blog V4 (R820T2, with bias tee) & 1 & 30 & AliExpress / RTL-SDR Blog \\
 gr-iridium + iridium-toolkit (software) & 1 & 0 & GitHub (muccc) \\
 \end{longtable}
@@ -386,8 +386,8 @@ M3x30 socket screws (stack bolts) & 4 & 2 & AliExpress \\
 M3 nylon washers (under the stack bolts' heads) & 1 pack & 2 & AliExpress \\
 M3 socket screw assortment (10/12/14/16/20 mm) + M3 washers & 1 kit & 5 & AliExpress \\
 M3 silicone grommets, spare set (30.5 mm stack) & 1 pack & 2 & AliExpress \\
-Heat-set inserts, CNC Kitchen M2 x 3 / M2.5 x 4 / M3 x 3 / M3 x 5.7 & 1 small pack of each & 12 & CNC Kitchen store \\
-Brass screws M2x20, M3x5, M3x6 (beside the GPS) & 1 small set & 6 & AliExpress \\
+Heat-set inserts, CNC Kitchen M2 x 3 / M2.5 x 4 & 1 small pack of each & 12 & CNC Kitchen store \\
+Brass screws M2x6, M2x8 (beside the GPS) & 1 small set & 6 & AliExpress \\
 M2 and M2.5 socket screws + M2 nylon lock nuts & 1 kit & 5 & AliExpress \\
 JST-SH 1.0mm 4-pin pigtails (the sensor and RC leads) & 1 pack of 10 & 5 & AliExpress \\
 JST-GH 1.25mm 6-pin spare lead (J3 GPS port) & 1 & 2 & AliExpress \\
@@ -397,7 +397,7 @@ JST-SH 1.0mm 3-pin pigtail (J15 LED strip) & 1 & 2 & AliExpress \\
 Already have: 4S LiPo packs, LiPo balance charger.
 
 \subsubsection*{B2 --- Aircraft sensors and payload - optional} 5 lines, about GBP 68.
-RNGFNDn\_TYPE and PRX1\_TYPE ship at 0; enable each one at the bench after it is fitted. The +5 V rail cannot carry all of these AND the SAWbird+ at once - check\_modules.py prints the budget.
+RNGFNDn\_TYPE and PRX1\_TYPE ship at 0; enable each one at the bench after it is fitted. The +5 V rail cannot carry all of these at once - check\_modules.py prints the budget.
 
 \begin{longtable}{@{}P{0.50\textwidth}P{0.12\textwidth}rP{0.22\textwidth}@{}}
 \toprule
@@ -412,7 +412,7 @@ XIAO ESP32S3 Sense (recording camera) & 1 & 14 & AliExpress \\
 Camera power: thin silicone wire + 2-pin JST pigtails & 1 kit & 2 & AliExpress \\
 \end{longtable}
 
-Total, everything to buy: about GBP 782. Generated from \file{docs/PARTS.csv} by \file{tools/gen\_doc\_tables.py}; every row's reasoning and link is in the CSV, and \file{docs/BUYING.md} is the same list with prices and provenance tags.
+Total, everything to buy: about GBP 872. Generated from \file{docs/PARTS.csv} by \file{tools/gen\_doc\_tables.py}; every row's reasoning and link is in the CSV, and \file{docs/BUYING.md} is the same list with prices and provenance tags.
 % END GENERATED ORDER
 
 \flag{Do not buy a bare PMW3901 or VL53L1X chip to hand-fit.} Both were deleted from the
@@ -445,7 +445,7 @@ board: the 5.30 mm clear run meets its derived 3.6 mm requirement. Test-fit the 
 soldering; a second lead is then the fallback rather than an interruption. \\
 \textbf{10} JST-SH pigtails, not 4 &
 the first one you crimp badly is then not a project stall. \\
-\textbf{SAWbird+, the Blog V4 dongle, the coax pigtail and the power lead}, all with
+\textbf{the HC610 antenna, its bias tee, the Blog V4 dongle and the coax}, all with
 the first order &
 T3b cannot be started without the first two, and the SoOP chain cannot be \emph{flown}
 without the last two --- this document listed neither until 2026-09-19.
@@ -485,7 +485,7 @@ grommet adds only silicone bearing on mask.
 \item \textbf{PARAM} --- the result is a \emph{firmware constant}: \file{FLOW\_ORIENT\_YAW}.
 The board carries the pin and has no value to change.
 \item \textbf{MODULE} --- the property belongs to a \emph{bought part} that plugs in: the
-RF front end, which is the Nooelec SAWbird+ IR, and flow quality, which is the off-board
+RF front end, which is the Tallysman HC610 active antenna, and flow quality, which is the off-board
 camera. A shortfall is placement, shielding or a different module.
 \item \textbf{DATA} --- the T3b record asserts nothing about the board at all.
 \end{itemize}
@@ -719,7 +719,7 @@ GPS + compass & \file{J3}, JST-GH 6P & the module's own lead, latched \\
 ELRS receiver & \file{J5}, JST-SH 4P & 5 V, TX, RC\_IN, GND \\
 I2C rangefinders & \file{J9}, JST-SH 4P & 5 V, SCL, SDA, GND \\
 360 lidar (later) & \file{J11}, JST-SH 4P & \file{+5V\_PAYLOAD}, TX, RX, GND \\
-SoOP antenna chain & \file{J12}, U.FL & coax from the SAWbird+; its power from \file{PV1}/\file{PV2} \\
+SoOP antenna chain & \file{J12}, U.FL & coax from the bias tee; the bias tee's DC from \file{PV1}/\file{PV2} \\
 recording camera, FPV & \file{PV1}/\file{PV2} & \file{+5V\_PAYLOAD} and GND, soldered \\
 LED strip & \file{J15}, JST-SH 3P & \file{+5V\_PAYLOAD}, data, GND --- or solder to \file{PL1}--\file{PL3} \\
 buzzer & \file{J16}, JST-SH 2P & +5 V, drain --- or solder to \file{PZ1}/\file{PZ2} \\
@@ -756,8 +756,8 @@ There is no magnetometer on the FC by design: one 15 mm from a 60 A 4-in-1 is us
 until 2026-09-22 --- a loom built to that table shorts the payload rail to ground.
 
 \textbf{The payload rail is budgeted per mission.} \file{U20} and its inductor \file{L5}
-carry 1.6 A continuous. The drone's payload (VTX, camera, SAWbird+, LD06, LED, CAN) is
-1.17 A; the lander's (two TVC servos, LED, CAN) is 0.76 A. \flag{Wire one mission's payload,
+carry 1.6 A continuous. The drone's payload (VTX, camera, Iridium antenna, LD06, LED, CAN) is
+1.0 A; the lander's (two TVC servos, LED, CAN) is 0.76 A. \flag{Wire one mission's payload,
 not all of it}: every payload connector at once is 1.67 A, over the inductor and about
 147\,\degC{} at \file{U20}'s worst corner. \file{check\_modules.py} fails any declared
 mission that does not fit.
@@ -784,7 +784,7 @@ an e-match connected; use a resistor or an LED.
 \file{J3} $\rightarrow$ GPS & 6 & the module's lead; the compass rides on it \\
 \file{J9} $\rightarrow$ rangefinders & 4 & one lead, split at a junction: down and up \\
 \file{J5} $\rightarrow$ ELRS & 4 & \\
-\file{J12} + \file{P41}/\file{P46} $\rightarrow$ SAWbird+ & coax + 2 & the antenna chain and its power \\
+\file{J12} + \file{PV1}/\file{PV2} $\rightarrow$ bias tee & coax + 2 & the antenna chain and its power \\
 \file{PZ}, \file{PL} $\rightarrow$ buzzer, LEDs & 2 + 3 & the LED strip is optional \\
 \bottomrule
 \end{tabular}
@@ -798,8 +798,8 @@ one it is the difference between hearing Iridium bursts and not (T3b).
 \item Route along the arms and plate edges, zip-tied every 40--50 mm. Slack belongs in one
 service loop near the stack.
 \item Leave the \textbf{USB edge} clear (Section~\ref{sec:T0}).
-\item The ELRS antenna and the Iridium patch get separation from everything else, and from
-each other.
+\item The ELRS antennas and the Iridium antenna get separation from everything else, and from
+each other: ELRS at the nose, the Iridium helix on the tower at the tail.
 \end{enumerate}
 
 \subsection{Things that will bite you}
@@ -858,7 +858,7 @@ buzzer has its own oscillator and loses every arming and failsafe pattern.
 \file{PL2} = \file{+5V\_PAYLOAD}, \file{PL3} = GND. \flag{\file{PL1} and \file{PL2} have no
 label.} 5 V WS2812B. One landing, not both.
 \item \flag{\file{P41} and \file{PZ1} are +5 V and unlabelled; \file{PL2} is \file{+5V\_PAYLOAD}
-and unlabelled.} The camera's and the SAWbird+'s power leads land on \file{PV1}/\file{PV2}
+and unlabelled.} The camera's and the bias tee's power leads land on \file{PV1}/\file{PV2}
 (the payload rail), \emph{not} on \file{P41}. Identify every pad on the printed gerber
 before the iron touches it --- never by counting from a neighbour.
 \end{itemize}
@@ -1045,7 +1045,7 @@ keeps those numbers); the \emph{same silicon} in the 12-pin RNX VQFN has a 3.9 $
 117\degC{} to \textbf{87\degC}.
 
 \flag{The rule that keeps it there:} nothing that is \emph{payload} draws from this board's
-buck. The SAWbird+, the recording camera, an FPV AIO and the LD06 run from the
+buck. The Iridium antenna, the recording camera, an FPV AIO and the LD06 run from the
 \textbf{payload 5 V BEC} (stage B2, ~GBP 4); with the first two alone on the FC rail the
 worst corner would be 154\degC. \file{check\_modules.py} fails any module that is neither in
 \file{design.LOADS\_5V} nor marked BEC-powered, so a load cannot land on \file{U8}
@@ -1096,9 +1096,9 @@ filter's settings (\file{soop\_nav\_default\_cfg} in \file{firmware/soop/soop\_n
 
 \subsection{Step 1 --- record the sky with the bench kit (no board needed)}
 
-Kit A2: the RTL-SDR, the SAWbird+ IR in line, the patch antenna outdoors with open sky,
-and the Pi. The SAWbird needs power: the RTL-SDR V4's bias tee (\cmd{rtl\_biast -b 1}) or
-its micro-USB lead.
+Kit A2: the RTL-SDR, the HC610 antenna outdoors with open sky, and the Pi. The antenna's
+LNA takes its 15 mA from the RTL-SDR V4's bias tee (\cmd{rtl\_biast -b 1}), so the bench
+chain is the antenna and one cable.
 
 \begin{verbatim}
 bash sitl/tle/fetch_iridium_tle.sh                        # today's orbits
@@ -1142,7 +1142,7 @@ in 23.8\,Hz steps, and the filter is told the one actually programmed.
 \file{APM/SOOP/replay.iq}, add \file{replay 1} to \file{soop.cfg} and reboot. The log's
 \file{SOS.CPU} is the DSP's share of real time on the H743; keep it well under 50\%. Remove
 \file{replay} afterwards.
-\item \textbf{Live capture}, outdoors, the antenna on \file{ANT} through the SAWbird.
+\item \textbf{Live capture}, outdoors, the antenna on \file{ANT} through its bias tee.
 \file{SOS.Bps} (bursts per second) should be comparable to step 1. If the board hears nothing
 the bench kit hears, try \file{swap\_iq 1} (swapped I and Q mirror the spectrum); if
 \file{SOS.Ovr} counts up, the capture or the DSP is not keeping up with 2\,MSPS on these
@@ -1543,7 +1543,7 @@ hand-fit \file{U3}
 \item Confirm \file{Y1} = \file{C2682774} and \file{Y2} = \file{C5563878}; refresh the stock
 snapshot if it is over 7 days old
 \item Order the aircraft parts from \file{docs/PARTS.csv}, \textbf{including the M3
-assortment}, the SAWbird+ with its coax pigtail and power lead, and the bias-tee dongle.
+assortment}, the HC610 with its bias tee, coax and U.FL clip, and the bias-tee dongle.
 Do not buy a bare PMW3901 or VL53L1X chip
 \item While waiting: prepare the board ID request, print the padmap, decide the USB edge
 \item On arrival: inspect under magnification, buzz the ESC cable, measure the tapped depths

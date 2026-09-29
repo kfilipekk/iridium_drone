@@ -35579,7 +35579,7 @@
 		(embedded_fonts no)
 		(model "${JLC_LIB}/packages3d/TF-SMD_TF-01A.step"
 			(offset
-				(xyz 0 -2.175001967 0.050001209)
+				(xyz 0 -5.225 0.050001209)
 			)
 			(scale
 				(xyz 1 1 1)

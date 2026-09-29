@@ -134,12 +134,12 @@ def build_rows():
         id="bench.rf", cls="MODULE",
         bound=(f"the requirement is C/N0 {cn0_req:.0f} dB-Hz, so Pr must reach "
                f"{req_2db:.0f} dBm at 2 dB system NF ({req_4db:.0f} dBm at 4 dB). The gain "
-               f"and noise figure that meet it come from the BOUGHT Nooelec SAWbird+ IR "
-               f"(>=30 dB gain, 60 MHz bandpass at 1620 MHz, shielded, at the antenna where "
-               f"NF is set before cable loss). The board contributes a U.FL entry (J12) and "
-               f"3.3 V"),
+               f"and noise figure that meet it come from the BOUGHT Tallysman HC610 "
+               f"(a pre-filter then a 28 dB LNA, NF 2.0 dB, inside the antenna, where NF is "
+               f"set before cable loss). The board contributes a U.FL entry (J12); the "
+               f"antenna's 15 mA comes through an inline bias tee"),
         evidence=("a desense result is fixed by antenna separation, ferrites and shielding - "
-                  "all listed mitigations - because the SAW sits AT THE ANTENNA and rejects "
+                  "all listed mitigations - because the filter sits AT THE ANTENNA and rejects "
                   "the board's own switchers before the tuner sees them. The one board-side "
                   "lever, an on-board LNA+SAW, was DELETED in favour of the bought module "
                   "(design.py U15/U16/FL1), so putting it back would be a respin - and it is "

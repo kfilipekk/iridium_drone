@@ -23,7 +23,7 @@ motor_h        = 15.0;
 prop_dia       = 178.4;
 
 batt_l = 138; batt_w = 47; batt_h = 48;
-batt_y = -4.0;   // forward of centre, so the rear posts stay free
+batt_y = -6.0;   // forward of centre, so the rear posts stay free
 
 // ---- PLATE OUTLINES, PARSED FROM THE MANUFACTURER DXF ---------------------
 // drone.scad drew ALL THREE plates as one 50 mm square, from a variable whose own

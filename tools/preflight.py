@@ -405,6 +405,14 @@ def firmware(board):
            if rc == 0 else
            "a label sits nearer another part - see tools/check_silk_owner.py"))
 
+    #the 3D bodies the renders and any enclosure CAD are drawn
+    rc, out = run("check_model_alignment.py")
+    m = re.search(r'(\d+) bodies tested against each other', out)
+    check("fabrication", "3D bodies sit on their footprints and overlap nothing", rc == 0,
+          (f"{m.group(1) if m else '?'} bodies, each on its footprint, none overlapping"
+           if rc == 0 else
+           "a 3D body is misplaced or overlaps another - see tools/check_model_alignment.py"))
+
     rc, out = run("check_build.py")
     m = re.search(r'BUILD CHECKS PASS - (\d+) checks across (\d+)', out)
     check("mechanical", "aircraft-level build checks", rc == 0,
@@ -712,7 +720,7 @@ def firmware(board):
     check("mechanical", "every part off the board is mounted, with screws", good,
           f"{len(mounts)} printed mounts, every joint derived and sold; {len(printed)} printed "
           f"parts fit the printer as closed solids; nothing rises more than "
-          f"{max(float(v[1]) for v in sky):.1f} deg above the GPS or the Iridium patch" if good else
+          f"{max(float(v[1]) for v in sky):.1f} deg above the GPS or the Iridium antenna" if good else
           "a part lacks a mount, a joint or its sky - see tools/check_cad_fit.py")
 
     g = re.findall(r'^\s+(\w+)\s+lowest z\s+[-\d.]+\s+clearance\s+([-\d.]+) mm', out, re.M)

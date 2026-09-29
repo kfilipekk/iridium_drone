@@ -9,11 +9,12 @@ CAD  = os.path.join(os.path.dirname(HERE), "cad")
 SCAD = os.path.join(CAD, "drone.scad")
 
 #the SCAD module that draws each part design.MOUNTED and design.MOUNTS name
-MODULE = {"iridium_patch": "iridium_patch", "gps": "gps", "sawbird": "sawbird", "rx": "rx",
+MODULE = {"iridium_antenna": "iridium_antenna", "gps": "gps", "bias_tee": "bias_tee", "rx": "rx",
           "elrs_antenna": "elrs_antennas", "xiao": "rec_cam", "lidar": "lidar360",
           "range_down": "belly_sensor"}
 #the printed parts that close a mount
 LIDS = {"gps_pod": ("antenna_tower", "gps"), "gps_lid": ("gps_pod", "gps"),
+        "bias_strap": ("antenna_tower", "bias_tee"),
         "xiao_lid": ("nose_mount", "xiao"), "rx_cover": ("nose_mount", "rx"),
         "range_lid": ("range_cradle", "range_down")}
 MOUNTS = sorted(design.MOUNTS)
@@ -26,10 +27,10 @@ PARTS = sorted(AIRFRAME + PRINTED + [MODULE[k] for k in MODULE])
 
 CLEARANCE = {
     ("esc", "gps"):      (30.0, "GPS at least 30 mm from the ESC (docs/HARDWARE.md)"),
-    ("gps", "iridium_patch"): (2.0, "the two patches do not touch"),
+    ("gps", "iridium_antenna"): (2.0, "the two antennas do not touch"),
     ("elrs_antennas", "frame"): (5.0, "ELRS antennas out of the carbon"),
     ("antenna_tower", "battery"): (3.0, "the battery slides in past the tower"),
-    ("battery", "iridium_patch"): (5.0, "the strap passes under the patch deck"),
+    ("battery", "iridium_antenna"): (3.0, "the battery slides in past the helix"),
     ("esc", "fc"):       (0.5, "grommet gap must keep the boards apart"),
     ("battery", "fc"):   (1.0, "battery must not press on the connectors"),
     ("frame", "props"):  (2.0, "prop disc vs arms and plates"),
@@ -41,8 +42,11 @@ CLEARANCE = {
 for _n in PRINTED + [MODULE[k] for k in MODULE]:
     CLEARANCE.setdefault(("props", _n), (5.0, "prop disc vs a mounted part"))
 
-#the antennas that need sky, and the elevation below
-SKY = {"gps": 15.0, "iridium_patch": 15.0}
+#the antennas that need sky: the elevation below
+import gen_scad_mounts
+SKY = {"gps": (15.0, None),
+       "iridium_antenna": (15.0, gen_scad_mounts.G["tower"]["seat_z"]
+                           + design.MOUNTED["iridium_antenna"]["H"] / 2)}
 #plastic is transparent to them; carbon, metal
 SKY_BLOCKERS = [p for p in PARTS if p not in PRINTED]
 
@@ -287,9 +291,9 @@ def main():
         print(f"  {a:8s} x {b:8s} {tag}  clear {sep:8.2f} mm  (need {need:.1f})  {why}")
 
     print("\nsky view (nothing but plastic above the elevation mask)")
-    for n, mask in SKY.items():
+    for n, (mask, zc) in SKY.items():
         lo, hi = box[n]
-        c = ((lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, hi[2])     #top face, the phase centre
+        c = ((lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, hi[2] if zc is None else zc)
         worst = (-90.0, None)
         for b in SKY_BLOCKERS:
             if b == n:
@@ -324,7 +328,8 @@ def main():
     sold = open(os.path.join(os.path.dirname(HERE), "docs", "PARTS.csv")).read()
     ours = {j["where"] for m in design.MOUNTS.values() for j in m["joints"]}
     need = {f"M{r['dia']:g}x{r['L']}" for r in fasteners.ROWS if r["where"] in ours}
-    need |= {f"{k.rstrip('s')} x {v['L']:g}" for k, v in design.INSERTS.items()}
+    used = {j["size"] for m in design.MOUNTS.values() for j in m["joints"] if j["into"] == "insert"}
+    need |= {f"{k} x {design.INSERTS[k]['L']:g}" for k in used}
     unsold = sorted(n for n in need if n not in sold)
     print(f"  docs/PARTS.csv sells {len(need) - len(unsold)} of the {len(need)} screw and insert "
           f"sizes the mounts use  {'ok' if not unsold else 'FAIL'}")

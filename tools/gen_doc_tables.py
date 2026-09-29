@@ -285,7 +285,7 @@ STAGES = [
      "disabled, so nothing in B2 is needed for a GPS flight."),
     ("B2", "Aircraft sensors and payload - optional",
      "`RNGFNDn_TYPE` and `PRX1_TYPE` ship at 0; enable each one at the bench after it "
-     "is fitted. The +5 V rail cannot carry all of these AND the SAWbird+ at once - "
+     "is fitted. The +5 V rail cannot carry all of these at once - "
      "`check_modules.py` prints the budget."),
 ]
 
