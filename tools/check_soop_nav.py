@@ -7,6 +7,7 @@ import csv
 import json
 import math
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -19,7 +20,7 @@ import soop_scenario
 import soop_solver as sol
 
 TLE = os.path.join(ROOT, "sitl", "tle", "iridium-next.tle")
-SRC = ["nav_host.c", "soop_nav.c", "soop_ephem.c", "sgp4.c"]
+SRC = ["nav_host.c", "soop_guard.c", "soop_nav.c", "soop_ephem.c", "sgp4.c"]
 
 FINE = "flow-grade velocity, 0.1 m/s"
 OP = dict(orbits="operator")
@@ -36,6 +37,16 @@ FLIGHTS = (
 )
 #--quick flies the design case alone
 QUICK = FLIGHTS[:1]
+
+#the spoofing guard (soop_guard.c)
+SPOOF_CLEAN = (41, 42, 43, 44)
+SPOOF_BACK = (55, 56, 57, 58)      #honest GPS returning after a 15 min denial
+SPOOFS = (
+    ("jump 500 m", (45, 46), dict(start_s=300.0, jump_m=500.0), 5.0),
+    ("drag 10 m/s", (47, 48), dict(start_s=300.0, rate=10.0), 300.0),
+    ("drag 5 m/s", (49, 50), dict(start_s=300.0, rate=5.0), 420.0),
+    ("drag 2 m/s", (53, 54), dict(start_s=300.0, rate=2.0), 1500.0),
+)
 
 GATES = dict(median_m=400.0,       #horizontal error over every denied second, all flights
              p95_m=1200.0,
@@ -59,7 +70,7 @@ def build(tmp):
     if r.returncode:
         return None, r.stderr
     sizes = []
-    for f in ("soop_nav.c", "soop_ephem.c", "sgp4.c"):
+    for f in ("soop_guard.c", "soop_nav.c", "soop_ephem.c", "sgp4.c"):
         obj = os.path.join(tmp, f[:-2] + ".o")
         r = subprocess.run(["arm-none-eabi-gcc", "-c", "-O2", "-std=c99", "-Wall", "-Wextra",
                             "-Werror", "-mcpu=cortex-m7", "-mthumb", "-mfpu=fpv5-d16",
@@ -70,9 +81,9 @@ def build(tmp):
             return exe, "arm: " + r.stderr
         sz = subprocess.run(["arm-none-eabi-size", obj], capture_output=True, text=True).stdout
         sizes.append(int(sz.splitlines()[1].split()[0]))
-    #the filter's RAM is one soop_nav_t; ask the compiler rather than guess
+    #the navigation's RAM is one soop_guard_t (two filters); ask the compiler
     probe = os.path.join(tmp, "probe.c")
-    open(probe, "w").write('#include "soop_nav.h"\nunsigned long nav_size = sizeof(soop_nav_t);\n')
+    open(probe, "w").write('#include "soop_guard.h"\nunsigned long nav_size = sizeof(soop_guard_t);\n')
     r = subprocess.run(["arm-none-eabi-gcc", "-c", "-O2", "-std=c99", "-I", SOOP,
                         "-mcpu=cortex-m7", "-mthumb", "-o", probe + ".o", probe,
                         "-mfpu=fpv5-d16", "-mfloat-abi=hard"], capture_output=True, text=True)
@@ -173,6 +184,9 @@ def fly(exe, tmp, name, seed, kw):
             valid += 1
             errs.append(e)
             within += e < 2.0 * float(row[8])
+    alarms = sum(1 for row in rows if row[0] == "F" and int(row[13]) == 3)
+    m = re.search(r"gps jumps (\d+)", r.stderr)
+    alarms += int(m.group(1)) if m else 1
     bursts = [row for row in rows if row[0] == "B"]
     fused = wrong = false_fused = n_false = 0
     for row, b in zip(bursts, truth["bursts"]):
@@ -186,7 +200,70 @@ def fly(exe, tmp, name, seed, kw):
             wrong += 1
     return dict(name=name, seed=seed, errs=errs, within=within, valid=valid, n=len(fixes),
                 final=fixes[-1][1] if fixes else float("nan"), fused=fused, wrong=wrong,
-                false_fused=false_fused, n_false=n_false, stderr=r.stderr.strip())
+                false_fused=false_fused, n_false=n_false, alarms=alarms, stderr=r.stderr.strip())
+
+
+def spoof_flight(exe, tmp, name, seed, spoof, **kw):
+    """One flight on GPS throughout, armed at 60 s, optionally spoofed."""
+    d = os.path.join(tmp, f"spoof_{seed}")
+    kw = dict(dict(gps_min=30.0, denial_min=0.0), **kw)
+    truth = soop_scenario.make_obs(d, seed=seed, orbits="operator", spoof=spoof, **kw)
+    r = subprocess.run([exe, os.path.join(d, "iridium.tle"), os.path.join(d, "obs.txt")],
+                       capture_output=True, text=True)
+    track = truth["track"]
+    tb = [p["board"] for p in track]
+    t_sp = truth["boot"] + (spoof["start_s"] if spoof else 1e9)
+    seen, early, errs, j = None, 0, [], 0
+    for row in (ln.split(",") for ln in r.stdout.splitlines() if ln.startswith("F,")):
+        t, state = float(row[1]), int(row[13])
+        if state == 3 and seen is None:
+            if t < t_sp:
+                early += 1
+            else:
+                seen = t - t_sp
+        if seen is not None and t <= tb[-1]:
+            while j < len(tb) - 2 and tb[j + 1] <= t:
+                j += 1
+            w = (t - tb[j]) / (tb[j + 1] - tb[j])
+            la, lo = (track[j][k] + w * (track[j + 1][k] - track[j][k]) for k in ("lat", "lon"))
+            dn = math.radians(float(row[2]) - la) * 6371000.0
+            de = math.radians(float(row[3]) - lo) * 6371000.0 * math.cos(math.radians(la))
+            errs.append(math.hypot(dn, de))
+    m = re.search(r"gps jumps (\d+)", r.stderr)
+    if not spoof:
+        early += int(m.group(1)) if m else 1
+    return seen, early, errs
+
+
+def check_spoofing(exe, tmp):
+    lines, good = [], True
+    alarms = sum(spoof_flight(exe, tmp, "clean", s, None)[1] for s in SPOOF_CLEAN)
+    ok = alarms == 0
+    good &= ok
+    lines.append(f"  {'ok  ' if ok else 'FAIL'}  {len(SPOOF_CLEAN)} flights on honest GPS for 30 "
+                 f"minutes: {alarms} spoofing alarm(s)")
+    alarms = sum(spoof_flight(exe, tmp, "back", s, None, gps_min=5.0, denial_min=15.0,
+                              back_min=5.0)[1] for s in SPOOF_BACK)
+    ok = alarms == 0
+    good &= ok
+    lines.append(f"  {'ok  ' if ok else 'FAIL'}  {len(SPOOF_BACK)} flights whose honest GPS comes "
+                 f"back after a 15 minute denial: {alarms} spoofing alarm(s)")
+    for name, seeds, spoof, deadline in SPOOFS:
+        res = [spoof_flight(exe, tmp, name, s, spoof) for s in seeds]
+        lat = [r[0] for r in res]
+        ok = all(x is not None and x <= deadline for x in lat) and not any(r[1] for r in res)
+        good &= ok
+        moved = [spoof.get("jump_m", 0.0) + spoof.get("rate", 0.0) * x for x in lat
+                 if x is not None]
+        lines.append(f"  {'ok  ' if ok else 'FAIL'}  spoofer, {name}: caught after "
+                     f"{', '.join('never' if x is None else f'{x:.0f} s' for x in lat)} "
+                     f"(limit {deadline:.0f} s), the GPS by then {max(moved or [0]):.0f} m off"
+                     + (f"; the fix after it is {pct([e for r in res for e in r[2]], 0.5):.0f} m "
+                        f"median from the truth" if "jump_m" in spoof and any(r[2] for r in res)
+                        else ""))
+    lines.append("        (after a drag is caught the simulation still feeds the dragged EKF velocity,")
+    lines.append("        which the aircraft stops using once it drops the GPS - so it is not measured)")
+    return good, lines
 
 
 def pct(v, q):
@@ -261,6 +338,17 @@ def main():
         print(f"  {'ok  ' if good else 'FAIL'}  with 0.1 m/s velocity: median {pct(fine, 0.5):.0f} m, "
               f"p95 {pct(fine, 0.95):.0f} m (limits {g['fine_median_m']:.0f} / "
               f"{g['fine_p95_m']:.0f}): the filter keeps what a better velocity gives it")
+
+    al = sum(r["alarms"] for r in results)
+    checks.append(al == 0)
+    print(f"  {'ok  ' if al == 0 else 'FAIL'}  the spoofing guard raised {al} alarm(s) and "
+          f"rejected no GPS fix across {len(results)} honest flights")
+
+    if "--quick" not in sys.argv:
+        good, lines = check_spoofing(exe, tmp)
+        checks.append(good)
+        for ln in lines:
+            print(ln)
 
     nv, nf = blind_start(exe, tmp)
     checks.append(nf > 0 and nv == 0)

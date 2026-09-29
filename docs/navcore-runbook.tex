@@ -1163,8 +1163,26 @@ compare \file{SOF} against \file{GPS} in the log; then a denial test in a safe a
 
 \textbf{What the aircraft will not do.} It offers no Iridium fix until it has had GPS (or a
 surveyed start within 50\,m): started blind, the filter linearises about a guess kilometres
-out and in simulation reported up to four times better than it was. And it believes the
-real GPS while that GPS reports a good fix, so a spoofed fix would be learned too.
+out and in simulation reported up to four times better than it was.
+
+\textbf{Spoofing.} From arming, a second copy of the navigation runs without the GPS, on
+Iridium alone (\file{soop\_guard.c}), and every GPS fix is checked against it before the
+navigation learns from it. A fix that jumps is refused at once; a GPS that stays further
+from the Iridium-only position than 3 times its accuracy (and at least 150\,m) for 5\,s is
+declared spoofed. The GCS then shows \emph{SoOP: GPS spoofed, N m from Iridium - using
+SoOP}, the navigation drops the real GPS for the rest of the flight, and the autopilot is
+moved onto the Iridium receiver (\file{GPS\_AUTO\_SWITCH 0}, \file{GPS\_PRIMARY 1}, not
+saved: a reboot restores them). \file{SOS.G} logs the guard's state and \file{SOS.GD} the
+distance it measured.
+
+In simulation (\file{tools/check\_soop\_nav.py}) it raises no alarm on honest GPS ---
+including GPS coming back after a 15 minute denial --- and catches a 500\,m jump in 1--2\,s,
+a 10\,m/s drag in about 4 minutes, a 5\,m/s drag in about 4 and a 2\,m/s drag in 5 to 19;
+by then the spoofer has moved the GPS 1.3--2.4\,km. It cannot be faster: a spoofer that
+drags the position drags the EKF's velocity too, and until the aircraft has been pulled
+further than an Iridium-only fix can tell apart, the two stories agree. A slower drag may
+not be caught within a flight. Watch \file{SOS.GD} in flight: a distance that keeps growing
+while the GPS looks healthy is the early sign.
 
 \subsection{TLEs and time}
 

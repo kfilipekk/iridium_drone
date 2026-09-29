@@ -249,7 +249,8 @@ PREREQUISITES = [
          claim="the flight navigation in C (soop_nav.c) associates bursts to satellites, "
                "tracks the TCXO, the orbit errors and the flight EKF's velocity drift, and "
                "holds a fix with an honest accuracy through 15-30 min denied flights on "
-               "real orbits, and builds for the H743"),
+               "real orbits, checks the GPS against Iridium so a jump or a fast drag is "
+               "caught and honest GPS is never refused, and builds for the H743"),
     #the solve is ported to C and gated (solver.c below)
     dict(id="build.firmware", cls=BENCH,
          bound="AP_SoOP builds and links into the NAVCORE_SoOP firmware",
