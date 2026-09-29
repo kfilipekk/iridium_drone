@@ -27,8 +27,10 @@ void soop_nav_default_cfg(soop_nav_cfg_t *c)
     c->dt_sigma0 = 0.03;
     c->baro_sigma = 0.5;  c->baro_bias_sigma = 3.0;  c->baro_bias_tau = 600.0;
     c->beta_sigma = 60.0;
-    c->along0_m = 300.0;  c->along_m_per_day = 1000.0;
-    c->cross_m = 200.0;   c->radial_m = 100.0;
+    //public TLEs against Iridium's own orbits, all 80 satellites
+    c->orbit[SOOP_ORBIT_TLE] = (soop_orbit_err_t){ 300.0, 470.0, 65.0, 12.0, 75.0, 56.0 };
+    //Iridium's own orbits, fitted to SGP4: not measured
+    c->orbit[SOOP_ORBIT_OPERATOR] = (soop_orbit_err_t){ 50.0, 150.0, 20.0, 10.0, 20.0, 10.0 };
     c->max_tle_age_d = 7.0;
     c->gps_sigma = 3.0;
     c->sig_floor = 1.0;
@@ -104,7 +106,7 @@ static double utc_of(const soop_nav_t *nav, double tb)
 static void screen_catalogue(soop_nav_t *nav, double t_utc)
 {
     for (int i = 0; i < nav->n_cat && i < (int)sizeof nav->cat_ok; i++)
-        nav->cat_ok[i] = t_utc == 0.0
+        nav->cat_ok[i] = t_utc <= 0.0
             || fabs(t_utc - nav->cat[i].epoch_s) < nav->cfg.max_tle_age_d * 86400.0;
 }
 
@@ -383,11 +385,14 @@ static void sat_prior(const soop_nav_t *nav, int sat, double t_utc, double pr[4]
 {
     const soop_nav_cfg_t *c = &nav->cfg;
     const double age = fabs(t_utc - nav->cat[sat].epoch_s) / 86400.0;
-    const double s_tau = (c->along0_m + c->along_m_per_day * age) / 7400.0;
+    const soop_orbit_err_t *o = &c->orbit[nav->cat[sat].orbit];
+    const double s_tau = (o->along0_m + o->along_m_per_day * age) / 7400.0;
+    const double s_cross = o->cross0_m + o->cross_m_per_day * age;
+    const double s_radial = o->radial0_m + o->radial_m_per_day * age;
     pr[0] = c->beta_sigma * c->beta_sigma;
     pr[1] = s_tau * s_tau;
-    pr[2] = c->cross_m * c->cross_m;
-    pr[3] = c->radial_m * c->radial_m;
+    pr[2] = s_cross * s_cross;
+    pr[3] = s_radial * s_radial;
 }
 
 static void drop_slot(soop_nav_t *nav, int k)

@@ -1072,23 +1072,109 @@ about 100\degC.}
 
 This is the one place the project is honest about not knowing.
 
-\textbf{The Doppler solve is written and validated.} \file{tools/soop\_solver.py} runs
-\file{SOLVER OK}, recovering a known position from clean geometry at \textbf{160.1 m median
-at 5 Hz}, and reports a singular geometry rather than inventing a number.
+\textbf{What exists.} The whole Iridium chain is written in C and gated against simulation,
+and the aircraft runs the same C (\file{AP\_SoOP}, installed by
+\file{tools/install\_soop\_backend.py}). The burst DSP finds 95\% of bursts at 55\,dB-Hz and
+above with a p90 carrier error near 2\,Hz and no false detections
+(\file{tools/check\_soop\_dsp.py}). The navigation holds a median of about 200\,m and a p95
+of about 710\,m horizontally through 15--30 minute GNSS-denied flights at 15\,m/s on the real
+constellation, with orbits one to three days old --- and the accuracy it reports holds about
+97\% of the time, which is what the flight EKF needs (\file{tools/check\_soop\_nav.py}).
+What limits it is the flight EKF's velocity once GNSS is gone, not the orbits: at 1\,m/s of
+velocity error the median is 200\,m; at 0.1\,m/s, 36\,m.
 
-\textbf{What is not known is what the shipping antenna and receiver actually deliver.} The
-shipped \file{DopplerErrorModel} sigma is \textbf{180 m}; the measured divergence boundary
-was taken at \textbf{20 m}. The SITL scenarios print this warning beside their own results:
+\textbf{What is not known is what the real sky and this antenna deliver}: how many bursts
+per minute, at what C/N0, how far each satellite's transmitter is off frequency, and how
+the TCXO drifts in flight. The simulation's assumption for each is written in
+\file{tools/soop\_scenario.py}. T3b replaces them with measurements, in three steps, and the
+filter's settings (\file{soop\_nav\_default\_cfg} in \file{firmware/soop/soop\_nav.c}, or
+\file{APM/SOOP/soop.cfg} on the card) are where the answers go.
 
-\begin{quote}
-\emph{``The 120 m divergence boundary DOES NOT APPLY here: it was measured at sigma 20 m
-and this run is at sigma 180 m. Re-measure the boundary at the current sigma before reading
-a hold/runaway verdict off it.''}
-\end{quote}
+\subsection{Step 1 --- record the sky with the bench kit (no board needed)}
 
-\flag{Rescaling it by arithmetic would invent a measurement.} Only a bench RF measurement
-moves this: a reference receiver, the real antenna, real geometry. Until then, do not read
-a position-hold verdict off those scenarios.
+Kit A2: the RTL-SDR, the SAWbird+ IR in line, the patch antenna outdoors with open sky,
+and the Pi. The SAWbird needs power: the RTL-SDR V4's bias tee (\cmd{rtl\_biast -b 1}) or
+its micro-USB lead.
+
+\begin{verbatim}
+bash sitl/tle/fetch_iridium_tle.sh                        # today's orbits
+date -u +%Y-%m-%dT%H:%M:%S.%NZ > rec.time
+rtl_sdr -f 1626333333 -s 2000000 -g 40 -n 1200000000 rec.cu8    # 10 min, 2.4 GB
+python3 tools/soop_bench.py rec.cu8 --start $(cat rec.time) --site LAT LON H
+\end{verbatim}
+
+\file{--site} is where the antenna was, in degrees and ellipsoidal metres (a phone's GPS is
+close enough). The tool converts the recording to what the board's ADCs would capture
+(\file{firmware/soop/iq\_import.c}), runs the flight DSP and the flight navigation over it,
+and reports:
+
+\begin{itemize}
+\item \textbf{Bursts per minute and their C/N0.} The simulation assumes about one burst a
+second from each satellite in view, at 45--65\,dB-Hz. A few per minute is a gain or antenna
+problem, not a navigation one.
+\item \textbf{The anchored run}, where the filter is told the site. Most bursts should be
+fused and the \textbf{NIS} should sit near 1: that says the filter's noise model fits the
+real sky. Well above 1, the first suspect is the satellites' transmit offsets, printed
+beside it: put their rms in \file{soop.cfg} as \file{beta\_sigma}.
+\item \textbf{The offset run}, started 5\,km away. It shows the filter walking in to the
+site. Its reported accuracy is optimistic --- this is a blind start, which the aircraft
+never uses (it anchors on GPS first).
+\item \textbf{gr-iridium's count}, if it is installed: the DSP should find most of the
+bursts gr-iridium finds in the Ring Alert band.
+\end{itemize}
+
+\subsection{Step 2 --- the board on the bench, after T3}
+
+On the SD card: \file{APM/SOOP/iridium.tle}, a copy of \file{sitl/tle/iridium-next.tle}
+fetched that day, and optionally \file{APM/SOOP/soop.cfg} (\file{key value} lines:
+\file{beta\_sigma}, \file{clkd\_q}, \file{bbg}, \file{swap\_iq}, \file{replay},
+\file{dut1}, \dots). Set \file{GPS2\_TYPE 27}; the task starts with the SoOP GPS backend.
+
+\begin{enumerate}
+\item \textbf{Tuner lock.} At boot the GCS shows \emph{SoOP: tuner locked, VCO n}, or an
+error naming the VCO and the VTUNE ADC state (row 3.12). The LO is set from the 25\,MHz TCXO
+in 23.8\,Hz steps, and the filter is told the one actually programmed.
+\item \textbf{CPU, before any RF.} Copy \file{board.iq} from step 1's output folder to
+\file{APM/SOOP/replay.iq}, add \file{replay 1} to \file{soop.cfg} and reboot. The log's
+\file{SOS.CPU} is the DSP's share of real time on the H743; keep it well under 50\%. Remove
+\file{replay} afterwards.
+\item \textbf{Live capture}, outdoors, the antenna on \file{ANT} through the SAWbird.
+\file{SOS.Bps} (bursts per second) should be comparable to step 1. If the board hears nothing
+the bench kit hears, try \file{swap\_iq 1} (swapped I and Q mirror the spectrum); if
+\file{SOS.Ovr} counts up, the capture or the DSP is not keeping up with 2\,MSPS on these
+ADC channels --- a measurement the datasheet could not settle.
+\item \textbf{Static with GPS, 30 minutes at a known spot.} \file{SOF.HAcc} settles to tens of
+metres (anchored on GPS) and \file{SOF.NIS} near 1. \file{SOS.Clk} is the TCXO: how fast it
+drifts over those 30 minutes sets \file{clkd\_q} (the default, 0.08\,Hz/s/$\sqrt{\rm s}$,
+assumes the board temperature wanders by about 3\,\degC).
+\end{enumerate}
+
+\subsection{Step 3 --- in flight}
+
+With \file{GPS2\_TYPE 27} the Iridium fix is the second GPS and \file{GPS\_AUTO\_SWITCH 1}
+moves to it when the real one loses its fix. When denied, the EKF must take position from GPS
+(\file{EK3\_SRC2\_POSXY 3}) and velocity from flow (\file{EK3\_SRC2\_VELXY 5}) --- not from
+the Iridium fix, whose velocity is the EKF's own, corrected. Fly first with GPS healthy and
+compare \file{SOF} against \file{GPS} in the log; then a denial test in a safe area.
+
+\textbf{What the aircraft will not do.} It offers no Iridium fix until it has had GPS (or a
+surveyed start within 50\,m): started blind, the filter linearises about a guess kilometres
+out and in simulation reported up to four times better than it was. And it believes the
+real GPS while that GPS reports a good fix, so a spoofed fix would be learned too.
+
+\subsection{TLEs and time}
+
+Before each flying day run \cmd{bash sitl/tle/fetch\_iridium\_tle.sh} and copy the result to
+\file{APM/SOOP/iridium.tle}. It fetches CelesTrak's supplemental sets for Iridium, fitted to
+Iridium's own ephemeris and marked by a \file{C} in column 8 of line 1; if those are
+unavailable it says so and writes the public TLEs instead, which are several hundred metres
+further off along-track. The filter weighs each satellite by which kind its elements are and
+their age, and ignores any older than 7 days. If IERS Bulletin A gives $|$UT1$-$UTC$|$ above 0.1\,s, put it
+in \file{soop.cfg} as \file{dut1}: 0.1\,s turns the satellites 46\,m.
+
+The SITL scenarios (\file{sitl/}) still fly the synthetic \file{DopplerErrorModel} of
+\file{sitl/soop\_link.py}, not this chain, so do not read a position-hold verdict off them
+either.
 
 % =============================================================================
 \section{Part 12 --- T3c: IMU temperature calibration}
@@ -1377,35 +1463,39 @@ uses 9001, which is above the ceiling the registry asks you to respect \\
 The board and its firmware are green. The project's \emph{premise} is not, and a clean gate
 says nothing about it, so it is stated here rather than left to the repository's own notes.
 
-\textbf{The Iridium Doppler solver exists and is validated; the chain around it does not.}
+\textbf{The Iridium chain exists in C and is gated against simulation; nothing about it is
+proven on hardware or real sky yet.} That is T3b (Part 11).
 
 \begin{center}
 \begin{tabular}{@{}P{0.29\textwidth}P{0.61\textwidth}@{}}
 \toprule
 \textbf{Piece} & \textbf{Status} \\
 \midrule
-The least-squares Doppler solve & \good{built and validated} --- \file{tools/soop\_solver.py}.
-Gauss-Newton over position and clock with an analytic Jacobian; it recovers a known position
-exactly from clean geometry, and reports \emph{singular} on degenerate geometry rather than
+The least-squares Doppler solve & \good{built and validated} --- \file{tools/soop\_solver.py},
+the Python reference; it reports \emph{singular} on degenerate geometry rather than
 inventing a number \\
-SGP4 and real TLE ephemeris & \good{built and validated} (2026-09-20) --- \file{tools/soop\_solver.py
---ephemeris} propagates the vendored Iridium NEXT catalogue with SGP4 and converts
-TEME$\rightarrow$ECEF including the Earth's rotation. A known position is recovered from
-\emph{real} orbits to $\sim$260\,m median at 5\,Hz over 60 bursts. SGP4 propagation error is
-not measured by it \\
-Burst detection and frequency estimation & \good{built and validated} (2026-09-20) ---
-\file{tools/soop\_burst.py}, from I/Q: energy detection plus a periodogram carrier estimate
-that beats the burst's $\sim$120\,Hz FFT bin, measured at p90 2.4\,Hz at C/N0
-$\approx$62\,dB-Hz on synthetic I/Q. The bench re-check on recorded I/Q stays a bench item \\
-The solve ported to C for the H743 & \good{built and validated} (2026-09-20) ---
-\file{firmware/soop/}, a differential test against the Python reference (agreement
-$1.6\times10^{-8}$\,m) and a cross-compile for Cortex-M7 \\
-The flight firmware around it & \flag{not built} --- nothing yet samples the MAX2112, runs
-SGP4 in C, or hands a fix to the EKF on the aircraft \\
-The route into the EKF & \good{built} (2026-09-20) --- an in-process \file{AP\_GPS} backend
-(\file{GPS\_TYPE\_SOOP}), so the fix never leaves the vehicle. Registered and compiled into
-both firmwares, and gated; that the EKF actually \emph{fuses} it is not yet proven ---
-\file{tools/soop\_sitl\_test.py} exists but is not passing \\
+SGP4 and the ephemeris & \good{built and validated} --- \file{firmware/soop/sgp4.c} and
+\file{soop\_ephem.c} agree with the Python reference to 0.15\,m on the whole catalogue, and
+the frame rotation with Vallado's published example to 16\,m. TLEs are read by column,
+with no \file{scanf}, because the flight C library has none with floating point \\
+Burst detection and frequency estimation & \good{built and gated} ---
+\file{firmware/soop/soop\_dsp.c}, against a simulated sky with the board's impairments: 95\%
+of bursts at 55\,dB-Hz and above, p90 carrier error about 2\,Hz, no false detections. A bench
+recording converts into the same DSP (\file{iq\_import.c}) \\
+The navigation & \good{built and gated} --- \file{firmware/soop/soop\_nav.c}, a Kalman filter
+over position, the flight EKF's velocity drift, the TCXO, the GPS time tag, baro, and each
+satellite's orbit and transmit errors. Over simulated 15--30 minute denied flights: median
+200\,m, p95 about 710\,m; its reported accuracy holds 97\% of the time; no burst credited to
+the wrong satellite in 23\,346 (\file{tools/check\_soop\_nav.py}) \\
+The flight firmware around it & \good{built}, \flag{not proven on hardware} ---
+\file{firmware/ardupilot/AP\_SoOP}: the MAX2112 driver, ADC1/ADC2 simultaneous I/Q capture
+(battery sensing moved to ADC3), and the task that runs the gated C and hands fixes to the
+EKF. It compiles into the NAVCORE firmware; tuner lock, the capture rate and the CPU share
+are T3b step 2 \\
+The route into the EKF & \good{built} --- an in-process \file{AP\_GPS} backend
+(\file{GPS\_TYPE 27}), fed by \file{AP\_SoOP} on the aircraft \\
+SITL with the real chain & \flag{not built} --- SITL still flies a synthetic stand-in fix
+(\file{AP\_SoOPFix::update\_from\_sitl}) \\
 \bottomrule
 \end{tabular}
 \end{center}

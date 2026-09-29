@@ -21,14 +21,18 @@ import soop_solver as sol
 TLE = os.path.join(ROOT, "sitl", "tle", "iridium-next.tle")
 SRC = ["nav_host.c", "soop_nav.c", "soop_ephem.c", "sgp4.c"]
 
+FINE = "flow-grade velocity, 0.1 m/s"
+OP = dict(orbits="operator")
 #(name, seeds, scenario arguments)
 FLIGHTS = (
-    ("15 min denied, 15 m/s, 1-day TLE", (1, 2, 3, 4, 5, 6), dict()),
-    ("30 min denied", (7, 8), dict(denial_min=30.0)),
-    ("3-day-old TLE", (9, 10), dict(tle_age_d=3.0)),
-    ("hovering (static)", (11, 12), dict(static=True)),
-    ("10x the false bursts", (13,), dict(false_rate=0.5)),
-    ("a third of the bursts", (14,), dict(rate=0.3)),
+    ("15 min denied, 15 m/s, 1-day orbits", (1, 2, 3, 4, 5, 6), OP),
+    ("30 min denied", (7, 8), dict(OP, denial_min=30.0)),
+    ("3-day-old orbits", (9, 10), dict(OP, tle_age_d=3.0)),
+    ("hovering (static)", (11, 12), dict(OP, static=True)),
+    ("10x the false bursts", (13,), dict(OP, false_rate=0.5)),
+    ("a third of the bursts", (14,), dict(OP, rate=0.3)),
+    ("public TLEs, the fallback", (15, 16, 17, 18), dict()),
+    (FINE, (19, 20, 21, 22), dict(OP, vel_sigma=0.1)),
 )
 #--quick flies the design case alone
 QUICK = FLIGHTS[:1]
@@ -39,13 +43,16 @@ GATES = dict(median_m=400.0,       #horizontal error over every denied second, a
              within2_min=0.90,     #fixes inside 2 x reported hacc (a 2-D Gaussian gives 0.86+)
              avail_min=0.95,       #denied seconds with a valid fix
              wrong_max=0.002,      #fused bursts credited to the wrong satellite or channel
-             false_max=0.02)       #false bursts that got fused
+             false_max=0.02,       #false bursts that got fused
+             #the way toward 20 m (docs/IRIDIUM-RESEARCH.md)
+             fine_median_m=60.0,
+             fine_p95_m=200.0)
 
 
 def build(tmp):
     """Host and H743 builds, both with ArduPilot's -fsingle-precision-constant."""
     exe = os.path.join(tmp, "nav_host")
-    r = subprocess.run(["cc", "-O2", "-std=c99", "-Wall", "-Wextra", "-Werror", "-pedantic",
+    r = subprocess.run(["cc", "-O2", "-std=c99", "-Wall", "-Wextra", "-Wshadow", "-Werror", "-pedantic",
                         "-fsingle-precision-constant", "-o", exe]
                        + [os.path.join(SOOP, f) for f in SRC] + ["-lm"],
                        capture_output=True, text=True)
@@ -128,7 +135,8 @@ def blind_start(exe, tmp, seed=31):
     out += [ln for ln in lines if ln[0] in "EAD"]
     log = os.path.join(d, "blind.txt")
     open(log, "w").write("\n".join(out) + "\n")
-    r = subprocess.run([exe, TLE, log], capture_output=True, text=True)
+    r = subprocess.run([exe, os.path.join(d, "iridium.tle"), log], capture_output=True,
+                       text=True)
     rows = [ln.split(",") for ln in r.stdout.splitlines() if ln.startswith("F,")]
     return sum(int(p[12]) for p in rows), len(rows)
 
@@ -136,7 +144,10 @@ def blind_start(exe, tmp, seed=31):
 def fly(exe, tmp, name, seed, kw):
     d = os.path.join(tmp, f"flight_{seed}")
     truth = soop_scenario.make_obs(d, seed=seed, **kw)
-    r = subprocess.run([exe, TLE, os.path.join(d, "obs.txt")], capture_output=True, text=True)
+    #the filter assumes half as much again of the velocity error as the flight has
+    vel = ["--vel-sigma", f"{1.5 * kw['vel_sigma']:g}"] if "vel_sigma" in kw else []
+    r = subprocess.run([exe, os.path.join(d, "iridium.tle"), os.path.join(d, "obs.txt")] + vel,
+                       capture_output=True, text=True)
     rows = list(csv.reader(r.stdout.splitlines()[1:]))
     track = truth["track"]
     tb = [p["board"] for p in track]
@@ -243,14 +254,22 @@ def main():
         checks.append(good)
         print(f"  {'ok  ' if good else 'FAIL'}  {text}")
 
+    fine = [x for r in results if r["name"] == FINE for x in r["errs"]]
+    if fine:
+        good = pct(fine, 0.5) <= g["fine_median_m"] and pct(fine, 0.95) <= g["fine_p95_m"]
+        checks.append(good)
+        print(f"  {'ok  ' if good else 'FAIL'}  with 0.1 m/s velocity: median {pct(fine, 0.5):.0f} m, "
+              f"p95 {pct(fine, 0.95):.0f} m (limits {g['fine_median_m']:.0f} / "
+              f"{g['fine_p95_m']:.0f}): the filter keeps what a better velocity gives it")
+
     nv, nf = blind_start(exe, tmp)
     checks.append(nf > 0 and nv == 0)
     print(f"  {'ok  ' if nv == 0 and nf else 'FAIL'}  with no GPS and no surveyed start, {nv} of {nf} "
           f"fixes offered: it does not hand the EKF a position it cannot vouch for")
 
     print("\n  NOTE: simulated flights. What they cannot settle: the real burst rate and C/N0 on")
-    print("  the aircraft, how the real TCXO drifts with temperature, how far real TLEs are off,")
-    print("  and the satellites' real transmit offsets. The bench recordings and T3b measure")
+    print("  the aircraft, how the real TCXO drifts with temperature, how far Iridium's own")
+    print("  orbits are off, and the satellites' real transmit offsets. The bench recordings and T3b measure")
     print("  those, and the filter's parameters (soop_nav_default_cfg) are where they go.")
     ok = all(checks)
     print("\n" + (f"SOOP-NAV OK - {sum(checks)}/{len(checks)} assertions" if ok else

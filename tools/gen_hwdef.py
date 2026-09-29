@@ -23,7 +23,6 @@ DROP = [
     (r'^define HAL_OSD_TYPE_DEFAULT', "no analogue OSD fitted"),
     (r'^ROMFS_WILDCARD libraries/AP_OSD', "no analogue OSD fitted"),
     (r'^PA4 BATT2_VOLTAGE_SENS', "single battery; freed for the SoOP I/Q input"),
-    (r'^PC4 PRESSURE_SENS',      "no airspeed sensor; freed for the SoOP I/Q input"),
     (r'^define HAL_BATT2_',      "single battery"),
     (r'^define HAL_DEFAULT_AIRSPEED_PIN', "no airspeed sensor"),
     (r'^define BOARD_RSSI_ANA_PIN', "RSSI arrives over CRSF"),
@@ -51,6 +50,18 @@ REPLACE = [
      "PC5 PYRO_FIRE OUTPUT LOW GPIO(84)",
      "PC5 drives Q5's gate via R54 (1k series) with R55 (47k pull-down) for the recovery / e-match pyro channel on J18. "
      "LOW keeps the channel disarmed at boot."),
+    (r'^PC4 PRESSURE_SENS ADC1 SCALE\(2\)',
+     "PC4 SOOP_I_ADC ADC1 SCALE(1)",
+     "No airspeed sensor: PC4 is the tuner's I, through the OPA2374 stage. Declared on ADC1 so "
+     "the DMA resolver gives ADC1/ADC2 a stream of their own; AnalogIn leaves ADC1 alone "
+     "(tools/install_soop_backend.py) and AP_SoOP_Capture samples it with Q on ADC2."),
+    (r'^PC0 BATT_VOLTAGE_SENS ADC1 SCALE\(1\)',
+     "PC0 BATT_VOLTAGE_SENS ADC3 SCALE(1)",
+     "Battery sensing moves to ADC3 (PC0 is ADC123_INP10, the same channel number), so "
+     "ADC1 and ADC2 are free to sample the tuner's I and Q together - AP_SoOP_Capture."),
+    (r'^PC1 BATT_CURRENT_SENS ADC1 SCALE\(1\)',
+     "PC1 BATT_CURRENT_SENS ADC3 SCALE(1)",
+     "Battery current moves to ADC3 with the voltage (PC1 is ADC123_INP11)."),
     (r'^PD10\s+PINIO1.*',
      "PD10 TOUCHDOWN INPUT PULLUP GPIO(85)",
      "PD10 reads the landing leg touchdown switch on J20 with 10k pull-up R56."),
@@ -70,6 +81,13 @@ define ALLOW_ARM_NO_COMPASS 1
 
 # U19, the TMP119 beside U9, needs this line or it is dead SILICON.
 define AP_TEMPERATURE_SENSOR_ENABLED 1
+
+# ADC1 samples the tuner's I (PC4, INP4) and ADC2 its Q (PA4, INP18) at the same instant, in
+# dual regular-simultaneous mode, for the on-board Iridium navigation (AP_SoOP_Capture).
+# Dual mode needs 32-bit ADC12 samples; the battery is on ADC3, above.
+define STM32_ADC_DUAL_MODE TRUE
+define STM32_ADC_SAMPLES_SIZE 32
+define HAL_SOOP_CAPTURE_ENABLED 1
 """
 
 #defaults

@@ -43,13 +43,13 @@ def check_constants():
 
 def build(tmp):
     exe = os.path.join(tmp, "dsp_host")
-    r = subprocess.run(["cc", "-O2", "-std=c99", "-Wall", "-Wextra", "-Werror", "-o", exe,
+    r = subprocess.run(["cc", "-O2", "-std=c99", "-Wall", "-Wextra", "-Wshadow", "-Werror", "-o", exe,
                         os.path.join(SOOP, "dsp_host.c"), os.path.join(SOOP, "soop_dsp.c"), "-lm"],
                        capture_output=True, text=True)
     if r.returncode:
         return None, r.stderr
     obj = os.path.join(tmp, "soop_dsp.o")
-    r = subprocess.run(["arm-none-eabi-gcc", "-c", "-O2", "-std=c99", "-Wall", "-Wextra", "-Werror",
+    r = subprocess.run(["arm-none-eabi-gcc", "-c", "-O2", "-std=c99", "-Wall", "-Wextra", "-Wshadow", "-Werror",
                         "-mcpu=cortex-m7", "-mthumb", "-mfpu=fpv5-d16", "-mfloat-abi=hard",
                         "-fsingle-precision-constant", "-o", obj, os.path.join(SOOP, "soop_dsp.c")],
                        capture_output=True, text=True)
@@ -62,7 +62,7 @@ def build(tmp):
 def check_import(tmp, dsp_exe):
     """A synthetic bench recording through iq_import and the DSP."""
     exe = os.path.join(tmp, "iq_import")
-    r = subprocess.run(["cc", "-O2", "-std=c99", "-Wall", "-Wextra", "-Werror", "-o", exe,
+    r = subprocess.run(["cc", "-O2", "-std=c99", "-Wall", "-Wextra", "-Wshadow", "-Werror", "-o", exe,
                         os.path.join(SOOP, "iq_import.c"), "-lm"], capture_output=True, text=True)
     if r.returncode:
         return False, "iq_import build: " + r.stderr.strip()[:300]

@@ -154,6 +154,15 @@ def build_rows():
         evidence="nothing on the board - it gates FLYING, not ordering",
         residual="the same bench session as bench.rf"))
     rows.append(dict(
+        id="build.firmware", cls="PARAM",
+        bound=("AP_SoOP builds and links into the NAVCORE_SoOP firmware; the pins it uses "
+               "(PC4/PA4 capture, I2C1 tuner, PC0/PC1 moved to ADC3) are gated against the "
+               "netlist by the hwdef check"),
+        evidence=("tuner lock, the 2 MSPS capture rate and the CPU share are properties of "
+                  "the code on this silicon. ST's pin data confirms every ADC channel used, "
+                  "so what the bench finds is fixed in firmware, not copper"),
+        residual="runbook T3b step 2"))
+    rows.append(dict(
         id="bench.cameraflow", cls="MODULE",
         bound=("flow quality is a property of the off-board companion camera and the ground; "
                "J4 (its connector) was cut from this board"),

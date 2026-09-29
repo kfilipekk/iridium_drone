@@ -241,14 +241,16 @@ PREREQUISITES = [
     dict(id="solver.nav", cls=GATED,
          check="the on-board navigation holds position through simulated denied flights",
          claim="the flight navigation in C (soop_nav.c) associates bursts to satellites, "
-               "tracks the TCXO, the TLE errors and the flight EKF's velocity drift, and "
+               "tracks the TCXO, the orbit errors and the flight EKF's velocity drift, and "
                "holds a fix with an honest accuracy through 15-30 min denied flights on "
                "real orbits, and builds for the H743"),
     #the solve is ported to C and gated (solver.c below)
-    dict(id="build.firmware", cls=BUILD,
+    dict(id="build.firmware", cls=BENCH,
+         bound="AP_SoOP builds and links into the NAVCORE_SoOP firmware",
          claim="the flight firmware: MAX2112 control, I/Q capture and the EKF hand-off on the H743",
-         why="the DSP, ephemeris and navigation are in C and gated (solver.dsp, solver.nav), "
-             "but nothing yet tunes the MAX2112, samples its I/Q or runs them on the aircraft."),
+         why="BUILT. The gated C (solver.dsp, solver.nav) runs in AP_SoOP with the tuner "
+             "driver and simultaneous ADC1/ADC2 capture. Tuner lock, the 2 MSPS capture and "
+             "the CPU share are only known on the board: runbook T3b step 2."),
     dict(id="solver.c", cls=GATED,
          check="the C solver agrees with the Python reference and builds for the target",
          claim="the Doppler solve is ported to C, matches the Python reference and "

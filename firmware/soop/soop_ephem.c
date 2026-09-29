@@ -87,6 +87,7 @@ int soop_ephem_parse(const char *text, soop_sat_t *out, int max_sats)
             if (sgp4_parse_tle(line, l2, &tle) != SGP4_OK || sgp4_init(&tle, &s->sgp) != SGP4_OK)
                 continue;
             s->norad = (uint32_t)strtol(line + 2, NULL, 10);
+            s->orbit = line[7] == 'C' ? SOOP_ORBIT_OPERATOR : SOOP_ORBIT_TLE;
             s->epoch_s = soop_jd_to_j2000(tle.epoch_jd, tle.epoch_jd_frac);
             size_t k = 0;
             if (prev[0] != '1' && prev[0] != '2' && prev[0] != '#')

@@ -32,7 +32,7 @@ static char *slurp(const char *path)
 int main(int argc, char **argv)
 {
     if (argc < 3) {
-        fprintf(stderr, "usage: %s catalogue.tle obs.txt [--static] [--sats]\n", argv[0]);
+        fprintf(stderr, "usage: %s catalogue.tle obs.txt [--static] [--sats] [--vel-sigma M/S]\n", argv[0]);
         return 2;
     }
     char *tle = slurp(argv[1]);
@@ -76,6 +76,8 @@ int main(int argc, char **argv)
             cfg.vel_sigma = cfg.velz_sigma = 0.02;
         } else if (!strcmp(argv[k], "--sats")) {
             sats = 1;
+        } else if (!strcmp(argv[k], "--vel-sigma") && k + 1 < argc) {
+            cfg.vel_sigma = atof(argv[++k]);
         }
     }
     soop_nav_init(&nav, &cfg, cat, n_cat, 0.0);
