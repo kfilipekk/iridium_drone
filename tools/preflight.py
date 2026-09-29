@@ -176,21 +176,43 @@ def assembly(board):
                if lk else
                "CPL has no Layer column - nothing says which side a part is on"))
 
-    holes = [(d.GetCenter().x/1e6, d.GetCenter().y/1e6)
+    #what actually touches each face at the stack holes (design.FC_HOLE_HARDWARE)
+    holes = [(d.GetCenter().x/1e6, d.GetCenter().y/1e6, d.GetRadius()/1e6)
              for d in board.GetDrawings()
              if d.GetLayer() == pcbnew.Edge_Cuts and d.ShowShape() == "Circle"]
-    worst, wref = 99.0, None
+    hw = design.FC_HOLE_HARDWARE
+    near = {}                                  #face -> (distance, ref)
     for fp in board.GetFootprints():
         for pad in fp.Pads():
             b = pad.GetBoundingBox()
             x0, y0 = b.GetLeft()/1e6, b.GetTop()/1e6
             x1, y1 = b.GetRight()/1e6, b.GetBottom()/1e6
-            for hx, hy in holes:
-                d = math.hypot(max(x0-hx, 0, hx-x1), max(y0-hy, 0, hy-y1))
-                if d < worst:
-                    worst, wref = d, fp.GetReference()
-    check("assembly", "no copper under a screw head", worst >= 2.75,
-          f"closest is {wref} at {worst:.2f} mm (M3 cap head is 2.75 mm)")
+            for face, layer in (("top", pcbnew.F_Cu), ("bottom", pcbnew.B_Cu)):
+                if not pad.IsOnLayer(layer):
+                    continue
+                for hx, hy, _ in holes:
+                    d = math.hypot(max(x0-hx, 0, hx-x1), max(y0-hy, 0, hy-y1))
+                    if d < near.get(face, (99.0, None))[0]:
+                        near[face] = (d, f"{fp.GetReference()}.{pad.GetNumber()}")
+    bad = []
+    ring = max(r for _, _, r in holes) if holes else 0.0
+    for face in ("top", "bottom"):
+        d, ref = near.get(face, (99.0, None))
+        if d < ring:
+            bad.append(f"{ref} inside the hole's {2 * ring:.1f} mm ring, against the shank")
+        stack = hw[face]
+        if stack[0]["conductive"] and d < stack[0]["reach_d"] / 2:
+            bad.append(f"{ref} at {d:.2f} mm under the {stack[0]['name']} "
+                       f"({stack[0]['reach_d'] / 2:.2f} mm)")
+        for lo, hi in zip(stack, stack[1:]):
+            if not lo["conductive"] and hi["conductive"] and hi["reach_d"] > lo["reach_d"]:
+                bad.append(f"the {hi['name']} overhangs the {lo['name']} it sits on")
+    worst = min(v[0] for v in near.values()) if near else 99.0
+    check("assembly", "no copper under a screw head", bool(holes) and not bad,
+          "; ".join(bad) if bad else
+          f"nothing metal touches a face: {hw['top'][0]['name']} top, {hw['bottom'][0]['name']} "
+          f"below; nearest pad {worst:.2f} mm, inside a metal hex's 3.18 mm corners, so "
+          f"these must stay nylon")
 
 
 #signal integrity
@@ -649,6 +671,11 @@ def firmware(board):
           "cad/frame.scad is current" if rc == 0
           else "cad/frame.scad is stale - run tools/gen_scad_frame.py")
 
+    rc, out = run("gen_scad_mounts.py --check")
+    check("mechanical", "CAD mounts match design.MOUNTS", rc == 0,
+          "cad/mounts.scad is current" if rc == 0
+          else "cad/mounts.scad is stale - run tools/gen_scad_mounts.py")
+
     rc, out = run("check_purchase.py")
     m = re.search(r'^(\d+) interface\(s\) still rest on an ASSUMED', out, re.M)
     check("mechanical", "buy-to-buy interfaces mate", rc == 0,
@@ -676,6 +703,17 @@ def firmware(board):
     check("mechanical", "assembly has no interference", rc == 0,
           f"{m.group(1)} part pairs checked by intersection volume, all clear" if m
           else "parts overlap in the assembly - see tools/check_cad_fit.py")
+
+    mounts = re.findall(r'^  (\w+)\s+carries .* joint\(s\)\s+(ok|FAIL)$', out, re.M)
+    sky = re.findall(r'^  (\w+)\s+highest obstruction\s+([-\d.]+) deg.*(ok|FAIL)$', out, re.M)
+    printed = re.findall(r'^  (\w+)\s+[\d.]+ x .* (ok|FAIL)$', out, re.M)
+    good = (rc == 0 and bool(mounts) and bool(sky) and bool(printed)
+            and all(v[-1] == "ok" for v in mounts + sky + printed))
+    check("mechanical", "every part off the board is mounted, with screws", good,
+          f"{len(mounts)} printed mounts, every joint derived and sold; {len(printed)} printed "
+          f"parts fit the printer as closed solids; nothing rises more than "
+          f"{max(float(v[1]) for v in sky):.1f} deg above the GPS or the Iridium patch" if good else
+          "a part lacks a mount, a joint or its sky - see tools/check_cad_fit.py")
 
     g = re.findall(r'^\s+(\w+)\s+lowest z\s+[-\d.]+\s+clearance\s+([-\d.]+) mm', out, re.M)
     if g:

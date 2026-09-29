@@ -75,10 +75,16 @@ PREREQUISITES = [
     dict(id="mech.joints", cls=GATED, tool="check_fit.py",
          claim="every bolted joint fits by declaration: pattern, hole, screw length, "
                "stack under the kit's top plate, standoff posts clear of the boards"),
+    dict(id="mech.mounts", cls=GATED, check="every part off the board is mounted, with screws",
+         claim="the GPS, Iridium patch, SAWbird+, receiver and antennas, nose camera, lidar "
+               "and rangefinder each sit on a printed mount that fits the printer, held by "
+               "screws the buy list sells, with the two patches clear to the sky"),
     dict(id="mech.frame", cls=GATED, check="CAD frame matches design.FRAME",
          claim="the CAD frame is generated from design.FRAME, not stale"),
     dict(id="mech.screwhead", cls=GATED, check="no copper under a screw head",
-         claim="no copper sits under a screw head"),
+         claim="nothing metal touches the board at the stack holes: the steel heads sit on "
+               "nylon washers and the spacers below are nylon, since pads lie inside a "
+               "metal hex's reach"),
     dict(id="mech.mounting", cls=GATED, check="mounting holes",
          claim="the 30.5 mm 4-hole mounting pattern is present"),
 

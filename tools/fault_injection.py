@@ -132,11 +132,14 @@ class _Pt:
 
 
 class _Circle:
-    def __init__(self, x, y):
-        self._c = _Pt(x, y)
+    def __init__(self, x, y, r=2_000_000):          #a 4.0 mm hole, in board units (nm)
+        self._c, self._r = _Pt(x, y), r
 
     def GetCenter(self):
         return self._c
+
+    def GetRadius(self):
+        return self._r
 
     def GetLayer(self):
         return preflight.pcbnew.Edge_Cuts

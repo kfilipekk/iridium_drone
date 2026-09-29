@@ -18,6 +18,7 @@ explode        = 0;             //try 28 for an exploded view
 //GENERATED from tools/design.py by tools/gen_scad_frame.py
 include <frame.scad>
 //frame.scad is GENERATED from design.py and the real board
+include <mounts.scad>
 
 plate_t        = bottom_plate_t;   //the plate this model draws
 
@@ -72,7 +73,7 @@ module frame() {
                   concat(stack_holes, front_posts));
         //TOP PLATE. 42.50 x 160.26 - the long one, ABOVE the prop plane
         if (show_top_plate) translate([0, 0, top_plate_z])
-            plate(top_plate_w, top_plate_l, plate_t, plate_y_top,
+            plate(top_plate_w, top_plate_l, upper_plate_t, plate_y_top,
                   concat(front_posts, rear_posts));
         //corner posts
         for (p = front_posts)
@@ -166,8 +167,9 @@ module stack_screws() {
 }
 
 module battery() {
-    translate([0, 0, top_plate_z + plate_t + batt_h/2])
-        color("#5a2f2f", 0.35) cube([batt_l, batt_w, batt_h], center = true);
+    //long axis fore-and-aft, along the top plate
+    translate([0, batt_y, top_plate_z + upper_plate_t + batt_h/2])
+        color("#5a2f2f", 0.35) cube([batt_w, batt_l, batt_h], center = true);
 }
 
 //flow camera module [A] 12 mm deep
@@ -180,32 +182,6 @@ module camera() {
         //lens barrel poking out of the module bottom (3.5 mm, per design.CAMERA.lens_len)
         color("#0d0f11") translate([0, 0, -3.5]) cylinder(d = 8, h = 3.5);
     }
-}
-
-//nose recording camera: XIAO ESP32S3 Sense
-//sits on the nose, lens forward, recording to its own microSD
-module rec_cam() {
-    translate([0, -rec_cam_y, z_mid_plate + medium_plate_t]) {
-        color("#23272e") linear_extrude(rec_cam_h)
-            offset(r = 1) square([rec_cam_l - 2, rec_cam_w - 2], center = true);
-        //lens barrel, pointing forward (-Y)
-        color("#0d0f11") translate([0, -rec_cam_w/2, rec_cam_h/2])
-            rotate([90, 0, 0]) cylinder(d = 8, h = 3);
-    }
-}
-
-//belly sensor: downward rangefinder / flow module under the bottom plate
-module belly_sensor() {
-    translate([0, 18, z_bot_plate - belly_h])
-        color("#2a2f36") linear_extrude(belly_h)
-            offset(r = 1) square([belly_l - 2, belly_w - 2], center = true);
-}
-
-module lidar360() {
-    //LDROBOT LD06, mounted UPSIDE-DOWN under the bottom plate (PRX1_ORIENT 1)
-    translate([0, lidar_y, z_bot_plate - lidar_h])
-        color("#3b4048") linear_extrude(lidar_h)
-            offset(r = 2) square([lidar_l - 4, lidar_w - 4], center = true);
 }
 
 module skid() {
@@ -246,6 +222,8 @@ stack_screws();
 if (show_rec_cam) rec_cam();
 belly_sensor();
 lidar360();
+mounts();
+mounted_parts();
 if (show_battery && show_frame) battery();
 if (show_camera) camera();
 if (show_skids) skids();
