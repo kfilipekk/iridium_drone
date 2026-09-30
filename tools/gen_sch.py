@@ -107,7 +107,7 @@ def main():
     for ref in order:
         lid, fp, val, lcsc, dnp = design.COMPONENTS[ref]
         cx, cy = place[ref]
-        units = sorted({u for (_x, _y, _r, u) in pidx[lid].values()})
+        units = sorted({u for (_x, _y, _r, u) in pidx[lid].values()}) or [1]   #a fiducial has no pins
         for ui in units:
             ox = cx + (ui - 1) * 30.48
             out += [f'\t(symbol (lib_id "{lid}") (at {ox:.2f} {cy:.2f} 0) (unit {ui})',

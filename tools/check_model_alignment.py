@@ -222,7 +222,22 @@ def main():
             o = [min(A[h], B[h]) - max(A[l], B[l]) for l, h in ((0, 2), (1, 3), (4, 5))]
             if min(o) > COLLIDE:
                 clash.append((ra, rb, o))
+    #what is bolted through each stack hole sits flat on the board
+    hw = design.FC_HOLE_HARDWARE
+    reach = {False: hw["top"][0]["reach_d"] / 2, True: hw["bottom"][0]["reach_d"] / 2}
+    stack = [(T(d.GetCenter().x), T(d.GetCenter().y)) for d in b.GetDrawings()
+             if d.GetLayer() == pcbnew.Edge_Cuts and d.ShowShape() == "Circle"]
+    under = []
+    for r, (x0, y0, x1, y1, _, _) in sorted(box.items()):
+        for hx, hy in stack:
+            d = math.hypot(max(x0 - hx, 0, hx - x1), max(y0 - hy, 0, hy - y1))
+            if d < reach[side[r]]:
+                under.append((r, d, reach[side[r]], hw["bottom" if side[r] else "top"][0]["name"]))
     print(f"{len(ref_c)} bodies measured against their footprints (tolerance {tol} mm)")
+    print(f"{len(box)} bodies tested against the hardware at {len(stack)} stack holes: "
+          f"{len(under)} under it")
+    for r, d, rr, name in under:
+        print(f"  FAIL {r:5s} body is {d:.2f} mm from a stack hole, inside the {name} ({rr:.2f} mm)")
     print(f"{len(box)} bodies tested against each other: {len(clash)} overlap(s)")
     for ra, rb, o in clash:
         print(f"  FAIL {ra} and {rb} bodies overlap by {o[0]:.2f} x {o[1]:.2f} x {o[2]:.2f} mm")
@@ -243,6 +258,9 @@ def main():
         return 1
     if clash:
         print(f"\nFAIL - {len(clash)} pair(s) of bodies occupy the same space")
+        return 1
+    if under:
+        print(f"\nFAIL - {len(under)} body/bodies under the stack hardware")
         return 1
     if bad or peg_bad:
         print(f"\nFAIL - {len(bad) + peg_bad} body/bodies misplaced; correct the model offset in the "

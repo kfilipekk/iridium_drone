@@ -31,10 +31,10 @@ The board fits a standard 30.5 × 30.5 mm mounting pattern, runs ArduPilot (`NAV
 | **MCU** | STM32H743VIT6 (ARM Cortex-M7 @ 480 MHz, 2 MB Flash, 1 MB RAM, LQFP-100) |
 | **IMU** | Dual independent IMUs: TDK InvenSense ICM-42688-P (SPI1) + ICM-42605 (SPI4) on filtered 3.3 V analog LDO |
 | **Barometer** | TE Connectivity MS5611-01BA03 (I2C2, on the 3.3 V analogue rail) |
-| **Flash & Storage** | Winbond W25Q128 128 Mb SPI Flash (SPI3) + MicroSD card socket (SDIO 4-bit) |
+| **Flash & Storage** | Winbond W25Q128 128 Mb SPI Flash (SPI3, WSON-8; holds the Iridium orbit catalogue) + MicroSD card socket (SDIO 4-bit) |
 | **RF / SoOP Front-End** | Maxim Integrated MAX2112 direct-conversion L-band tuner (1616–1626.5 MHz, I2C2) + TI OPA2374 dual baseband filter/amplifiers into ADC1/ADC2 quadrature inputs; U.FL 50 Ω RF port |
-| **Power Architecture** | 3S–5S LiPo input (up to 21.0 V), SMBJ22A TVS clamping at 35.5 V under the bucks' 38 V absolute maximum; reverse-polarity P-FET<br>• Buck 1 (U8, system +5V): TI LMR33630 VQFN, 1.6 A continuous (set by the 4 × 4 mm inductor, not the 3 A IC)<br>• Buck 2 (U20, +5V_PAYLOAD for servos, CAN, LED, camera/VTX/Iridium antenna): LMR33630, 1.6 A continuous, budgeted per mission<br>• LDO 1: 3.3 V system (AP2112K-3.3)<br>• LDO 2: 3.3 V clean analogue for IMUs, baro and tuner (TLV75533)<br>• LDO 3: 3.3 V DroneCAN (XC6206) |
-| **Interconnects** | JST-SH 1.0 mm locking connectors for all off-board signals (ESC 8P, GPS 6P, RC 4P, I2C 4P, DroneCAN 4P, Serial/Lidar 4P, Optical Flow 6P, TVC Servos 6P, Pyro 2P, Touchdown 2P, Buzzer 2P, SWD 4P) |
+| **Power Architecture** | 3S–5S LiPo input (up to 21.0 V), SMBJ22A TVS clamping at 35.5 V under the bucks' 38 V absolute maximum; reverse-polarity P-FET<br>• Buck 1 (U8, system +5V): TI LMR33630 VQFN, 1.6 A continuous (set by the 4 × 4 mm inductor, not the 3 A IC)<br>• Buck 2 (U20, +5V_PAYLOAD for servos, CAN, LED, camera/VTX/Iridium antenna): LMR33630, 1.6 A continuous, budgeted per mission<br>• LDO 1: 3.3 V system (TLV75733P, exposed-pad SOT-23-5 into the ground plane)<br>• LDO 2: 3.3 V clean analogue for IMUs, baro and tuner (TLV75533)<br>• LDO 3: 3.3 V DroneCAN (XC6206) |
+| **Interconnects** | Latching JST-GH 1.25 mm for the leads that leave the core of the airframe (GPS 6P, RC 4P, I2C 4P, DroneCAN 4P, Serial/Lidar 4P); JST-SH 1.0 mm, held by a printed clamp, for the rest (ESC 8P, Optical Flow 6P, TVC Servos 6P, Pyro 2P, Touchdown 2P, Buzzer 2P, LED 3P, SWD 4P). ESD clamps at the GPS, RC and CAN connectors |
 | **PCB Stackup** | 6-layer, no impedance control ordered (45.1 × 47.3 mm outline, 0.5 mm corner radius, 1 oz outer / 0.5 oz inner copper) |
 
 ---
@@ -60,8 +60,8 @@ Layer 6 (B.Cu):    Sensors, RF receiver circuitry, DroneCAN, buck converters
 - Standard 30.5 × 30.5 mm flight stack mounting on 7-inch / 10-inch quadrotor frames
 - DShot300/600 motor outputs via J2 (JST-SH 8P)
 - Plug-and-play SPI3 optical flow connector (`J14`, PMW3901) for local drift stabilization
-- Serial port `J11` (USART1 = SERIAL2, JST-SH 4P: +5V_PAYLOAD / TX / RX / GND) for the LD06 lidar or a companion computer
-- Dedicated DroneCAN transceiver (`J6`, JST-SH 4P)
+- Serial port `J11` (USART1 = SERIAL2, JST-GH 4P: +5V_PAYLOAD / TX / RX / GND) for the LD06 lidar or a companion computer
+- Dedicated DroneCAN transceiver (`J6`, JST-GH 4P)
 
 ### 2. TVC Rocket Lander Platform (`lander-2`)
 - Thrust-vector control servo outputs (`J17`, JST-SH **6P**: PWM7–PWM10 on pins 1–4, +5V_PAYLOAD on pin 5, GND on pin 6) powered by the independent payload buck (1.6 A continuous)

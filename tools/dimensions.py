@@ -150,8 +150,9 @@ def main():
     row("top of the tallest part (J3)", f"{ztop:.2f} mm", "[D] JST GH series")
     #the kit's inner height is not the number to build
     _sto = design.required_standoff(b)
-    #the top plate is where the kit puts it (design.TOP_PLATE_MOUNT)
-    row("frame's inner space over the mid plate (kit 22 mm standoffs)",
+    #the top plate stands on design.TOP_PLATE_MOUNT's standoffs
+    row(f"frame's inner space over the mid plate "
+        f"({design.TOP_PLATE_MOUNT['front_standoff']:.0f} mm standoffs)",
         f"{FRAME_H[0]:.2f} mm", FRAME_H[1])
     row("top plate underside above z=0", f"{_sto['top_plate_z']:.2f} mm", _sto["src"])
     row("SPARE under the top plate", f"{_sto['top_plate_z']-ztop:.2f} mm", "[M] derived")

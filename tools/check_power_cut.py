@@ -100,8 +100,10 @@ def main():
         spos = next((p for r, p in pads.get(netname, []) if r == src), None)
         if spos is None:
             continue
+        #capacitors and resistors draw nothing
+        named = getattr(design, "LOAD_CURRENT", {}).get(netname, {})
         loads = [(r, p) for r, p in pads.get(netname, [])
-                 if r != src and not r.split(".")[0].startswith(("C", "R"))]
+                 if r != src and (r in named or not r.split(".")[0].startswith(("C", "R")))]
         if not loads:
             continue
 

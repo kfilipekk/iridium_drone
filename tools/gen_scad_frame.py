@@ -104,9 +104,9 @@ hole_dia        = {M['hole_d']};
 plate_hole_dia  = {M['plate_hole_d']};   // M3 close clearance, > screw_dia
 screw_dia       = {M['screw_dia']};     // M3
 
-// TOP PLATE HEIGHT IS THE KIT'S GEOMETRY (design.TOP_PLATE_MOUNT), not a purchase.
-// The DXF settles it: 22 mm standoffs stand on the MID plate at the front posts, 30 mm
-// on the BOTTOM plate at the rear posts, and one flat top plate needs 22 + 8 = 30.
+// TOP PLATE HEIGHT (design.TOP_PLATE_MOUNT). The DXF settles the arrangement: the front
+// standoffs stand on the MID plate, the rear ones on the BOTTOM plate, 8 mm lower, so one
+// flat top plate needs rear = front + 8 ({TPM['front_standoff']:.0f} + 8 = {TPM['rear_standoff']:.0f}).
 // standoff_len is the top plate's underside above z = 0 (bottom of the bottom plate).
 standoff_len    = {STO['top_plate_z']};   // = bottom_t + {TPM['rear_standoff']:.0f} = mid plate top + {TPM['front_standoff']:.0f}
 standoff_front  = {TPM['front_standoff']};

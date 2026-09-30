@@ -70,17 +70,23 @@ import pcbnew as _pcbnew
 _BOT = design.stack_heights(_pcbnew.LoadBoard(os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "NAVCORE-SoOP.kicad_pcb")),
     skip_dnp=True)[1]
+#the spacer is bought, so it comes in the lengths that are sold
+SPACER_NEED = design.ESC["parts"] + GAP[0] + _BOT
+SPACER = min(L for L in design.NYLON_SPACER_STOCK if L >= SPACER_NEED - 0.2)
 joint("FC to ESC to frame, the 30.5 mm stack bolt", 3.0,
       [("nylon washer under the head", design.FC_HOLE_HARDWARE["top"][0]["t"],
         "[L] M3 nylon washer - keeps the steel head off the pads (design.FC_HOLE_HARDWARE)"),
        ("FC PCB", FC_PCB[0], FC_PCB[1]),
-       ("ESC-to-FC spacer", round(design.ESC["parts"] + GAP[0] + _BOT, 1),
-        f"[M] ESC parts {design.ESC['parts']:.1f} + air {GAP[0]:.1f} + board bottom "
-        f"parts {_BOT:.1f} (design.stack_heights, measured)"),
+       ("ESC-to-FC spacer", SPACER,
+        f"[M] needs {SPACER_NEED:.1f}: ESC parts {design.ESC['parts']:.1f} + air {GAP[0]:.1f} "
+        f"+ board bottom parts {_BOT:.2f} (design.stack_heights, measured); [L] the next "
+        f"stock length"),
        ("ESC PCB", ESC_PCB[0], ESC_PCB[1]),
        ("mid plate", F["medium_t"], "[D] TBS: middle plate 2 mm"),
        ("arm root", F["arm_t"], "[D] TBS: arm 6 mm")],
-      4, "into the bottom plate's press nut (kit, 8 pcs); buy 4 x M3 nylon female standoff 12 mm for the ESC-to-FC spacer - a grommet cannot hold 12.1 mm")
+      4, "into the bottom plate's press nut (kit, 8 pcs); buy 4 x M3 NYLON female standoff "
+         f"{SPACER:g} mm for the ESC-to-FC spacer - a grommet cannot hold {SPACER_NEED:.1f} mm, "
+         "and metal there would sit on the board's pads")
 
 #the printed mounts (design.MOUNTS): every part off the board
 import gen_scad_mounts as _gm

@@ -1,4 +1,4 @@
-#linear regulators: U9 (AP2112K-3.3 -> +3V3), U10 (TLV75533 -> +3V3A) and
+#linear regulators: U9 (TLV75733P -> +3V3), U10 (TLV75533 -> +3V3A) and
 import ngspice
 from checks import Checks
 from circuits import design, value
@@ -18,12 +18,12 @@ T_LOOP = 1e-6
 
 #datasheet figures per rail
 RAILS = (
-    dict(ref="U9", part="AP2112K-3.3", vin="+5V", vout="+3V3", v=3.3,
-         #[D] 600 mA minimum guaranteed output; Vdo 200 mV max at 300 mA
-         i_rated=0.600, vdo=0.200, vdo_at=0.300, r_o=0.033, acc=0.015,
+    dict(ref="U9", part="TLV75733P", vin="+5V", vout="+3V3", v=3.3,
+         #[D] 1 A output; DYD package: Vdo 450 mV max at 1 A (3.3 V <= VOUT < 5 V)
+         i_rated=1.000, vdo=0.450, vdo_at=1.000, r_o=0.069, acc=0.010,
          cin_ref="C26", cout_ref="C27",
-         cin_min=1e-6, cout_min=1e-6, cout_eff_min=None,
-         v_lo=3.135, v_hi=3.465, psrr="65 dB at 1 kHz",
+         cin_min=1e-6, cout_min=1e-6, cout_eff_min=0.47e-6,
+         v_lo=3.135, v_hi=3.465, psrr="46 dB at 100 kHz",
          loads=D.LOADS_3V3),
     dict(ref="U10", part="TLV75533", vin="+5V", vout="+3V3A", v=3.3,
          #[D] 500 mA output; COUT 1-200 uF nominal and > 0.47 uF EFFECTIVE

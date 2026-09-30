@@ -203,7 +203,7 @@ def main():
               f"{v:.2f} V from the divider" if v is not None else "undriven")
 
     print("\n=== LDOs: a wrong or absent output cap makes an LDO oscillate ===")
-    for ref, part, vin, vout in (("U9", "AP2112K-3.3", "+5V", "+3V3"),
+    for ref, part, vin, vout in (("U9", "TLV75733P", "+5V", "+3V3"),
                                  ("U10", "TLV75533", "+5V", "+3V3A")):
         if ref not in comps:
             continue

@@ -22,6 +22,8 @@ LH = design.MOUNTED["lidar"]
 TOP_Z = F["bottom_t"] + TPM["rear_standoff"] + F["upper_t"]       #top plate's upper face
 MID_Z = F["bottom_t"] + F["arm_t"]                                #mid plate's underside
 CLEAR = {"M2": 2.4, "M2.5": 2.9, "M3": 3.4}                       #clearance holes
+#a 2.5 mm cable tie through a pair of slots, 1.0 mm thick
+TIE = dict(w=2.5, slot_w=1.5, slot_l=3.0, pitch=5.0)
 HEAD = {"M2": 4.2, "M2.5": 5.0, "M3": 6.0}                        #counterbores for heads
 
 
@@ -113,10 +115,16 @@ module bore(i, up = true) {{        // an insert bore, from the face it is press
 }}
 module hole(d, h) {{ translate([0, 0, -0.5]) cylinder(d = d, h = h + 1, $fn = 24); }}
 module box(x0, x1, y0, y1, z0, z1) {{ translate([x0, y0, z0]) cube([x1 - x0, y1 - y0, z1 - z0]); }}
+// a tie-down point for a {TIE['w']} mm cable tie through a plate: two slots {TIE['pitch']} mm apart
+// along x, or one (n = 1) beside an edge the tie wraps round
+module tie(x, y, z0, h, n = 2) {{
+    for (s = (n == 1 ? [0] : [-1, 1])) translate([x + s * {TIE['pitch'] / 2}, y, z0])
+        box(-{TIE['slot_w'] / 2}, {TIE['slot_w'] / 2}, -{TIE['slot_l'] / 2}, {TIE['slot_l'] / 2}, -0.5, h + 0.5);
+}}
 
 // ---- antenna tower: the Iridium helix on its seat, the GPS pod and bias tee on the arm --
 // Bolts through the top plate's two rear posts, the only top-plate holes the battery
-// leaves free, into the kit's 30 mm standoffs; the seat has holes to reach those screws.
+// leaves free, into the rear standoffs; the seat has holes to reach those screws.
 tower_foot_z  = {T['foot_z']};
 tower_post_y  = {T['y_post']};
 seat_z        = {T['seat_z']};            // the helix's base
@@ -151,9 +159,13 @@ module antenna_tower() {{
         box(-cx + w, cx - w, cy0 - cy + w, cy0 + cy - w, tower_foot_z + {T['foot_t']}, seat_z + 1);
         box(cx - w - 1, cx + 1, cy0 - 4, cy0 + 4, seat_z - st - 12, seat_z - st);
         for (h = {T['helix_holes']}) translate([h[0], h[1], seat_z - st]) hole({CLEAR['M2.5']}, st);
+        // the helix's SMA and the boss round it, through the Airframes template's centre hole
+        translate([0, helix_y, seat_z - st]) hole({MP['iridium_antenna']['sma_hole']}, st);
         // the GPS pod's screws come up through the arm; the strap's go down into it
         for (s = [-1, 1]) translate([s * gps_screw_x, gps_y, seat_z - at]) hole({CLEAR['M2']}, at);
         for (s = [-1, 1]) translate([{T['strap_x']} / 2 + 3, bias_y + s * 19.5, seat_z]) bore(ins_m2);
+        // the coax and the GPS lead tied to the arm's edges, clear of the bias tee
+        for (s = [-1, 1]) tie(s * ({T['arm_x'] / 2} - 2.5), bias_y + 9, seat_z - at, at, n = 1);
     }}
 }}
 module gps_pod() {{
@@ -252,6 +264,7 @@ module nose_mount() {{
         for (s = [-1, 1]) translate([s * cam_boss, cam_y, cam_bot]) bore(ins_m2, false);
         box(-rx_w + {N['rx_wall']}, rx_w - {N['rx_wall']}, rx_y - rx_l + {N['rx_wall']}, rx_y + rx_l - {N['rx_wall']}, rx_bot - 1, pz - 0.01);
         box(-3, 3, rx_y + rx_l - {N['rx_wall']} - 0.01, rx_y + rx_l + 0.01, rx_bot + 1, pz - 0.01);   // wires out
+        tie(0, rx_y + rx_l + 4, pz, t);                                // and tied down where they leave
         for (s = [-1, 1]) translate([s * rx_boss, rx_y, rx_bot]) bore(ins_m2, false);
         translate([{N['av'][0]}, {N['av'][1]}, pz - 12]) hole(3.4, 12 + t);
         translate([{N['ah'][0]}, {N['ah'][1]} - 0.5, {N['ah'][2]}]) rotate([-90, 0, 0]) cylinder(d = 3.4, h = 6, $fn = 24);
@@ -287,7 +300,7 @@ module elrs_antennas() {{
 }}
 
 // ---- lidar bracket: the LD06, upside down under the bottom plate ------------------------
-// Hangs from the two forward rear-post screws (into the 30 mm standoffs) and the front
+// Hangs from the two forward rear-post screws (into the rear standoffs) and the front
 // pair of the 20x20 M2 holes; the heads sit in counterbores because the lidar covers them.
 lidar_bracket_t = {L['t']};
 lidar_y         = {L['y']};
@@ -299,6 +312,7 @@ module lidar_bracket() {{
         for (p = {L['m2']}) translate([p[0], p[1], -t]) {{ hole({CLEAR['M2']}, t); translate([0, 0, -1]) cylinder(d = {HEAD['M2']}, h = cb + 1, $fn = 24); }}
         // the LD06's two diagonal M2.5 holes, screwed from the lidar's side
         for (s = [-1, 1]) translate([s * {L['diag'][0] / 2}, lidar_y - s * {L['diag'][1] / 2}, -t]) bore(ins_m25, false);
+        tie(0, {L['y0']} + 3, -t, t);                                  // the lidar's lead, at the front edge
     }}
 }}
 module lidar360() {{

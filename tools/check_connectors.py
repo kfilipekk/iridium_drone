@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 #every connector's opening must face off the board, with room for the plug
 #Usage: python3 tools/check_connectors.py [board.kicad_pcb]
-import os, sys, math
+import os, re, sys, math
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import pcbnew, design
 
@@ -196,6 +196,30 @@ def main():
         except Exception as e:
             warns.append(f"{ref}: vertical room could not be computed ({e})")
 
+    #how each plug stays in (design.CONNECTOR_RETENTION)
+    print("\nretention")
+    ret = design.CONNECTOR_RETENTION
+    rb = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                      "docs", "navcore-runbook.tex")
+    runbook = open(rb).read() if os.path.exists(rb) else ""
+    m = re.search(r"\\subsection\{Staking the plugs\}(.*?)\\(sub)?section", runbook, re.S)
+    staking = m.group(1) if m else ""
+    for fp in sorted(board.GetFootprints(), key=lambda f: f.GetReference()):
+        ref = fp.GetReference()
+        if not re.fullmatch(r"J\d+", ref):
+            continue
+        how, why = ret.get(ref, (None, None))
+        gh = "GH" in fp.GetFPIDAsString().upper()
+        if how is None:
+            fails.append(f"{ref}: no retention declared (design.CONNECTOR_RETENTION)")
+        elif gh and how != "latch":
+            fails.append(f"{ref}: a latching JST-GH declared '{how}'")
+        elif how == "latch" and "SH" in fp.GetFPIDAsString().upper() and not gh:
+            fails.append(f"{ref}: declared a latch, but its footprint is a friction JST-SH")
+        elif how == "stake" and runbook and f"\\file{{{ref}}}" not in staking:
+            fails.append(f"{ref}: staked, but the runbook's 'Staking the plugs' step does not name it")
+        else:
+            print(f"  {ref:4s} {how:6s} {why}")
     print()
     for w in warns: print(f"  warn  {w}")
     for f in fails: print(f"  FAIL  {f}")
