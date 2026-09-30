@@ -27,6 +27,12 @@ DATASHEET_PACKAGE = {
                   "[L] jlcpcb.com/partdetail/C51940119, verified 2026-09-03"),
 }
 
+#parts whose package has an exposed thermal pad that JLCPCB's package string leaves out
+THERMAL_PAD = {
+    "C22399950": "[D] TI TLV757P SBVS320: 'DYD Package, 5-Pin SOT-23 With Exposed Thermal "
+                 "Pad' (fig. 4-2); the pad goes to a large ground plane",
+}
+
 #industry-standard pitches by package family
 FAMILY_PITCH = {
     "SOT-23": 0.95, "SOT-25": 0.95, "SOIC": 1.27, "LQFP-100": 0.50,
@@ -193,7 +199,11 @@ def main():
                   f"{'--':>5}  {str(mfr)[:30]}  -- no count in package string")
             continue
         flag = ""
-        if joints and len(elec) != joints:
+        if joints and lcsc in THERMAL_PAD and len(elec) == joints + 1:
+            notes.append(f"{ref} ({lcsc}): {joints} joints + the exposed pad - {THERMAL_PAD[lcsc]}")
+            flag = "  (+ exposed pad, datasheet)"
+            ok += 1
+        elif joints and len(elec) != joints:
             flag = "  <-- MISMATCH: wrong package variant scraps the board"
             fails.append(f"{ref} ({lcsc}, {mfr}): footprint has {len(elec)} electrical "
                          f"pad(s), JLCPCB says the part has {joints} joint(s). "

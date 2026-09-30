@@ -95,8 +95,8 @@ def main():
     #Required_standoff() returns buy=None when the stack is taller than the longest stock length
     line("FAIL" if z_max > STO["top_plate_z"] else "ok", "tallest point of the stack",
          f"{z_max:.1f} mm against the top plate's underside at {STO['top_plate_z']:.1f} mm "
-         f"({STO['top_plate_z']-z_max:.1f} mm spare) - the kit's {STO['buy']:.0f} mm front "
-         f"standoffs over the mid plate; nothing to buy", STO["src"])
+         f"({STO['top_plate_z']-z_max:.1f} mm spare) - {STO['buy']:.0f} mm front standoffs "
+         f"over the mid plate", STO["src"])
 
     #board vs the ESC, per edge
     print("\n=== board vs the ESC below it (COMPUTED) ===")
@@ -204,10 +204,14 @@ def main():
 
     print("\n=== SETTLED - do not go measuring these ===")
     line("ok", "top plate height",
-         f"the kit's {STO['buy']:.0f} mm front standoffs stand on the mid plate; the top "
+         f"{STO['buy']:.0f} mm front standoffs stand on the mid plate; the top "
          f"plate's underside is {STO['top_plate_z']:.1f} mm up against a {z_max:.1f} mm "
-         f"stack = {STO['top_plate_z']-z_max:.1f} mm spare. Use the kit's standoffs - the "
-         f"earlier 'buy 35 mm' assumed a standoff at the 30.5 pattern that does not exist",
+         f"stack = {STO['top_plate_z']-z_max:.1f} mm spare. Buy "
+         f"{design.TOP_PLATE_MOUNT['front_standoff']:.0f} and "
+         f"{design.TOP_PLATE_MOUNT['rear_standoff']:.0f} mm standoffs to replace the kit's "
+         f"{design.TOP_PLATE_MOUNT['kit_front']:.0f} and "
+         f"{design.TOP_PLATE_MOUNT['kit_rear']:.0f} mm: the GH connectors under the board "
+         f"need the room",
          STO["src"])
     line("ok", "motor screw length",
          f"arm {FRAME['arm_t']:.0f} mm is published, so tools/fasteners.py derives the screw - "

@@ -11,7 +11,7 @@
 wheelbase      = 320.0;
 frame_size_x   = 200.0;
 frame_size_y   = 230.0;
-inner_h        = 22.0;
+inner_h        = 25.0;
 bottom_plate_t = 2.5;
 medium_plate_t = 2.0;
 upper_plate_t  = 2.0;
@@ -57,7 +57,7 @@ fc_l_fab       = 45.00;   // centreline: what JLC routes to
 fc_w_fab       = 47.20;
 fc_pcb         = 1.60;
 fc_top_parts   = 4.4;          // tallest: J3
-fc_bot_parts   = 3.0;          // tallest: L5
+fc_bot_parts   = 4.35;          // tallest: J11
 
 esc_l          = 45.6;
 esc_w          = 44.0;
@@ -75,21 +75,21 @@ hole_dia        = 4.0;
 plate_hole_dia  = 3.2;   // M3 close clearance, > screw_dia
 screw_dia       = 3.0;     // M3
 
-// TOP PLATE HEIGHT IS THE KIT'S GEOMETRY (design.TOP_PLATE_MOUNT), not a purchase.
-// The DXF settles it: 22 mm standoffs stand on the MID plate at the front posts, 30 mm
-// on the BOTTOM plate at the rear posts, and one flat top plate needs 22 + 8 = 30.
+// TOP PLATE HEIGHT (design.TOP_PLATE_MOUNT). The DXF settles the arrangement: the front
+// standoffs stand on the MID plate, the rear ones on the BOTTOM plate, 8 mm lower, so one
+// flat top plate needs rear = front + 8 (25 + 8 = 33).
 // standoff_len is the top plate's underside above z = 0 (bottom of the bottom plate).
-standoff_len    = 32.5;   // = bottom_t + 30 = mid plate top + 22
-standoff_front  = 22.0;
-standoff_rear   = 30.0;
+standoff_len    = 35.5;   // = bottom_t + 33 = mid plate top + 25
+standoff_front  = 25.0;
+standoff_rear   = 33.0;
 post_od         = 5.0;
 front_posts     = [[-14.6, -27.88], [14.6, -27.88], [-14.6, -52.88], [14.6, -52.88]];   // on the mid plate, rel. stack centre
 rear_posts      = [[-14.6, 27.88], [14.6, 27.88], [-11.0, 80.75], [11.0, 80.75]];   // on the bottom plate
 plate_y_fc      = -29.16;    // plate centres rel. the stack centre, +y aft
 plate_y_bottom  = 31.09;
 plate_y_top     = 4.78;
-standoff_need   = 30.3;   // stack top above z = 0
-standoff_slack  = 2.2;  // headroom under the top plate
+standoff_need   = 31.6;   // stack top above z = 0
+standoff_slack  = 3.9;  // headroom under the top plate
 cam_mod_t       = 12.0;
 cam_mod_w       = 30.0;
 pi_l            = 65.0;

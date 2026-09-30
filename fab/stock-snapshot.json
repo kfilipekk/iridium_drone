@@ -1,6 +1,6 @@
 {
  "assembled_boards": 2,
- "date": "2026-09-26",
+ "date": "2026-09-30",
  "lines": {
   "C107004": {
    "found": true,
@@ -11,7 +11,7 @@
    "mpn": "CC0402JRNPO9BN300",
    "price_usd": 0.0025,
    "spec": "0402",
-   "stock": 303528
+   "stock": 209378
   },
   "C113993": {
    "found": true,
@@ -22,7 +22,7 @@
    "mpn": "SMBJ22A",
    "price_usd": 0.0561,
    "spec": "DO-214AA(SMB)",
-   "stock": 1078
+   "stock": 972
   },
   "C11702": {
    "found": true,
@@ -33,7 +33,7 @@
    "mpn": "0402WGF1001TCE",
    "price_usd": 0.0018,
    "spec": "0402",
-   "stock": 8639907
+   "stock": 7279055
   },
   "C12084": {
    "found": true,
@@ -42,9 +42,9 @@
    "library": "expand",
    "min_purchase": 1,
    "mpn": "SN65HVD230DR",
-   "price_usd": 0.6334,
+   "price_usd": 0.6339,
    "spec": "SOIC-8",
-   "stock": 86504
+   "stock": 89858
   },
   "C12530": {
    "found": true,
@@ -55,7 +55,7 @@
    "mpn": "CL05A225MQ5NSNC",
    "price_usd": 0.0053,
    "spec": "0402",
-   "stock": 5390133
+   "stock": 5057601
   },
   "C131394": {
    "found": true,
@@ -64,9 +64,9 @@
    "library": "expand",
    "min_purchase": 1,
    "mpn": "CC0402KRX7R9BB104",
-   "price_usd": 0.0098,
+   "price_usd": 0.0097,
    "spec": "0402",
-   "stock": 7604640
+   "stock": 7392051
   },
   "C13585": {
    "found": true,
@@ -75,9 +75,9 @@
    "library": "base",
    "min_purchase": 1,
    "mpn": "CL31A106KBHNNNE",
-   "price_usd": 0.2652,
+   "price_usd": 0.2655,
    "spec": "1206",
-   "stock": 2545873
+   "stock": 2399662
   },
   "C14165": {
    "found": true,
@@ -86,9 +86,9 @@
    "library": "expand",
    "min_purchase": 1,
    "mpn": "0466003.NRHF",
-   "price_usd": 0.1051,
+   "price_usd": 0.0987,
    "spec": "1206",
-   "stock": 7543
+   "stock": 27361
   },
   "C148357": {
    "found": true,
@@ -97,9 +97,9 @@
    "library": "expand",
    "min_purchase": 1,
    "mpn": "WST4041",
-   "price_usd": 0.1724,
+   "price_usd": 0.1725,
    "spec": "SOT-23-3L",
-   "stock": 44439
+   "stock": 70270
   },
   "C15195": {
    "found": true,
@@ -110,7 +110,7 @@
    "mpn": "CL05B103KB5NNNC",
    "price_usd": 0.005,
    "spec": "0402",
-   "stock": 4463418
+   "stock": 4072674
   },
   "C1523": {
    "found": true,
@@ -121,7 +121,7 @@
    "mpn": "0402B102K500NT",
    "price_usd": 0.0042,
    "spec": "0402",
-   "stock": 3829269
+   "stock": 3315390
   },
   "C1525": {
    "found": true,
@@ -132,7 +132,7 @@
    "mpn": "CL05B104KO5NNNC",
    "price_usd": 0.0045,
    "spec": "0402",
-   "stock": 24676480
+   "stock": 21878053
   },
   "C1546": {
    "found": true,
@@ -143,7 +143,7 @@
    "mpn": "0402CG101J500NT",
    "price_usd": 0.0042,
    "spec": "0402",
-   "stock": 3474575
+   "stock": 3231185
   },
   "C15639": {
    "found": true,
@@ -152,9 +152,9 @@
    "library": "expand",
    "min_purchase": 1,
    "mpn": "MS561101BA03-50",
-   "price_usd": 6.6988,
+   "price_usd": 6.7044,
    "spec": "QFN-8(3x5)",
-   "stock": 2829
+   "stock": 1706
   },
   "C160402": {
    "found": true,
@@ -163,9 +163,9 @@
    "library": "expand",
    "min_purchase": 1,
    "mpn": "SM02B-SRSS-TB(LF)(SN)",
-   "price_usd": 0.1318,
+   "price_usd": 0.1319,
    "spec": "SMD,P=1mm,Surface Mount\uff0cRight Angle",
-   "stock": 46070
+   "stock": 42446
   },
   "C160404": {
    "found": true,
@@ -174,9 +174,9 @@
    "library": "expand",
    "min_purchase": 1,
    "mpn": "SM04B-SRSS-TB(LF)(SN)",
-   "price_usd": 0.2131,
+   "price_usd": 0.2609,
    "spec": "SMD,P=1mm,Surface Mount\uff0cRight Angle",
-   "stock": 30700
+   "stock": 36048
   },
   "C160407": {
    "found": true,
@@ -185,9 +185,9 @@
    "library": "expand",
    "min_purchase": 1,
    "mpn": "SM08B-SRSS-TB(LF)(SN)",
-   "price_usd": 0.3313,
+   "price_usd": 0.3315,
    "spec": "SMD,P=1mm,Surface Mount\uff0cRight Angle",
-   "stock": 124874
+   "stock": 122937
   },
   "C167879": {
    "found": true,
@@ -198,7 +198,7 @@
    "mpn": "FNR4030S100MT",
    "price_usd": 0.0465,
    "spec": "SMD,4x4mm",
-   "stock": 119201
+   "stock": 114318
   },
   "C1713": {
    "found": true,
@@ -209,7 +209,7 @@
    "mpn": "CL21A106KOQNNNE",
    "price_usd": 0.0629,
    "spec": "0805",
-   "stock": 427519
+   "stock": 349922
   },
   "C17168": {
    "found": true,
@@ -220,7 +220,7 @@
    "mpn": "0402WGF0000TCE",
    "price_usd": 0.0025,
    "spec": "0402",
-   "stock": 10247355
+   "stock": 9320904
   },
   "C173427": {
    "found": true,
@@ -231,7 +231,18 @@
    "mpn": "BZT52C15",
    "price_usd": 0.0166,
    "spec": "SOD-123",
-   "stock": 224981
+   "stock": 223818
+  },
+  "C18077720": {
+   "found": true,
+   "lcsc_url": "https://www.lcsc.com/product-detail/wire-to-board-connector_bossie-bx-gh1-25-4pwt_C18077720.html",
+   "least_patch": 2,
+   "library": "expand",
+   "min_purchase": 1,
+   "mpn": "BX-GH1.25-4PWT",
+   "price_usd": 0.0842,
+   "spec": "SMD,P=1.25mm,Surface Mount\uff0cRight Angle",
+   "stock": 15951
   },
   "C18305": {
    "found": true,
@@ -240,9 +251,9 @@
    "library": "expand",
    "min_purchase": 1,
    "mpn": "BLM21PG600SN1D",
-   "price_usd": 0.0398,
+   "price_usd": 0.0399,
    "spec": "0805",
-   "stock": 90357
+   "stock": 87069
   },
   "C1850418": {
    "found": true,
@@ -251,9 +262,20 @@
    "library": "expand",
    "min_purchase": 1,
    "mpn": "ICM-42688-P",
-   "price_usd": 19.4158,
+   "price_usd": 19.432,
    "spec": "LGA-14(2.5x3)",
-   "stock": 347
+   "stock": 5248
+  },
+  "C190862": {
+   "found": true,
+   "lcsc_url": "https://www.lcsc.com/product-detail/nor-flash_winbond-elec-w25q128jvpiq_C190862.html",
+   "least_patch": 0,
+   "library": "expand",
+   "min_purchase": 1,
+   "mpn": "W25Q128JVPIQ",
+   "price_usd": 3.2555,
+   "spec": "WSON-8-EP(5x6)",
+   "stock": 8004
   },
   "C20917": {
    "found": true,
@@ -262,9 +284,20 @@
    "library": "base",
    "min_purchase": 1,
    "mpn": "AO3400A",
-   "price_usd": 0.0845,
+   "price_usd": 0.0846,
    "spec": "SOT-23",
-   "stock": 1069723
+   "stock": 984592
+  },
+  "C22399950": {
+   "found": true,
+   "lcsc_url": null,
+   "least_patch": 5,
+   "library": "expand",
+   "min_purchase": 1,
+   "mpn": "TLV75733PDYDR",
+   "price_usd": 0.2791,
+   "spec": "SOT-23-5",
+   "stock": 2259
   },
   "C22428347": {
    "found": true,
@@ -273,9 +306,9 @@
    "library": "expand",
    "min_purchase": 1,
    "mpn": "TMP119AIYBGR",
-   "price_usd": 3.4233,
+   "price_usd": 3.4262,
    "spec": "DSBGA-6",
-   "stock": 7953
+   "stock": 7765
   },
   "C231329": {
    "found": true,
@@ -284,9 +317,9 @@
    "library": "expand",
    "min_purchase": 1,
    "mpn": "B3U-1000P",
-   "price_usd": 0.1863,
+   "price_usd": 0.1865,
    "spec": "SMD,3x2.5mm",
-   "stock": 151419
+   "stock": 143010
   },
   "C25076": {
    "found": true,
@@ -297,7 +330,7 @@
    "mpn": "0402WGF1000TCE",
    "price_usd": 0.0012,
    "spec": "0402",
-   "stock": 4679449
+   "stock": 4170445
   },
   "C25104": {
    "found": true,
@@ -308,7 +341,7 @@
    "mpn": "0402WGF3300TCE",
    "price_usd": 0.004,
    "spec": "0402",
-   "stock": 1303252
+   "stock": 1209889
   },
   "C25117": {
    "found": true,
@@ -319,7 +352,7 @@
    "mpn": "0402WGF4700TCE",
    "price_usd": 0.0027,
    "spec": "0402",
-   "stock": 1039858
+   "stock": 863413
   },
   "C25741": {
    "found": true,
@@ -328,9 +361,9 @@
    "library": "base",
    "min_purchase": 1,
    "mpn": "0402WGF1003TCE",
-   "price_usd": 0.0025,
+   "price_usd": 0.0024,
    "spec": "0402",
-   "stock": 9789679
+   "stock": 8302544
   },
   "C25744": {
    "found": true,
@@ -341,7 +374,7 @@
    "mpn": "0402WGF1002TCE",
    "price_usd": 0.0034,
    "spec": "0402",
-   "stock": 23695868
+   "stock": 21855278
   },
   "C25767": {
    "found": true,
@@ -352,7 +385,7 @@
    "mpn": "0402WGF2203TCE",
    "price_usd": 0.0022,
    "spec": "0402",
-   "stock": 102661
+   "stock": 161885
   },
   "C25792": {
    "found": true,
@@ -363,7 +396,7 @@
    "mpn": "0402WGF4702TCE",
    "price_usd": 0.0026,
    "spec": "0402",
-   "stock": 5804307
+   "stock": 5576037
   },
   "C25804": {
    "found": true,
@@ -374,7 +407,7 @@
    "mpn": "0603WAF1002T5E",
    "price_usd": 0.0018,
    "spec": "0603",
-   "stock": 22946703
+   "stock": 23127113
   },
   "C25862": {
    "found": true,
@@ -385,7 +418,7 @@
    "mpn": "0402WGF1201TCE",
    "price_usd": 0.0023,
    "spec": "0402",
-   "stock": 190380
+   "stock": 165890
   },
   "C25874": {
    "found": true,
@@ -396,7 +429,7 @@
    "mpn": "0402WGF2492TCE",
    "price_usd": 0.0014,
    "spec": "0402",
-   "stock": 24801
+   "stock": 23678
   },
   "C25900": {
    "found": true,
@@ -407,7 +440,7 @@
    "mpn": "0402WGF4701TCE",
    "price_usd": 0.0027,
    "spec": "0402",
-   "stock": 16216232
+   "stock": 15547638
   },
   "C25905": {
    "found": true,
@@ -418,7 +451,7 @@
    "mpn": "0402WGF5101TCE",
    "price_usd": 0.0024,
    "spec": "0402",
-   "stock": 6639200
+   "stock": 6096473
   },
   "C2655099": {
    "found": true,
@@ -427,9 +460,9 @@
    "library": "expand",
    "min_purchase": 1,
    "mpn": "ICM-42605",
-   "price_usd": 8.3503,
+   "price_usd": 8.3573,
    "spec": "LGA-14(2.5x3)",
-   "stock": 4401
+   "stock": 3845
   },
   "C2682774": {
    "found": true,
@@ -438,9 +471,9 @@
    "library": "expand",
    "min_purchase": 1,
    "mpn": "X32258MSB4SI",
-   "price_usd": 0.193,
+   "price_usd": 0.1931,
    "spec": "SMD3225-4P",
-   "stock": 45983
+   "stock": 19155
   },
   "C2687116": {
    "found": true,
@@ -451,7 +484,7 @@
    "mpn": "USBLC6-2SC6",
    "price_usd": 0.0475,
    "spec": "SOT-23-6",
-   "stock": 75980
+   "stock": 79148
   },
   "C2765186": {
    "found": true,
@@ -462,7 +495,7 @@
    "mpn": "TYPE-C 16PIN 2MD(073)",
    "price_usd": 0.0743,
    "spec": "SMD",
-   "stock": 1012133
+   "stock": 950611
   },
   "C2861505": {
    "found": true,
@@ -471,7 +504,7 @@
    "library": "expand",
    "min_purchase": 1,
    "mpn": "LMR33630ARNXR",
-   "price_usd": 1.2992,
+   "price_usd": 1.3003,
    "spec": "VQFN-12(2x3)",
    "stock": 91
   },
@@ -482,9 +515,9 @@
    "library": "expand",
    "min_purchase": 1,
    "mpn": "CC0805KKX7R8BB475",
-   "price_usd": 0.072,
+   "price_usd": 0.0721,
    "spec": "0805",
-   "stock": 570537
+   "stock": 580523
   },
   "C404027": {
    "found": true,
@@ -493,9 +526,9 @@
    "library": "expand",
    "min_purchase": 1,
    "mpn": "TLV75533PDBVR",
-   "price_usd": 0.143,
+   "price_usd": 0.1421,
    "spec": "SOT-23-5",
-   "stock": 138956
+   "stock": 137354
   },
   "C444392": {
    "found": true,
@@ -504,20 +537,9 @@
    "library": "expand",
    "min_purchase": 1,
    "mpn": "OPA2374M/TR",
-   "price_usd": 0.3427,
+   "price_usd": 0.343,
    "spec": "SOP-8",
-   "stock": 4957
-  },
-  "C51118": {
-   "found": true,
-   "lcsc_url": "https://www.lcsc.com/product-detail/voltage-regulators-linear-low-drop-out-ldo-regulators_diodes-incorporated-ap2112k-3-3trg1_C51118.html",
-   "least_patch": 5,
-   "library": "expand",
-   "min_purchase": 1,
-   "mpn": "AP2112K-3.3TRG1",
-   "price_usd": 0.1708,
-   "spec": "SOT-25-5",
-   "stock": 42332
+   "stock": 3457
   },
   "C5137195": {
    "found": true,
@@ -528,7 +550,7 @@
    "mpn": "BWU.FL-IPEX1",
    "price_usd": 0.0415,
    "spec": "SMD",
-   "stock": 626764
+   "stock": 601868
   },
   "C5177178": {
    "found": true,
@@ -537,9 +559,9 @@
    "library": "expand",
    "min_purchase": 1,
    "mpn": "CS3216X5R226M160NRI",
-   "price_usd": 0.0773,
+   "price_usd": 0.0774,
    "spec": "1206",
-   "stock": 42993
+   "stock": 82973
   },
   "C51940119": {
    "found": true,
@@ -550,7 +572,7 @@
    "mpn": "XY-SM06B-GHS-TB",
    "price_usd": 0.0704,
    "spec": "SMD,P=1.25mm,Surface Mount\uff0cRight Angle",
-   "stock": 18611
+   "stock": 18034
   },
   "C5271084": {
    "found": true,
@@ -559,9 +581,9 @@
    "library": "expand",
    "min_purchase": 1,
    "mpn": "STM32H743VIT6TR",
-   "price_usd": 11.9083,
+   "price_usd": 11.9183,
    "spec": "LQFP-100(14x14)",
-   "stock": 894
+   "stock": 831
   },
   "C52923": {
    "found": true,
@@ -572,7 +594,7 @@
    "mpn": "CL05A105KA5NQNC",
    "price_usd": 0.0099,
    "spec": "0402",
-   "stock": 6487369
+   "stock": 5675403
   },
   "C53055319": {
    "found": true,
@@ -581,9 +603,9 @@
    "library": "expand",
    "min_purchase": 1,
    "mpn": "SH1.0mm-3P-WT",
-   "price_usd": 0.0481,
+   "price_usd": 0.0482,
    "spec": "SMD,P=1mm,Surface Mount\uff0cRight Angle",
-   "stock": 866
+   "stock": 816
   },
   "C53055322": {
    "found": true,
@@ -592,7 +614,7 @@
    "library": "expand",
    "min_purchase": 1,
    "mpn": "SH1.0mm-6P-WT",
-   "price_usd": 0.0663,
+   "price_usd": 0.0664,
    "spec": "SMD,P=1mm,Surface Mount\uff0cRight Angle",
    "stock": 28765
   },
@@ -603,9 +625,9 @@
    "library": "base",
    "min_purchase": 1,
    "mpn": "XC6206P332MR-G",
-   "price_usd": 0.1425,
+   "price_usd": 0.1426,
    "spec": "SOT-23-3L",
-   "stock": 489554
+   "stock": 477529
   },
   "C5563878": {
    "found": true,
@@ -614,9 +636,9 @@
    "library": "expand",
    "min_purchase": 1,
    "mpn": "T132S4-25000ML33DTL",
-   "price_usd": 1.4291,
+   "price_usd": 1.4303,
    "spec": "SMD3225-4P",
-   "stock": 109
+   "stock": 29
   },
   "C596391": {
    "found": true,
@@ -625,9 +647,31 @@
    "library": "expand",
    "min_purchase": 1,
    "mpn": "MAX2112ETI+T",
-   "price_usd": 18.1589,
+   "price_usd": 18.174,
    "spec": "TQFN-28-EP(5x5)",
    "stock": 15
+  },
+  "C6454456": {
+   "found": true,
+   "lcsc_url": "https://www.lcsc.com/product-detail/esd-and-surge-protection-tvs-esd_msksemi-srv05-4-p-t7_C6454456.html",
+   "least_patch": 10,
+   "library": "expand",
+   "min_purchase": 1,
+   "mpn": "SRV05-4-P-T7",
+   "price_usd": 0.0402,
+   "spec": "SOT-23-6",
+   "stock": 3817
+  },
+  "C6952426": {
+   "found": true,
+   "lcsc_url": "https://www.lcsc.com/product-detail/esd-and-surge-protection-tvs-esd_nexperia-pesd2canfd24lt-qr_C6952426.html",
+   "least_patch": 5,
+   "library": "expand",
+   "min_purchase": 1,
+   "mpn": "PESD2CANFD24LT-QR",
+   "price_usd": 0.295,
+   "spec": "TO-236AB",
+   "stock": 16168
   },
   "C7836": {
    "found": true,
@@ -636,9 +680,9 @@
    "library": "expand",
    "min_purchase": 1,
    "mpn": "SN74LVC1G17DBVR",
-   "price_usd": 0.1678,
+   "price_usd": 0.1679,
    "spec": "SOT-23-5",
-   "stock": 69452
+   "stock": 59863
   },
   "C81598": {
    "found": true,
@@ -649,7 +693,7 @@
    "mpn": "1N4148W",
    "price_usd": 0.0123,
    "spec": "SOD-123",
-   "stock": 5245195
+   "stock": 5219255
   },
   "C82219": {
    "found": true,
@@ -660,7 +704,7 @@
    "mpn": "0402B473K500NT",
    "price_usd": 0.0059,
    "spec": "0402",
-   "stock": 270622
+   "stock": 265246
   },
   "C8598": {
    "found": true,
@@ -671,7 +715,7 @@
    "mpn": "B5819W SL",
    "price_usd": 0.028,
    "spec": "SOD-123",
-   "stock": 495627
+   "stock": 519174
   },
   "C91145": {
    "found": true,
@@ -680,9 +724,9 @@
    "library": "expand",
    "min_purchase": 1,
    "mpn": "TF-01A",
-   "price_usd": 0.1917,
+   "price_usd": 0.1918,
    "spec": "SMD",
-   "stock": 205700
+   "stock": 201733
   },
   "C91185": {
    "found": true,
@@ -691,9 +735,9 @@
    "library": "expand",
    "min_purchase": 1,
    "mpn": "CC0805KKX7R9BB105",
-   "price_usd": 0.0379,
+   "price_usd": 0.0327,
    "spec": "0805",
-   "stock": 844438
+   "stock": 811905
   },
   "C965804": {
    "found": true,
@@ -704,7 +748,7 @@
    "mpn": "XL-1608UGC-04",
    "price_usd": 0.005,
    "spec": "0603",
-   "stock": 3842681
+   "stock": 3645205
   },
   "C965807": {
    "found": true,
@@ -715,18 +759,7 @@
    "mpn": "XL-1608UBC-04",
    "price_usd": 0.0043,
    "spec": "0603",
-   "stock": 2373675
-  },
-  "C97521": {
-   "found": true,
-   "lcsc_url": "https://www.lcsc.com/product-detail/nor-flash_winbond-elec-w25q128jvsiq_C97521.html",
-   "least_patch": 0,
-   "library": "base",
-   "min_purchase": 1,
-   "mpn": "W25Q128JVSIQ",
-   "price_usd": 2.5496,
-   "spec": "SOIC-8-208mil",
-   "stock": 59683
+   "stock": 2261289
   }
  },
  "source": "https://jlcpcb.com/api/overseas-pcb-order/v1/shoppingCart/smtGood/selectSmtComponentList"

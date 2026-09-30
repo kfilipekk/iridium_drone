@@ -204,6 +204,9 @@ def assembly(board):
         if stack[0]["conductive"] and d < stack[0]["reach_d"] / 2:
             bad.append(f"{ref} at {d:.2f} mm under the {stack[0]['name']} "
                        f"({stack[0]['reach_d'] / 2:.2f} mm)")
+        if d < hw["pad_clear"]:
+            bad.append(f"{ref} at {d:.2f} mm, inside the {hw['pad_clear']:.2f} mm a metal "
+                       "spacer would reach")
         for lo, hi in zip(stack, stack[1:]):
             if not lo["conductive"] and hi["conductive"] and hi["reach_d"] > lo["reach_d"]:
                 bad.append(f"the {hi['name']} overhangs the {lo['name']} it sits on")
@@ -211,8 +214,7 @@ def assembly(board):
     check("assembly", "no copper under a screw head", bool(holes) and not bad,
           "; ".join(bad) if bad else
           f"nothing metal touches a face: {hw['top'][0]['name']} top, {hw['bottom'][0]['name']} "
-          f"below; nearest pad {worst:.2f} mm, inside a metal hex's 3.18 mm corners, so "
-          f"these must stay nylon")
+          f"below; nearest pad {worst:.2f} mm, clear of even a metal hex's corners")
 
 
 #signal integrity
@@ -284,26 +286,33 @@ def integrity(board):
 
 
 def silkscreen(board):
-    """Report how many pad/test-point labels made it onto the silkscreen."""
+    """Report how many pads carry their function (design.PAD_LABELS) on the silkscreen."""
     #count what is printed, not what silk_labels could place
     try:
         placed, skipped = [], []
         for fp in board.GetFootprints():
             if "TestPoint" not in fp.GetFPIDAsString():
                 continue
-            r = fp.Reference()
-            (placed if r.IsVisible() and r.GetLayer() in (pcbnew.F_SilkS, pcbnew.B_SilkS)
-             else skipped).append(fp.GetReference())
+            want = design.PAD_LABELS.get(fp.GetReference())
+            texts = {g.GetText() for g in fp.GraphicalItems()
+                     if g.Type() == pcbnew.PCB_TEXT_T and g.IsVisible()
+                     and g.GetLayer() in (pcbnew.F_SilkS, pcbnew.B_SilkS)}
+            (placed if want and want in texts else skipped).append(fp.GetReference())
     except Exception as e:
         check("fabrication", "pad silkscreen labels", False,
               f"could not evaluate: {e}", hard=False)
         return
     total = len(placed) + len(skipped)
-    ok = not skipped
-    detail = (f"{len(placed)}/{total} pad labels printed on the board"
-              + (f" - blank (on padmap.svg and the assembly drawings): {', '.join(sorted(skipped))}" if skipped
-                 else ""))
-    check("fabrication", "pad silkscreen labels", ok, detail, hard=False)
+    listed = set(getattr(design, "PAD_LABELS_UNPRINTED", {}))
+    unlisted = sorted(set(skipped) - listed)
+    stale = sorted(listed & set(placed))
+    ok = not unlisted and not stale
+    detail = (f"{len(placed)}/{total} pads carry their function on the silkscreen"
+              + (f"; unprinted by design, on padmap.svg: {', '.join(sorted(set(skipped) & listed))}"
+                 if set(skipped) & listed else "")
+              + (f"; BLANK and not in PAD_LABELS_UNPRINTED: {', '.join(unlisted)}" if unlisted else "")
+              + (f"; labelled but still listed as unprinted: {', '.join(stale)}" if stale else ""))
+    check("fabrication", "pad silkscreen labels", ok, detail)
 
 
 def project(board):
@@ -409,9 +418,11 @@ def firmware(board):
     rc, out = run("check_model_alignment.py")
     m = re.search(r'(\d+) bodies tested against each other', out)
     check("fabrication", "3D bodies sit on their footprints and overlap nothing", rc == 0,
-          (f"{m.group(1) if m else '?'} bodies, each on its footprint, none overlapping"
+          (f"{m.group(1) if m else '?'} bodies, each on its footprint, none overlapping another "
+           "or the stack hardware"
            if rc == 0 else
-           "a 3D body is misplaced or overlaps another - see tools/check_model_alignment.py"))
+           "a 3D body is misplaced, overlaps another or sits under the stack hardware - see "
+           "tools/check_model_alignment.py"))
 
     rc, out = run("check_build.py")
     m = re.search(r'BUILD CHECKS PASS - (\d+) checks across (\d+)', out)

@@ -4,6 +4,7 @@
 Usage:  python3 tools/fault_injection.py [--list-gaps]
 """
 import argparse
+import math
 import contextlib
 import csv
 import io
@@ -186,6 +187,24 @@ def _board_proxy(**over):
         preflight.pcbnew.LoadBoard = real_load
 
 
+class _UnlabelledPad:
+    """A test pad whose footprint carries no text at all."""
+    def GetFPIDAsString(self):
+        return "TestPoint:TestPoint_Pad_1.5x1.5mm"
+
+    def GetReference(self):
+        return "P41"
+
+    def GraphicalItems(self):
+        return []
+
+
+@contextlib.contextmanager
+def _unlabelled_pad():
+    with _board_proxy(GetFootprints=lambda: [_UnlabelledPad()]):
+        yield
+
+
 @contextlib.contextmanager
 def _no_edge_cuts():
     with _board_proxy(GetDrawings=lambda: []):
@@ -203,6 +222,42 @@ def _track_on_a_plane():
     with _board_proxy(GetTracks=lambda: [_PlaneTrack()],
                       GetLayerName=lambda _li: "In1.Cu"):
         yield
+
+
+@contextlib.contextmanager
+def _hole_near_a_pad():
+    """A mounting hole 3.0 mm from the nearest pad."""
+    real_load = preflight.pcbnew.LoadBoard
+    real = real_load(preflight.BOARD)
+    boxes = [p.GetBoundingBox() for p in real.GetPads()]
+
+    def nearest(x, y):
+        return min(math.hypot(max(b.GetLeft() - x, 0, x - b.GetRight()),
+                              max(b.GetTop() - y, 0, y - b.GetBottom())) for b in boxes)
+
+    spot = None
+    for bb in boxes:
+        cx, cy = (bb.GetLeft() + bb.GetRight()) // 2, (bb.GetTop() + bb.GetBottom()) // 2
+        for x, y in ((bb.GetRight() + 3_000_000, cy), (bb.GetLeft() - 3_000_000, cy),
+                     (cx, bb.GetBottom() + 3_000_000), (cx, bb.GetTop() - 3_000_000)):
+            if 2_600_000 < nearest(x, y) <= 3_000_000:
+                spot = (x, y)
+                break
+        if spot:
+            break
+    extra = _Circle(*spot)
+
+    class _Proxy:
+        def __getattr__(self, name):
+            if name == "GetDrawings":
+                return lambda: list(real.GetDrawings()) + [extra]
+            return getattr(real, name)
+
+    preflight.pcbnew.LoadBoard = lambda *a, **k: _Proxy()
+    try:
+        yield
+    finally:
+        preflight.pcbnew.LoadBoard = real_load
 
 
 @contextlib.contextmanager
@@ -296,9 +351,15 @@ TIER_B = [
     dict(pid="mech.mounting", group="fabrication", check="mounting holes",
          fault=_no_edge_cuts,
          why="no mounting holes is not a 30.5 mm four-hole pattern"),
+    dict(pid="fab.padlabels", group="silkscreen", check="pad silkscreen labels",
+         fault=_unlabelled_pad,
+         why="a test pad with no function printed beside it must fail the label check"),
     dict(pid="mech.screwhead", group="assembly", check="no copper under a screw head",
          fault=_hole_on_a_pad,
          why="a screw hole landing on a pad must fail the clearance check"),
+    dict(pid="mech.screwhead", group="assembly", check="no copper under a screw head",
+         fault=_hole_near_a_pad,
+         why="a pad 3 mm from a hole is inside a metal spacer's corners and must fail"),
     dict(pid="fab.planes", group="integrity", check="planes carry no routing",
          fault=_track_on_a_plane,
          why="signal copper on In1.Cu must fail the plane check"),
@@ -393,10 +454,13 @@ def main():
               f"{len(flips[tool])} check(s) flipped")
 
     print(f"\n=== Tier B: {len(TIER_B)} inline fault(s) ===")
+    inert = []      #a fault its check shrugged off
     for t in TIER_B:
         v = run_inline_fault(capture, t["group"], t["fault"]).get(t["check"])
         if v in ("FAIL", "WARN"):
             covers.setdefault(t["pid"], []).append(f"inline:{t['group']}")
+        else:
+            inert.append(f"{t['pid']} ({t['fault'].__name__})")
         print(f"  {' ok ' if v in ('FAIL', 'WARN') else 'FAIL'} {t['pid']:16} "
               f"{t['check']:24} -> {v or 'check not reported'}")
         if v not in ("FAIL", "WARN"):
@@ -431,6 +495,10 @@ def main():
         print("     * A check with an unconditional `ok` (e.g. `check(..., True, ...)`) -")
         print("       that one cannot fail for ANY input, and is a defect, not a gap.")
         print("     The list is intentionally a failure, not a silent pass.")
+        return 1
+
+    if inert:
+        print(f"\nFAIL - {len(inert)} injected fault(s) went unnoticed: {', '.join(inert)}")
         return 1
 
     print("\nALL GATED PREREQUISITES REACT TO A FAULT - none is a check that cannot fail.")

@@ -82,10 +82,12 @@ def board_facts():
     #package heights come from design.PART_HEIGHT
     top, bot, top_ref, bot_ref, unknown = _d.stack_heights(b, skip_dnp=True)
     ftop, fbot, _, fbot_ref, _ = _d.stack_heights(b, skip_dnp=False)
-    if unknown:
-        print("  !! footprints with no declared height:")
-        for n, refs in sorted(unknown.items()):
-            print(f"       {n}  ({', '.join(sorted(refs)[:6])})")
+    #a part with no declared height is not measured at all
+    check("geometry", "every fitted part has a declared height", not unknown,
+          "; ".join(f"{n} ({', '.join(sorted(r)[:6])})" for n, r in sorted(unknown.items()))
+          or f"all measured; tallest {top:.2f} mm on top ({top_ref}), {bot:.2f} mm below "
+             f"({bot_ref})",
+          "[M] board footprints against design.PART_HEIGHT")
     if fbot > bot:
         print(f"  note bottom-side height is {bot:.2f} mm on the base build ({bot_ref}) "
               f"but {fbot:.2f} mm with the FPV buck fitted ({fbot_ref})")
@@ -117,8 +119,8 @@ def connectors(text):
             ("J8  microSD",      ["microsd"],                    "the card itself - logs AND Lua scripts"),
             ("P71-74+P44 companion", ["pi zero", "raspberry", "radxa"], "5 wires to the companion"),
             ("J5  RC",           ["elrs", "receiver"],           "ELRS receiver"),
-            ("PL1-3 LED",        ["ws2812", "led strip"],        "addressable strip"),
-            ("PZ1-2 buzzer",     ["buzzer", "piezo"],            "5 V piezo"),
+            ("J15 LED",          ["ws2812", "led strip"],        "addressable strip"),
+            ("J16 buzzer",       ["buzzer", "piezo"],            "5 V piezo"),
             ("XT60 power",       ["xt60"],                       "battery lead"),
             ("battery plug",     ["ec5"],                        "EC5 adapter - the Zeee packs are not XT60")]
     for label, keys, why in need:

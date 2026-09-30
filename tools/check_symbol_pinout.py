@@ -19,9 +19,9 @@ CROSS_CHECK = {
     "STM32H743VIT6_C114409": ("MCU_ST_STM32H7", "STM32H743VITx"),
     "SN65HVD230DR":          ("Interface_CAN_LIN", "SN65HVD230"),
     "USBLC6-2SC6_C2687116":  ("Power_Protection", "USBLC6-2SC6"),
-    "W25Q128JVSIQTR":        ("Memory_Flash", "W25Q128JVS"),
+    "W25Q128JVPIQTR":        ("Memory_Flash", "W25Q128JVP"),
     "TPS54202DDCR":          ("Regulator_Switching", "TPS54202DDC"),
-    "AP2112K-3_3TRG1":       ("Regulator_Linear", "AP2112K-3.3"),
+    "SRV05-4-P-T7_C6454456": ("Power_Protection", "SRV05-4"),
     "MS561101BA03-50":       ("Sensor_Pressure", "MS5611-01BA"),
     "AO3400A":               ("Transistor_FET", "AO3400A"),
     "TMP119AIYBGR":          ("Sensor_Temperature", "TMP119AIYBGR"),
@@ -31,6 +31,11 @@ CROSS_CHECK = {
 
 #parts with no KiCad equivalent
 DATASHEET_VERIFIED = {
+    #KiCad has the TLV757P only in DBV and DRV
+    "TLV75733PDYDR": ("docs/datasheets/TLV757P-TI.pdf Table 4-1 Pin Functions, DYD column, "
+                      "and Figure 4-2",
+                      "all 6 pads: 1 IN, 2 GND, 3 EN, 4 NC, 5 OUT, 6 (thermal pad) GND",
+                      "2026-09-29"),
     "TLV75533PDBVR": ("docs/datasheets/TLV755P-SBVS293.pdf Figure 4-2, DBV package",
                       "all 5 pins: IN GND EN NC OUT", "2026-09-17"),
     "MAX2112ETI+T": ("docs/datasheets/MAX2112.pdf pin description table",
@@ -114,7 +119,8 @@ def variants(name):
     for alt in n.split("/"):                      #alternate function names
         if not alt:
             continue
-        for form in (alt, alt.rstrip("#"), alt.rstrip("N") if alt.endswith("N") else alt):
+        #active-low marks: CS#, #CS (EasyEDA), CSN
+        for form in (alt, alt.strip("#"), alt.rstrip("N") if alt.endswith("N") else alt):
             f = form.replace("_", "").replace("-", "")
             if f:
                 out.add(f)
@@ -123,7 +129,10 @@ def variants(name):
             if head:
                 out.add(head.replace("_", ""))
     syn = {"VSS": "GND", "GND": "VSS", "VDD": "VCC", "VCC": "VDD",
-           "VI": "VIN", "VIN": "VI", "VO": "VOUT", "VOUT": "VO"}
+           "VI": "VIN", "VIN": "VI", "VO": "VOUT", "VOUT": "VO",
+           "IN": "VIN", "OUT": "VOUT",
+           #protection arrays name their rails by polarity
+           "VN": "GND", "VP": "VCC"}
     for v in list(out):
         if v in syn:
             out.add(syn[v])

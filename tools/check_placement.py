@@ -10,20 +10,21 @@ TOMM = pcbnew.ToMM
 
 def main():
     b = pcbnew.LoadBoard(BOARD)
+    #a pad number can name several pads
     pads, fps = {}, {}
     for fp in b.GetFootprints():
         fps[fp.GetReference()] = fp
         for pad in fp.Pads():
-            pads[(fp.GetReference(), pad.GetPadName())] = (
-                TOMM(pad.GetPosition().x), TOMM(pad.GetPosition().y))
+            pads.setdefault((fp.GetReference(), pad.GetPadName()), []).append(
+                (TOMM(pad.GetPosition().x), TOMM(pad.GetPosition().y)))
 
     #adjacency rules
     fails, worst = [], []
     for ref, (t_ref, t_pad, max_mm) in design.ADJACENCY.items():
         if ref not in fps or (t_ref, t_pad) not in pads: continue
-        tx, ty = pads[(t_ref, t_pad)]
         best = min((math.hypot(px - tx, py - ty)
-                    for (r, _p), (px, py) in pads.items() if r == ref), default=None)
+                    for tx, ty in pads[(t_ref, t_pad)]
+                    for (r, _p), pts in pads.items() if r == ref for px, py in pts), default=None)
         if best is None: continue
         worst.append((best, ref, t_ref, t_pad, max_mm))
         if best > max_mm: fails.append((best, ref, t_ref, t_pad, max_mm))

@@ -24,6 +24,8 @@ render docs/img/render-bottom-flat.png bottom "${PRES[@]}"
 render docs/img/render-iso.png         top    "${PRES[@]}" --rotate -45,0,45 --perspective
 render docs/img/render-iso-bottom.png  bottom "${PRES[@]}" --rotate -45,0,45 --perspective
 
+python3 tools/gen_padmap.py
+
 echo; echo "=== 2. does every body sit on its own footprint? ==="
 #measured in the exported GLB, which is what the viewer draws
 python3 tools/check_model_alignment.py | grep -v '^$' | tail -4

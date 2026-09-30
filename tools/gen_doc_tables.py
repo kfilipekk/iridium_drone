@@ -188,7 +188,9 @@ def stack_table():
 
 
 def frame_table(f):
+    import design
     _sto = load_standoff()
+    tpm = design.TOP_PLATE_MOUNT
     rows = [
         "| | value | ",
         "|---|---|",
@@ -199,11 +201,12 @@ def frame_table(f):
         f"upper {f['upper_t']}, camera side {f['cam_plate_t']} mm |",
         f"| arms | {f['arm_t']} mm |",
         f"| **FC mounting** | **{f['stack']}** |",
-        f"| **inner space over the mid plate** | **{f['inner_h']:.0f} mm** - the kit's "
-        f"22 mm front standoffs; 30 mm rear standoffs stand on the bottom plate "
-        f"(design.TOP_PLATE_MOUNT, from the DXF) |",
-        f"| **standoffs** | **use the kit's** - stack {_sto['stack']:.1f} mm leaves "
-        f"{_sto['slack']:.1f} mm under the top plate |",
+        f"| **inner space over the mid plate** | **{f['inner_h']:.0f} mm** - "
+        f"{tpm['front_standoff']:.0f} mm front standoffs; {tpm['rear_standoff']:.0f} mm rear "
+        f"standoffs stand on the bottom plate (design.TOP_PLATE_MOUNT, from the DXF) |",
+        f"| **standoffs** | **buy {tpm['front_standoff']:.0f} and {tpm['rear_standoff']:.0f} mm** "
+        f"(the kit's are {tpm['kit_front']:.0f} and {tpm['kit_rear']:.0f}) - stack "
+        f"{_sto['stack']:.1f} mm leaves {_sto['slack']:.1f} mm under the top plate |",
         f"| motor mounting | {' / '.join(f'{p:.0f}x{p:.0f}' for p in f['motor_patterns_mm'])} mm "
         f"([L] retailer figure - the manufacturer DXF's motor holes are self-inconsistent, "
         f"see KNOWN-ISSUES.md) |",

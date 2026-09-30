@@ -116,14 +116,15 @@ def main():
     design.MOUNTING["gap"] = declared
     worst_gap = min(results, key=results.get)
     if min(results.values()) >= 0.5:
-        print(f"  ok   top plate       stack clears the kit's top plate by "
+        print(f"  ok   top plate       stack clears the top plate by "
               f"{min(results.values()):.1f} mm at worst ({worst_gap:.1f} mm grommet); "
               f"{results[declared]:.1f} mm at the declared {declared:.1f} mm")
     else:
         fails.append(f"stack hits or grazes the top plate at {worst_gap:.1f} mm grommet "
-                     f"compression ({min(results.values()):.2f} mm) - the 22 mm kit "
-                     f"standoff is not enough; both standoff sets must grow by the same "
-                     f"amount to keep the top plate flat")
+                     f"compression ({min(results.values()):.2f} mm) - the "
+                     f"{design.TOP_PLATE_MOUNT['front_standoff']:.0f} mm front standoff is not "
+                     f"enough; both standoff sets must grow by the same amount to keep the "
+                     f"top plate flat")
     srow = next(r for r in fasteners.ROWS if "stack bolt" in r["where"])
     worst_need = srow["need"] + (GROMMET_RANGE[1] - declared)
     if std_len(worst_need) <= srow["L"]:

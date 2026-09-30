@@ -40,7 +40,8 @@ PREREQUISITES = [
          claim="every printed label sits nearer the part it names than any other part"),
     dict(id="fab.models", cls=GATED, tool="check_model_alignment.py",
          claim="every part's 3D body sits on its footprint - pegged parts with their pegs "
-               "in the holes - and no two bodies occupy the same space"),
+               "in the holes - no two bodies occupy the same space, and none sits under the "
+               "washer or spacer bolted through a stack hole"),
     dict(id="fab.bundle", cls=GATED, tool="check_order_bundle.py",
          claim="the bundle you upload matches the verified BOM, CPL and gerbers"),
 
@@ -142,9 +143,10 @@ PREREQUISITES = [
          why="the junction figures are BRACKETS between the datasheet's JEDEC and EVM "
              "copper, and this board is between them. No desk calculation narrows it; "
              "T3a measures it. U19 logs the board beside U9 every flight in the meantime."),
-    dict(id="adv.silk", cls=ADVISORY, check="pad silkscreen labels",
-         why="an unlabelled pad costs a bench session, not a board, and a label is left off "
-             "rather than printed where it would read as another part's."),
+    dict(id="fab.padlabels", cls=GATED, check="pad silkscreen labels",
+         claim="every solder pad and test point carries its function (design.PAD_LABELS) on "
+               "the silkscreen, where check_silk_owner.py reads it as that pad's - or is named "
+               "in design.PAD_LABELS_UNPRINTED with the reason, and on padmap.svg"),
     dict(id="adv.in4rails", cls=ADVISORY, check="In4.Cu rails not fragmented",
          why="separate pours around separate pad groups, each tied to its rail - a note "
              "about shape, not a defect in connectivity."),
@@ -170,12 +172,12 @@ PREREQUISITES = [
              "check_footprints.py verifies pad count, package and pitch but not those."),
     dict(id="act.impedance", cls=ORDER_ACTION,
          claim="leave impedance control OFF",
-         why="none is specified. USB is a plain differential pair, and the 1.62 GHz "
-             "J12 -> U13 run is 0.10 mm track across four layers, roughly 60-90 ohm on "
-             "JLC's default stack: at worst ~1.5 dB of mismatch behind the HC610's "
-             "28 dB of gain, which moves the system noise figure by a few tenths of a dB "
-             "at most. Ordering "
-             "impedance control would not change the drawn geometry."),
+         why="none is needed. USB is a plain differential pair. The 1.62 GHz J12 -> U13 "
+             "line is drawn as 50 ohm grounded coplanar on F.Cu over the solid In1 ground "
+             "(0.21 mm track, 0.2 mm gap): 50-54 ohm across JLC's 6-layer prepregs "
+             "(0.10-0.12 mm, er 4.1-4.2), so the uncontrolled tolerance costs a fraction of "
+             "a dB behind the HC610's 28 dB of gain. Ordering impedance control would not "
+             "change the drawn geometry."),
     dict(id="act.quantity", cls=ORDER_ACTION,
          claim="5 bare PCBs / 2 assembled, BOTH sides",
          why="5 is the multilayer minimum and 2 the SMT minimum; both sides are populated "

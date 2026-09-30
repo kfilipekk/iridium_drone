@@ -178,12 +178,11 @@ def main():
                          f"- measure at T3a")
             line("warn", f"{ref} junction temperature",
                  f"{tj_peak:.0f} C peak on good copper ({tj_max-tj_peak:.0f} C margin) "
-                 f"but {tj_peak_bad:.0f} C on the datasheet's 'no heatsink' figure. This "
-                 f"board measures 7443 mm2 of GND plane and 5 vias on the output pad "
-                 f", so the good end is the expected one - "
-                 f"but the AP2112 has OTSD, so being wrong means a mid-flight BROWNOUT, "
-                 f"not smoke. U19 (TMP119) sits 3.9 mm away in the same GND pour and "
-                 f"logs this neighbourhood every flight - see TEMP_LOG in defaults.parm",
+                 f"but {tj_peak_bad:.0f} C on the datasheet's minimal-copper figure. On "
+                 f"this board of solid planes the good end is the expected one - but "
+                 f"{part} has thermal shutdown, so being wrong means a mid-flight "
+                 f"BROWNOUT, not smoke. U19 (TMP119) sits beside it and logs this "
+                 f"neighbourhood every flight - see TEMP_LOG in defaults.parm",
                  theta_src)
         elif tj_peak >= tj_max - 25:
             notes.append(f"{ref}: {tj_peak:.0f} C peak leaves under 25 C of margin")
