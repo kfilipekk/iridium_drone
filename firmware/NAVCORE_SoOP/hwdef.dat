@@ -106,11 +106,7 @@ define HAL_BATT_CURR_SCALE 40.0
 PC4 SOOP_I_ADC ADC1 SCALE(1)
 # [removed: no airspeed sensor] define HAL_DEFAULT_AIRSPEED_PIN 4
 
-# [was: PC5 RSSI_ADC ADC1]
-# PC5 drives Q5's gate via R54 (1k series) with R55 (47k pull-down) for the
-# recovery / e-match pyro channel on J18. LOW keeps the channel disarmed at
-# boot.
-PC5 PYRO_FIRE OUTPUT LOW GPIO(84)
+# [removed: no RSSI ADC pin; the pyro channel that used PC5 was removed in Rev C] PC5 RSSI_ADC ADC1
 # [removed: RSSI arrives over CRSF] define BOARD_RSSI_ANA_PIN 8
 
 # LED
@@ -192,9 +188,7 @@ PC12 SDMMC1_CK SDMMC1
 PD2 SDMMC1_CMD SDMMC1
 
 # GPIOs
-# [was: PD10  PINIO1 OUTPUT GPIO(81) LOW]
-# PD10 reads the landing leg touchdown switch on J20 with 10k pull-up R56.
-PD10 TOUCHDOWN INPUT PULLUP GPIO(85)
+# [removed: no touchdown input; the lander switch interface was removed in Rev C] PD10  PINIO1 OUTPUT GPIO(81) LOW
 # [was: PD11  PINIO2 OUTPUT GPIO(82) LOW]
 # PD11 is reserved for an optical flow motion interrupt. It is not wired on
 # Rev C (J14.6 is GND), so the pull-down holds it idle.

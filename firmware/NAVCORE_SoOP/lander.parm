@@ -13,14 +13,7 @@ SERVO8_FUNCTION 34
 SERVO9_FUNCTION 35
 SERVO10_FUNCTION 36
 
-#touchdown switch: PD10 / GPIO(85)
-
-#pyro is mapped through AP_Parachute's relay function
-RELAY1_FUNCTION 3
-RELAY1_PIN 84
-RELAY1_DEFAULT 0
-RELAY1_INVERTED 0
-#disabled at boot
+#Rev C removed the touchdown input (PD10) and the pyro channel (PC5) from the board
 CHUTE_ENABLED 0
 CHUTE_TYPE 0
 CHUTE_ALT_MIN 10

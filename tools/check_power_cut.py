@@ -41,31 +41,91 @@ def poly_span(pts, axis, v):
     return sum(xs[k+1] - xs[k] for k in range(0, len(xs) - 1, 2))
 
 
+#each track as the sub-segments between the points
+def _split_at_junctions(b, code, segs):
+    vias = [v for v in b.GetTracks() if v.Type() == pcbnew.PCB_VIA_T and v.GetNetCode() == code]
+    pads = [p for fp in b.GetFootprints() for p in fp.Pads() if p.GetNetCode() == code]
+
+    def key(o, end):
+        p = (TOMM(o.GetStart().x), TOMM(o.GetStart().y)) if end == 0 else \
+            (TOMM(o.GetEnd().x), TOMM(o.GetEnd().y))
+        return p
+
+    out = []
+    for t in segs:
+        lay = t.GetLayer()
+        a = (TOMM(t.GetStart().x), TOMM(t.GetStart().y))
+        c = (TOMM(t.GetEnd().x), TOMM(t.GetEnd().y))
+        dx, dy = c[0] - a[0], c[1] - a[1]
+        L2 = dx * dx + dy * dy
+        ts = {0.0, 1.0}
+
+        def add(pt):
+            if L2 == 0:
+                return
+            u = ((pt[0] - a[0]) * dx + (pt[1] - a[1]) * dy) / L2
+            if 0 < u < 1 and math.hypot(a[0] + u * dx - pt[0], a[1] + u * dy - pt[1]) < 0.02:
+                ts.add(u)
+        for o in segs:
+            if o is t or o.GetLayer() != lay:
+                continue
+            add(key(o, 0)); add(key(o, 1))
+        for v in vias:
+            if v.IsOnLayer(lay):
+                add((TOMM(v.GetPosition().x), TOMM(v.GetPosition().y)))
+        for p in pads:
+            if not p.IsOnLayer(lay):
+                continue
+            pp = p.GetPosition()
+            if math.hypot(TOMM(pp.x) - (a[0] + dx / 2), TOMM(pp.y) - (a[1] + dy / 2)) \
+                    < max(0.5, math.hypot(dx, dy)):
+                add((TOMM(pp.x), TOMM(pp.y)))
+        ss = sorted(ts)
+        for i in range(len(ss) - 1):
+            u0, u1 = ss[i], ss[i + 1]
+            out.append((lay, (a[0] + u0 * dx, a[1] + u0 * dy),
+                        (a[0] + u1 * dx, a[1] + u1 * dy), TOMM(t.GetWidth())))
+    return out
+
+
 #copper that leads nowhere carries no current
 def drop_dead_ends(b, code, segs):
     vias = [v for v in b.GetTracks() if v.Type() == pcbnew.PCB_VIA_T and v.GetNetCode() == code]
     pads = [p for fp in b.GetFootprints() for p in fp.Pads() if p.GetNetCode() == code]
     zones = [z for z in b.Zones() if z.GetNetCode() == code]
+    pieces = _split_at_junctions(b, code, segs)
 
     def anchored(t, pt, live):
-        lay = t.GetLayer()
-        here = (TOMM(pt.x), TOMM(pt.y))
-        if any(v.IsOnLayer(lay) and math.dist(here, (TOMM(v.GetPosition().x), TOMM(v.GetPosition().y)))
+        lay = t[0]
+        if any(v.IsOnLayer(lay) and math.dist(pt, (TOMM(v.GetPosition().x), TOMM(v.GetPosition().y)))
                <= TOMM(v.GetWidth(lay)) / 2 for v in vias):
             return True
-        if any(p.IsOnLayer(lay) and p.HitTest(pt) for p in pads):
+        vp = pcbnew.VECTOR2I(pcbnew.FromMM(pt[0]), pcbnew.FromMM(pt[1]))
+        if any(p.IsOnLayer(lay) and p.HitTest(vp) for p in pads):
             return True
-        if any(z.IsOnLayer(lay) and z.HitTestFilledArea(lay, pt) for z in zones):
+        if any(z.IsOnLayer(lay) and z.HitTestFilledArea(lay, vp) for z in zones):
             return True
-        return any(o is not t and o.GetLayer() == lay and o.HitTest(pt, 0) for o in live)
+        return any(o is not t and o[0] == lay and point_on(pt, o[1], o[2]) for o in live)
 
-    live = list(segs)
+    live = list(pieces)
     while True:
         dead = [t for t in live
-                if not (anchored(t, t.GetStart(), live) and anchored(t, t.GetEnd(), live))]
+                if not (anchored(t, t[1], live) and anchored(t, t[2], live))]
         if not dead:
             return live
         live = [t for t in live if t not in dead]
+
+
+#is pt on the closed segment a-c?
+def point_on(pt, a, c, tol=1e-6):
+    dx, dy = c[0] - a[0], c[1] - a[1]
+    L2 = dx * dx + dy * dy
+    if L2 == 0:
+        return math.hypot(pt[0] - a[0], pt[1] - a[1]) <= tol
+    u = ((pt[0] - a[0]) * dx + (pt[1] - a[1]) * dy) / L2
+    if u < -tol or u > 1 + tol:
+        return False
+    return math.hypot(a[0] + u * dx - pt[0], a[1] + u * dy - pt[1]) <= tol
 
 
 def main():
@@ -110,11 +170,8 @@ def main():
         tracks = []
         segs = [t for t in b.GetTracks()
                 if t.GetNetCode() == code and t.Type() != pcbnew.PCB_VIA_T]
-        for t in drop_dead_ends(b, code, segs):
-            tracks.append(((TOMM(t.GetStart().x), TOMM(t.GetStart().y)),
-                           (TOMM(t.GetEnd().x), TOMM(t.GetEnd().y)),
-                           TOMM(t.GetWidth()),
-                           b.GetLayerName(t.GetLayer()) in INNER))
+        for lay, a, c, w in drop_dead_ends(b, code, segs):
+            tracks.append((a, c, w, b.GetLayerName(lay) in INNER))
         zones = []
         for z in b.Zones():
             n = z.GetNet()

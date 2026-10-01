@@ -61,6 +61,7 @@ private:
     volatile uint8_t _guard_state;   //SOOP_G_*, written by the thread
     volatile float _guard_dist;      //m, the GPS from the GPS-free filter
     bool       _spoof_handled;
+    bool       _warned_stale;        //the all-stale TLE warning has been sent once
     soop_sat_t *_cat;
     int16_t    *_block;
     int        _n_cat;
