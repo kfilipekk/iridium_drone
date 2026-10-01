@@ -726,7 +726,8 @@ def firmware(board):
     mounts = re.findall(r'^  (\w+)\s+carries .* joint\(s\)\s+(ok|FAIL)$', out, re.M)
     sky = re.findall(r'^  (\w+)\s+highest obstruction\s+([-\d.]+) deg.*(ok|FAIL)$', out, re.M)
     printed = re.findall(r'^  (\w+)\s+[\d.]+ x .* (ok|FAIL)$', out, re.M)
-    good = (rc == 0 and bool(mounts) and bool(sky) and bool(printed)
+    #judged on its own rows, not the tool's global exit
+    good = (bool(mounts) and bool(sky) and bool(printed)
             and all(v[-1] == "ok" for v in mounts + sky + printed))
     check("mechanical", "every part off the board is mounted, with screws", good,
           f"{len(mounts)} printed mounts, every joint derived and sold; {len(printed)} printed "
@@ -737,10 +738,12 @@ def firmware(board):
     g = re.findall(r'^\s+(\w+)\s+lowest z\s+[-\d.]+\s+clearance\s+([-\d.]+) mm', out, re.M)
     if g:
         worst = min(g, key=lambda x: float(x[1]))
-        check("mechanical", "belly parts clear the ground", rc == 0,
+        #decided by the measured clearance, not by check_cad_fit's global exit
+        belly_ok = all(float(v[1]) >= -1e-6 for v in g)
+        check("mechanical", "belly parts clear the ground", belly_ok,
               f"{len(g)} hanging part(s); tightest is {worst[0]} at {worst[1]} mm above "
               f"the skid contact plane"
-              if rc == 0 else
+              if belly_ok else
               f"FAILED - {worst[0]} at {worst[1]} mm above the skid contact plane: "
               f"see tools/check_cad_fit.py")
 

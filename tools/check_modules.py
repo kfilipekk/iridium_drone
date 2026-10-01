@@ -87,6 +87,25 @@ NOT_FOOTPRINTS = {
     "P62": "UART7 spare pad - removed in Rev B relayout",
     "P63": "UART7 spare pad - removed in Rev B relayout",
     "P64": "UART7 spare pad - removed in Rev B relayout",
+    #Rev C removals
+    "TP1": "SWDIO probe pad - removed in Rev C; J19 carries SWD directly",
+    "TP2": "SWCLK probe pad - removed in Rev C; J19 carries SWD directly",
+    "TP5": "USART1_TX probe pad - removed in Rev C",
+    "TP6": "USART1_RX probe pad - removed in Rev C",
+    "TP7": "WS2812 probe pad - removed in Rev C",
+    "TP8": "BUZZER probe pad - removed in Rev C",
+    "TP20": "SWD GND probe pad - removed in Rev C; J19 carries GND",
+    "TP21": "SWD 3V3 probe pad - removed in Rev C; J19 carries +3V3",
+    "TP22": "VSERVO probe pad - removed in Rev C",
+    "J18": "pyro channel connector - removed in Rev C; recovery is the lander's hardware",
+    "J20": "touchdown switch connector - removed in Rev C",
+    "Q5": "pyro gate FET - removed in Rev C with J18",
+    "D5": "pyro flyback diode - removed in Rev C with J18",
+    "F1": "pyro PPTC fuse - removed in Rev C with J18",
+    "R54": "pyro gate series resistor - removed in Rev C with J18",
+    "R55": "pyro gate pull-down - removed in Rev C with J18",
+    "R56": "touchdown pull-up - removed in Rev C with J20",
+    "C87": "pyro gate hold-down - removed in Rev C with J18",
 }
 docs = [q for q in (REPO / "docs").glob("*.md") if q.name != "HISTORY.md"]
 docs.append(REPO / "README.md")

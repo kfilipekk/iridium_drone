@@ -64,10 +64,11 @@ PREREQUISITES = [
     dict(id="elec.traces", cls=GATED, tool="check_traces.py",
          claim="trace lengths, differential skew and crystal stray capacitance are in limit"),
     dict(id="elec.sim", cls=GATED, tool="check_sim.py",
-         claim="the analogue blocks - the buck output filters, the battery hot-plug "
-               "transient, the pyro gate, the MAX2112 PLL loop filter, the baseband "
-               "difference amp, the battery sense chain and the three linear "
-               "regulators - simulate inside their datasheet and design bounds (sim/)"),
+         claim="the analogue blocks - the buck output filters, the payload buck under a "
+               "double servo stall, the battery hot-plug transient, the MAX2112 PLL loop "
+               "filter, the ANT_IN bias tee, the baseband difference amp, the battery sense "
+               "chain and the three linear regulators - simulate inside their datasheet "
+               "and design bounds (sim/)"),
 
     #mechanically sound
     dict(id="mech.connectors", cls=GATED, tool="check_connectors.py",

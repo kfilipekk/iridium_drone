@@ -154,6 +154,12 @@ int  soop_nav_burst(soop_nav_t *nav, double t_board, double f_hz, double sigma_h
 //the current estimate, propagated to t_board
 int  soop_nav_fix(soop_nav_t *nav, double t_board, soop_fix_t *fix);
 
+//1 when the whole catalogue is older than max_tle_age_d
+int  soop_nav_cat_stale(const soop_nav_t *nav);
+
+//the newest TLE epoch in the catalogue, UTC s since J2000.0
+double soop_nav_cat_newest_epoch(const soop_nav_t *nav);
+
 //ECEF <-> geodetic (WGS84)
 void soop_geodetic(const double r[3], double *lat_deg, double *lon_deg, double *h);
 void soop_ecef(double lat_deg, double lon_deg, double h, double r[3]);

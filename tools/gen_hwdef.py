@@ -28,6 +28,8 @@ DROP = [
     (r'^define BOARD_RSSI_ANA_PIN', "RSSI arrives over CRSF"),
     (r'^BARO DPS310',            "DPS310 is not stocked at LCSC; MS5611 fitted"),
     (r'^BARO BMP280',            "BMP280 not fitted"),
+    (r'^PC5 RSSI_ADC',           "no RSSI ADC pin; the pyro channel that used PC5 was removed in Rev C"),
+    (r'^PD10\s+PINIO1',          "no touchdown input; the lander switch interface was removed in Rev C"),
     (r'^IMU Invensense SPI:icm20602', "ICM-20602 not fitted"),
     (r'^IMU Invensense SPI:mpu6000',  "MPU6000 not fitted"),
     (r'^SPIDEV icm20602',        "ICM-20602 not fitted"),
@@ -46,10 +48,6 @@ REPLACE = [
      "the rail enabled - R45 pulls the gate down as well - so payload fails safe towards "
      "powered. It is deliberately a pin MatekH743 only ever READS: a stock MatekH743 "
      "binary cannot assert it and so cannot cut payload power."),
-    (r'^PC5 RSSI_ADC',
-     "PC5 PYRO_FIRE OUTPUT LOW GPIO(84)",
-     "PC5 drives Q5's gate via R54 (1k series) with R55 (47k pull-down) for the recovery / e-match pyro channel on J18. "
-     "LOW keeps the channel disarmed at boot."),
     (r'^PC4 PRESSURE_SENS ADC1 SCALE\(2\)',
      "PC4 SOOP_I_ADC ADC1 SCALE(1)",
      "No airspeed sensor: PC4 is the tuner's I, through the OPA2374 stage. Declared on ADC1 so "
@@ -62,9 +60,6 @@ REPLACE = [
     (r'^PC1 BATT_CURRENT_SENS ADC1 SCALE\(1\)',
      "PC1 BATT_CURRENT_SENS ADC3 SCALE(1)",
      "Battery current moves to ADC3 with the voltage (PC1 is ADC123_INP11)."),
-    (r'^PD10\s+PINIO1.*',
-     "PD10 TOUCHDOWN INPUT PULLUP GPIO(85)",
-     "PD10 reads the landing leg touchdown switch on J20 with 10k pull-up R56."),
     (r'^PD11\s+PINIO2.*',
      "PD11 FLOW_MOTION INPUT PULLDOWN GPIO(86)",
      "PD11 is reserved for an optical flow motion interrupt. It is not wired on Rev C (J14.6 is GND), so the pull-down holds it idle."),
@@ -393,8 +388,6 @@ def main():
                 bl, flags=re.M)
     bl = bl.replace("# for Matek H743-WING bootloader",
                     "# for NAVCORE-SoOP bootloader")
-    #MatekH743's bootloader drives PD10 low as PINIO1
-    bl = re.sub(r'^PD10\s+PINIO1.*$', "PD10 TOUCHDOWN INPUT PULLUP", bl, flags=re.M)
     bl = bl.replace("PB12 MAX7456_CS CS",
                     "# [removed: no analogue OSD fitted] PB12 MAX7456_CS CS")
     open(f"{OUT}/hwdef-bl.dat", "w").write(

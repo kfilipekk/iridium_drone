@@ -290,6 +290,129 @@ def main():
             fails.append(f"{a} x {b}: {sep:.2f} mm apart, needs {need:.1f} - {why}")
         print(f"  {a:8s} x {b:8s} {tag}  clear {sep:8.2f} mm  (need {need:.1f})  {why}")
 
+    #the plugged-in assembly (Stage 5)
+    print("\nplugged-in envelopes (cad/plugs.scad, Stage 5)")
+    import gen_scad_plugs
+    plug_scad = os.path.join(CAD, "plugs.scad")
+    if not os.path.exists(plug_scad) or open(plug_scad).read() != gen_scad_plugs.generate():
+        fails.append("cad/plugs.scad is stale or missing - run tools/gen_scad_plugs.py")
+        print("  cad/plugs.scad is STALE - run tools/gen_scad_plugs.py")
+    missing = sorted(set(design.MATING_FACE) - set(design.MATING_PLUG))
+    if missing:
+        fails.append(f"design.MATING_PLUG has no plug width for {', '.join(missing)}")
+    plug_refs = sorted(design.MATING_FACE, key=lambda r: (len(r), r))
+    plug_names = [f"plug_{r}" for r in plug_refs]
+    pres = render_many([(f"{n}();", os.path.join(out, n + ".stl")) for n in plug_names])
+    plugs = {}
+    for n, r in zip(plug_names, pres):
+        if r is False:
+            fails.append(f"{n}: export failed")
+            continue
+        plugs[n] = read_stl(os.path.join(out, n + ".stl"))
+    #not `fc`: the plug mates with the board
+    blockers = [p for p in PARTS if p != "fc"]
+    pbox = {n: bbox(t) for n, t in plugs.items()}
+    near = [(n, b) for n in plug_names if n in plugs for b in blockers
+            if box_gap(pbox[n], box[b]) <= 0.0]
+    inter = dict(zip(near, render_many([
+        (f"intersection() {{ {n}(); {b}(); }}", os.path.join(out, f"{n}-{b}.stl"))
+        for n, b in near])))
+    GRAZES = []
+    for n in plug_names:
+        if n not in plugs:
+            continue
+        ref = n[len("plug_"):]
+        hits, closest = [], (float("inf"), None)
+        for b in blockers:
+            gap = box_gap(pbox[n], box[b])
+            if gap > 0.0:
+                if gap < closest[0]:
+                    closest = (gap, b)
+                continue
+            rr = inter.get((n, b), "empty")
+            tris = [] if rr == "empty" else (read_stl(os.path.join(out, f"{n}-{b}.stl"))
+                                              if rr is not False else [])
+            v = volume(tris)
+            if v > 1e-6:
+                hits.append((b, v))
+            else:
+                sep = min_sep(plugs[n], parts[b])
+                if sep < closest[0]:
+                    closest = (sep, b)
+        need = design.MATING_CLEARANCE.get(ref, 6.0)
+        if hits:
+            b, v = max(hits, key=lambda k: k[1])
+            body = design.MATING_PLUG_BODY.get(ref, need)
+            GRAZES.append(f"{ref}: the mated plug runs into {b} ({v:.1f} mm^3); "
+                          f"{need:.1f} mm of clearance is declared, {body:.1f} mm of it "
+                          f"rigid")
+            print(f"  {ref:4s} GRAZE runs into {b} ({v:.1f} mm^3; {need:.1f} mm declared, "
+                  f"{body:.1f} mm rigid)")
+        else:
+            print(f"  {ref:4s} ok    nearest {closest[1] or 'nothing'} at "
+                  f"{closest[0]:.2f} mm (plug needs {need:.1f})")
+
+    #the check above intersects each plug against the airframe models
+    try:
+        import pcbnew
+        bd = pcbnew.LoadBoard(gen_scad_plugs.BOARD)
+        half = design.MOUNTING["pitch"] / 2.0
+        #model coords
+        holes = [(sx * half, sy * half)
+                 for sx in (-1, 1) for sy in (-1, 1)]
+        hw = design.FC_HOLE_HARDWARE["top"]
+        print("\nedge plugs vs the REAL stack hardware (gated - "
+              "stack_screws() models only a O3.0 bolt)")
+        grid, tol = 0.05, 0.5
+        for ref in sorted(design.MATING_FACE, key=lambda r: (len(r), r)):
+            dx, dy, ux, uy, w, depth, flip = gen_scad_plugs.plug_of(bd, ref)
+            if flip:
+                continue                       #hardware is on the top face
+            under = design.MATING_PLUG_UNDER.get(ref, 0.0)
+            bxp, byp = dx, dy                   #plug's mouth, model coords
+            px, py = -uy, ux                    #across the plug
+            total, worst, at = 0.0, 0.0, None
+            for hx, hy in holes:
+                if math.hypot(hx - bxp, hy - byp) > depth + 4.0:
+                    continue
+                for hwd in hw:
+                    r = hwd["reach_d"] / 2.0
+                    h = hwd["t"] - under        #only the part above the plug's underside
+                    if h <= 0.0:
+                        continue
+                    if math.hypot(hx - bxp, hy - byp) > depth + r + 1.0:
+                        continue
+                    n = int((depth + 2 * r) / grid)
+                    m = int((w + 2 * r) / grid)
+                    area = 0.0
+                    for i in range(n):
+                        along = -r + (i + 0.5) * grid
+                        if along < 0.0 or along > depth:
+                            continue
+                        for j in range(m):
+                            ac = -w / 2.0 - r + (j + 0.5) * grid
+                            if ac < -w / 2.0 or ac > w / 2.0:
+                                continue
+                            sx2, sy2 = bxp + ux * along + px * ac, byp + uy * along + py * ac
+                            if math.hypot(sx2 - hx, sy2 - hy) <= r:
+                                area += grid * grid
+                    vol = area * min(h, gen_scad_plugs.PLUG_H)
+                    total += vol
+                    if vol > worst:
+                        worst, at = vol, hwd["name"]
+            if worst > tol:
+                fails.append(f"{ref}: the mated plug runs into the real stack hardware "
+                             f"({total:.1f} mm^3, largest: {at}) - the fastener stands "
+                             f"proud inside the connector's sweep and the plug cannot seat")
+                print(f"  {ref:4s} FAIL  real-hardware overlap {total:6.1f} mm^3 "
+                      f"(largest: {at}; the plug cannot seat)")
+            else:
+                print(f"  {ref:4s} ok    no real stack hardware stands in the plug's "
+                      f"sweep")
+    except Exception as e:                     #a gate must fail, not vanish, on error
+        fails.append(f"real-hardware plug pass could not run: {e}")
+        print(f"  real-hardware plug pass could not run: {e}")
+
     print("\nsky view (nothing but plastic above the elevation mask)")
     for n, (mask, zc) in SKY.items():
         lo, hi = box[n]
@@ -359,6 +482,8 @@ def main():
                 ("not a closed solid", not closed)) if bad))
 
     print()
+    for g in GRAZES:
+        print(f"  PLUG GRAZE (Stage 5, not a gate): {g}")
     for w in warns: print("  WARN " + w)
     if fails:
         print(f"FAIL - {len(fails)} geometric problem(s)")

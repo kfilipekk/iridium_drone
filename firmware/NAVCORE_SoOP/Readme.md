@@ -119,8 +119,9 @@ leaves the rail on, so the payload is powered from boot. Setting the relay turns
 | GPIO | Pin | Function |
 | --- | --- | --- |
 | 83 | PA7 | Payload 5 V rail, low = on, `RELAY1_PIN` |
-| 84 | PC5 | Pyro channel on J18, held low through reset |
-| 85 | PD10 | Touchdown switch on J20, active low with pull-up |
+
+Rev C removed the pyro channel (was GPIO 84 / PC5) and the touchdown switch (was GPIO 85 /
+PD10) from the board; both pins are now free and the lander drives them in its own hardware.
 
 ## CAN
 

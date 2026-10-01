@@ -385,6 +385,43 @@ def main():
 
     notes.append("current capacity is checked by tools/check_power_cut.py")
 
+    #8
+    #the ANT_IN feed rides the 1616-1626.5 MHz carrier
+    rf = getattr(design, "RF_PARTS", None)
+    if not rf:
+        errs.append("design.RF_PARTS is missing: nothing states the ANT_IN ESD capacitance "
+                    "or the bias choke's self-resonance, so neither limit is checked")
+    else:
+        e = rf["ant_esd"]
+        if e["cj_pf"] > e["cj_max_pf"]:
+            errs.append(f"ANT_IN ESD {e['part']} ({e['lcsc']}) has Cd = {e['cj_pf']} pF, "
+                        f"over the {e['cj_max_pf']} pF limit - it shunts the 1.6 GHz feed. "
+                        f"{e['src']}")
+        else:
+            notes.append(f"ANT_IN ESD {e['part']} ({e['lcsc']}): Cd {e['cj_pf']} pF <= "
+                         f"{e['cj_max_pf']} pF, {e['standoff_v']:.0f} V standoff")
+        c = rf["bias_choke"]
+        x_ohm = 2.0 * math.pi * c["f_carrier_ghz"] * 1e9 * c["inductance_nh"] * 1e-9
+        if c["srf_ghz"] < c["srf_min_ghz"]:
+            errs.append(f"bias choke {c['part']} ({c['lcsc']}) self-resonates at "
+                        f"{c['srf_ghz']} GHz, below the {c['srf_min_ghz']} GHz minimum - "
+                        f"above resonance it is a capacitor, not the bias feed. {c['src']}")
+        elif x_ohm < c["x_min_ohm"]:
+            errs.append(f"bias choke {c['part']} ({c['lcsc']}) presents only {x_ohm:.0f} ohm "
+                        f"at {c['f_carrier_ghz']} GHz (2*pi*f*L), under the "
+                        f"{c['x_min_ohm']:.0f} ohm the front end needs - too little RF "
+                        f"isolation from the bias-tee supply. {c['src']}")
+        else:
+            notes.append(f"bias choke {c['part']} ({c['lcsc']}): SRF {c['srf_ghz']} GHz "
+                         f">= {c['srf_min_ghz']} GHz, X {x_ohm:.0f} ohm at "
+                         f"{c['f_carrier_ghz']} GHz")
+        for key in ("ant_esd", "bias_choke"):
+            r = rf[key]
+            if not any(v[3] == r["lcsc"] for v in design.COMPONENTS.values()):
+                notes.append(f"{r['part']} ({r['lcsc']}) is not fitted in design.COMPONENTS "
+                             f"yet - the limits above are checked against the sourcing "
+                             f"record, not the layout, until Stage 2")
+
     #report
     print(f"ICs checked            : {len(ics)}")
     print(f"power pins examined    : {len(worst) + sum(1 for e in errs if 'no decoupling' in e)}")

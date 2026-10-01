@@ -27,6 +27,11 @@ CROSS_CHECK = {
     "TMP119AIYBGR":          ("Sensor_Temperature", "TMP119AIYBGR"),
     #added after this part turned out to be wired backwards on the board
     "XC6206P332MR":          ("Regulator_Linear", "XC6206PxxxMR"),
+    #diodes (added for the D/L pinout pass)
+    "SMBJ22A_C113993":       ("Device", "D_Zener"),
+    "1N4148W_C81598":        ("Device", "D"),
+    "BZT52C15":              ("Device", "D_Zener"),
+    "B5819W_C8598":          ("Device", "D_Schottky"),
 }
 
 #parts with no KiCad equivalent
@@ -69,6 +74,41 @@ DATASHEET_VERIFIED = {
         "all 4 pins used. pin 1 'GND or N.C.' grounded on purpose - safe by class "
         "(neither Disable nor Vcon; Epson TG2016SMN permits N.C. to GND)",
         "2026-09-18"),
+    #fetched for the Rev C connector/protection pass (Stage 1) and verified before the parts
+    "INA180A2IDBVR": (
+        "TI INAx180 datasheet, 'Pin Configuration and Functions', DBV (SOT-23-5) "
+        "pinout A; the datasheet's note (1): 'INA180A devices use pinout A. INA180B "
+        "devices use pinout B' - this is an A2, so pinout A",
+        "all 5 pins: 1 OUT, 2 GND, 3 IN+, 4 IN-, 5 VS. The fetched EasyEDA symbol "
+        "matches pinout A, not the B ordering (which puts OUT on pin 4)",
+        "2026-09-30"),
+    "AP22653W6-7": (
+        "Diodes AP22652/AP22653/AP22652A/AP22653A datasheet DS41186 Rev 2-2, "
+        "'Pin Assignments', SOT26 (Type A1)",
+        "all 6 pins: 1 IN, 2 GND, 3 EN/EN, 4 FAULT, 5 ILIM, 6 OUT. AP22653 = active-high "
+        "enable, which the plan's default-on pull-up needs. NOTE the current limit is set "
+        "by an external resistor and is 125 mA to 2665 mA - it cannot be programmed to the "
+        "plan's 50-100 mA, so the real choice is 125 mA or another part",
+        "2026-09-30"),
+    #d/L parts KiCad's Device library cannot corroborate
+    "LED": (
+        "0603 LED: pin 1 is the cathode and pin 2 the anode, the same polarity the "
+        "vendored 0603 LED footprint marks; the board sinks pin 1 (LED0_K/LED1_K) "
+        "with pin 2 on +3V3, so the LED lights when the MCU pulls low",
+        "2 used pins: 1 = K, 2 = A", "2026-10-01"),
+    "L": (
+        "two-terminal inductor/ferrite: not polarised, so pin 1 and pin 2 are "
+        "interchangeable; KiCad's Device:L names them 1 and 2, which is all that "
+        "matters here (L1 ferrite +3V3->VDDA, L2/L5 buck phase->rail)",
+        "2 used pins: 1, 2", "2026-10-01"),
+    "PESD2CANFD24LT-QR": (
+        "Nexperia PESD2CANFD24LT-Q datasheet, SOT-23 pinout: pins 1 and 2 are the two "
+        "protected lines and pin 3 is the common/GND (the sheet measures capacitance "
+        "'from pin 1 or 2 to pin 3')",
+        "all 3 pins: 1 = I/O1 (CANH), 2 = I/O2 (CANL), 3 = common (GND). The vendored "
+        "symbol's combined 1=C/2=C/3=A common-node topology matches a device that "
+        "clamps each line to the shared pin 3",
+        "2026-10-01"),
 }
 
 
@@ -107,6 +147,18 @@ def pinmap(path, name):
     return out, None
 
 
+def our_symbol_path(spec):
+    """Resolve a design symbol spec ('lib:name') to its symbol-library file."""
+    lib, _, name = spec.partition(":")
+    if lib == "jlc_parts":
+        return jlcpaths.SYMBOLS, name
+    for d in KICAD_SYM_DIRS:
+        p = os.path.join(d, lib + ".kicad_sym")
+        if os.path.exists(p):
+            return p, name
+    return None, name
+
+
 def variants(name):
     """Every spelling of a pin name that should count as the same pin."""
     n = name.upper().strip()
@@ -118,6 +170,12 @@ def variants(name):
     out = set()
     for alt in n.split("/"):                      #alternate function names
         if not alt:
+            continue
+        if alt in ("-", "\u2212"):                  #bare polarity mark = cathode (K)
+            out.add("K")
+            continue
+        if alt == "+":                             #bare polarity mark = anode (A)
+            out.add("A")
             continue
         #active-low marks: CS#, #CS (EasyEDA), CSN
         for form in (alt, alt.strip("#"), alt.rstrip("N") if alt.endswith("N") else alt):
@@ -131,6 +189,8 @@ def variants(name):
     syn = {"VSS": "GND", "GND": "VSS", "VDD": "VCC", "VCC": "VDD",
            "VI": "VIN", "VIN": "VI", "VO": "VOUT", "VOUT": "VO",
            "IN": "VIN", "OUT": "VOUT",
+           #diode terminals: EasyEDA/JLC write C/A, KiCad writes K/A
+           "C": "K", "K": "C",
            #protection arrays name their rails by polarity
            "VN": "GND", "VP": "VCC"}
     for v in list(out):
@@ -142,7 +202,7 @@ def variants(name):
 def main():
     verbose = "-v" in sys.argv
     actives = {r: v for r, v in design.COMPONENTS.items()
-               if r.startswith(("U", "Q", "Y"))}
+               if r.startswith(("U", "Q", "Y", "D", "L"))}
     used = {}
     for net, specs in design.NETS.items():
         for sp in specs:
@@ -154,16 +214,20 @@ def main():
 
     by_symbol = {}
     for ref, v in actives.items():
-        by_symbol.setdefault(v[0].split(":", 1)[1], []).append(ref)
+        by_symbol.setdefault(v[0], []).append(ref)
 
     fails, unverified = [], []
     print(f"jlc symbols : {JLC_SYM}")
     print(f"{'symbol':34} {'refs':14} {'pins':>5}  verdict")
     print("-" * 78)
 
-    for sym in sorted(by_symbol):
-        refs = ",".join(sorted(by_symbol[sym]))
-        ours, err = pinmap(JLC_SYM, sym)
+    for spec in sorted(by_symbol):
+        members = by_symbol[spec]
+        sym = spec.split(":", 1)[1]
+        refs = ",".join(sorted(members))
+        ourpath, symname = our_symbol_path(spec)
+        ours, err = (pinmap(ourpath, symname) if ourpath
+                     else (None, f"library for {spec} not installed"))
         if ours is None:
             print(f"{sym[:34]:34} {refs[:14]:14} {'?':>5}  FAIL {err}")
             fails.append(f"{sym}: {err}")
@@ -191,7 +255,7 @@ def main():
             continue
         #only pins the netlist actually uses can scrap a board; report all
         relied = set()
-        for r in by_symbol[sym]:
+        for r in members:
             relied |= set(used.get(r, {}))
         bad_used, bad_other = [], []
         for num in sorted(set(ours) | set(theirs)):
@@ -204,7 +268,7 @@ def main():
             print(f"{sym[:34]:34} {refs[:14]:14} {len(ours):5}  FAIL "
                   f"{len(bad_used)} WIRED pin(s) disagree with {libname}:{kname}")
             for num, a, b in bad_used[:12]:
-                net = next((used[r][num] for r in by_symbol[sym]
+                net = next((used[r][num] for r in members
                             if num in used.get(r, {})), "?")
                 print(f"{'':34} {'':14} {'':5}    pin {num:>4} carries {net:12} "
                       f"ours={a} kicad={b}")

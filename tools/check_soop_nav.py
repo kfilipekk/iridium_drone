@@ -134,6 +134,26 @@ def check_ephemeris(exe):
                 f"{worst_v * 1e6:.0f} um/s; Vallado example {dr:.1f} m, {dv * 1000:.0f} mm/s")
 
 
+def cat_age(exe, t_utc):
+    """soop_nav's view of the catalogue at UTC t_utc (s since J2000)."""
+    out = subprocess.run([exe, TLE, "--cat-age", f"{t_utc:.1f}"], capture_output=True,
+                         text=True).stdout.split()
+    return int(out[1]), float(out[3])
+
+
+def check_catalogue_age(exe):
+    """A catalogue whose newest epoch is past max_tle_age_d (7 d) must be reported stale."""
+    _, newest = cat_age(exe, 0.0)
+    if newest <= 0.0:
+        return False, "could not read the catalogue's newest epoch"
+    cases = ((1.0, 0), (6.0, 0), (8.0, 1), (30.0, 1))
+    got = [(d, cat_age(exe, newest + d * 86400.0)[0], want) for d, want in cases]
+    ok = all(g == w for _, g, w in got)
+    return ok, ("catalogue staleness vs max_tle_age_d 7: "
+                + ", ".join(f"+{d:.0f}d={g}" for d, g, _ in got)
+                + " (want 0,0,1,1)")
+
+
 def blind_start(exe, tmp, seed=31):
     """A flight whose GPS never came: the filter starts from a guess 5 km out."""
     d = os.path.join(tmp, "blind")
@@ -289,6 +309,10 @@ def main():
           f"(text {text} B, filter state {ram} B)")
 
     good, msg = check_ephemeris(exe)
+    checks.append(good)
+    print(f"  {'ok  ' if good else 'FAIL'}  {msg}")
+
+    good, msg = check_catalogue_age(exe)
     checks.append(good)
     print(f"  {'ok  ' if good else 'FAIL'}  {msg}")
 
