@@ -11,7 +11,7 @@ if HERE not in sys.path:
 
 from checks import Checks          # noqa: E402
 
-MODULES = ("power", "hotplug", "pyro", "pll", "baseband", "sense", "ldo")
+MODULES = ("power", "servo", "hotplug", "pll", "rf", "baseband", "sense", "ldo")
 
 
 #run the named modules into one shared collector

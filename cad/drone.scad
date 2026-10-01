@@ -9,6 +9,8 @@ show_frame     = true;
 show_top_plate = true;          //off for a plan view of the stack
 show_camera    = false;         //DEFERRED OV9281 flow camera - competes for the belly slot
 show_skids     = true;          //TPU landing skids at the motor pattern
+//the PLUGGED-IN assembly (Stage 5): every edge connector drawn mated
+show_plugs     = true;
 //false, because it does not fit and is not fitted
 show_rec_cam   = true;         //XIAO ESP32S3 Sense on the nose, recording to microSD
 show_pi        = false;         //Radxa Zero 3W companion - DEFERRED, does not fit here
@@ -19,6 +21,8 @@ explode        = 0;             //try 28 for an exploded view
 include <frame.scad>
 //frame.scad is GENERATED from design.py and the real board
 include <mounts.scad>
+//plugs.scad is GENERATED from the board and design.MATING_FACE/MATING_CLEARANCE
+include <plugs.scad>
 
 plate_t        = bottom_plate_t;   //the plate this model draws
 
@@ -224,6 +228,7 @@ belly_sensor();
 lidar360();
 mounts();
 mounted_parts();
+if (show_plugs) plugs();
 if (show_battery && show_frame) battery();
 if (show_camera) camera();
 if (show_skids) skids();

@@ -33,7 +33,9 @@ static char *slurp(const char *path)
 int main(int argc, char **argv)
 {
     if (argc < 3) {
-        fprintf(stderr, "usage: %s catalogue.tle obs.txt [--static] [--sats] [--vel-sigma M/S]\n", argv[0]);
+        fprintf(stderr, "usage: %s catalogue.tle obs.txt [--static] [--sats] [--vel-sigma M/S]\n"
+                        "       %s catalogue.tle --cat-age T_UTC   (print STALE <0|1> NEWEST <s J2000>)\n",
+                argv[0], argv[0]);
         return 2;
     }
     char *tle = slurp(argv[1]);
@@ -52,6 +54,16 @@ int main(int argc, char **argv)
                     printf("S %u %.3f %.4f %.4f %.4f %.6f %.6f %.6f\n", (unsigned)cat[i].norad,
                            t, r[0], r[1], r[2], v[0], v[1], v[2]);
             }
+        return 0;
+    }
+    //catalogue age at a given UTC (s since J2000)
+    if (!strcmp(argv[2], "--cat-age") && argc >= 4) {
+        soop_nav_cfg_t cfg;
+        soop_nav_default_cfg(&cfg);
+        soop_guard_cfg_t gcfg;
+        soop_guard_default_cfg(&gcfg);
+        soop_guard_init(&guard, &cfg, &gcfg, cat, n_cat, atof(argv[3]));
+        printf("STALE %d NEWEST %.1f\n", soop_nav_cat_stale(nav_), soop_nav_cat_newest_epoch(nav_));
         return 0;
     }
     if (!strcmp(argv[2], "--teme") && argc >= 10) {

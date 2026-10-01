@@ -110,6 +110,25 @@ static void screen_catalogue(soop_nav_t *nav, double t_utc)
             || fabs(t_utc - nav->cat[i].epoch_s) < nav->cfg.max_tle_age_d * 86400.0;
 }
 
+int soop_nav_cat_stale(const soop_nav_t *nav)
+{
+    if (nav->n_cat <= 0)
+        return 0;
+    for (int i = 0; i < nav->n_cat && i < (int)sizeof nav->cat_ok; i++)
+        if (nav->cat_ok[i])
+            return 0;
+    return 1;
+}
+
+double soop_nav_cat_newest_epoch(const soop_nav_t *nav)
+{
+    double newest = 0.0;
+    for (int i = 0; i < nav->n_cat; i++)
+        if (nav->cat[i].epoch_s > newest)
+            newest = nav->cat[i].epoch_s;
+    return newest;
+}
+
 //board time -> UTC, a straight line through the GPS time tags
 static void time_sample(soop_nav_t *nav, double tb, double tu)
 {

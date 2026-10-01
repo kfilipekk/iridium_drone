@@ -250,6 +250,7 @@ bool AP_SoOP::setup()
     }
     soop_guard_init(_guard, &cfg, &_gcfg, _cat, _n_cat, 0.0);
     _fs = SOOP_FS;
+    _warned_stale = false;
     return true;
 }
 
@@ -389,6 +390,15 @@ void AP_SoOP::feed_until(double horizon)
 
 void AP_SoOP::publish(double t)
 {
+    //UTC is only known once a time tag has arrived
+    if (!_warned_stale && _nav->have_time && soop_nav_cat_stale(_nav)) {
+        _warned_stale = true;
+        const double utc = _nav->tu0 + _nav->tc_a + (1 + _nav->tc_b) * (t - _nav->tb0);
+        GCS_SEND_TEXT(MAV_SEVERITY_WARNING,
+                      "SoOP: TLE catalogue stale - newest epoch %.1f d old (max %.0f d), %d satellites unusable",
+                      (utc - soop_nav_cat_newest_epoch(_nav)) / 86400.0, _nav->cfg.max_tle_age_d,
+                      _nav->n_cat);
+    }
     soop_fix_t f;
     const bool valid = soop_guard_fix(_guard, t, &f);
     AP::logger().WriteStreaming("SOF", "TimeUS,Lat,Lng,Alt,HAcc,VAcc,SAcc,NIS,NT,V",
