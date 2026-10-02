@@ -151,7 +151,9 @@ def main():
         subprocess.run(["kicad-cli", "pcb", "export", "glb", "--output", glb, "-D", f"JLC_LIB={jlc}",
                         "--subst-models", "--force", board], capture_output=True, check=True)
         body = bodies(glb)
-        verts = {r: vertices(glb, r) for r in pegged if r in body}
+        #holes with no model to fit them (a Tag-Connect footprint) locate nothing
+        pegged = {r: h for r, h in pegged.items() if r in body}
+        verts = {r: vertices(glb, r) for r in pegged}
     ref_c = {}
     for fp in b.GetFootprints():
         r = fp.GetReference()

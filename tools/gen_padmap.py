@@ -28,6 +28,16 @@ def svg(board):
         p = fp.GetPosition()
         pads.append((fp.GetReference(), fp.IsFlipped(), T(p.x) - x0, T(p.y) - y0,
                      design.PAD_LABELS.get(fp.GetReference(), "?")))
+    conns = []
+    for ref, nm in design.SILK_NAMES.items():
+        fp = board.FindFootprintByReference(ref)
+        if fp is None:
+            continue
+        cy = fp.GetCourtyard(pcbnew.B_CrtYd if fp.IsFlipped() else pcbnew.F_CrtYd)
+        bb = cy.BBox() if cy.OutlineCount() else fp.GetBoundingBox(False)
+        conns.append((ref, fp.IsFlipped(), T(bb.GetLeft()) - x0, T(bb.GetTop()) - y0,
+                      T(bb.GetRight()) - x0, T(bb.GetBottom()) - y0, nm,
+                      ref in getattr(design, "SILK_NAMES_UNPRINTED", {})))
     W = 2 * w * K + 2 * PAD + GAP
     H = h * K + 2 * PAD + 60
     out = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{W:.0f}" height="{H:.0f}" '
@@ -35,7 +45,7 @@ def svg(board):
            f'<rect width="100%" height="100%" fill="#faf9f7"/>',
            f'<text x="{PAD}" y="26" font-family="monospace" font-size="16" font-weight="bold" '
            f'fill="#111">NAVCORE-SoOP pad map ({w:.1f} x {h:.1f} mm) - reference, then what '
-           f'the silkscreen prints</text>']
+           f'the silkscreen prints; dashed connectors are not named on the board</text>']
     for i, (side, name) in enumerate(((False, "TOP, seen from above"),
                                       (True, "BOTTOM, seen from below"))):
         ox = PAD + i * (w * K + GAP)
@@ -44,6 +54,16 @@ def svg(board):
                    f'fill="#0f3d2e" stroke="#08251c" stroke-width="2"/>')
         out.append(f'<text x="{ox}" y="{oy + h * K + 22:.1f}" font-family="monospace" '
                    f'font-size="13" fill="#333">{name}</text>')
+        for ref, flipped, l, t, r, b, nm, blank in sorted(conns):
+            if flipped != side:
+                continue
+            lx = ox + ((w - r) if side else l) * K
+            out.append(f'<rect x="{lx:.1f}" y="{oy + t * K:.1f}" width="{(r - l) * K:.1f}" '
+                       f'height="{(b - t) * K:.1f}" fill="none" stroke="#9fd3c0" '
+                       f'stroke-width="1.5"{' stroke-dasharray="4 3"' if blank else ''}/>')
+            out.append(f'<text x="{lx + (r - l) * K / 2:.1f}" y="{oy + (t + b) / 2 * K + 4:.1f}" '
+                       f'font-family="monospace" font-size="10" text-anchor="middle" '
+                       f'fill="#9fd3c0">{ref} {nm}</text>')
         for ref, flipped, x, y, fn in sorted(pads):
             if flipped != side:
                 continue

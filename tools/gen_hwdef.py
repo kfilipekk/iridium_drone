@@ -28,8 +28,6 @@ DROP = [
     (r'^define BOARD_RSSI_ANA_PIN', "RSSI arrives over CRSF"),
     (r'^BARO DPS310',            "DPS310 is not stocked at LCSC; MS5611 fitted"),
     (r'^BARO BMP280',            "BMP280 not fitted"),
-    (r'^PC5 RSSI_ADC',           "no RSSI ADC pin; the pyro channel that used PC5 was removed in Rev C"),
-    (r'^PD10\s+PINIO1',          "no touchdown input; the lander switch interface was removed in Rev C"),
     (r'^IMU Invensense SPI:icm20602', "ICM-20602 not fitted"),
     (r'^IMU Invensense SPI:mpu6000',  "MPU6000 not fitted"),
     (r'^SPIDEV icm20602',        "ICM-20602 not fitted"),
@@ -60,6 +58,15 @@ REPLACE = [
     (r'^PC1 BATT_CURRENT_SENS ADC1 SCALE\(1\)',
      "PC1 BATT_CURRENT_SENS ADC3 SCALE(1)",
      "Battery current moves to ADC3 with the voltage (PC1 is ADC123_INP11)."),
+    (r'^PC5 RSSI_ADC.*',
+     "PC5 BIAS_EN OUTPUT HIGH GPIO(84)",
+     "RSSI arrives over CRSF, so PC5 enables U24, the antenna's bias feed. HIGH, and R59 "
+     "pulls it up, so the feed is on from power-up; AP_SoOP switches it off on a lasting "
+     "short or when soop.cfg says ant_feed 0."),
+    (r'^PD10\s+PINIO1.*',
+     "PD10 BIAS_FAULT INPUT GPIO(85)",
+     "U24's FAULT#, open drain, pulled up by R60: low on overcurrent, overtemperature or "
+     "reverse voltage."),
     (r'^PD11\s+PINIO2.*',
      "PD11 FLOW_MOTION INPUT PULLDOWN GPIO(86)",
      "PD11 is reserved for an optical flow motion interrupt. It is not wired on Rev C (J14.6 is GND), so the pull-down holds it idle."),
@@ -232,6 +239,23 @@ REVB = """
 """
 
 
+#the antenna feed monitor's pins and scaling
+def ant_feed():
+    a = design.ANT_FEED
+    v = design.COMPONENTS[a["sense_ref"]][2]
+    ohm = float(v.replace("R", ".")) if "R" in v else float(v)
+    return f"""
+# The antenna feed's current: U25 (INA180A2, x{a['gain']:.0f}) across R62 ({v} ohm), on PC2_C.
+# PC2_C reaches ADC3_INP0 with its analogue switch open; AP_SoOP opens it (SYSCFG PMCR).
+PC2 ANT_CURRENT ADC3 SCALE(1)
+define HAL_SOOP_ANT_ADC_PIN 0
+define HAL_SOOP_ANT_SENSE_OHM {ohm}f
+define HAL_SOOP_ANT_GAIN {a['gain']:.1f}f
+define HAL_SOOP_ANT_EN_GPIO 84
+define HAL_SOOP_ANT_FAULT_GPIO 85
+"""
+
+
 #IMU orientation
 
 def _rot(roll, pitch, yaw):
@@ -373,12 +397,12 @@ def main():
             ref = IMU_REF[m.group(2)]
             now = imu_rotation(BOARD, ref)
             out.append(f"IMU {m.group(1)} SPI:{m.group(2)} ROTATION_{now}"
-                       f"    # {ref}, from its pads; forward is the top edge")
+                       f"    # {ref}, from its pads; forward is the bottom edge")
             rotated.append((ref, m.group(2), was, now))
             continue
         out.append(ln)
 
-    body = HEADER + "\n".join(out) + EXTRA + REVB
+    body = HEADER + "\n".join(out) + EXTRA + ant_feed() + REVB
     os.makedirs(OUT, exist_ok=True)
     open(f"{OUT}/hwdef.dat", "w").write(body)
 

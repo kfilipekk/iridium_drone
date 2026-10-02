@@ -51,13 +51,13 @@ batt_overhang  = 2.25;   // per side, battery vs top plate
 // 0.5 mm MORE clearance to the ESC than exists. Three copies of this number have
 // already disagreed once in this project (2.5 / 2.3 / 3.0); this is the fourth, and
 // it is now generated so it cannot be the fifth.
-fc_l           = 45.10;   // Edge.Cuts bbox - conservative
+fc_l           = 46.60;   // Edge.Cuts bbox - conservative
 fc_w           = 47.30;
-fc_l_fab       = 45.00;   // centreline: what JLC routes to
+fc_l_fab       = 46.50;   // centreline: what JLC routes to
 fc_w_fab       = 47.20;
 fc_pcb         = 1.60;
 fc_top_parts   = 4.4;          // tallest: J3
-fc_bot_parts   = 4.35;          // tallest: J11
+fc_bot_parts   = 4.4;          // tallest: J14
 
 esc_l          = 45.6;
 esc_w          = 44.0;
@@ -88,8 +88,8 @@ rear_posts      = [[-14.6, 27.88], [14.6, 27.88], [-11.0, 80.75], [11.0, 80.75]]
 plate_y_fc      = -29.16;    // plate centres rel. the stack centre, +y aft
 plate_y_bottom  = 31.09;
 plate_y_top     = 4.78;
-standoff_need   = 31.6;   // stack top above z = 0
-standoff_slack  = 3.9;  // headroom under the top plate
+standoff_need   = 31.7;   // stack top above z = 0
+standoff_slack  = 3.8;  // headroom under the top plate
 cam_mod_t       = 12.0;
 cam_mod_w       = 30.0;
 pi_l            = 65.0;

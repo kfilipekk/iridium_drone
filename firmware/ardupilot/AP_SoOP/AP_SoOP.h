@@ -4,6 +4,7 @@
 #include <AP_HAL/AP_HAL.h>
 
 extern "C" {
+#include "soop_ant.h"
 #include "soop_dsp.h"
 #include "soop_guard.h"
 }
@@ -44,6 +45,7 @@ private:
     void feed_until(double horizon);
     void publish(double t);
     void log_status(double t);
+    void ant_update(double t);
 
     bool     _started;
     HAL_Semaphore _sem;
@@ -74,6 +76,14 @@ private:
     bool       _have_baro_offset;
     double     _last_fix_t, _last_status_t;
     uint32_t   _cpu_us, _bursts_s;
+    //antenna feed
+    soop_ant_t _ant;
+    bool       _ant_started;
+    int        _ant_reported;
+    double     _ant_log_t;
+    float      _ant_ma;
+    AP_HAL::AnalogSource *_ant_adc;
+    volatile bool _ant_feed_off;
     uint64_t   _samples_s;
 };
 

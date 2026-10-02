@@ -23,7 +23,7 @@ module tie(x, y, z0, h, n = 2) {
         box(-0.75, 0.75, -1.5, 1.5, -0.5, h + 0.5);
 }
 
-// ---- antenna tower: the Iridium helix on its seat, the GPS pod and bias tee on the arm --
+// ---- antenna tower: the Iridium helix on its seat, the GPS pod on the arm ---------------
 // Bolts through the top plate's two rear posts, the only top-plate holes the battery
 // leaves free, into the rear standoffs; the seat has holes to reach those screws.
 tower_foot_z  = 37.5;
@@ -35,7 +35,7 @@ gps_z         = 93.10;      // module underside; its top is 105.50
 pod_top_z     = 101.10;
 gps_lid_t     = 2.0;
 gps_screw_x   = 15.30;
-bias_y        = 126.0;
+tie_y         = 135.0;
 module antenna_tower() {
     fx = 18.0; fy = 12.0; cx = 7.5; cy = 8.0;
     cy0 = 84.0; w = 2.4; st = 4.0; at = 4.0;
@@ -47,9 +47,6 @@ module antenna_tower() {
             box(-20.0, 20.0, 68.0, 104.0, seat_z - st, seat_z);
             box(-ax, ax, 104.0 - 1, 178.0, seat_z - at, seat_z);
             box(-wb, wb, web0, 178.0, seat_z - at - 16.0, seat_z - at);
-            // under the arm, bosses for the strap's inserts
-            for (s = [-1, 1]) translate([10.0 / 2 + 3, bias_y + s * 19.5, seat_z - at - 3])
-                cylinder(d = ins_m2[2], h = 3.01);
         }
         // the foot screws, and holes in the seat to reach them
         for (x = [-11.0, 11.0]) translate([x, tower_post_y, tower_foot_z]) {
@@ -62,11 +59,10 @@ module antenna_tower() {
         for (h = [[0.0, 74.0], [0.0, 94.0]]) translate([h[0], h[1], seat_z - st]) hole(2.9, st);
         // the helix's SMA and the boss round it, through the Airframes template's centre hole
         translate([0, helix_y, seat_z - st]) hole(12.0, st);
-        // the GPS pod's screws come up through the arm; the strap's go down into it
+        // the GPS pod's screws come up through the arm
         for (s = [-1, 1]) translate([s * gps_screw_x, gps_y, seat_z - at]) hole(2.4, at);
-        for (s = [-1, 1]) translate([10.0 / 2 + 3, bias_y + s * 19.5, seat_z]) bore(ins_m2);
-        // the coax and the GPS lead tied to the arm's edges, clear of the bias tee
-        for (s = [-1, 1]) tie(s * (22.0 - 2.5), bias_y + 9, seat_z - at, at, n = 1);
+        // the coax and the GPS lead tied to the arm's edges
+        for (s = [-1, 1]) tie(s * (22.0 - 2.5), tie_y, seat_z - at, at, n = 1);
     }
 }
 module gps_pod() {
@@ -95,20 +91,6 @@ module gps_lid() {
         }
     }
 }
-module bias_strap() {                // a bridge over the bias tee, two screws into the arm
-    x0 = 10.0 / 2 + 3 - 10.0 / 2; x1 = x0 + 10.0; t = 3.0;
-    hw = 16.5; top = seat_z + 12.0 + 0.3;
-    color("#e0a050") difference() {
-        union() {
-            for (s = [-1, 1]) {
-                translate([x0, s > 0 ? bias_y + hw : bias_y - hw - 5.5, seat_z]) cube([x1 - x0, 5.5, t]);
-                translate([x0, s > 0 ? bias_y + hw : bias_y - hw - 2, seat_z]) cube([x1 - x0, 2, top + t - seat_z]);
-            }
-            box(x0, x1, bias_y - hw - 2, bias_y + hw + 2, top, top + t);
-        }
-        for (s = [-1, 1]) translate([10.0 / 2 + 3, bias_y + s * 19.5, seat_z]) hole(2.4, t);
-    }
-}
 module gps() {
     translate([0, gps_y, gps_z]) {
         color("#3050a0") box(-10.0, 10.0, -10.0, 10.0, 0, 8.4);
@@ -121,14 +103,6 @@ module iridium_antenna() {          // Tallysman HC610: radome over the helix, S
         color("#c8b070") translate([0, 0, -10]) cylinder(d = 8, h = 10, $fn = 24);
     }
 }
-module bias_tee() {
-    translate([0, bias_y, seat_z]) {
-        color("#9aa0a6") box(-21.0, 21.0, -16.0, 16.0, 0, 12.0);
-        color("#c8b070") for (s = [-1, 1]) translate([s * 21.0, 0, 6.0])
-            rotate([0, s * 90, 0]) cylinder(d = 6.5, h = 8, $fn = 24);
-    }
-}
-
 // ---- nose mount: XIAO camera, RP3 receiver, both ELRS antennas ---------------------------
 // Clamped under the mid plate by the two forward front-post screws, in the gap the arms
 // leave there. Everything hangs below the plate. Ahead of the carbon, and the length of
@@ -162,6 +136,7 @@ module nose_mount() {
         for (p = [[-14.6, -52.88], [14.6, -52.88]]) translate([p[0], p[1], pz]) hole(3.4, t);
         box(-cam_x + cw, cam_x - cw, cam_y - cam_d + cw, cam_y + cam_d - cw, cam_bot - 1, pz - 0.01);
         translate([0, cam_y - cam_d - 1, cam_bot + cw + 21.0 - 7]) rotate([-90, 0, 0]) cylinder(d = 10, h = cw + 2);
+        box(-3, 3, cam_y + cam_d - cw - 0.01, cam_y + cam_d + 0.01, cam_bot + cw, cam_bot + cw + 5);   // its power wires out
         for (s = [-1, 1]) translate([s * cam_boss, cam_y, cam_bot]) bore(ins_m2, false);
         box(-rx_w + 1.6, rx_w - 1.6, rx_y - rx_l + 1.6, rx_y + rx_l - 1.6, rx_bot - 1, pz - 0.01);
         box(-3, 3, rx_y + rx_l - 1.6 - 0.01, rx_y + rx_l + 0.01, rx_bot + 1, pz - 0.01);   // wires out
@@ -213,7 +188,7 @@ module lidar_bracket() {
         for (p = [[-10.0, 43.5], [10.0, 43.5]]) translate([p[0], p[1], -t]) { hole(2.4, t); translate([0, 0, -1]) cylinder(d = 4.2, h = cb + 1, $fn = 24); }
         // the LD06's two diagonal M2.5 holes, screwed from the lidar's side
         for (s = [-1, 1]) translate([s * 14.1, lidar_y - s * 14.1, -t]) bore(ins_m25, false);
-        tie(0, 3.0 + 3, -t, t);                                  // the lidar's lead, at the front edge
+        tie(0, 48.0 - 2.5, -t, t);                                // the lidar's lead, at the aft edge, clear of its base
     }
 }
 module lidar360() {
@@ -249,19 +224,18 @@ module belly_sensor() {
 }
 
 module mounts() {
-    antenna_tower(); gps_pod(); gps_lid(); bias_strap(); nose_mount(); xiao_lid(); rx_cover();
+    antenna_tower(); gps_pod(); gps_lid(); nose_mount(); xiao_lid(); rx_cover();
     lidar_bracket();
     range_cradle(); range_lid();
 }
 module mounted_parts() {
-    gps(); iridium_antenna(); bias_tee(); rx(); elrs_antennas();
+    gps(); iridium_antenna(); rx(); elrs_antennas();
 }
 
 // ---- laid out for printing: each part on the bed, in the orientation it prints ---------
 module print_antenna_tower() { translate([0, 0, seat_z]) rotate([180, 0, 0]) antenna_tower(); }
 module print_gps_pod()       { translate([0, 0, -seat_z]) gps_pod(); }
 module print_gps_lid()       { translate([0, 0, pod_top_z + 6.4]) rotate([180, 0, 0]) gps_lid(); }
-module print_bias_strap()    { translate([0, 0, seat_z + 15.3]) rotate([180, 0, 0]) bias_strap(); }
 module print_nose_mount()    { translate([0, 0, nose_z]) rotate([180, 0, 0]) nose_mount(); }
 module print_xiao_lid()      { translate([0, 0, -(cam_bot - 2.0)]) xiao_lid(); }
 module print_rx_cover()      { translate([0, 0, -(rx_bot - 1.5)]) rx_cover(); }

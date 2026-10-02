@@ -37,11 +37,10 @@ COMPONENTS = {
  "U11": ("jlc_parts:SN65HVD230DR",          "jlc:SOIC-8_L4.9-W3.9-P1.27-LS6.0-BL",      "SN65HVD230",    "C12084",   False),
  "U12": ("jlc_parts:USBLC6-2SC6_C2687116",  "jlc:SOT-23-6_L2.9-W1.6-P0.95-LS2.8-BL",    "USBLC6-2SC6",   "C2687116", False),
  "J1" : ("jlc_parts:TYPE-C_16PIN_2MD(073)", "jlc:USB-C-SMD_TYPE-C-16PIN-2MD-073",       "USB-C",         "C2765186", False),
- "J2" : ("jlc_parts:SM08B-SRSS-TB(LF)(SN)", "jlc:CONN-TH_SM08B-SRSS-TB-LF-SN",                "ESC 8P",        "C160407",  False),
+ "J2" : ("jlc_parts:SM08B-GHS-TB(LF)(SN)", "jlc:CONN-SMD_SM08B-GHS-TB-LF-SN",       "ESC 8P",        "C265111",  False),
  "J3" : ("jlc_parts:XY-SM06B-GHS-TB",       "jlc:CONN-SMD_XY-SM06B-GHS-TB",            "GPS+I2C",       "C51940119",False),
  "J5" : ("jlc_parts:BX-GH1_25-4PWT",        "jlc:CONN-SMD_4P-P1.25_BX-GH1.25-4PWT","RC IN",   "C18077720",False),
  "J6" : ("jlc_parts:BX-GH1_25-4PWT",        "jlc:CONN-SMD_4P-P1.25_BX-GH1.25-4PWT","CAN 4P",  "C18077720",False),
- "J7" : ("jlc_parts:XY-SM04B-GHS-TB",       "jlc:CONN-SMD_4P-P1.25_12502-04WASMT",            "RNGFND",        "C51940118",False),
  "J8" : ("jlc_parts:TF-01A",                "jlc:TF-SMD_TF-01A",                        "microSD",       "C91145",   False),
  #Y1 is a passive crystal and the part number matters more than it looks
  "Y1" : ("jlc_parts:X32258MSB4SI",          "jlc:CRYSTAL-SMD_4P-L3.2-W2.5-BL",          "8MHz",          "C2682774", False),
@@ -109,6 +108,9 @@ LOADS_3V3 = [   #through U9, TLV75733P
     ("status LEDs D2/D3",              0.010, 0.010, "[A] 2 x ~5 mA through their resistors"),
     ("TMP119 temp sensor (U19)",       0.000, 0.000, "[D] TMP119: 3.5 uA active, "
                                                      "1.25 uA at the 1 Hz default rate"),
+    ("PMW3901 flow breakout (J14)",    0.020, 0.030, "[A] the sensor plus the breakout's "
+                                                     "LDO and LED"),
+    ("INA180A2 antenna sense (U25)",   0.000, 0.000, "[D] INA180: 260 uA maximum quiescent"),
 ]
 LOADS_3V3A = [  #through U10, TLV75533
     ("ICM-42688-P",                    0.001, 0.002, "[D] ~0.88 mA 6-axis continuous"),
@@ -227,79 +229,85 @@ RF_PARTS = dict(
 )
 #connector orientation
 MATING_FACE = {
-    "J1": (0.0, +1.0),   #USB-C - plug inserts along -y toward the board
-    "J2": (0.0, +1.0),   #ESC JST-SH 8P (a GH-8P does not fit the left edge - see ledger 6d)
+    "J1": (0.0, +1.0),   #USB-C
+    "J2": (0.0, +1.0),   #ESC JST-GH 8P
     "J3": (0.0, +1.0),   #GPS/I2C JST-GH 6P
     "J8": (0.0, +1.0),   #microSD card slot
-    "J5": (0.0, +1.0),   #RC receiver JST-SH 4P
-    "J6": (0.0, +1.0),   #DroneCAN JST-SH 4P
-    "J9": (0.0, +1.0),   #I2C port (VCC/SCL/SDA/GND) - the dedicated bus
-    "J11": (0.0, +1.0),  #SERIAL2 lidar port (5V/TX/RX/GND)
-    "J14": (0.0, +1.0),  #SPI3 Optical Flow JST-SH 6P
-    "J17": (0.0, +1.0),  #TVC Servos / Actuator Header JST-SH 6P
-    "J19": (0.0, +1.0),  #SWD Debug JST-SH 4P
+    "J5": (0.0, +1.0),   #RC receiver JST-GH 4P
+    "J6": (0.0, +1.0),   #DroneCAN JST-GH 4P
+    "J9": (0.0, +1.0),   #I2C port JST-GH 4P
+    "J11": (0.0, +1.0),  #SERIAL2 lidar port JST-GH 4P
+    "J12": (0.0, +1.0),  #MMCX RF Antenna
+    "J14": (0.0, +1.0),  #optical flow JST-GH 6P
+    "J17": (0.0, +1.0),  #servo 1, 1x3 right-angle header
+    "J23": (0.0, +1.0),  #servo 2
+    "J21": (0.0, +1.0),  #companion TELEM JST-GH 6P
+    "J22": (0.0, +1.0),  #payload 5V JST-GH 3P
 }
 
-#how wide the plug that mates with each connector is, in mm
 MATING_PLUG = {
-    "J1":  (9.0,  "[A] USB-C plug overmould, typical 9 mm"),
-    "J2":  (10.6, "[D] JST SHR 8P: 8 x 1.00 + 2.60"),
-    "J3":  (10.4, "[D] JST GHR 6P: 6 x 1.25 + 2.90"),
-    "J5":  (7.9,  "[D] JST GHR 4P: 4 x 1.25 + 2.90"),
-    "J6":  (7.9,  "[D] JST GHR 4P"),
-    "J8":  (15.0, "[A] microSD card, 15 mm across"),
-    "J9":  (7.9,  "[D] JST GHR 4P"),
-    "J11": (7.9,  "[D] JST GHR 4P"),
-    "J14": (8.6,  "[D] JST SHR 6P: 6 x 1.00 + 2.60"),
-    "J17": (8.6,  "[D] JST SHR 6P"),
-    "J19": (6.6,  "[D] JST SHR 4P: 4 x 1.00 + 2.60"),
+    "J1":  (9.0,   "[A] USB-C plug overmould, typical 9 mm"),
+    "J2":  (12.9,  "[D] JST GHR 8P: 8 x 1.25 + 2.90"),
+    "J3":  (10.4,  "[D] JST GHR 6P: 6 x 1.25 + 2.90"),
+    "J5":  (7.9,   "[D] JST GHR 4P: 4 x 1.25 + 2.90"),
+    "J6":  (7.9,   "[D] JST GHR 4P"),
+    "J8":  (15.0,  "[A] microSD card, 15 mm across"),
+    "J9":  (7.9,   "[D] JST GHR 4P"),
+    "J11": (7.9,   "[D] JST GHR 4P"),
+    "J12": (5.11,  "[D] MMCX right-angle cable plug"),
+    "J14": (10.4,  "[D] JST GHR 6P: 6 x 1.25 + 2.90"),
+    "J17": (8.0,   "[A] JR/Futaba 3-pin servo plug, 7.6-8.0 mm wide"),
+    "J23": (8.0,   "[A] JR/Futaba 3-pin servo plug, 7.6-8.0 mm wide"),
+    "J21": (10.4,  "[D] JST GHR 6P: 6 x 1.25 + 2.90"),
+    "J22": (6.65,  "[D] JST GHR 3P: 3 x 1.25 + 2.90"),
 }
-#how much of that run is a rigid plug body before the wire
-MATING_PLUG_BODY = {"J1": 6.0, "J2": 4.0, "J3": 5.0, "J5": 5.0, "J6": 5.0, "J8": 14.0,
-                    "J9": 5.0, "J11": 5.0, "J14": 4.0, "J17": 4.0, "J19": 4.0}
 
-#how much straight
+MATING_PLUG_BODY = {
+    "J1": 6.0, "J2": 5.0, "J3": 5.0, "J5": 5.0, "J6": 5.0, "J8": 14.0,
+    "J9": 5.0, "J11": 5.0, "J12": 6.0, "J14": 5.0, "J17": 14.5, "J23": 14.5,
+    "J21": 5.0, "J22": 5.0,
+}
+
 MATING_CLEARANCE = {
     "J1": 9.0,    #USB-C plug overmould
-    "J2": 6.0,    #JST-SH plug plus wire bend
-    "J5": 6.0,    #JST-SH class, same as J2
-    "J6": 6.0,    #JST-SH class, DroneCAN
-    "J9": 6.0,    #JST-SH class, same as J2 (the dedicated I2C port)
-    "J11": 6.0,   #JST-SH class, same as J2 (SERIAL2 lidar port)
-    "J14": 6.0,   #JST-SH class, Optical Flow
-    "J17": 6.0,   #JST-SH class, TVC Servos
-    "J19": 6.0,   #JST-SH class, SWD
-    "J3": 3.6,
-    "J8": 14.0,   #a microSD card must come all the way out
+    "J2": 6.0,    #JST-GH plug plus wire bend
+    "J3": 6.0,    #GPS/I2C JST-GH 6P
+    "J5": 6.0,    #RC JST-GH 4P
+    "J6": 6.0,    #DroneCAN JST-GH 4P
+    "J8": 14.0,   #microSD ejection
+    "J9": 6.0,    #I2C JST-GH 4P
+    "J11": 6.0,   #lidar JST-GH 4P
+    "J12": 6.0,   #MMCX coax cable straight run
+    "J14": 6.0,   #flow JST-GH 6P
+    "J17": 17.0,  #servo plug 14.5 mm on the overhanging pins
+    "J23": 17.0,
+    "J21": 6.0,   #companion JST-GH 6P
+    "J22": 6.0,   #payload 5V JST-GH 3P
 }
 
-#how HIGH the plug's own underside sits above the PCB once it is mated
 MATING_PLUG_UNDER = {r: 0.0 for r in MATING_FACE}
 
-#connector retention
-#how each plug stays in over a flight's vibration
 CONNECTOR_RETENTION = {
-    "J3": ("latch", "JST-GH positive lock"), "J5": ("latch", "JST-GH positive lock"),
-    "J6": ("latch", "JST-GH positive lock"), "J9": ("latch", "JST-GH positive lock"),
-    "J11": ("latch", "JST-GH positive lock"),
+    "J2": ("latch", "JST-GH positive lock"),
+    "J3": ("latch", "JST-GH positive lock"),
+    "J5": ("latch", "JST-GH positive lock"),
+    "J6": ("latch", "JST-GH positive lock"),
     "J8": ("latch", "microSD socket's card latch"),
-    "J2": ("stake", "ESC harness, JST-SH 8P - a GH-8P does not fit; see ledger 6d"),
-    "J14": ("stake", "flow, JST-SH 6P - a GH-6P does not fit; see ledger 6d"),
-    "J17": ("stake", "TVC servos, JST-SH 6P"),
-    "J12": ("stake", "U.FL: a dot of RTV over the mated plug, the usual U.FL retention"),
+    "J9": ("latch", "JST-GH positive lock"),
+    "J11": ("latch", "JST-GH positive lock"),
+    "J12": ("snap", "MMCX positive snap-lock"),
+    "J14": ("latch", "JST-GH positive lock"),
+    "J17": ("friction", "JR standard servo plug friction fit + printed clip"),
+    "J23": ("friction", "JR standard servo plug friction fit + printed clip"),
+    "J19": ("bench", "Tag-Connect TC2030-NL pogo-pin cable for recovery"),
+    "J21": ("latch", "JST-GH positive lock"),
+    "J22": ("latch", "JST-GH positive lock"),
     "J1": ("bench", "USB-C, for setup - unplugged before flight"),
-    "J19": ("bench", "SWD, for recovery - unplugged before flight"),
 }
 
 #vertical mating
-#connectors that mate along +z instead of across the board
-VERTICAL_MATING = {
-    "J12": dict(
-        plug=2.2,    #mated plug height above the board, [D] Hirose U.FL-R-SMT-1
-        bend=3.0,    #90-degree coax bend radius above the plug
-        radius=4.0,  #horizontal sweep the bend needs around the connector centre
-        src="[D] Hirose U.FL-R-SMT-1 vertical + RG178 coax bend"),
-}
+#connectors permanently mated vertically under the top plate during flight
+VERTICAL_MATING = {}
 
 
 #parts that must see something, not merely fit
@@ -508,22 +516,22 @@ OFFBOARD = dict(
              src="[M] design.py nets: J3.2/3 USART2, J3.4/5 I2C1, J3.6-8 GND"),
     rangefinder_down=dict(part="Benewake TFS20-L", variant="I2C", addr=0x10,
                           lands_on="J9 (dedicated I2C port)", vcc="3.3 V",
-                          wrong_variant_note="the UART variant needs SERIAL6 (UART4)",
+                          wrong_variant_note="the UART variant would need a spare UART on a connector, and there is none: J21 is the companion's and J11 the lidar's",
                           src="[D] AP_RangeFinder Benewake TFS20L driver, I2C 0x10"),
     rangefinder_up=dict(part="VL53L1X module (GY-53-L1X)", addr=0x29,
                         lands_on="J9 (dedicated I2C port)", vcc="3.3 V",
                         free_because="U7 is deleted - the on-board VL53L1X would "
                                      "otherwise own 0x29 and collide",
                         src="[D] VL53L1X fixed default address 0x29"),
-    buzzer=dict(part="5V PASSIVE piezo", lands_on="J16", drive="PA15 TIM2_CH1 ALARM",
+    buzzer=dict(part="5V PASSIVE piezo", lands_on="P161-P163 (soldered)", drive="PA15 TIM2_CH1 ALARM",
                 must_be="passive",
                 note="a TIMER channel means ArduPilot generates the tone patterns, so an "
                      "ACTIVE buzzer (own oscillator) loses every arming/failsafe pattern",
                 src="[M] hwdef.dat: PA15 TIM2_CH1 TIM2 GPIO(32) ALARM"),
-    led=dict(part="WS2812B strip", lands_on="J15", volts=5,
+    led=dict(part="WS2812B strip", lands_on="P151-P153 (soldered)", volts=5,
              note="the on-board 74LVC1G17 outputs 5 V logic - a 12 V strip (WS2815) will "
                   "not light",
-             src="[M] design.py: U17 drives WS2812_OUT at 5 V into J15.2"),
+             src="[M] design.py: U17 drives WS2812_OUT at 5 V into P152"),
     rx=dict(part="ELRS 2.4 GHz receiver - MUST BE ESP-BASED", lands_on="J5 (USART6)",
             mcu="ESP", min_fw="3.5.0",
             gcs_note="ELRS MAVLink needs SERIAL7_PROTOCOL 2, SERIAL7_BAUD 460, RSSI_TYPE 5",
@@ -548,8 +556,7 @@ OFFBOARD = dict(
     gbp=13.99,
     #position on the belly: set from MOUNTS
     mount_y_mm=None,
-               #power comes off the SERIAL6 pad group's 5V/GND pins
-               wiring={"TX": "TP6 (USART1_RX)", "5V": "P71", "GND": "P74"},
+               wiring={"TX": "J11.3 (USART1_RX)", "5V": "J11.1", "GND": "J11.4"},
                params={"SERIAL2_PROTOCOL": 11, "SERIAL2_BAUD": 230, "PRX1_TYPE": 16,
                        "PRX1_ORIENT": 1, "BRD_SER2_RTSCTS": 0},
                orient_note="PRX1_ORIENT 1 = upside-down underneath, which is how this airframe carries it - a top mount is blocked by the battery",
@@ -559,8 +566,8 @@ OFFBOARD = dict(
                             "115200 baud) - same driver, drop-in",
                buying_check="confirm the bundle contains the LIDAR unit, not a cable or adapter board, and that it is LDROBOT protocol - a look-alike clone is a Lua-driver project",
                src="[D] AP_Proximity_LD06.cpp: 47-byte frame, 0x54 start, CRC8 0x4D; [D] ArduPilot LD06 wiring page: TX only, PWM unconnected, self-spins"),
-    esc=dict(part="SpeedyBee BLS 60A", conn="JST-SH 8P on J2",
-             note="J2 follows Betaflight's documented SpeedyBee F405 V4 order, but the cable you receive must be buzzed before VBAT",
+    esc=dict(part="SpeedyBee BLS 60A", conn="JST-GH 8P on J2 (side entry, latching)",
+             note="J2 pins 1-8 follow the SpeedyBee order, so the cable is straight through; the ESC end is its own JST-SH 8P. Buzz the cable before VBAT",
              src="[D] SpeedyBee manual + [M] design.py nets"),
     src="[M] every 'lands_on' traced to design.py nets")
 
@@ -568,17 +575,16 @@ OFFBOARD = dict(
 PAYLOAD = dict(
     pwm=[("PWM5", "PA2", "TP3", "SERVO5_FUNCTION"),
          ("PWM6", "PA3", "TP4", "SERVO6_FUNCTION")],
+    #J21's UART7 is the companion's
     serial=[(2, "USART1", "J11", "EARMARKED for the 360 lidar "
-                                       "(PRX1_TYPE 16); free only until that is fitted"),
-            (6, "UART4", "P71 / P72 / P73 / P74", "Expansion UART - unclaimed in defaults.parm, but earmarked since 2026-09-14 for the companion computer (MAVLink OPTICAL_FLOW)")],
-    serial_unrouted=[(1, "UART7"),    #PE7/PE8 stop at the MCU
-                     (4, "USART3"),   #PD8/PD9 stop at the MCU
-                     (5, "UART8")],   #declared in hwdef, no nets in the design at all
-    serial_earmarked=[(2, "360 lidar, PRX1_TYPE 16"),
-                      (6, "companion computer, MAVLink OPTICAL_FLOW - moved from "
-                          "SERIAL1 on 2026-09-14 when J4 was cut")],
-    power_5v=["P71", "P61", "P151", "P41", "J5.1", "J9.1", "J11.1"],
-    gnd=["P74", "P64", "P153", "P46", "J5.4", "J9.4", "J11.4"],
+                                 "(PRX1_TYPE 16); free only until that is fitted")],
+    serial_unrouted=[(4, "USART3"),   #PD8/PD9 stop at the MCU
+                     (5, "UART8"),    #declared in hwdef, no nets in the design at all
+                     (6, "UART4")],   #PB9/PB8 stop at the MCU since the wire pads went
+    serial_earmarked=[(1, "companion computer, MAVLink2 + OPTICAL_FLOW on J21"),
+                      (2, "360 lidar, PRX1_TYPE 16")],
+    power_5v=["J21.1", "J22.1", "P151", "J5.1", "J9.1", "J11.1"],
+    gnd=["J21.6", "J22.2", "P153", "J5.4", "J9.4", "J11.4"],
     #a servo drawing real current must not come off the flight controller's 5 V rail
     power_note="signal is 3.3 V logic, which every hobby servo and ESC accepts as a valid PWM high",
     mass_budget_g=885.0,   #payload at 40% hover throttle, from the build check
@@ -658,10 +664,6 @@ MOUNTED = dict(
     iridium_antenna=dict(name="Tallysman HC610 active Iridium helix", dia=33.3, dia_top=28.5,
                          H=54.2, g=24.0, hole_pcd=20.0, hole_depth=6.0, sma_hole=12.0,
                          src="[D] Tallysman HC610 datasheet: RHCP quadrifilar helix, 3.7 dBic at zenith, pre-filter then 28 dB LNA, NF 2.0 dB"),
-    #J12 carries no DC
-    bias_tee=dict(name="SMA bias tee, 10 MHz-6 GHz", L=42.0, W=32.0, H=12.0, g=20.0,
-                  src="[L] generic 10 MHz-6 GHz listings: 32 x 42 x 12 mm, <1.2 dB insertion "
-                      "loss, 1-50 V; [A] 20 g - weigh on arrival"),
     rx=dict(name="RadioMaster RP3 (ELRS 2.4 GHz, two antennas)", L=22.0, W=13.0, H=4.0,
             g=1.6, src="[L] RadioMaster RP3 listing: 22 x 13 x 4 mm; no holes, so it sits "
                        "in a pocket under a screwed cover"),
@@ -689,7 +691,7 @@ BATT_POS = dict(y=-6.0, z=_TOP_Z,
 #each mount: where it sits, what it carries
 MOUNTS = dict(
     antenna_tower=dict(
-        carries=("iridium_antenna", "gps", "bias_tee"),
+        carries=("iridium_antenna", "gps"),
         foot=dict(x=36.0, y=24.0, t=4.0, y0=TOP_PLATE_MOUNT["rear_posts"][3][1]),
         #narrow enough that the foot screws' heads clear it
         column=dict(x=15.0, y=16.0, wall=2.4, y0=84.0),
@@ -700,7 +702,8 @@ MOUNTS = dict(
         #the GPS 80 mm behind the helix's axis, its top between the heights
         gps=dict(y0=164.0, top_z=105.5, pod_y=28.0, pocket=8.0, lid_t=2.0, lid_cbore=2.0,
                  wall=2.0),
-        bias=dict(y0=126.0, strap_x=10.0, strap_t=3.0),
+        #the coax (J12's MMCX pigtail onto the helix's SMA) and the GPS lead are tied
+        tie_y=135.0,
         joints=[dict(where="antenna tower to top plate, at the rear posts", size="M3", qty=2,
                      at=[(x, y, _TOP_Z) for x, y in TOP_PLATE_MOUNT["rear_posts"][2:]],
                      layers=[("tower foot", "foot.t"), ("top plate", FRAME["upper_t"])],
@@ -713,9 +716,7 @@ MOUNTS = dict(
                      layers=[("tower arm", "arm.t")], into="insert"),
                 dict(where="GPS lid to its pod", size="M2", qty=2,
                      layers=[("lid, under the recessed head", "gps.lid_under_head")],
-                     into="insert"),
-                dict(where="bias tee strap to the tower arm", size="M2", qty=2,
-                     layers=[("strap foot", "bias.strap_t")], into="insert")],
+                     into="insert")],
         print_note="seat and arm on the bed; PETG"),
     nose_mount=dict(
         carries=("xiao", "rx", "elrs_antenna"),
@@ -775,7 +776,6 @@ MASS_ITEMS = [
     ("RX",                               MOUNTED["rx"]["g"], MOUNTED["rx"]["src"]),
     ("Iridium antenna (HC610)",          MOUNTED["iridium_antenna"]["g"],
      MOUNTED["iridium_antenna"]["src"]),
-    ("bias tee",                         MOUNTED["bias_tee"]["g"], MOUNTED["bias_tee"]["src"]),
     ("XIAO nose camera",                 CAMERA_REC["g"], CAMERA_REC["src"]),
     ("printed mounts, inserts, screws",  45,              "[A] PETG at ~30% infill"),
     #PI["src"] is the DATASHEET source for the 65x30 mm outline and the 5V/2A rating
@@ -810,7 +810,7 @@ net("GND",
     "U8.1","U8.6","U8.11","U9.2","U9.6","U10.2","U11.2","U12.2",   #U8: PGND 1/11 + AGND 6; U9 pad 6 its thermal pad
     "J1.A1B12","J1.B1A12","J1.13","J1.14",
     "J2.1","J2.9","J2.10", "J3.6","J3.7","J3.8",
-    "J5.4","J5.5","J5.6", "J6.4","J6.5","J6.6", "J7.4","J7.5","J7.6",
+    "J5.4","J5.5","J5.6", "J6.4","J6.5","J6.6",
     "J8.6","J8.10","J8.11","J8.12","J8.13",
     "Y1.2","Y1.4", "D1.2",
     "C1.2","C2.2","C3.2","C4.2","C5.2","C6.2","C7.2","C8.2","C9.2",
@@ -826,7 +826,7 @@ net("GND",
 net("VBAT_IN", "J2.2", "D1.1", "Q4.3")            #D1 pin 1 = cathode; Q4 pin 3 = drain
 net("VBAT", "Q4.2", "C17.1","C18.1","C19.1","U8.2","U8.10","R4.1","R18.1")  #Q4 p2 = source
 net("+5V",  "C22.1","C23.1","U9.1","C26.1","U10.1","C28.1",
-            "J3.1","J5.1","J7.1","R6.1")
+            "J3.1","J5.1","R6.1")
 net("+3V3", "U9.5","C27.1","U1.11","U1.27","U1.50","U1.75","U1.100",
             "C1.1","C2.1","C3.1","C4.1","C5.1","C6.1","C7.1",
             "U5.8","C36.1",
@@ -880,10 +880,10 @@ net("I2C2_SCL","U1.PB10","R11.2","U4.8")
 net("I2C2_SDA","U1.PB11","R12.2","U4.7")
 #TOF_XSHUT (PD11) and TOF_INT (PD10) deleted with U7
 net("USART2_TX","U1.PD5","J3.2"); net("USART2_RX","U1.PD6","J3.3")   #GPS1
-net("UART7_TX","U1.PE8");  net("UART7_RX","U1.PE7")        #companion - no landing:
-net("PPS_SYNC","U1.PE10"); net("UART7_RTS","U1.PE9")        #J4 cut, and no free pad site exists (board is full)
+net("UART7_TX","U1.PE8");  net("UART7_RX","U1.PE7")        #companion (J21)
+net("UART7_CTS","U1.PE10"); net("UART7_RTS","U1.PE9")
 net("USART6_TX","U1.PC6","J5.2"); net("RC_IN","U1.PC7","J5.3")
-net("UART4_TX","U1.PB9","J7.2");  net("UART4_RX","U1.PB8","J7.3")    #TFmini-S
+net("UART4_TX","U1.PB9");  net("UART4_RX","U1.PB8")        #expansion UART (PB9/PB8 spare)
 net("CAN1_RX","U1.PD0","U11.4"); net("CAN1_TX","U1.PD1","U11.1")
 net("CAN1_SILENT","U1.PD3","R14.1","U11.8")
 net("CANH","U11.7","J6.2","R15.1"); net("CANL","U11.6","J6.3","R15.2")
@@ -913,7 +913,7 @@ net("USART1_TX","U1.PA9"); net("USART1_RX","U1.PA10")
 net("USART3_TX","U1.PD8"); net("USART3_RX","U1.PD9")
 net("PE1_SPARE","U1.PE1")       #UART8_TX, unused: ESC telemetry is receive-only
 net("PE15_SPARE","U1.PE15"); net("PB2_SPARE","U1.PB2")
-net("PC2_SPARE","U1.PC2_C"); net("PC3_SPARE","U1.PC3_C")
+net("PC3_SPARE","U1.PC3_C")
 #SoOP analogue front end (SoOP config, DNP)
 net("SOOP_I_ADC","U1.PC4","U14.1")
 net("SOOP_Q_ADC","U1.PA4","U14.7")
@@ -922,7 +922,7 @@ net("SPARE_ADC","U1.PA7")
 
 
 #RF front end (SoOP config, all DNP)
-net("ANT_IN",   "J12.1","C52.1"); NETS["GND"] += ["J12.2"]
+net("ANT_IN",   "J12.1","C52.1"); NETS["GND"] += ["J12.2", "J12.3", "J12.4", "J12.5"]
 net("RFIN",     "C52.2","U13.4")
 NETS["GND"] += ["U13.3","U13.10","U13.11","U13.29"]
 net("VCC_RF",   "U13.1","U13.2","U13.6","U13.7","U13.13","U13.16","U13.25",
@@ -1028,33 +1028,16 @@ for ref, netname in zip(TESTPOINT_REFS, TESTPOINT_NETS):
     add(ref, "Connector:TestPoint", "TestPoint:TestPoint_Pad_1.5x1.5mm", netname, "", False)
     NETS[netname].append(f"{ref}.1")
 
-#connector reduction: JST-GH -> solder pads
-PAD_FP = "TestPoint:TestPoint_Pad_1.5x1.5mm"
-_PAD_LABELS = {
-    #J6 is now a fitted JST-GH 4P connector (DroneCAN) powered from +5V_PAYLOAD
-    "J7": {1:"RF_5V",  2:"RF_TX",  3:"RF_RX",  4:"RF_GND"},
-}
-for jref, labels in _PAD_LABELS.items():
-    COMPONENTS.pop(jref, None)
-    for pinno, label in labels.items():
-        pref = f"P{jref[1:]}{pinno}"
-        add(pref, "Connector:TestPoint", PAD_FP, label, "", False)
-        for netname, specs in NETS.items():
-            for i, sp in enumerate(list(specs)):
-                if sp == f"{jref}.{pinno}":
-                    specs[i] = f"{pref}.1"
-    #drop the connector's shell/mounting pins entirely
-    for netname, specs in NETS.items():
-        NETS[netname] = [sp for sp in specs if not sp.startswith(f"{jref}.")]
-
-add("P41", "Connector:TestPoint", PAD_FP, "TEL_5V",  "", False)
-add("P44", "Connector:TestPoint", PAD_FP, "TEL_PPS", "", False)
-add("P46", "Connector:TestPoint", PAD_FP, "TEL_GND", "", False)
-NETS["+5V"].append("P41.1")
-NETS["PPS_SYNC"].append("P44.1")
-NETS["GND"].append("P46.1")
-
-#UART7 has no landing, and the companion does not need one
+#J21: Companion Computer Port (JST-GH 6P)
+#Pixhawk DS-009 standard TELEM pinout
+add("J21", "jlc_parts:XY-SM06B-GHS-TB", "jlc:CONN-SMD_XY-SM06B-GHS-TB",
+    "COMPANION", "C51940119", False)
+NETS["+5V"].append("J21.1")
+NETS["UART7_TX"].append("J21.2")
+NETS["UART7_RX"].append("J21.3")
+NETS["UART7_CTS"].append("J21.4")
+NETS["UART7_RTS"].append("J21.5")
+NETS["GND"] += ["J21.6", "J21.7", "J21.8"]
 
 #SoOP RF front end moved off this board
 INCLUDE_ONBOARD_LNA = False       #U15/U16/FL1/L3/L4 - see the ANT_IN comment
@@ -1092,18 +1075,19 @@ NETS["GND"]    += ["Q1.2", "R39.2", "P163.1"]
 net("BUZZ_DRAIN", "Q1.3", "D4.2", "P162.1")                #D4 pin2 = anode
 NETS["+5V"]    += ["D4.1", "P161.1"]                       #D4 pin1 = cathode
 
-#J19: Dedicated 4-pin SWD debug header alongside reference pads
-add("J19", "jlc_parts:SM04B-SRSS-TB_(LF)(SN)",
-    "jlc:CONN-SMD_4P-P1.00_SM04B-SRSS-TB-LF-SN", "SWD 4P", "C160404", False)
-NETS["GND"]  += ["J19.4", "J19.5", "J19.6"]
+#J19: Tag-Connect TC2030-NL 6-pad pogo connection for SWD + NRST recovery
+add("J19", "Connector:TC2030",
+    "Connector:Tag-Connect_TC2030-IDC-NL_2x03_P1.27mm_Vertical", "TC2030-NL", "", False)
 NETS["+3V3"] += ["J19.1"]
 NETS["SWDIO"] += ["J19.2"]
-NETS["SWCLK"] += ["J19.3"]
+NETS["NRST"] += ["J19.3"]
+NETS["SWCLK"] += ["J19.4"]
+NETS["GND"] += ["J19.5", "J19.6"]
 
 #second LMR33630A (TI VQFN-12 HotRod, 3A, 400 kHz), identical to U8
 add("U20", "jlc_parts:LMR33630ARNXR", "jlc:VQFN-12_L3.0-W2.0-P0.65-BL_TI_RNX",
     "LMR33630A", "C2861505", False)
-IND("L5", "10uH", F_ANR4030)
+IND("L5", "10uH", F_ANR5040)
 CAP("C66", "100n")                 #VIN hf (50V rated in PART_LCSC)
 CAP("C68", "100n")                 #bootstrap
 CAP("C79", "1u")                   #internal VCC bypass
@@ -1111,9 +1095,9 @@ CAP("C69", "22u", F_C1206)         #output bulk
 CAP("C70", "22u", F_C1206)
 RES("R40", "100k"); RES("R41", "22k")       #EN divider
 RES("R42", "100k"); RES("R43", "24k9")      #1.000 V reference -> 5.016 V output
-#J22 (a GH-3P payload power port) was specified to replace PV1/PV2
-add("PV1", "Connector:TestPoint", PAD15, "PAYLOAD_5V",  "", False)
-add("PV2", "Connector:TestPoint", PAD15, "PAYLOAD_GND", "", False)
+#J22: JST-GH 3P payload power port (+5V_PAYLOAD) for a VTX or camera
+add("J22", "jlc_parts:SM03B-GHS-TB(LF)(SN)", "jlc:CONN-TH_SM03B-GHS-TB-LF-SN",
+    "PAYLOAD 5V", "C514175", False)
 
 NETS["VBAT"] += ["U20.2", "U20.10", "C66.1", "R40.1"]
 net("BUCK_PAYLOAD_BOOT", "U20.4", "C68.1")
@@ -1121,12 +1105,12 @@ net("BUCK_PAYLOAD_PH",   "U20.12", "U20.3", "C68.2", "L5.1")
 net("BUCK_PAYLOAD_VCC",  "U20.5", "C79.1")
 net("BUCK_PAYLOAD_EN",   "U20.9", "R40.2", "R41.1")
 net("BUCK_PAYLOAD_FB",   "U20.7", "R42.2", "R43.1")
-net("+5V_PAYLOAD", "L5.2", "C69.1", "C70.1", "R42.1", "PV1.1")
+net("+5V_PAYLOAD", "L5.2", "C69.1", "C70.1", "R42.1", "J22.1")
 PWR_FLAGS["+5V_PAYLOAD"] = "PF10"
 add("PF10", "power:PWR_FLAG", "", "PWR_FLAG", "", False)
 NETS["+5V_PAYLOAD"].append("PF10.1")
 NETS["GND"] += ["U20.1", "U20.6", "U20.11", "C66.2", "C79.2", "C69.2", "C70.2",
-                "R41.2", "R43.2", "PV2.1"]
+                "R41.2", "R43.2", "J22.2", "J22.3", "J22.4", "J22.5"]
 
 #the MCU drives 3.3V; a 5V WS2812 strip wants >=0.7*VDD = 3.5V on DIN
 add("U17", "jlc_parts:SN74LVC1G17DBVR", F_SOT235, "74LVC1G17", "C7836", False)
@@ -1180,9 +1164,9 @@ NETS["+5V"] += ["C88.1", "C89.1"]; NETS["GND"] += ["C88.2", "C89.2"]
 for _f in ("FID1", "FID2", "FID3"):
     add(_f, "Mechanical:Fiducial", "Fiducial:Fiducial_1mm_Mask2mm", "Fiducial", "", False)
 
-#breaks out SPI3 + PD4 (EXT_CS1) + PD11 (FLOW_MOTION) onto a 6-pin JST-SH connector
-add("J14", "jlc_parts:SH1_0MM-6P-WT",
-    "jlc:CONN-SMD_SH1.0MM-6P-WT", "FLOW 6P", "C53055322", False)
+#breaks out SPI3 + PD4 (EXT_CS1) + PD11 (FLOW_MOTION) onto a 6-pin JST-GH connector
+add("J14", "jlc_parts:XY-SM06B-GHS-TB",
+    "jlc:CONN-SMD_XY-SM06B-GHS-TB", "FLOW 6P", "C51940119", False)
 NETS["+3V3"] += ["J14.1"]
 NETS["SPI3_SCK"] += ["J14.2"]
 NETS["SPI3_MISO"] += ["J14.3"]
@@ -1191,20 +1175,56 @@ net("EXT_CS1", "U1.PD4", "J14.5")
 NETS["GND"] += ["J14.6", "J14.7", "J14.8"]
 net("FLOW_MOTION", "U1.PD11")
 
-#dedicated 6-pin JST-SH header on independent timer TIM4 (PWM7-10)
-add("J17", "jlc_parts:SH1_0MM-6P-WT",
-    "jlc:CONN-SMD_SH1.0MM-6P-WT", "SERVO 6P", "C53055322", False)
+#two 1x3 2.54 mm right-angle male headers, side by side on the fore edge
+SERVO_HDR = ("jlc_parts:KH-2_54PH-1X3P-L13_5-WT", "jlc:HDR-SMD_3P-P2.54-H-M_KH-2.54PH-1X3P-L13.5-WT")
+add("J17", *SERVO_HDR, "SERVO1", "C20610212", False)
+add("J23", *SERVO_HDR, "SERVO2", "C20610212", False)
 net("PWM7",  "U1.PD12", "J17.1")
-net("PWM8",  "U1.PD13", "J17.2")
-net("PWM9",  "U1.PD14", "J17.3")
-net("PWM10", "U1.PD15", "J17.4")
-#one power pin for both servos
-NETS["+5V_PAYLOAD"] += ["J17.5"]
-NETS["GND"] += ["J17.6", "J17.7", "J17.8"]
+net("PWM8",  "U1.PD13", "J23.1")
+NETS["GND"] += ["J17.3", "J23.3"]
 
-#the pyro channel (J18, Q5, D5, F1, R54, R55, C87 and PC5) was deleted
+#both servos share +5V_PAYLOAD
+NETS["+5V_PAYLOAD"] += ["J17.2", "J23.2", "D8.1", "C92.1"]
+add("D8", "jlc_parts:PTVS5V0S1UR", "jlc:SOD-123FL_L2.7-W1.8-LS3.8-RD", "PTVS5V0S1UR", "C5380694", False)
+NETS["GND"].append("D8.2")
+CAP("C92", "22u", F_C1206)
+NETS["GND"].append("C92.2")
 
-#the touchdown-switch input (J20, R56 and PD10) was deleted for the same reason
+#+5V -> load switch U24 -> 2.2 ohm sense -> 10u/100n/10p -> 27 nH choke L6 -> ANT_IN
+add("U24", "jlc_parts:AP22653W6-7", "jlc:SOT-23-6_L2.9-W1.6-P0.95-LS2.8-BR",
+    "AP22653", "C2158037", False)
+NETS["+5V"].append("U24.1")
+NETS["GND"].append("U24.2")
+net("BIAS_EN", "U24.3", "U1.PC5", "R59.2")      #EN, active high: MCU PC5, pulled up
+net("BIAS_FAULT", "U24.4", "U1.PD10", "R60.2")  #FAULT#, open drain: MCU PD10, pulled up to +3V3
+net("BIAS_ILIM", "U24.5", "R61.1")
+net("+5V_BIAS_SW", "U24.6", "R62.1", "U25.3")
+#the switch's own bypass at IN and at OUT (DS41186, Power Supply Considerations)
+CAP("C95", "100n"); NETS["+5V"].append("C95.1"); NETS["GND"].append("C95.2")
+CAP("C96", "100n"); NETS["+5V_BIAS_SW"].append("C96.1"); NETS["GND"].append("C96.2")
+RES("R59", "10k"); NETS["+5V"].append("R59.1")
+RES("R60", "10k"); NETS["+3V3"].append("R60.1")
+RES("R61", "210k"); NETS["GND"].append("R61.2")
+
+#feed current: INA180A2 (gain 50) across R62, into ADC3 on PC2_C
+RES("R62", "2R2")
+add("U25", "jlc_parts:INA180A2IDBVR", "jlc:SOT-23-5_L3.0-W1.7-P0.95-LS2.8-BL",
+    "INA180A2", "C192764", False)
+NETS["+5V_BIAS"] = ["R62.2", "U25.4", "C93.1", "C90.1", "C91.1", "L6.1"]
+net("ANT_CURRENT", "U25.1", "U1.PC2_C")
+NETS["GND"].append("U25.2")
+NETS["+3V3"] += ["U25.5", "C94.1"]
+CAP("C93", "10u", F_C0805); NETS["GND"].append("C93.2")
+CAP("C94", "100n");         NETS["GND"].append("C94.2")
+CAP("C90", "100n");         NETS["GND"].append("C90.2")
+CAP("C91", "10p");          NETS["GND"].append("C91.2")
+add("L6", L, "jlc:L0402", "27nH", "C113111", False)
+NETS["ANT_IN"] += ["L6.2"]
+
+#ESD protection on ANT_IN, 0.2 pF:
+add("D7", "Device:D_TVS", "jlc:DSN0603-2_L0.6-W0.3-P0.40-BI", "PESD5V0C1BSF", "C477955", False)
+NETS["ANT_IN"].append("D7.1")
+NETS["GND"].append("D7.2")
 
 add("D_USB", "jlc_parts:B5819W_C8598",
     "jlc:SOD-123_L2.7-W1.6-LS3.7-RD-1", "B5819W", "C8598", False)
@@ -1216,7 +1236,7 @@ del NETS["SPARE_ADC"]                   #PA7 now has a job
 #reverse-polarity protection and the edge connectors
 
 #Q4 is a P-FET that blocks a reversed pack
-add("J12", "Connector:Conn_Coaxial", F_UFL, "U.FL ANT", "C5137195", False)
+add("J12", "jlc_parts:DL-MMCX-KWE-90", "jlc:MMCX-TH_DL-MMCX-KWE-90", "MMCX-KWE-90", "C2894793", False)
 
 #U19: the board measures its own temperature
 #U9's junction is the one number on this board that nothing at a desk can compute
@@ -1251,8 +1271,6 @@ NETS["USART1_TX"] += ["J11.2"]
 NETS["USART1_RX"] += ["J11.3"]
 NETS["GND"] += ["J11.4", "J11.5", "J11.6"]
 
-#J21 (a GH-6P companion / telemetry port on UART7) was specified by the plan
-
 #placement intent
 ADJACENCY = {
     #MCU VDD decoupling - one per supply pin, as close as the package allows
@@ -1277,6 +1295,14 @@ ADJACENCY = {
     #ESD clamps: at the connector, before the trace runs into the board
     "D6": ("J6", "2", 4.0), "U22": ("J3", "2", 6.0), "U23": ("J5", "2", 5.0),
     "C88": ("U22", "5", 1.5), "C89": ("U23", "5", 1.5),
+    #Rev D: servo rail clamp and bulk cap between the two servo headers
+    "D8": ("J17", "2", 6.0), "C92": ("J23", "2", 6.0),
+    "U25": ("U24", "6", 5.0), "R62": ("U24", "6", 3.0), "C93": ("R62", "2", 2.5),
+    "C95": ("U24", "1", 1.5), "C96": ("U24", "6", 1.5),
+    "C94": ("U25", "5", 1.5),
+    #Rev D: Active bias-tee and RF protection at J12
+    "D7": ("J12", "1", 2.5), "L6": ("J12", "1", 3.5), "C52": ("J12", "1", 5.0),
+    "C90": ("L6", "1", 2.0), "C91": ("L6", "1", 2.0), "U24": ("L6", "1", 5.0),
     #U19 is a temperature sensor and its whole value is where it sits
     "U19": ("U9", "1", 5.0),
     "C74": ("U19", "B1", 3.5),
@@ -1342,7 +1368,44 @@ for _r, _lim in (("C22", 3.0), ("C23", 3.0), ("C69", 3.0), ("C70", 3.0),
 
 #geometry
 #one definition
-BOARD = dict(X0=100.0, Y0=99.4, W=45.0, H=47.2, R=0.5, MOUNT=30.5, HOLE_D=4.0)
+BOARD = dict(X0=99.25, Y0=99.4, W=46.5, H=47.2, R=0.5, MOUNT=30.5, HOLE_D=4.0)
+
+#the perimeter, connectors first
+#every perimeter port's mouth points along its footprint's local +y
+CONN_BODY = {
+    "CONN-SMD_XY-SM06B-GHS-TB":         (5.53, 3.22, "[M] STEP bbox in the Rev C GLB"),
+    "CONN-SMD_4P-P1.25_BX-GH1.25-4PWT": (4.13, 2.83, "[M] STEP bbox in the Rev C GLB"),
+    "CONN-SMD_SM08B-GHS-TB-LF-SN":      (6.63, 2.70, "[M] STEP bbox (C265111)"),
+    "CONN-TH_SM03B-GHS-TB-LF-SN":       (3.50, 2.37, "[M] STEP bbox (C514175)"),
+    "USB-C-SMD_TYPE-C-16PIN-2MD-073":   (4.47, 4.86, "[M] STEP bbox in the Rev C GLB"),
+    "TF-SMD_TF-01A":                    (8.05, 9.63, "[M] STEP bbox in the Rev C GLB"),
+    "MMCX-TH_DL-MMCX-KWE-90":           (1.80, 4.80, "[M] STEP bbox (C2894793)"),
+    "HDR-SMD_3P-P2.54-H-M_KH-2.54PH-1X3P-L13.5-WT":
+                                        (3.81, 6.10, "[D] C20610212 land drawing: 2.5 mm "
+                                                     "insulator at y 3.6-6.1, pins to 12.15"),
+}
+
+#where each port goes
+FLOORPLAN_REV_D = {
+    #aft (N): GPS toward the tower, the antenna in the RF corner
+    "J3":  dict(edge="N", side="F", at=122.50, front=-0.05, desc="GPS+I2C GH-6P"),
+    "J12": dict(edge="N", side="F", at=143.00, front=+2.30, desc="MMCX antenna"),
+    "J9":  dict(edge="N", side="B", at=116.90, front=-0.45, desc="I2C GH-4P"),
+    "J6":  dict(edge="N", side="B", at=128.10, front=-0.45, desc="DroneCAN GH-4P"),
+    #fore (S): the two servos side by side, RC and lidar underneath
+    "J17": dict(edge="S", side="F", at=117.75, front=0.00,  desc="servo 1"),
+    "J23": dict(edge="S", side="F", at=127.25, front=0.00,  desc="servo 2"),
+    "J5":  dict(edge="S", side="B", at=116.90, front=-0.45, desc="RC GH-4P"),
+    "J11": dict(edge="S", side="B", at=128.10, front=-0.45, desc="lidar GH-4P"),
+    #starboard (E): companion and USB on top, flow underneath
+    "J21": dict(edge="E", side="F", at=116.30, front=-0.05, desc="companion GH-6P"),
+    "J1":  dict(edge="E", side="F", at=129.00, front=+0.50, desc="USB-C"),
+    "J14": dict(edge="E", side="B", at=116.30, front=-0.05, desc="flow GH-6P"),
+    #port (W): ESC and payload power on top, the microSD underneath
+    "J2":  dict(edge="W", side="F", at=117.60, front=-0.55, desc="ESC GH-8P"),
+    "J22": dict(edge="W", side="F", at=130.30, front=-0.90, desc="payload GH-3P"),
+    "J8":  dict(edge="W", side="B", at=123.50, front=+1.00, desc="microSD"),
+}
 
 _VALUE_FIX = {"R6": "100k", "R7": "24k9", "R42": "100k", "R43": "24k9",
               "R4": "100k", "R5": "22k", "R40": "100k", "R41": "22k"}
@@ -1370,6 +1433,9 @@ PASSIVE_LCSC = {
     ("10k",  F_R0603): "C25804",
     ("27k",  F_R0402): "C25771",  ("47k",  F_R0402): "C25792",
     ("100k", F_R0402): "C25741",
+    ("210k", F_R0402): "C58827",   #U24 RLIM; UNI-ROYAL 0402WGF2103TCE, 1%
+    ("2R2",  F_R0402): "C25101",   #R62 bias-feed sense; UNI-ROYAL 0402WGF220KTCE, 1%
+    ("10p",  F_C0402): "C32949",   #C91; Samsung CL05C100JB5NNNC 10pF 50V C0G
     ("37k4", F_R0402): "C25888",
     ("24k9", F_R0402): "C25874",
     ("10uH", F_L1210): "C167879",     #FNR4030 on a 1210 land - does not fit
@@ -1409,6 +1475,7 @@ if _unpriced:
 RATINGS = {
  #LCSC value V dielectric tol package Tmin Tmax source
  "C1525":    ("100n",  16,  "X7R",     "10%",  "0402",  -55, 125, "[D] LCSC product page, 2026-08-29"),
+ "C32949":   ("10p",   50,  "C0G",     "5%",   "0402",  -55, 125, "[L] jlcpcb.com/partdetail/C32949: CL05C100JB5NNNC 10pF 50V C0G, 2026-10-01"),
  "C82219":   ("47n",   50,  "X7R",     "10%",  "0402",  -55, 125, "[L] JLCPCB part API: FH 0402B473K500NT 47nF 50V X7R 0402, 2026-09-26"),
  "C131394":  ("100n",  50,  "X7R",     "10%",  "0402",  None, None, "[D] LCSC product page, 2026-08-29"),
  "C52923":   ("1u",    25,  "X5R",     "10%",  "0402",  -55,  85, "[D] LCSC product page, 2026-08-29"),
@@ -1447,6 +1514,7 @@ LOADS_5V = [
     ("ELRS receiver on J5",             0.100, 0.100, "[A] docs/HARDWARE.md budget row; ESP-based RX with telemetry"),
     ("TFS20-L rangefinder on J9",       0.106, 0.106, "[D] 0.35 W at 3.3 V via its inline LDO - optional (stage B2), budgeted as fitted"),
     ("GY-53-L1X upward ToF on J9",      0.020, 0.020, "[D] VL53L1X module ~20 mA - optional (stage B2), budgeted as fitted"),
+    ("HC610 LNA through U24 on J12",    0.015, 0.015, "[D] Tallysman HC610: 15 mA at 2.2-12 V, fed down the coax"),
 ]
 LOADS_5V_CONT_A = round(sum(r[1] for r in LOADS_5V), 3)
 LOADS_5V_PEAK_A = round(sum(r[2] for r in LOADS_5V), 3)
@@ -1457,7 +1525,14 @@ INDUCTOR_LOAD_A = {"L2": LOADS_5V_CONT_A}
 #height of each package above the board surface it sits on, mm
 PART_HEIGHT = {
     "CONN-SMD_XY-SM06B": 4.4,   #JST GH 6P
-    "CONN-TH_SM08B": 2.9,       #JST SH 8P - the ESC connector
+    "CONN-SMD_SM08B-GHS": 4.35, #J2 JST GH 8P side entry; [D] JST GH: 4.25 mm
+    "CONN-TH_SM03B-GHS": 4.35,  #J22 JST GH 3P side entry (SMD despite the name)
+    "HDR-SMD_3P-P2.54-H-M_KH": 2.5,  #J17/J23; [D] C20610212 insulator height 2.5 mm
+    "MMCX-TH_DL-MMCX-KWE-90": 4.0,   #J12; [D] DreamLNK drawing: 6.80 overall less 2.80 of pins
+    "L_APV_ANR5040": 4.0,            #L5; [D] 5.0 x 5.0 x 4.0 mm
+    "L0402": 0.5,                    #L6 LQW15AN; [D] Murata 0.5 mm max
+    "DSN0603-2": 0.3,                #D7 PESD5V0C1BSF; [D] Nexperia DSN0603-2, 0.3 mm
+    "Tag-Connect_TC2030-IDC-NL": 0.0,  #J19: bare pads, the cable clips on from above
     "USB-C": 3.2, "TF-SMD": 1.9, "COB": 2.3, "DO-214": 2.3,
     "OPTO": 1.6, "SOIC": 1.8, "SOP": 1.8,
     "LQFP": 1.6, "LGA-14": 0.95, "SENSORS-SMD_MS5611": 1.1,
@@ -1586,13 +1661,18 @@ NET_SOURCE = {
     "+3V3":  "U9.5",       #TLV757P output
     "+3V3A": "U10.5",      #TLV75533 output
     "+3V3_CAN": "U21.2",   #XC6206 output
+    "+5V_BIAS_SW": "U24.6",  #bias-tee load switch output, before the sense resistor
     "VBUS":  "J1.A4B9",    #USB-C
 }
 
 NET_CURRENT = {
+    #J2's VBAT pin to Q4: everything the board takes from the pack
+    "VBAT_IN": 1.2,
     "VBAT": 2.5,
     "+5V":  0.95,
     "+5V_PAYLOAD": 1.5,
+    "+5V_BIAS_SW": 0.155,   #AP22653 limit, RLIM 210k, max (DS41186)
+    "+5V_BIAS": 0.155,
     "+3V3": 0.6,
     "+3V3A": 0.35,
     "+3V3_CAN": 0.1,
@@ -1602,13 +1682,15 @@ NET_CURRENT = {
 #per-load continuous currents for check_power_cut.py
 LOAD_CURRENT = {
     "+5V_PAYLOAD": {
-        #[M] the BEC loom wired to PV1/PV2
-        "PV1.1": 0.565,
+        #[M] Payload 5V port J22: VTX 0.30 + XIAO camera 0.25
+        "J22.1": 0.55,
         #[M] WS2812 strip average, 10% duty rule (HARDWARE.md: 60 mA cont / 600 mA peak)
         "P151.1": 0.06,
         #[D] LD06 steady 0.18 (300 mA is its start-up surge)
         "J11.1": 0.18,
-        "J17.5": 0.50,
+        #[M] Two TVC servos on J17 and J23, pin 2 (250 mA each running)
+        "J17.2": 0.25,
+        "J23.2": 0.25,
         #[D] U21 is the +3V3_CAN LDO feed for the SN65HVD230
         "U21.3": 0.10,
         #[A] one small DroneCAN node (J6 powers the bus per design.py:2098)
@@ -1621,6 +1703,16 @@ LOAD_CURRENT = {
         "R28.1": 0.100,
         #[L] the 25 MHz TCXO, ~2 mA (LOADS_3V3A row)
         "Y2.4": 0.002,
+        #[D] the IMUs and the baro, at their LOADS_3V3A peaks, on each supply pin
+        "U2.5": 0.002, "U2.8": 0.002, "U3.5": 0.002, "U3.8": 0.002,
+        "U4.1": 0.002, "U4.2": 0.002,
+    },
+    "+3V3": {
+        "J14.1": 0.030,                 #flow breakout (LOADS_3V3 row)
+        "U25.5": 0.0003,                #INA180 (LOADS_3V3 row)
+    },
+    "VBUS": {
+        "U12.5": 0.0,                   #USBLC6 ESD clamp: no DC load
     },
     #the +5V rows of LOADS_5V, per pad
     "+5V": {
@@ -1629,16 +1721,18 @@ LOAD_CURRENT = {
         "J3.1": 0.05,                   #M10 GPS + compass
         "J5.1": 0.1,                    #ELRS receiver
         "J9.1": 0.126,                  #TFS20-L 0.106 + upward ToF 0.02
+        "J21.1": 0.25,                  #companion computer telemetry
+        "U24.1": 0.015,                 #active bias-tee for active antenna LNA
     },
 }
 
 #the payload buck (U20, +5V_PAYLOAD)
 PAYLOAD_PROFILES = {
-    "drone": dict(keys=("PV1.1", "P151.1", "J11.1", "U21.3", "J6.1"),
-                  what="quad on GPS/SoOP: VTX + XIAO camera + Iridium antenna on PV1/PV2, "
+    "drone": dict(keys=("J22.1", "P151.1", "J11.1", "U21.3", "J6.1"),
+                  what="quad on GPS/SoOP: VTX + XIAO camera on J22, "
                        "LED strip, LD06 lidar, CAN transceiver and one node"),
-    "lander": dict(keys=("J17.5", "P151.1", "U21.3", "J6.1"),
-                   what="TVC lander: two TVC servos running on J17 (aux servos are "
+    "lander": dict(keys=("J17.2", "J23.2", "P151.1", "U21.3", "J6.1"),
+                   what="TVC lander: two TVC servos running on J17/J23 (aux servos are "
                         "one-shot deployers), LED strip, CAN transceiver and one node"),
 }
 PAYLOAD_ALL_WIRED = tuple(k for k in LOAD_CURRENT["+5V_PAYLOAD"] if k != "P151.1")
@@ -1651,21 +1745,28 @@ def payload_amps(keys):
 PAYLOAD_MISSION_A = {name: payload_amps(p["keys"]) for name, p in PAYLOAD_PROFILES.items()}
 PAYLOAD_ALL_WIRED_A = payload_amps(PAYLOAD_ALL_WIRED)
 RAIL_5V_PAYLOAD = dict(
-    irms_a=1.6, isat_a=2.4,   #[D] L5 is the same FNR4030S100MT (C167879) as L2
+    irms_a=2.1, isat_a=2.5,   #[D] L5 is upsized to CKCS5040-10uH/M (C354610)
     worst_mission=max(PAYLOAD_MISSION_A, key=PAYLOAD_MISSION_A.get),
     worst_mission_a=max(PAYLOAD_MISSION_A.values()),
-    src="[D] FNR4030S100MT Irms/Isat; [M] currents are design.LOAD_CURRENT['+5V_PAYLOAD'] "
+    src="[D] CKCS5040-10uH/M Irms/Isat; [M] currents are design.LOAD_CURRENT['+5V_PAYLOAD'] "
         "keys grouped by design.PAYLOAD_PROFILES")
 INDUCTOR_LOAD_A["L5"] = RAIL_5V_PAYLOAD["worst_mission_a"]
 
 #the TVC servo rail
-#J17 serves two TVC servos from the payload buck U20
+#the antenna feed monitor (firmware/soop/soop_ant.c) what the firmware decides from U25's
+ANT_FEED = dict(
+    sense_ref="R62", gain=50.0, vs=3.3, swing_v=0.02,
+    lna_ma=15.0, short_circuit_ma=35.0,
+    open_ma=3.0, short_ma=28.0, settle_s=0.5, retry_after_s=5.0, retry_off_s=10.0,
+    adc="PC2_C, ADC3_INP0 (SYSCFG PMCR PC2SO open)",
+    src="[D] TI INAx180: A2 gain 50 V/V, output swing to VS-0.02 V; [D] Tallysman HC610 15 mA at 2.2-12 V; [D] Diodes DS41186 Rev 5-2")
+
+
 SERVO_RAIL = dict(
-    ref="J17", net="+5V_PAYLOAD", count=2,
+    refs=("J17", "J23"), net="+5V_PAYLOAD", count=2,
     run_a=0.250, stall_a=0.700,
-    #[M] the buck's output is 5.016 V (R42/R43)
     v_min=4.765, v_max=5.267,
-    src="[D] docs/SENSORS.md: an 8-9 g micro (SG90 class) servo draws ~250 mA running and ~700 mA stalled; [M] J17.5 is the one +5V_PAYLOAD pin (design.NETS)")
+    src="[D] docs/SENSORS.md: an 8-9 g micro (SG90 class) servo draws ~250 mA running and ~700 mA stalled")
 
 
 #what each MCU pin is for, in the electrical sense
@@ -1708,9 +1809,9 @@ PIN_INTENT = {
     "USART2_RX": dict(mcu="in",  why="from GPS TX"),
     "UART7_TX":  dict(mcu="out", why="to companion RX"),
     "UART7_RX":  dict(mcu="in",  why="from companion TX"),
-    "UART7_RTS": dict(mcu="out", why="flow control out"),
-    "PPS_SYNC":  dict(mcu="in",
-                      why="companion PPS edge in (the default config wires it as UART7_CTS, also an input)"),
+    "UART7_CTS": dict(mcu="in",  why="from companion RTS"),
+    "BIAS_EN":   dict(mcu="out", why="MCU enables active bias-tee"),
+    "BIAS_FAULT": dict(mcu="in", why="bias-tee load switch fault flag"),
     "USART6_TX": dict(mcu="out", why="to receiver, or half-duplex CRSF"),
     "RC_IN":     dict(mcu="in",  why="receiver drives the FC"),
     "UART4_TX":  dict(mcu="out", why="to rangefinder/peripheral RX"),
@@ -1744,10 +1845,10 @@ PIN_INTENT = {
                        why="Q3 gate: LOW leaves the 5V Payload rail enabled, HIGH cuts it"),
 
     #TVC servos / secondary actuators (TIM4 on J17)
-    "PWM7":  dict(mcu="out", why="TIM4_CH1 servo / actuator PWM on J17"),
-    "PWM8":  dict(mcu="out", why="TIM4_CH2 servo / actuator PWM on J17"),
-    "PWM9":  dict(mcu="out", why="TIM4_CH3 servo / actuator PWM on J17"),
-    "PWM10": dict(mcu="out", why="TIM4_CH4 servo / actuator PWM on J17"),
+    "PWM7":  dict(mcu="out", why="TIM4_CH1 servo PWM on J17"),
+    "PWM8":  dict(mcu="out", why="TIM4_CH2 servo PWM on J23"),
+    "PWM9":  dict(mcu="out", why="TIM4_CH3, spare - no connector"),
+    "PWM10": dict(mcu="out", why="TIM4_CH4, spare - no connector"),
 
     #lander / recovery peripherals
 
@@ -1766,7 +1867,7 @@ PIN_INTENT = {
 #the one board, and everything that can bolt onto it later
 MODULES = {
     "esc": dict(
-        what="SpeedyBee BLS 60A 4-in-1", lands_on=["J2"], conn="JST-SH 8P (friction fit - a GH-8P does not fit the edge)",
+        what="SpeedyBee BLS 60A 4-in-1", lands_on=["J2"], conn="JST-GH 8P on J2, side entry; a GH-8P to SH-8P lead to the ESC",
         needs_board_change=None, gbp=0, status="fitted",
         ma_5v=0, counted=True,
         note="J2 follows Betaflight's documented SpeedyBee pinout; buzz it before VBAT"),
@@ -1788,55 +1889,56 @@ MODULES = {
         note="Mount settled 2026-09-04: fore or aft of the battery on the top plate"),
     "lidar_360": dict(
         what="LDROBOT LD06, 12 m, INDOOR ONLY", lands_on=["J11"],
-        conn="SERIAL2 (USART1) on J11; J11.1 is +5V_PAYLOAD (U20) in Rev C", bec=True,
+        conn="SERIAL2 (USART1) on J11; J11.1 is +5V_PAYLOAD (U20)", bec=True,
         #price, third and final correction
         needs_board_change=None, gbp=OFFBOARD["lidar"]["gbp"], status="later",
         ma_5v=180, counted=False,
         note="[D] 180 mA running, but 300 mA at START-UP"),
     "rc_link": dict(
-        what="ELRS 2.4 GHz, ESP-based", lands_on=["J5"], conn="JST-SH 4P on J5 (USART6)",
+        what="ELRS 2.4 GHz, ESP-based", lands_on=["J5"], conn="JST-GH 4P on J5 (USART6)",
         needs_board_change=None, gbp=12, status="fitted",
         ma_5v=100, counted=True,
         note="MAVLink downlink caps at 1470 B/s - carries telemetry, never video"),
     "soop_tuner": dict(
         what="SoOP RF front end: Tallysman HC610 active helix (filter + LNA), at the antenna",
-        lands_on=["J12"], conn="U.FL coax into J12 through an inline bias tee; its DC from "
-                               "PV1/PV2 (+5V_PAYLOAD, U20)", bec=True,
+        lands_on=["J12"], conn="MMCX coax into J12; the board's bias tee (U24, L6) feeds "
+                               "its LNA +5 V down the coax", bec=False,
         needs_board_change=None, gbp=115, status="later",
-        ma_5v=15, counted=False,
-        note="the filter+LNA stage the board could not source, bought built into the antenna. 15 mA [D] at 2.2-12 V through a bias tee"),
+        ma_5v=15, counted=True,
+        note="the filter+LNA stage the board could not source, bought built into the antenna. 15 mA [D] at 2.2-12 V, fed by the on-board bias tee - J12 carries +5 V"),
     "fpv": dict(
-        what="5.8 GHz camera + VTX, 25 mW EIRP", lands_on=[],
-        conn="5 V and GND from PV1/PV2 (+5V_PAYLOAD, U20)", bec=True,
+        what="5.8 GHz camera + VTX, 25 mW EIRP", lands_on=["J22"],
+        conn="5 V and GND from J22 (GH-3P, +5V_PAYLOAD, U20)", bec=True,
         needs_board_change=None, gbp=25, status="later",
         ma_5v=300, counted=False,
         note="a 25 mW AIO runs from 5 V, so it does not need the unroutable 9 V block - and from the payload BEC, not this board's buck"),
     "rec_camera": dict(
         what="XIAO ESP32-S3 Sense, records to its own SD", lands_on=[],
-        conn="two wires to PV1/PV2 (+5V_PAYLOAD, U20)", bec=True,
+        conn="its own 1S cell; or, flown with no VTX, J22's GH-3P (+5V_PAYLOAD) - J22 is one "
+             "port, so the VTX and the camera together need a Y-lead", bec=True,
         needs_board_change=None, gbp=14, status="later",
         ma_5v=250, counted=False,
         note="0.25 A, on the payload BEC (or standalone on a 1S cell)"),
     "flow_globalshutter": dict(
         what="global-shutter flow via a companion",
-        lands_on=["P71", "P72", "P73", "P74"],
-        conn="SERIAL6 (UART4) pads, MAVLink OPTICAL_FLOW",
+        lands_on=["J21"],
+        conn="SERIAL1 (UART7) on J21, MAVLink OPTICAL_FLOW",
         needs_board_change=None,
         gbp=60, status="later",
         ma_5v=0, counted=True,
         note="FLOW_TYPE 5 (MAVLink) - the companion does the vision, the H7 just consumes it"),
     "flow_pmw3901": dict(
-        what="PixArt PMW3901 flow", lands_on=["J14"], conn="JST-SH 6P on J14 (SPI3)",
+        what="PixArt PMW3901 flow", lands_on=["J14"], conn="JST-GH 6P on J14 (SPI3)",
         needs_board_change=None,
         gbp=12, status="later",
         ma_5v=0, counted=True,
         note="External PMW3901 flow breakout connects via J14 on SPI3"),
     "payload_5v_rail": dict(
-        what="on-board 5 V buck for payload/servos", lands_on=["J17", "J11"], conn="+5V_PAYLOAD",
+        what="on-board 5 V buck for payload/servos", lands_on=["J17", "J23", "J11"], conn="+5V_PAYLOAD",
         needs_board_change=None,
         gbp=0, status="fitted",
         ma_5v=0, counted=True,
-        note="TPS54332 5V/2.5A switching buck U20 powering servos on J17 and companion on J11"),
+        note="TPS54332 5V/2.5A switching buck U20 powering the servos on J17/J23 and the lidar on J11"),
     "src": "[M] every lands_on asserted against real footprints by the module check",
 }
 
@@ -1860,7 +1962,6 @@ RF_BENCH = dict(
     #a step keeping this fraction of baseline bursts is a pass
     min_fraction_of_baseline=0.5,
     mitigations=["antenna placement and separation", "ferrites on the motor leads",
-                 "ferrite on the bias tee's DC lead",
                  "keep the SDR off the airframe entirely - the receive chain is "
                  "laptop-side, so this board allows it"],
     src="[A] min_fraction_of_baseline is a judgement call; every other field is a slot "
@@ -1892,41 +1993,46 @@ NOT_A_PART = {ref for ref, spec in COMPONENTS.items()
 SILK_NAMES = {
     "J1": "USB", "J2": "ESC", "J3": "GPS", "J5": "RC", "J6": "CAN",
     "J9": "I2C", "J11": "UART2", "J12": "ANT", "J14": "FLOW",
-    "J17": "SERVO", "J19": "SWD",
+    "J17": "SRV1", "J23": "SRV2", "J19": "SWD", "J21": "TELEM", "J22": "P5V",
 }
 #what each solder pad and test point
 PAD_LABELS = {
-    "P41": "5V", "P44": "PPS", "P46": "GND",
-    "P71": "5V", "P72": "TX6", "P73": "RX6", "P74": "GND",
     "P151": "L5V", "P152": "DIN", "P153": "LG",
     "P161": "B5V", "P162": "BZ", "P163": "BG",
-    "PV1": "P5V", "PV2": "PG",
     "TP3": "S5", "TP4": "S6", "TP9": "I", "TP10": "Q",
 }
 #pads the silkscreen has no room to name
 PAD_LABELS_UNPRINTED = {
-    "P44": "boxed in by TP3, TP10, U5 and R20: no 1 mm label reads as its own",
-    "TP3": "probe point; no place for a label 0.5 mm nearer it than any neighbour",
-    "P151": "LED 5V pad crowded by TP10 and U5: no 1 mm label reads as its own",
-    "P153": "LED GND pad beside P161: no 1 mm label reads as its own",
-    "P161": "buzzer 5V pad under L2's keep-out: no 1 mm label reads as its own",
-    "PV1": "payload 5V pad beside PV2's label: no 1 mm label reads as its own",
+    "P162": "buzzer drain pad between P161 and P163, whose labels take the room within 3 mm",
+}
+#connector names the silkscreen has no room for (tools: silk_names.py, 4 mm search)
+SILK_NAMES_UNPRINTED = {
+    "J12": "the only coax jack on the board, inside the RF fence",
+    "J14": "GH-6P under J21 on the bottom; its pads face a column of passives",
+    "J19": "Tag-Connect footprint, bench-only, used with its own cable",
+    "J21": "GH-6P on the east edge; its pads face U13's passives, its body covers the rest",
+    "J23": "0.5 mm from J17 and boxed in by U17 and P151: SRV1 is printed beside J17, "
+           "J23 is the other servo header",
 }
 
 SILK_TITLE = ["IRIDIUM NAV", "KRYSTIAN FILIPEK"]
+#Rev C's hand-placed texts
+SILK_RETIRED = {"PYRO", "SERVO"}
 SILK_TITLE_SIDE = {"IRIDIUM NAV": "bottom", "KRYSTIAN FILIPEK": "top"}
 
 #3D models: bodies that legitimately sit off their outline or reach into the board
 MODEL_EXPECTED = {
+    "J12": (0.01, -1.22),  #the MMCX barrel overhangs the north edge
 }
 MODEL_EXPECTED_SINK = {
     "J1": 0.78,            #USB-C shell legs in their slots
     "J8": 0.61,            #microSD locating posts in their holes
+    "J12": 2.80,           #MMCX legs through the board
 }
 
 #board frame: which edge is forward
-#the reference forward is the TOP edge in KiCad's top view (the USB-C / antenna / SWD edge)
-BOARD_FORWARD = (0, -1)      #KiCad (x right, y down) direction of "forward"
+#forward is the BOTTOM edge in KiCad's top view - the servo / RC edge
+BOARD_FORWARD = (0, +1)      #KiCad (x right, y down) direction of "forward"
 #TDK LGA-14 axes, from the datasheet's top view
 IMU_AXES = {
     "U2": ("icm42688", ("1", "2", "3", "4"), ("8", "9", "10", "11"), ("5", "6", "7"), ("12", "13", "14")),

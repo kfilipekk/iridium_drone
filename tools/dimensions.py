@@ -19,7 +19,7 @@ GROMMET_D = (design.MOUNTING["grommet_d"], design.MOUNTING["src"])
 #height above the board surface
 CONN = {
  "J1": (3.16, 6.5,  "USB-C",         "[D] TYPE-C 16P 2MD(073); [A] plug overmould"),
- "J2": (2.90, 4.0,  "ESC JST-SH 8P", "[D] JST SH series; [A] plug + wire exit"),
+ "J2": (4.35, 4.0,  "ESC JST-GH 8P", "[D] JST GH series; [A] plug + wire exit"),
  "J3": (4.40, 4.0,  "GPS JST-GH 6P", "[D] JST GH series; [A] plug + wire exit"),
  "J8": (1.85, 12.0, "microSD",       "[D] TF-01A; [M] a microSD card is 15 mm long"),
 }
@@ -127,9 +127,12 @@ def main():
 
     h("What is on each board edge")
     hdr("edge", "value", "source")
-    for name, ref in (("top", "J1"), ("left", "J2"), ("bottom", "J3 (GPS) and J8 (microSD)"),
-                      ("right", "nothing")):
-        row(name, ref, "[M]")
+    for name, ref, src in (
+            ("aft (KiCad top)", "J3, J12 on top; J9, J6 below", "[M] design.FLOORPLAN_REV_D"),
+            ("fore", "J17, J23 on top; J5, J11 below", "[M]"),
+            ("east", "J21, J1 on top; J14 below", "[M]"),
+            ("west", "J2, J22 on top; J8 below", "[M]")):
+        row(name, ref, src)
 
     h("Stack, measured up from the frame's bottom plate")
     hdr("level", "height", "source")
@@ -148,11 +151,11 @@ def main():
     z += PCB_T[0]; row("top surface of this board", f"{z:.2f} mm", PCB_T[1])
     ztop = z + max(c[0] for c in CONN.values())
     row("top of the tallest part (J3)", f"{ztop:.2f} mm", "[D] JST GH series")
-    #the kit's inner height is not the number to build
+    #standoff length is a purchase (25 and 33 mm replace the kit's 22 and 30 mm)
     _sto = design.required_standoff(b)
     #the top plate stands on design.TOP_PLATE_MOUNT's standoffs
     row(f"frame's inner space over the mid plate "
-        f"({design.TOP_PLATE_MOUNT['front_standoff']:.0f} mm standoffs)",
+        f"(bought {design.TOP_PLATE_MOUNT['front_standoff']:.0f} mm standoffs)",
         f"{FRAME_H[0]:.2f} mm", FRAME_H[1])
     row("top plate underside above z=0", f"{_sto['top_plate_z']:.2f} mm", _sto["src"])
     row("SPARE under the top plate", f"{_sto['top_plate_z']-ztop:.2f} mm", "[M] derived")
@@ -163,11 +166,13 @@ def main():
     row("clear rectangle around the 30.5 mm pattern", f"{L:.2f} x {W:.2f} mm", "[M]")
     row("stack mounting", f"{pitch_x:.2f} x {pitch_y:.2f} mm M3", "[M]")
     row("inner height, at least", f"{ztop:.2f} mm", "[M] + [D]")
-    row("clear beyond the TOP edge (USB)", f"{max(CONN['J1'][1]-0.0,0):.1f} mm", "[A] plug")
-    row("clear beyond the LEFT edge (ESC)", f"{CONN['J2'][1]:.1f} mm minus 0.40 inboard",
-        "[A] plug")
-    row("clear below the BOTTOM edge (card)", f"{CONN['J8'][1]:.0f} mm on the bottom side",
-        "[M] card length")
+    row("clear beyond the fore edge (servo plugs)",
+        f"{int(design.MATING_CLEARANCE['J17'])} mm", "[M] design.MATING_CLEARANCE")
+    row("clear beyond the east edge at J1 (USB)",
+        f"{int(design.MATING_CLEARANCE['J1'])} mm", "[A] plug overmould")
+    row("clear beyond the west edge, underside (card)",
+        f"{int(design.MATING_CLEARANCE['J8'])} mm", "[M] card length")
+    row("clear beyond every other port", "6 mm", "[D] GH plug + [A] wire bend")
 
     h("Compared with the ESC it stacks on")
     hdr("", "value", "source")

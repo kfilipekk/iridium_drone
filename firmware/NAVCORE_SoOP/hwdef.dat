@@ -106,7 +106,11 @@ define HAL_BATT_CURR_SCALE 40.0
 PC4 SOOP_I_ADC ADC1 SCALE(1)
 # [removed: no airspeed sensor] define HAL_DEFAULT_AIRSPEED_PIN 4
 
-# [removed: no RSSI ADC pin; the pyro channel that used PC5 was removed in Rev C] PC5 RSSI_ADC ADC1
+# [was: PC5 RSSI_ADC ADC1]
+# RSSI arrives over CRSF, so PC5 enables U24, the antenna's bias feed. HIGH,
+# and R59 pulls it up, so the feed is on from power-up; AP_SoOP switches it
+# off on a lasting short or when soop.cfg says ant_feed 0.
+PC5 BIAS_EN OUTPUT HIGH GPIO(84)
 # [removed: RSSI arrives over CRSF] define BOARD_RSSI_ANA_PIN 8
 
 # LED
@@ -188,7 +192,10 @@ PC12 SDMMC1_CK SDMMC1
 PD2 SDMMC1_CMD SDMMC1
 
 # GPIOs
-# [removed: no touchdown input; the lander switch interface was removed in Rev C] PD10  PINIO1 OUTPUT GPIO(81) LOW
+# [was: PD10  PINIO1 OUTPUT GPIO(81) LOW]
+# U24's FAULT#, open drain, pulled up by R60: low on overcurrent,
+# overtemperature or reverse voltage.
+PD10 BIAS_FAULT INPUT GPIO(85)
 # [was: PD11  PINIO2 OUTPUT GPIO(82) LOW]
 # PD11 is reserved for an optical flow motion interrupt. It is not wired on
 # Rev C (J14.6 is GND), so the pull-down holds it idle.
@@ -227,8 +234,8 @@ define HAL_COMPASS_AUTO_ROT_DEFAULT 2
 # H743-V1,      ICM20602, MPU6000
 # H743-V1.5/V2, ICM42605, MPU6000
 # H743-V3,      ICM42688P, ICM42605
-IMU Invensensev3 SPI:icm42688 ROTATION_YAW_270    # U2, from its pads; forward is the top edge
-IMU Invensensev3 SPI:icm42605 ROTATION_YAW_270    # U3, from its pads; forward is the top edge
+IMU Invensensev3 SPI:icm42688 ROTATION_YAW_180    # U2, from its pads; forward is the bottom edge
+IMU Invensensev3 SPI:icm42605 ROTATION_YAW_90    # U3, from its pads; forward is the bottom edge
 # [removed: ICM-20602 not fitted] IMU Invensense SPI:icm20602 ROTATION_ROLL_180_YAW_270
 # [removed: MPU6000 not fitted] IMU Invensense SPI:mpu6000 ROTATION_ROLL_180_YAW_270
 define HAL_DEFAULT_INS_FAST_SAMPLE 1
@@ -265,4 +272,13 @@ define AP_TEMPERATURE_SENSOR_ENABLED 1
 define STM32_ADC_DUAL_MODE TRUE
 define STM32_ADC_SAMPLES_SIZE 32
 define HAL_SOOP_CAPTURE_ENABLED 1
+
+# The antenna feed's current: U25 (INA180A2, x50) across R62 (2R2 ohm), on PC2_C.
+# PC2_C reaches ADC3_INP0 with its analogue switch open; AP_SoOP opens it (SYSCFG PMCR).
+PC2 ANT_CURRENT ADC3 SCALE(1)
+define HAL_SOOP_ANT_ADC_PIN 0
+define HAL_SOOP_ANT_SENSE_OHM 2.2f
+define HAL_SOOP_ANT_GAIN 50.0f
+define HAL_SOOP_ANT_EN_GPIO 84
+define HAL_SOOP_ANT_FAULT_GPIO 85
 

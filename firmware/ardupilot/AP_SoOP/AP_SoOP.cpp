@@ -14,6 +14,9 @@ extern "C" {
 #include <AP_Logger/AP_Logger.h>
 #include <GCS_MAVLink/GCS.h>
 
+#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
+#include <hal.h>             //SYSCFG, for the PC2_C analogue switch
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -42,6 +45,7 @@ AP_SoOP *soop() { return AP_SoOP::get_singleton(); }
 //main thread
 void AP_SoOP::update()
 {
+    ant_update(AP_HAL::micros64() / double(1000000));
     if (!_started) {
         _started = true;
         if (!hal.scheduler->thread_create(FUNCTOR_BIND_MEMBER(&AP_SoOP::thread_main, void),
@@ -105,6 +109,47 @@ void AP_SoOP::update()
     }
 }
 
+//antenna feed
+void AP_SoOP::ant_update(double t)
+{
+#if defined(HAL_SOOP_ANT_EN_GPIO) && defined(HAL_SOOP_ANT_FAULT_GPIO) && defined(HAL_SOOP_ANT_ADC_PIN)
+    if (!_ant_started) {
+        _ant_started = true;
+#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS && defined(STM32H7)
+        //PC2_C reaches ADC3_INP0 only with its analogue switch open
+        SYSCFG->PMCR |= SYSCFG_PMCR_PC2SO;
+#endif
+        _ant_adc = hal.analogin->channel(HAL_SOOP_ANT_ADC_PIN);
+        hal.gpio->pinMode(HAL_SOOP_ANT_EN_GPIO, HAL_GPIO_OUTPUT);
+        hal.gpio->pinMode(HAL_SOOP_ANT_FAULT_GPIO, HAL_GPIO_INPUT);
+        soop_ant_cfg_t cfg;
+        soop_ant_default_cfg(&cfg);
+        soop_ant_init(&_ant, &cfg, t);
+        _ant_reported = -1;
+    }
+    _ant.cfg.feed_enabled = !_ant_feed_off;
+    _ant_ma = _ant_adc ? soop_ant_ma(_ant_adc->voltage_average(), HAL_SOOP_ANT_SENSE_OHM,
+                                     HAL_SOOP_ANT_GAIN) : 0.0f;
+    const bool fault = hal.gpio->read(HAL_SOOP_ANT_FAULT_GPIO) == 0;     //FAULT# is low
+    hal.gpio->write(HAL_SOOP_ANT_EN_GPIO, soop_ant_step(&_ant, t, _ant_ma, fault));
+    if (_ant.state != _ant_reported) {
+        _ant_reported = _ant.state;
+        const MAV_SEVERITY sev = _ant.state == SOOP_ANT_OK ? MAV_SEVERITY_INFO
+                                 : _ant.state == SOOP_ANT_OFF ? MAV_SEVERITY_NOTICE
+                                 : MAV_SEVERITY_WARNING;
+        GCS_SEND_TEXT(sev, "SoOP: antenna %s, %.1f mA", soop_ant_name(_ant.state), double(_ant_ma));
+    }
+    if (t - _ant_log_t >= 1.0) {
+        _ant_log_t = t;
+        AP::logger().WriteStreaming("SOA", "TimeUS,St,mA,En,Flt,Rt", "QBfBBI",
+                                    AP_HAL::micros64(), uint8_t(_ant.state), _ant_ma,
+                                    uint8_t(_ant.en), uint8_t(fault), uint32_t(_ant.retries));
+    }
+#else
+    (void)t;
+#endif
+}
+
 //set-up
 void AP_SoOP::load_config()
 {
@@ -154,6 +199,8 @@ void AP_SoOP::load_config()
             _replay = val != 0;
         } else if (!strcmp(key, "swap_iq")) {
             _swap_iq = val != 0;
+        } else if (!strcmp(key, "ant_feed")) {
+            _ant_feed_off = val == 0;
         } else if (!strcmp(key, "bbg")) {
             _bbg = uint8_t(constrain_int16(int16_t(val), 0, 15));
         } else {

@@ -24,6 +24,8 @@ def local_to_board(fp, lx, ly):
 
 #mating face from the footprint itself: opposite the largest pad row
 def derive_face(fp):
+    if "PinHeader" in fp.GetFPIDAsString() and "Horizontal" in fp.GetFPIDAsString():
+        return (1.0, 0.0), "horizontal pin header contacts step in X, pins in +X"
     rows = {}
     for pad in fp.Pads():
         p = pad.GetPosition()
@@ -36,6 +38,18 @@ def derive_face(fp):
         rows[round(ly, 2)] += 1
     if not rows: return None, "no pads"
     back = max(rows, key=lambda k: (rows[k], -abs(k)))
+    if abs(back) < 0.01:
+        #a single row on the origin (a right-angle pin header)
+        bb = fp.GetCourtyard(pcbnew.B_CrtYd if fp.IsFlipped() else pcbnew.F_CrtYd).BBox()
+        a = math.radians(fp.GetOrientationDegrees())
+        far = []
+        for X in (bb.GetLeft(), bb.GetRight()):
+            for Y in (bb.GetTop(), bb.GetBottom()):
+                dx, dy = X/1e6 - fp.GetPosition().x/1e6, Y/1e6 - fp.GetPosition().y/1e6
+                ly = dx*math.sin(a) + dy*math.cos(a)
+                far.append(-ly if fp.IsFlipped() else ly)
+        face = (0.0, 1.0) if max(far) > -min(far) else (0.0, -1.0)
+        return face, f"{rows[back]} contacts on the origin, courtyard to {max(far):+.2f}/{min(far):+.2f}"
     face = (0.0, 1.0) if back < 0 else (0.0, -1.0)
     return face, f"{rows[back]} contacts at local y {back:+.2f}"
 
@@ -88,7 +102,10 @@ def main():
         #walk from the courtyard centre to its face along the mating direction
         half = (abs(vx)*(cr-cl) + abs(vy)*(cb-ct)) / 2
         mx, my = cx + vx*half, cy + vy*half
-        width = (abs(vy)*(cr-cl) + abs(vx)*(cb-ct)) / 2 + CORRIDOR_MARGIN
+        #the plug travels the corridor, so its width sets it
+        plug_w = design.MATING_PLUG.get(ref, (None,))[0]
+        width = (plug_w / 2 if plug_w else (abs(vy)*(cr-cl) + abs(vx)*(cb-ct)) / 2) \
+            + CORRIDOR_MARGIN
 
         #2 - does the mouth point off the board?
         exit_d = None

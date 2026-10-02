@@ -16,37 +16,46 @@ module plug_box(x, y, ux, uy, w, depth, z0, h) {
 }
 
 module plug_J1() {   // 9.0 mm clearance, 9.00 mm mouth
-    plug_box(0.00, 22.93, 0.0000, 1.0000, 9.00, 9.00, fc_z + fc_pcb, plug_h);
+    plug_box(23.75, -6.00, 1.0000, -0.0000, 9.00, 9.00, fc_z + fc_pcb, plug_h);
 }
-module plug_J2() {   // 6.0 mm clearance, 10.60 mm mouth
-    plug_box(-22.19, 4.90, -1.0000, -0.0000, 10.60, 6.00, fc_z + fc_pcb, plug_h);
+module plug_J2() {   // 6.0 mm clearance, 12.90 mm mouth
+    plug_box(-22.70, 5.40, -1.0000, -0.0000, 12.90, 6.00, fc_z + fc_pcb, plug_h);
 }
-module plug_J3() {   // 3.6 mm clearance, 10.40 mm mouth
-    plug_box(12.23, -10.85, 0.0000, -1.0000, 10.40, 3.60, fc_z + fc_pcb, plug_h);
+module plug_J3() {   // 6.0 mm clearance, 10.40 mm mouth
+    plug_box(0.00, 23.55, 0.0000, 1.0000, 10.40, 6.00, fc_z + fc_pcb, plug_h);
 }
 module plug_J5() {   // 6.0 mm clearance, 7.90 mm mouth
-    plug_box(22.51, 2.15, 1.0000, -0.0000, 7.90, 6.00, fc_z + fc_pcb, plug_h);
+    plug_box(-5.60, -23.15, 0.0000, -1.0000, 7.90, 6.00, fc_z - plug_h, plug_h);
 }
 module plug_J6() {   // 6.0 mm clearance, 7.90 mm mouth
-    plug_box(22.35, -8.06, 1.0000, -0.0000, 7.90, 6.00, fc_z - plug_h, plug_h);
+    plug_box(5.60, 23.15, 0.0000, 1.0000, 7.90, 6.00, fc_z - plug_h, plug_h);
 }
 module plug_J8() {   // 14.0 mm clearance, 15.00 mm mouth
-    plug_box(-0.30, -21.45, 0.0000, -1.0000, 15.00, 14.00, fc_z - plug_h, plug_h);
+    plug_box(-24.25, -0.50, -1.0000, -0.0000, 15.00, 14.00, fc_z - plug_h, plug_h);
 }
 module plug_J9() {   // 6.0 mm clearance, 7.90 mm mouth
-    plug_box(-22.23, -7.11, -1.0000, -0.0000, 7.90, 6.00, fc_z + fc_pcb, plug_h);
+    plug_box(-5.60, 23.15, 0.0000, 1.0000, 7.90, 6.00, fc_z - plug_h, plug_h);
 }
 module plug_J11() {   // 6.0 mm clearance, 7.90 mm mouth
-    plug_box(-22.02, -5.36, -1.0000, -0.0000, 7.90, 6.00, fc_z - plug_h, plug_h);
+    plug_box(5.60, -23.15, 0.0000, -1.0000, 7.90, 6.00, fc_z - plug_h, plug_h);
 }
-module plug_J14() {   // 6.0 mm clearance, 8.60 mm mouth
-    plug_box(9.43, 23.65, 0.0000, 1.0000, 8.60, 6.00, fc_z - plug_h, plug_h);
+module plug_J12() {   // 6.0 mm clearance, 5.11 mm mouth
+    plug_box(20.50, 25.90, 0.0000, 1.0000, 5.11, 6.00, fc_z + fc_pcb, plug_h);
 }
-module plug_J17() {   // 6.0 mm clearance, 8.60 mm mouth
-    plug_box(-8.32, -23.16, 0.0000, -1.0000, 8.60, 6.00, fc_z + fc_pcb, plug_h);
+module plug_J14() {   // 6.0 mm clearance, 10.40 mm mouth
+    plug_box(23.20, 6.70, 1.0000, -0.0000, 10.40, 6.00, fc_z - plug_h, plug_h);
 }
-module plug_J19() {   // 6.0 mm clearance, 6.60 mm mouth
-    plug_box(-9.38, 23.56, 0.0000, 1.0000, 6.60, 6.00, fc_z - plug_h, plug_h);
+module plug_J17() {   // 17.0 mm clearance, 8.00 mm mouth
+    plug_box(-4.75, -23.60, 0.0000, -1.0000, 8.00, 17.00, fc_z + fc_pcb, plug_h);
+}
+module plug_J21() {   // 6.0 mm clearance, 10.40 mm mouth
+    plug_box(23.20, 6.70, 1.0000, -0.0000, 10.40, 6.00, fc_z + fc_pcb, plug_h);
+}
+module plug_J22() {   // 6.0 mm clearance, 6.65 mm mouth
+    plug_box(-22.35, -7.30, -1.0000, -0.0000, 6.65, 6.00, fc_z + fc_pcb, plug_h);
+}
+module plug_J23() {   // 17.0 mm clearance, 8.00 mm mouth
+    plug_box(4.75, -23.60, 0.0000, -1.0000, 8.00, 17.00, fc_z + fc_pcb, plug_h);
 }
 
 module plugs() {
@@ -58,7 +67,10 @@ module plugs() {
     plug_J8();
     plug_J9();
     plug_J11();
+    plug_J12();
     plug_J14();
     plug_J17();
-    plug_J19();
+    plug_J21();
+    plug_J22();
+    plug_J23();
 }
