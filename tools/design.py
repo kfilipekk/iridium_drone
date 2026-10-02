@@ -379,8 +379,8 @@ def fmt_pattern(pitches_mm):
     return " / ".join(f"{p:.0f}x{p:.0f}" for p in sorted(pitches_mm))
 
 #the skid is a part you print
-SKID = dict(t=3.5, drop=40.0, hole_pitch=MOTOR_JOINT["pitch_mm"], printed=True,
-            #drop raised 25 -> 40 mm to give the LD06 a home
+SKID = dict(t=3.5, drop=45.0, hole_pitch=MOTOR_JOINT["pitch_mm"], printed=True,
+            #drop raised 25 -> 40 mm to give the LD06 a home, then 45 mm
             src="[D] 19x19 pitch is the motor's bolt pattern (BrotherHobby Avenger); [M] 3.5 mm thickness is a design choice for a printed part")
 
 #belly depth is SKID's drop plus its pad thickness
