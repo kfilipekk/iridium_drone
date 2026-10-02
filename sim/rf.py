@@ -13,9 +13,15 @@ L_CHOKE = CHOKE["inductance_nh"] * 1e-9          #27 nH
 DCR = CHOKE["dcr_ohm"]                            #0.52 ohm
 CJ = ESD["cj_pf"] * 1e-12                         #200 fF
 C_BLK = value(D.COMPONENTS["C52"][2])             #series DC block, ANT_IN -> RFIN
-C_TEE = 1e-9                                      #[A] the tee's own DC feedthrough, ~1 nF
+#the bias feed's filter at the choke's DC end: C90 100 nF and C91 10 pF
+C_TEE = value(D.COMPONENTS["C90"][2]) + value(D.COMPONENTS["C91"][2])
+C_BULK = value(D.COMPONENTS["C93"][2])            #10 uF after the sense resistor
+R_SENSE = value(D.COMPONENTS[D.ANT_FEED["sense_ref"]][2])
+R_SWITCH = 0.135                                  #[D] AP22653 RDS(on) max over -40..85 C
+I_LIMIT_MAX = 0.155                               #[D] DS41186: RLIM 210k, ILIMIT max at 25 C
+P_SENSE_MAX = 0.0625                              #[D] 0402 thick film, 1/16 W at 70 C
 R_SYS = 50.0                                      #[D] MAX2112 RF input is 50 ohm nominal
-DC_RAIL = 5.016                                   #the payload rail feeding the tee
+DC_RAIL = 5.016                                   #+5V, the main buck (design.BUCK_RAILS)
 #[D] Tallysman HC610 datasheet: the LNA takes 15 mA at 2.2-12 V
 LNA_I, LNA_V_MIN, LNA_V_MAX = 0.015, 2.2, 12.0
 BAND_HZ = (1.6165e9, 1.6265e9)
@@ -25,9 +31,12 @@ INSL_MAX_DB = 0.5                                 #budget for the whole on-board
 
 #DC: the payload rail, the choke, the LNA's 15 mA
 def bias():
-    net = f"""* HC610 LNA bias through the bias-tee choke
+    net = f"""* HC610 LNA bias: +5V, U24, R62, the filter, the choke
 Vdc vdc 0 {DC_RAIL}
-Rch vdc a {DCR}
+Rsw vdc sw {R_SWITCH}
+Rsen sw b {R_SENSE}
+Cbulk b 0 {C_BULK}
+Rch b a {DCR}
 Lch a ant {L_CHOKE}
 Iload ant 0 {LNA_I}
 Cesd ant 0 {CJ}
@@ -84,11 +93,19 @@ def main(chk=None):
     v_ant, v_rfin = bias()
     drop = DC_RAIL - v_ant
     print(f"  DC  LNA supply at ANT_IN: {v_ant:.4f} V "
-          f"(rail {DC_RAIL:.3f} V less {drop*1e3:.1f} mV of choke DCR)")
+          f"(rail {DC_RAIL:.3f} V less {drop*1e3:.1f} mV of switch, sense and choke)")
     print(f"  DC  at RFIN through C52:  {v_rfin*1e6:.3f} uV")
     chk.ok(LNA_V_MIN <= v_ant <= LNA_V_MAX,
            "HC610 LNA supply inside its 2.2-12 V window",
-           f"{v_ant:.3f} V through the choke's {DCR:.2f} ohm")
+           f"{v_ant:.3f} V through {R_SWITCH + R_SENSE + DCR:.2f} ohm of feed")
+    #a coax short with some resistance left in it can sit just under the switch's limit
+    p_sense = I_LIMIT_MAX ** 2 * R_SENSE
+    print(f"  DC  R62 at the switch's {I_LIMIT_MAX*1e3:.0f} mA worst-case limit: "
+          f"{p_sense*1e3:.1f} mW of its {P_SENSE_MAX*1e3:.1f} mW")
+    chk.ok(p_sense < P_SENSE_MAX,
+           "the sense resistor survives a short held at the switch's maximum limit",
+           f"{p_sense*1e3:.1f} mW vs {P_SENSE_MAX*1e3:.1f} mW; soop_ant switches the feed "
+           f"off after {D.ANT_FEED['retry_after_s']:.0f} s of it")
     chk.ok(abs(v_rfin) < 1e-3,
            "C52 blocks the LNA's DC from the tuner's RF input",
            f"{v_rfin*1e6:.3f} uV at RFIN")

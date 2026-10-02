@@ -1,74 +1,66 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1343" height="762" viewBox="0 0 1343 762">
+<svg xmlns="http://www.w3.org/2000/svg" width="1385" height="762" viewBox="0 0 1385 762">
 <rect width="100%" height="100%" fill="#faf9f7"/>
-<text x="20" y="26" font-family="monospace" font-size="16" font-weight="bold" fill="#111">NAVCORE-SoOP pad map (45.1 x 47.3 mm) - reference, then what the silkscreen prints</text>
-<rect x="20.0" y="50" width="631.4" height="662.2" rx="8" fill="#0f3d2e" stroke="#08251c" stroke-width="2"/>
+<text x="20" y="26" font-family="monospace" font-size="16" font-weight="bold" fill="#111">NAVCORE-SoOP pad map (46.6 x 47.3 mm) - reference, then what the silkscreen prints; dashed connectors are not named on the board</text>
+<rect x="20.0" y="50" width="652.4" height="662.2" rx="8" fill="#0f3d2e" stroke="#08251c" stroke-width="2"/>
 <text x="20.0" y="734.2" font-family="monospace" font-size="13" fill="#333">TOP, seen from above</text>
-<rect x="608.0" y="592.5" width="18" height="18" rx="3" fill="#f5c542" stroke="#222"/>
-<text x="617.0" y="589.5" font-family="monospace" font-size="9" text-anchor="middle" fill="#fff">P41</text>
-<text x="617.0" y="605.5" font-family="monospace" font-size="9" font-weight="bold" text-anchor="middle" fill="#111">5V</text>
-<rect x="296.5" y="547.0" width="18" height="18" rx="3" fill="#f5c542" stroke="#222"/>
-<text x="305.5" y="544.0" font-family="monospace" font-size="9" text-anchor="middle" fill="#fff">P44</text>
-<text x="305.5" y="560.0" font-family="monospace" font-size="9" font-weight="bold" text-anchor="middle" fill="#111">PPS</text>
-<rect x="412.0" y="641.5" width="18" height="18" rx="3" fill="#f5c542" stroke="#222"/>
-<text x="421.0" y="638.5" font-family="monospace" font-size="9" text-anchor="middle" fill="#fff">P46</text>
-<text x="421.0" y="654.5" font-family="monospace" font-size="9" font-weight="bold" text-anchor="middle" fill="#111">GND</text>
-<rect x="415.5" y="676.5" width="18" height="18" rx="3" fill="#f5c542" stroke="#222"/>
-<text x="424.5" y="673.5" font-family="monospace" font-size="9" text-anchor="middle" fill="#fff">P71</text>
-<text x="424.5" y="689.5" font-family="monospace" font-size="9" font-weight="bold" text-anchor="middle" fill="#111">5V</text>
-<rect x="524.0" y="655.5" width="18" height="18" rx="3" fill="#f5c542" stroke="#222"/>
-<text x="533.0" y="652.5" font-family="monospace" font-size="9" text-anchor="middle" fill="#fff">P72</text>
-<text x="533.0" y="668.5" font-family="monospace" font-size="9" font-weight="bold" text-anchor="middle" fill="#111">TX6</text>
-<rect x="615.0" y="442.0" width="18" height="18" rx="3" fill="#f5c542" stroke="#222"/>
-<text x="624.0" y="439.0" font-family="monospace" font-size="9" text-anchor="middle" fill="#fff">P73</text>
-<text x="624.0" y="455.0" font-family="monospace" font-size="9" font-weight="bold" text-anchor="middle" fill="#111">RX6</text>
-<rect x="104.0" y="88.5" width="18" height="18" rx="3" fill="#f5c542" stroke="#222"/>
-<text x="113.0" y="85.5" font-family="monospace" font-size="9" text-anchor="middle" fill="#fff">TP1</text>
-<text x="113.0" y="101.5" font-family="monospace" font-size="9" font-weight="bold" text-anchor="middle" fill="#111">DIO</text>
-<rect x="296.5" y="508.5" width="18" height="18" rx="3" fill="#f5c542" stroke="#222"/>
-<text x="305.5" y="505.5" font-family="monospace" font-size="9" text-anchor="middle" fill="#fff">TP10</text>
-<text x="305.5" y="521.5" font-family="monospace" font-size="9" font-weight="bold" text-anchor="middle" fill="#111">Q</text>
-<rect x="44.5" y="148.0" width="18" height="18" rx="3" fill="#f5c542" stroke="#222"/>
-<text x="53.5" y="145.0" font-family="monospace" font-size="9" text-anchor="middle" fill="#fff">TP2</text>
-<text x="53.5" y="161.0" font-family="monospace" font-size="9" font-weight="bold" text-anchor="middle" fill="#111">CLK</text>
-<rect x="604.5" y="547.0" width="18" height="18" rx="3" fill="#f5c542" stroke="#222"/>
-<text x="613.5" y="544.0" font-family="monospace" font-size="9" text-anchor="middle" fill="#fff">TP20</text>
-<text x="613.5" y="560.0" font-family="monospace" font-size="9" font-weight="bold" text-anchor="middle" fill="#111">GND</text>
-<rect x="454.0" y="554.0" width="18" height="18" rx="3" fill="#f5c542" stroke="#222"/>
-<text x="463.0" y="551.0" font-family="monospace" font-size="9" text-anchor="middle" fill="#fff">TP21</text>
-<text x="463.0" y="567.0" font-family="monospace" font-size="9" font-weight="bold" text-anchor="middle" fill="#111">3V3</text>
-<rect x="492.5" y="260.0" width="18" height="18" rx="3" fill="#f5c542" stroke="#222"/>
-<text x="501.5" y="257.0" font-family="monospace" font-size="9" text-anchor="middle" fill="#fff">TP22</text>
-<text x="501.5" y="273.0" font-family="monospace" font-size="9" font-weight="bold" text-anchor="middle" fill="#111">VSRV</text>
-<rect x="335.0" y="522.5" width="18" height="18" rx="3" fill="#f5c542" stroke="#222"/>
-<text x="344.0" y="519.5" font-family="monospace" font-size="9" text-anchor="middle" fill="#fff">TP3</text>
-<text x="344.0" y="535.5" font-family="monospace" font-size="9" font-weight="bold" text-anchor="middle" fill="#111">S5</text>
-<rect x="384.0" y="522.5" width="18" height="18" rx="3" fill="#f5c542" stroke="#222"/>
-<text x="393.0" y="519.5" font-family="monospace" font-size="9" text-anchor="middle" fill="#fff">TP4</text>
-<text x="393.0" y="535.5" font-family="monospace" font-size="9" font-weight="bold" text-anchor="middle" fill="#111">S6</text>
-<rect x="471.5" y="592.5" width="18" height="18" rx="3" fill="#f5c542" stroke="#222"/>
-<text x="480.5" y="589.5" font-family="monospace" font-size="9" text-anchor="middle" fill="#fff">TP7</text>
-<text x="480.5" y="605.5" font-family="monospace" font-size="9" font-weight="bold" text-anchor="middle" fill="#111">LED</text>
-<rect x="125.0" y="435.0" width="18" height="18" rx="3" fill="#f5c542" stroke="#222"/>
-<text x="134.0" y="432.0" font-family="monospace" font-size="9" text-anchor="middle" fill="#fff">TP8</text>
-<text x="134.0" y="448.0" font-family="monospace" font-size="9" font-weight="bold" text-anchor="middle" fill="#111">BZ</text>
-<rect x="475.0" y="305.5" width="18" height="18" rx="3" fill="#f5c542" stroke="#222"/>
-<text x="484.0" y="302.5" font-family="monospace" font-size="9" text-anchor="middle" fill="#fff">TP9</text>
-<text x="484.0" y="318.5" font-family="monospace" font-size="9" font-weight="bold" text-anchor="middle" fill="#111">I</text>
-<rect x="691.4" y="50" width="631.4" height="662.2" rx="8" fill="#0f3d2e" stroke="#08251c" stroke-width="2"/>
-<text x="691.4" y="734.2" font-family="monospace" font-size="13" fill="#333">BOTTOM, seen from below</text>
-<rect x="1192.8" y="648.5" width="18" height="18" rx="3" fill="#f5c542" stroke="#222"/>
-<text x="1201.8" y="645.5" font-family="monospace" font-size="9" text-anchor="middle" fill="#fff">P74</text>
-<text x="1201.8" y="661.5" font-family="monospace" font-size="9" font-weight="bold" text-anchor="middle" fill="#111">GND</text>
-<rect x="1154.3" y="627.5" width="18" height="18" rx="3" fill="#f5c542" stroke="#222"/>
-<text x="1163.3" y="624.5" font-family="monospace" font-size="9" text-anchor="middle" fill="#fff">PV1</text>
-<text x="1163.3" y="640.5" font-family="monospace" font-size="9" font-weight="bold" text-anchor="middle" fill="#111">5VP</text>
-<rect x="835.8" y="536.5" width="18" height="18" rx="3" fill="#f5c542" stroke="#222"/>
-<text x="844.8" y="533.5" font-family="monospace" font-size="9" text-anchor="middle" fill="#fff">PV2</text>
-<text x="844.8" y="549.5" font-family="monospace" font-size="9" font-weight="bold" text-anchor="middle" fill="#111">GND</text>
-<rect x="1108.8" y="249.5" width="18" height="18" rx="3" fill="#f5c542" stroke="#222"/>
-<text x="1117.8" y="246.5" font-family="monospace" font-size="9" text-anchor="middle" fill="#fff">TP5</text>
-<text x="1117.8" y="262.5" font-family="monospace" font-size="9" font-weight="bold" text-anchor="middle" fill="#111">TX2</text>
-<rect x="1199.8" y="487.5" width="18" height="18" rx="3" fill="#f5c542" stroke="#222"/>
-<text x="1208.8" y="484.5" font-family="monospace" font-size="9" text-anchor="middle" fill="#fff">TP6</text>
-<text x="1208.8" y="500.5" font-family="monospace" font-size="9" font-weight="bold" text-anchor="middle" fill="#111">RX2</text>
+<rect x="564.7" y="384.4" width="98.6" height="161.4" fill="none" stroke="#9fd3c0" stroke-width="1.5"/>
+<text x="614.0" y="469.1" font-family="monospace" font-size="10" text-anchor="middle" fill="#9fd3c0">J1 USB</text>
+<rect x="597.4" y="19.3" width="71.5" height="102.2" fill="none" stroke="#9fd3c0" stroke-width="1.5" stroke-dasharray="4 3"/>
+<text x="633.2" y="74.4" font-family="monospace" font-size="10" text-anchor="middle" fill="#9fd3c0">J12 ANT</text>
+<rect x="216.5" y="598.5" width="126.4" height="201.9" fill="none" stroke="#9fd3c0" stroke-width="1.5"/>
+<text x="279.7" y="703.4" font-family="monospace" font-size="10" text-anchor="middle" fill="#9fd3c0">J17 SRV1</text>
+<rect x="188.8" y="127.1" width="57.3" height="99.3" fill="none" stroke="#9fd3c0" stroke-width="1.5" stroke-dasharray="4 3"/>
+<text x="217.4" y="180.7" font-family="monospace" font-size="10" text-anchor="middle" fill="#9fd3c0">J19 SWD</text>
+<rect x="18.9" y="193.6" width="86.4" height="223.9" fill="none" stroke="#9fd3c0" stroke-width="1.5"/>
+<text x="62.1" y="309.5" font-family="monospace" font-size="10" text-anchor="middle" fill="#9fd3c0">J2 ESC</text>
+<rect x="586.8" y="193.4" width="85.8" height="187.7" fill="none" stroke="#9fd3c0" stroke-width="1.5" stroke-dasharray="4 3"/>
+<text x="629.7" y="291.3" font-family="monospace" font-size="10" text-anchor="middle" fill="#9fd3c0">J21 TELEM</text>
+<rect x="19.5" y="418.8" width="89.7" height="128.9" fill="none" stroke="#9fd3c0" stroke-width="1.5"/>
+<text x="64.4" y="487.3" font-family="monospace" font-size="10" text-anchor="middle" fill="#9fd3c0">J22 P5V</text>
+<rect x="349.5" y="598.5" width="126.4" height="201.9" fill="none" stroke="#9fd3c0" stroke-width="1.5" stroke-dasharray="4 3"/>
+<text x="412.7" y="703.4" font-family="monospace" font-size="10" text-anchor="middle" fill="#9fd3c0">J23 SRV2</text>
+<rect x="252.3" y="49.8" width="187.7" height="85.8" fill="none" stroke="#9fd3c0" stroke-width="1.5"/>
+<text x="346.2" y="96.7" font-family="monospace" font-size="10" text-anchor="middle" fill="#9fd3c0">J3 GPS</text>
+<rect x="508.0" y="670.3" width="18" height="18" rx="3" fill="#f5c542" stroke="#222"/>
+<text x="517.0" y="667.3" font-family="monospace" font-size="9" text-anchor="middle" fill="#fff">P151</text>
+<text x="517.0" y="683.3" font-family="monospace" font-size="9" font-weight="bold" text-anchor="middle" fill="#111">L5V</text>
+<rect x="545.8" y="670.3" width="18" height="18" rx="3" fill="#f5c542" stroke="#222"/>
+<text x="554.8" y="667.3" font-family="monospace" font-size="9" text-anchor="middle" fill="#fff">P152</text>
+<text x="554.8" y="683.3" font-family="monospace" font-size="9" font-weight="bold" text-anchor="middle" fill="#111">DIN</text>
+<rect x="587.0" y="670.3" width="18" height="18" rx="3" fill="#f5c542" stroke="#222"/>
+<text x="596.0" y="667.3" font-family="monospace" font-size="9" text-anchor="middle" fill="#fff">P153</text>
+<text x="596.0" y="683.3" font-family="monospace" font-size="9" font-weight="bold" text-anchor="middle" fill="#111">LG</text>
+<rect x="83.8" y="670.3" width="18" height="18" rx="3" fill="#f5c542" stroke="#222"/>
+<text x="92.8" y="667.3" font-family="monospace" font-size="9" text-anchor="middle" fill="#fff">P161</text>
+<text x="92.8" y="683.3" font-family="monospace" font-size="9" font-weight="bold" text-anchor="middle" fill="#111">B5V</text>
+<rect x="125.0" y="670.3" width="18" height="18" rx="3" fill="#f5c542" stroke="#222"/>
+<text x="134.0" y="667.3" font-family="monospace" font-size="9" text-anchor="middle" fill="#fff">P162</text>
+<text x="134.0" y="683.3" font-family="monospace" font-size="9" font-weight="bold" text-anchor="middle" fill="#111">BZ</text>
+<rect x="163.5" y="670.3" width="18" height="18" rx="3" fill="#f5c542" stroke="#222"/>
+<text x="172.5" y="667.3" font-family="monospace" font-size="9" text-anchor="middle" fill="#fff">P163</text>
+<text x="172.5" y="683.3" font-family="monospace" font-size="9" font-weight="bold" text-anchor="middle" fill="#111">BG</text>
+<rect x="289.5" y="151.5" width="18" height="18" rx="3" fill="#f5c542" stroke="#222"/>
+<text x="298.5" y="148.5" font-family="monospace" font-size="9" text-anchor="middle" fill="#fff">TP10</text>
+<text x="298.5" y="164.5" font-family="monospace" font-size="9" font-weight="bold" text-anchor="middle" fill="#111">Q</text>
+<rect x="475.0" y="477.0" width="18" height="18" rx="3" fill="#f5c542" stroke="#222"/>
+<text x="484.0" y="474.0" font-family="monospace" font-size="9" text-anchor="middle" fill="#fff">TP3</text>
+<text x="484.0" y="490.0" font-family="monospace" font-size="9" font-weight="bold" text-anchor="middle" fill="#111">S5</text>
+<rect x="153.0" y="102.5" width="18" height="18" rx="3" fill="#f5c542" stroke="#222"/>
+<text x="162.0" y="99.5" font-family="monospace" font-size="9" text-anchor="middle" fill="#fff">TP4</text>
+<text x="162.0" y="115.5" font-family="monospace" font-size="9" font-weight="bold" text-anchor="middle" fill="#111">S6</text>
+<rect x="520.5" y="106.0" width="18" height="18" rx="3" fill="#f5c542" stroke="#222"/>
+<text x="529.5" y="103.0" font-family="monospace" font-size="9" text-anchor="middle" fill="#fff">TP9</text>
+<text x="529.5" y="119.0" font-family="monospace" font-size="9" font-weight="bold" text-anchor="middle" fill="#111">I</text>
+<rect x="712.4" y="50" width="652.4" height="662.2" rx="8" fill="#0f3d2e" stroke="#08251c" stroke-width="2"/>
+<text x="712.4" y="734.2" font-family="monospace" font-size="13" fill="#333">BOTTOM, seen from below</text>
+<rect x="883.1" y="626.7" width="154.1" height="85.8" fill="none" stroke="#9fd3c0" stroke-width="1.5"/>
+<text x="960.2" y="673.6" font-family="monospace" font-size="10" text-anchor="middle" fill="#9fd3c0">J11 UART2</text>
+<rect x="712.2" y="193.4" width="85.8" height="187.7" fill="none" stroke="#9fd3c0" stroke-width="1.5" stroke-dasharray="4 3"/>
+<text x="755.1" y="291.3" font-family="monospace" font-size="10" text-anchor="middle" fill="#9fd3c0">J14 FLOW</text>
+<rect x="1039.9" y="626.7" width="154.1" height="85.8" fill="none" stroke="#9fd3c0" stroke-width="1.5"/>
+<text x="1117.0" y="673.6" font-family="monospace" font-size="10" text-anchor="middle" fill="#9fd3c0">J5 RC</text>
+<rect x="883.1" y="49.7" width="154.1" height="85.8" fill="none" stroke="#9fd3c0" stroke-width="1.5"/>
+<text x="960.2" y="96.6" font-family="monospace" font-size="10" text-anchor="middle" fill="#9fd3c0">J6 CAN</text>
+<rect x="1039.9" y="49.7" width="154.1" height="85.8" fill="none" stroke="#9fd3c0" stroke-width="1.5"/>
+<text x="1117.0" y="96.6" font-family="monospace" font-size="10" text-anchor="middle" fill="#9fd3c0">J9 I2C</text>
 </svg>
