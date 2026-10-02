@@ -6233,7 +6233,7 @@
 		(property "Reference" "J2" (at 397.51 57.15 0) (effects (font (size 1.27 1.27)) (justify left)))
 		(property "Value" "ESC 8P" (at 397.51 58.42 0) (effects (font (size 1.27 1.27)) (justify left)))
 		(property "Footprint" "jlc:CONN-SMD_SM08B-GHS-TB-LF-SN" (at 397.51 60.96 0) (effects (font (size 1.27 1.27)) hide))
-		(property "LCSC" "C265111" (at 397.51 60.96 0) (effects (font (size 1.27 1.27)) hide))
+		(property "LCSC" "C42376901" (at 397.51 60.96 0) (effects (font (size 1.27 1.27)) hide))
 		(pin "1" (uuid "6b7b82ec-2727-42fa-8a73-52a7f3df3225"))
 		(pin "2" (uuid "4c7edfd3-1000-4ff3-8aee-02113c6ebef8"))
 		(pin "3" (uuid "3775f56f-dbd4-4b86-b6e9-42657879f51b"))

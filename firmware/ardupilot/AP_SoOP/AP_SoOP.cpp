@@ -144,6 +144,10 @@ void AP_SoOP::ant_update(double t)
         AP::logger().WriteStreaming("SOA", "TimeUS,St,mA,En,Flt,Rt", "QBfBBI",
                                     AP_HAL::micros64(), uint8_t(_ant.state), _ant_ma,
                                     uint8_t(_ant.en), uint8_t(fault), uint32_t(_ant.retries));
+#if HAL_GCS_ENABLED
+        //live on the GCS too (Mission Planner's Status tab, QGC's MAVLink inspector)
+        gcs().send_named_float("ANT_MA", _ant_ma);
+#endif
     }
 #else
     (void)t;
