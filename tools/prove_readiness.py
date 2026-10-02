@@ -31,8 +31,14 @@ def gated_tools():
 
 def passing_checks():
     """A verdict per gated check, as a real run would supply."""
-    return [("x", p["check"], "PASS", "") for p in ORIG
-            if p["cls"] == GATED and "check" in p]
+    rows = []
+    for p in ORIG:
+        if p["cls"] != GATED:
+            continue
+        rows += [("x", n, "PASS", "") for n in readiness._names(p)]
+        if p.get("group"):
+            rows.append((p["group"], f"synthetic {p['group']} check", "PASS", ""))
+    return rows
 
 
 def all_tools_pass():
@@ -129,8 +135,9 @@ rep = readiness.evaluate([], {})
 soft = {p["id"] for p in ORIG if p["cls"] != GATED}
 check("no ADVISORY/BENCH/ORDER_ACTION/FLY entry ever blocks",
       not (set(blockers(rep)) & soft), f"intersection={sorted(set(blockers(rep)) & soft)}")
-check("every gated entry has a tool= or check=",
-      all(("tool" in p) or ("check" in p) for p in ORIG if p["cls"] == GATED))
+check("every gated entry has a tool=, check=, group= or rule=",
+      all(("tool" in p) or ("check" in p) or p.get("group") or p.get("rule")
+          for p in ORIG if p["cls"] == GATED))
 
 print("\n=== 8. the verdict string is DERIVED from the walk ===")
 fresh()
@@ -142,6 +149,37 @@ check("the blocked verdict names the count it is short by",
       f"{len(blocked['blocking'])} of {len(ORIG)}" in readiness.render(blocked))
 check("the clear verdict counts the gated entries it proved",
       f"all {len([p for p in ORIG if p['cls'] == GATED])} gated" in readiness.render(clear))
+
+print("\n=== 9. a hard failure nobody owns still blocks ===")
+fresh()
+rows = passing_checks() + [("signal integrity", "a check no prerequisite names", "FAIL", "x")]
+rep = readiness.evaluate(rows, all_tools_pass())
+check("an unowned FAIL blocks gate.hardchecks, and only it",
+      blockers(rep) == ["gate.hardchecks"], f"blocking={blockers(rep)}")
+check("...and names the check", "a check no prerequisite names" in
+      " ".join(reasons(rep, "gate.hardchecks")), str(reasons(rep, "gate.hardchecks"))[:90])
+rows = passing_checks() + [("x", "a check no prerequisite names", "WARN", "")]
+check("an unowned WARN does not block", readiness.evaluate(rows, all_tools_pass())["blocking"] == [])
+rows = [r for r in passing_checks() if r[1] != "drill file"] + [("x", "drill file", "FAIL", "")]
+rep = readiness.evaluate(rows, all_tools_pass())
+check("an owned FAIL blocks its owner only, once (tuple check=)",
+      blockers(rep) == ["fab.gerberlayers"], f"blocking={blockers(rep)}")
+rows = passing_checks() + [("project", "hwdef IMU rotations set", "FAIL", "")]
+rep = readiness.evaluate(rows, all_tools_pass())
+check("a FAIL in an owned group blocks the group's owner only",
+      blockers(rep) == ["project.functions"], f"blocking={blockers(rep)}")
+bad = all_tools_pass()
+bad["check_power_cut.py"] = 1
+rows = passing_checks() + [("firmware", "power copper reaches the loads", "FAIL", "")]
+src = {"power copper reaches the loads": "check_power_cut.py"}
+rep = readiness.evaluate(rows, bad, sources=src)
+check("a failing tool's own check row is credited to the tool, not counted twice",
+      blockers(rep) == ["elec.current"], f"blocking={blockers(rep)}")
+rep = readiness.evaluate(rows, all_tools_pass(), sources=src)
+check("...but the same FAIL behind a PASSING tool is not hidden by it",
+      blockers(rep) == ["gate.hardchecks"], f"blocking={blockers(rep)}")
+check("no results at all blocks gate.hardchecks", "gate.hardchecks" in
+      blockers(readiness.evaluate([], all_tools_pass())))
 
 fresh()
 print(f"\n{'ALL CLAIMS REPRODUCED' if ok else 'SOME CLAIMS DID NOT REPRODUCE'}")

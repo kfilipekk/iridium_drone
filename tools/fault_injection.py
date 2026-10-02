@@ -64,6 +64,13 @@ class _Synth:
         self.stderr = ""
 
 
+LAST_RUN = {}          #the rows, tool exits and sources of the latest run_gate call
+
+#tier D: every gate tool added since the tiers above
+SELF_TESTS = [
+]
+
+
 def make_gate_runner(capture, real_run):
     """Return a function that runs the gate in-process with only `fail_tool` red."""
     def run_gate(fail_tool):
@@ -78,11 +85,16 @@ def make_gate_runner(capture, real_run):
         try:
             preflight.results.clear()
             preflight.TOOL_RESULTS.clear()
+            preflight.CHECK_SOURCE.clear()
+            preflight._LAST_TOOL[0] = None
             with contextlib.redirect_stdout(io.StringIO()):
                 preflight.main()
         finally:
             subprocess.run = real_run
-        rep = readiness.evaluate(preflight.results, dict(preflight.TOOL_RESULTS))
+        rep = readiness.evaluate(preflight.results, dict(preflight.TOOL_RESULTS),
+                                 sources=dict(preflight.CHECK_SOURCE))
+        LAST_RUN.update(rows=list(preflight.results), tools=dict(preflight.TOOL_RESULTS),
+                        sources=dict(preflight.CHECK_SOURCE))
         verdicts = {name: v for _, name, v, _ in preflight.results}
         return {p["id"] for p, _ in rep["blocking"]}, verdicts
 
@@ -352,6 +364,90 @@ def _mounts_fail():
         _ACTIVE_CAPTURE["check_cad_fit.py"] = real
 
 
+@contextlib.contextmanager
+def _empty_fab():
+    real = preflight.FAB
+    with tempfile.TemporaryDirectory() as d:
+        preflight.FAB = d
+        try:
+            yield
+        finally:
+            preflight.FAB = real
+
+
+@contextlib.contextmanager
+def _no_gnd_plane():
+    with _board_proxy(Zones=lambda: []):
+        yield
+
+
+class _Net:
+    def __init__(self, name):
+        self.name = name
+
+    def GetNetname(self):
+        return self.name
+
+
+class _CriticalOnPlane(_PlaneTrack):
+    def GetNet(self):
+        return _Net("M1")
+
+
+@contextlib.contextmanager
+def _critical_on_plane():
+    with _board_proxy(GetTracks=lambda: [_CriticalOnPlane()],
+                      GetLayerName=lambda _li: "In4.Cu"):
+        yield
+
+
+@contextlib.contextmanager
+def _no_crystal():
+    real_load = preflight.pcbnew.LoadBoard
+    real = real_load(preflight.BOARD)
+    find = real.FindFootprintByReference
+    with _board_proxy(FindFootprintByReference=lambda r: None if r == "Y1" else find(r)):
+        yield
+
+
+@contextlib.contextmanager
+def _no_silk_texts():
+    with _board_proxy(GetDrawings=lambda: []):
+        yield
+
+
+@contextlib.contextmanager
+def _no_imu():
+    real = preflight.pcbnew.LoadBoard(preflight.BOARD)
+    fps = [f for f in real.GetFootprints() if f.GetReference() not in ("U2", "U3")]
+    with _board_proxy(GetFootprints=lambda: fps):
+        yield
+
+
+@contextlib.contextmanager
+def _hwdef_changed():
+    real = preflight.HWDEF
+    with tempfile.TemporaryDirectory() as d:
+        f = os.path.join(d, "hwdef.dat")
+        open(f, "w").write(open(real).read() + "\n# a line the cached build never saw\n")
+        preflight.HWDEF = f
+        try:
+            yield
+        finally:
+            preflight.HWDEF = real
+
+
+@contextlib.contextmanager
+def _belly_low():
+    real = _ACTIVE_CAPTURE.get("check_cad_fit.py", "")
+    _ACTIVE_CAPTURE["check_cad_fit.py"] = re.sub(
+        r"(lowest z\s+[-\d.]+\s+clearance\s+)[-\d.]+( mm)", r"\g<1>1.00\2", real, count=1)
+    try:
+        yield
+    finally:
+        _ACTIVE_CAPTURE["check_cad_fit.py"] = real
+
+
 TIER_B = [
     dict(pid="assy.twosided", group="assembly", check="two-sided assembly",
          fault=lambda: _fab_file("CPL-NAVCORE-SoOP.csv", _cpl_all_top),
@@ -405,6 +501,26 @@ TIER_B = [
     dict(pid="mech.mounts", group="firmware", check="every part off the board is mounted, with screws",
          fault=_mounts_fail,
          why="a mount that fails its joints check must fail the mounts gate"),
+    dict(pid="fab.gerberlayers", group="fabrication", check="gerber layers", fault=_empty_fab,
+         why="an empty fab directory has no gerbers"),
+    dict(pid="fab.gerberlayers", group="fabrication", check="drill file", fault=_empty_fab,
+         why="an empty fab directory has no drill file"),
+    dict(pid="assy.files", group="assembly", check="BOM present", fault=_empty_fab,
+         why="an empty fab directory has no BOM"),
+    dict(pid="si.gndplane", group="integrity", check="GND plane is solid",
+         fault=_no_gnd_plane, why="no GND pour on In1 is not one solid plane"),
+    dict(pid="si.critical", group="integrity", check="critical nets have a reference",
+         fault=_critical_on_plane, why="a motor line routed on the In4 plane has no reference"),
+    dict(pid="si.crystal", group="integrity", check="crystal near the MCU",
+         fault=_no_crystal, why="a board without Y1 has no crystal near the MCU"),
+    dict(pid="fab.connnames", group="silkscreen", check="connector names on the silkscreen",
+         fault=_no_silk_texts, why="no printed names leaves listed connectors blank"),
+    dict(pid="project.functions", group="project", check="IMU 1 (ICM-42688-P)",
+         fault=_no_imu, why="a board without its IMUs has lost a function"),
+    dict(pid="mech.belly", group="firmware", check="belly parts clear the ground",
+         fault=_belly_low, why="a belly part 1 mm above the skid plane is inside its 5 mm need"),
+    dict(pid="fw.build", group="firmware", check="ArduPilot builds for this board",
+         fault=_hwdef_changed, why="an hwdef edited after the build is not what was built"),
 ]
 
 
@@ -469,6 +585,7 @@ def main():
         return 1
 
     base_blocking, base_verdicts = run_gate(None)
+    base_run = dict(LAST_RUN)
     print(f"  positive control: all tools green -> {len(base_blocking)} blocking "
           f"prerequisite(s)")
     if base_blocking:
@@ -501,6 +618,39 @@ def main():
               f"{t['check']:24} -> {v or 'check not reported'}")
         if v not in ("FAIL", "WARN"):
             print(f"        {t['why']}")
+
+    #tier C: every check the green run reported, turned FAIL one at a time
+    rows0 = base_run["rows"]
+    loose = []
+    for i, (g, n, v, d) in enumerate(rows0):
+        if v != "PASS":
+            continue
+        rows = list(rows0)
+        rows[i] = (g, n, "FAIL", "injected")
+        rep = readiness.evaluate(rows, base_run["tools"], sources=base_run["sources"])
+        ids = {p["id"] for p, _ in rep["blocking"]}
+        if not ids:
+            loose.append(n)
+        if "gate.hardchecks" in ids:
+            covers.setdefault("gate.hardchecks", []).append("tier C")
+    print(f"\n=== Tier C: {sum(1 for r in rows0 if r[2] == 'PASS')} check(s) forced FAIL "
+          f"one at a time ===")
+    print(f"  {'ok' if not loose else 'FAIL'} - "
+          + ("every one blocks the order" if not loose else
+             f"{len(loose)} did not block: {', '.join(loose[:6])}"))
+    if loose:
+        inert += [f"tier C ({n})" for n in loose]
+
+    #tier D: the newer gates prove themselves by breaking their own input
+    if SELF_TESTS:
+        print(f"\n=== Tier D: {len(SELF_TESTS)} gate self-test(s) ===")
+    for pid, argv in SELF_TESTS:
+        r = _REAL_RUN([sys.executable, *argv], capture_output=True, text=True, timeout=1800)
+        if r.returncode == 0:
+            covers.setdefault(pid, []).append("self-test")
+        else:
+            inert.append(f"{pid} (self-test exit {r.returncode})")
+        print(f"  {' ok ' if r.returncode == 0 else 'FAIL'} {pid:16} {' '.join(argv)}")
 
     gaps = [p["id"] for p in gated if p["id"] not in covers]
 

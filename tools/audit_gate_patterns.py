@@ -56,6 +56,8 @@ def capture(outdir):
     sys.path.insert(0, HERE)
     os.chdir(REPO)
     import preflight                                          # noqa: E402
+    #preflight reads its board path from argv[1]
+    preflight.BOARD = "NAVCORE-SoOP.kicad_pcb"
     rc = preflight.main()
     print(f"\ncaptured {sum(seen.values())} subprocess run(s) into {outdir}")
     for k in sorted(seen):

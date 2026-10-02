@@ -69,8 +69,8 @@ PREREQUISITES = [
          claim="the analogue blocks - the buck output filters, the payload buck under a "
                "double servo stall, the battery hot-plug transient, the MAX2112 PLL loop "
                "filter, the ANT_IN bias tee, the baseband difference amp, the battery sense "
-               "chain and the three linear regulators - simulate inside their datasheet "
-               "and design bounds (sim/)"),
+               "chain, the three linear regulators and the antenna feed monitor - simulate "
+               "inside their datasheet and design bounds (sim/, nine decks)"),
 
     #mechanically sound
     dict(id="mech.connectors", cls=GATED, tool="check_connectors.py",
@@ -156,6 +156,36 @@ PREREQUISITES = [
          claim="every solder pad and test point carries its function (design.PAD_LABELS) on "
                "the silkscreen, where check_silk_owner.py reads it as that pad's - or is named "
                "in design.PAD_LABELS_UNPRINTED with the reason, and on padmap.svg"),
+    #checks that live in preflight itself, owned by name
+    dict(id="fab.gerberlayers", cls=GATED, check=("gerber layers", "drill file"),
+         claim="the fab directory holds a gerber for every layer and the drill file"),
+    dict(id="assy.files", cls=GATED, check=("BOM present", "CPL present"),
+         claim="the BOM and the placement file exist"),
+    dict(id="si.gndplane", cls=GATED, check="GND plane is solid",
+         claim="In1.Cu is one unbroken GND pour"),
+    dict(id="si.critical", cls=GATED, check="critical nets have a reference",
+         claim="every critical net runs next to a solid reference plane"),
+    dict(id="si.crystal", cls=GATED, check="crystal near the MCU",
+         claim="Y1 sits within reach of OSC_IN"),
+    dict(id="fab.connnames", cls=GATED, check="connector names on the silkscreen",
+         claim="every connector is named on the silkscreen, or listed in "
+               "design.SILK_NAMES_UNPRINTED with the reason and drawn on padmap.svg"),
+    dict(id="project.functions", cls=GATED, group="project",
+         claim="every fitted function is on the board and the hwdef sets IMU rotations "
+               "and a board ID"),
+    dict(id="fab.padmap", cls=GATED, check="pad map matches the board",
+         claim="docs/img/padmap.svg is generated from the board as built"),
+    dict(id="mech.mountscad", cls=GATED, check="CAD mounts match design.MOUNTS",
+         claim="cad/mounts.scad is generated from design.MOUNTS"),
+    dict(id="mech.belly", cls=GATED, check="belly parts clear the ground",
+         claim="nothing under the bottom plate reaches the skid contact plane"),
+    dict(id="order.links", cls=GATED, check="buying links are recoverable",
+         claim="every buying link resolves or carries a fallback search term"),
+    dict(id="fw.build", cls=GATED, check="ArduPilot builds for this board",
+         claim="the cached firmware was built from the hwdef on disk"),
+    #anything preflight fails that no entry above owns still stops the order
+    dict(id="gate.hardchecks", cls=GATED, rule="no_unowned_fail",
+         claim="no hard failure in preflight goes unowned"),
     dict(id="adv.in4rails", cls=ADVISORY, check="In4.Cu rails not fragmented",
          why="separate pours around separate pad groups, each tied to its rail - a note "
              "about shape, not a defect in connectivity."),
@@ -213,6 +243,13 @@ PREREQUISITES = [
              "at 7443 mm2 of GND plane and 5 vias on the output pad. What the bench sets "
              "is the offset between TEMP[0] and the junction, a constant U19 then carries "
              "forward every flight.",
+         refresh="runbook T3a (docs/navcore-runbook.tex Part 10)"),
+    dict(id="bench.u20", cls=BENCH,
+         bound="104 C worst case against 125 C - 21 C of margin (check_thermal.py)",
+         claim="U20's junction temperature at the worst payload mission",
+         why="BOUND. U20 is the same LMR33630A RNX as U8, carrying the payload rail's "
+             "worst mission (design.RAIL_5V_PAYLOAD); the figure is the single-theta_JA "
+             "corner at 40 C ambient, so a reading confirms it and cannot change copper.",
          refresh="runbook T3a (docs/navcore-runbook.tex Part 10)"),
     dict(id="bench.flowyaw", cls=BENCH, bound="one of four cardinal values in defaults.parm",
          claim="FLOW_ORIENT_YAW, against the camera's actual mount",
@@ -291,32 +328,82 @@ PREREQUISITES = [
 ]
 
 
-def evaluate(results, tool_results, today=None):
+def _names(p):
+    """The check names a prerequisite owns."""
+    c = p.get("check")
+    return () if c is None else (tuple(c) if isinstance(c, (tuple, list)) else (c,))
+
+
+def _tool_failed(p, tool_results):
+    t = p["tool"]
+    if t not in tool_results:
+        return f"{t} was never run"
+    if tool_results[t] != 0:
+        return f"{t} exited {tool_results[t]}"
+    return None
+
+
+def unowned_failures(results, tool_results, sources=None):
+    """Hard FAILs no prerequisite answers for."""
+    sources = sources or {}
+    names = {n for p in PREREQUISITES for n in _names(p)}
+    groups = {p["group"] for p in PREREQUISITES if p.get("group")}
+    red_tools = {p["tool"] for p in PREREQUISITES
+                 if "tool" in p and _tool_failed(p, tool_results)}
+    out = []
+    for g, name, verdict, _ in results:
+        if verdict != "FAIL" or name in names or g in groups:
+            continue
+        if sources.get(name) in red_tools:
+            continue
+        if name not in out:
+            out.append(name)
+    return out
+
+
+def evaluate(results, tool_results, today=None, sources=None):
     """Walk the manifest against what actually ran."""
     import datetime
     today = today or datetime.date.today()
 
-    by_name = {}
+    by_name, by_group = {}, {}
     for g, name, verdict, _ in results:
         by_name.setdefault(name, []).append(verdict)
+        by_group.setdefault(g, []).append((name, verdict))
 
     blocking, advisory, order_actions, bench, fly, build = [], [], [], [], [], []
     for p in PREREQUISITES:
         cls = p["cls"]
         if cls == GATED:
             bad = None
-            if "tool" in p:
-                t = p["tool"]
-                if t not in tool_results:
-                    bad = f"{t} was never run"
-                elif tool_results[t] != 0:
-                    bad = f"{t} exited {tool_results[t]}"
+            if p.get("rule") == "no_unowned_fail":
+                if not results:
+                    bad = "no checks ran"
+                else:
+                    loose = unowned_failures(results, tool_results, sources)
+                    if loose:
+                        bad = (f"{len(loose)} hard failure(s) no other prerequisite owns: "
+                               + ", ".join(repr(n) for n in loose[:5])
+                               + (" ..." if len(loose) > 5 else ""))
+            elif "tool" in p:
+                bad = _tool_failed(p, tool_results)
+            elif p.get("group"):
+                rows = by_group.get(p["group"])
+                if not rows:
+                    bad = f"no check in group {p['group']!r} ran"
+                else:
+                    red = [n for n, v in rows if v == "FAIL"]
+                    if red:
+                        bad = f"{p['group']!r} failed: " + ", ".join(repr(n) for n in red[:5])
             else:
-                marks = by_name.get(p.get("check"))
-                if marks is None:
-                    bad = f"check {p.get('check')!r} is not in the run"
-                elif "FAIL" in marks:
-                    bad = f"check {p.get('check')!r} failed"
+                for n in _names(p):
+                    marks = by_name.get(n)
+                    if marks is None:
+                        bad = f"check {n!r} is not in the run"
+                        break
+                    if "FAIL" in marks:
+                        bad = f"check {n!r} failed"
+                        break
             if bad is None and p.get("max_age_days") is not None:
                 st = p.get("state")
                 if not st:

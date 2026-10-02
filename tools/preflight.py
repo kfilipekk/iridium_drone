@@ -17,10 +17,13 @@ PLANE_LAYERS = ("In1.Cu", "In4.Cu")
 results = []
 
 TOOL_RESULTS = {}
+CHECK_SOURCE = {}       #check name -> the tool run last before it (readiness ownership)
+_LAST_TOOL = [None]
 
 
 def check(group, name, ok, detail, hard=True):
     results.append((group, name, "PASS" if ok else ("FAIL" if hard else "WARN"), detail))
+    CHECK_SOURCE[name] = _LAST_TOOL[0]
 
 
 def cli(args, out):
@@ -312,6 +315,11 @@ def integrity(board):
                     max(b.GetTop()/1e6-t[1], 0, t[1]-b.GetBottom()/1e6)))
             check("signal integrity", "crystal near the MCU", best <= 8.0,
                   f"Y1 is {best:.2f} mm from U1.12 (OSC_IN)")
+        else:
+            check("signal integrity", "crystal near the MCU", False, "U1 has no pad 12")
+    else:
+        check("signal integrity", "crystal near the MCU", False,
+              "Y1 or U1 is not on the board")
 
 
 def silkscreen(board):
@@ -329,7 +337,7 @@ def silkscreen(board):
             (placed if want and want in texts else skipped).append(fp.GetReference())
     except Exception as e:
         check("fabrication", "pad silkscreen labels", False,
-              f"could not evaluate: {e}", hard=False)
+              f"could not evaluate: {e}")
         return
     total = len(placed) + len(skipped)
     listed = set(getattr(design, "PAD_LABELS_UNPRINTED", {}))
@@ -379,7 +387,7 @@ def project(board):
         ("microSD socket",           {"J8"}),
         ("USB-C",                    {"J1"}),
         ("USB ESD protection",       {"U12"}),
-        ("ESC connector (JST-SH 8)", {"J2"}),
+        ("ESC connector (JST-GH 8)", {"J2"}),
         ("GPS / telemetry JST-GH",   {"J3"}),
         ("CAN transceiver",          {"U11"}),
         ("5 V buck",                 {"U8"}),
@@ -438,6 +446,7 @@ def firmware(board):
         r = sp.run([sys.executable, f"tools/{name}", *extra], capture_output=True,
                    text=True, timeout=1800)
         TOOL_RESULTS[name] = r.returncode
+        _LAST_TOOL[0] = name
         return r.returncode, (r.stdout or "") + (r.stderr or "")
 
     rc, out = run("check_topology.py")
@@ -799,17 +808,22 @@ def firmware(board):
           f"{max(float(v[1]) for v in sky):.1f} deg above the GPS or the Iridium antenna" if good else
           "a part lacks a mount, a joint or its sky - see tools/check_cad_fit.py")
 
-    g = re.findall(r'^\s+(\w+)\s+lowest z\s+[-\d.]+\s+clearance\s+([-\d.]+) mm', out, re.M)
+    g = re.findall(r'^\s+(\w+)\s+lowest z\s+[-\d.]+\s+clearance\s+([-\d.]+) mm'
+                   r'\s+\(need ([\d.]+)\)', out, re.M)
+    #each part against its own need (check_cad_fit.GROUND_PARTS)
+    short = [(n_, float(c), float(nd)) for n_, c, nd in g if float(c) < float(nd) - 1e-6]
     if g:
-        worst = min(g, key=lambda x: float(x[1]))
-        #decided by the measured clearance, not by check_cad_fit's global exit
-        belly_ok = all(float(v[1]) >= -1e-6 for v in g)
-        check("mechanical", "belly parts clear the ground", belly_ok,
+        worst = min(g, key=lambda x: float(x[1]) - float(x[2]))
+        check("mechanical", "belly parts clear the ground", not short,
               f"{len(g)} hanging part(s); tightest is {worst[0]} at {worst[1]} mm above "
-              f"the skid contact plane"
-              if belly_ok else
-              f"FAILED - {worst[0]} at {worst[1]} mm above the skid contact plane: "
-              f"see tools/check_cad_fit.py")
+              f"the skid contact plane (needs {worst[2]})"
+              if not short else
+              "FAILED - " + ", ".join(f"{n_} {c:.2f} mm (needs {nd:.1f})"
+                                      for n_, c, nd in short)
+              + " above the skid contact plane: see tools/check_cad_fit.py")
+    else:
+        check("mechanical", "belly parts clear the ground", False,
+              "check_cad_fit.py reported no ground clearances")
 
     rc, out = run("check_cables.py")
     m = re.search(r'PASS - (\d+) cables routed', out)
@@ -835,15 +849,9 @@ def firmware(board):
 
     rc, out = run("check_footprints.py")
     m_fp = re.search(r'(\d+) footprint\(s\) agree', out)
-    skipped = "SKIPPING" in out
-    check("assembly", "footprints match JLCPCB's pad count",
-          (not skipped) and rc == 0 and bool(m_fp),
-          ("jlcparts mirror absent - NOT CHECKED. Refetch it before ordering; the "
-           "command is in tools/check_lcsc_stock.py's docstring"
-           if skipped else
-           (f"{m_fp.group(1)} footprint(s) agree with JLCPCB's joint count"
-            if rc == 0 and m_fp else "MISMATCH - see tools/check_footprints.py")),
-          hard=not skipped)
+    check("assembly", "footprints match JLCPCB's pad count", rc == 0 and bool(m_fp),
+          f"{m_fp.group(1)} footprint(s) agree with JLCPCB's joint count"
+          if rc == 0 and m_fp else "MISMATCH or no authority - see tools/check_footprints.py")
 
     rc, out = run("windowpane_paste.py --scan")
     m_wp = re.search(r'(\d+) pad\(s\) need windowpaning', out)
@@ -918,11 +926,10 @@ def firmware(board):
         check("firmware", "ArduPilot builds for this board", fresh,
               f"arducopter.apj {size} bytes, {basis}"
               + ("" if fresh else " - does NOT match the hwdef on disk, "
-                                   "re-run tools/build_firmware.sh"),
-              hard=False)
+                                   "re-run tools/build_firmware.sh"))
     else:
         check("firmware", "ArduPilot builds for this board", False,
-              "not built - run tools/build_firmware.sh", hard=False)
+              "not built - run tools/build_firmware.sh")
 
 
 def main():
@@ -952,9 +959,15 @@ def main():
 
     #the verdict is derived, not restated
     print(f"\n({nf} hard failure(s), {nw} warning(s) among the individual checks above)")
-    rep = readiness.evaluate(results, TOOL_RESULTS)
+    rep = readiness.evaluate(results, TOOL_RESULTS, sources=CHECK_SOURCE)
     print(readiness.render(rep))
-    return 1 if rep["blocking"] else 0
+    if rep["blocking"]:
+        return 1
+    if nf:
+        #readiness.gate.hardchecks exists so this cannot happen; if it does
+        print(f"INTERNAL: {nf} hard failure(s) and nothing blocked - the gate is broken")
+        return 2
+    return 0
 
 
 if __name__ == "__main__":

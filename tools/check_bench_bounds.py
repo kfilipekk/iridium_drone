@@ -118,6 +118,14 @@ def build_rows():
                   "vias on the output pad. Only the datasheet's 'No Heatsink' corner is "
                   "over, and that describes a 2-layer board this one is not"),
         residual="T3a sets the board-to-junction offset once; U19 then logs it every flight"))
+    u20 = th.get("U20")
+    rows.append(dict(
+        id="bench.u20", cls="BOUND",
+        bound=f"check_thermal.py: {u20[1] if u20 else 'NOT COMPUTED'}",
+        evidence=("the worst payload mission at 40 C ambient on the part's single theta_JA "
+                  "stays under 125 C; U20 is the same LMR33630A RNX swapped in for U8, and "
+                  "the payload profiles that load it are budgeted per mission"),
+        residual="a thermocouple at T3a under the worst mission's load confirms it"))
     rows.append(dict(
         id="bench.flowyaw", cls="PARAM",
         bound=("FLOW_ORIENT_YAW selects one of four cardinal values; flow arrives as MAVLink "
@@ -136,8 +144,8 @@ def build_rows():
                f"{req_2db:.0f} dBm at 2 dB system NF ({req_4db:.0f} dBm at 4 dB). The gain "
                f"and noise figure that meet it come from the BOUGHT Tallysman HC610 "
                f"(a pre-filter then a 28 dB LNA, NF 2.0 dB, inside the antenna, where NF is "
-               f"set before cable loss). The board contributes a U.FL entry (J12); the "
-               f"antenna's 15 mA comes through an inline bias tee"),
+               f"set before cable loss). The board contributes an MMCX entry (J12); the "
+               f"antenna's 15 mA comes from the on-board feed (U24, monitored by U25)"),
         evidence=("a desense result is fixed by antenna separation, ferrites and shielding - "
                   "all listed mitigations - because the filter sits AT THE ANTENNA and rejects "
                   "the board's own switchers before the tuner sees them. The one board-side "
@@ -156,7 +164,7 @@ def build_rows():
     rows.append(dict(
         id="build.firmware", cls="PARAM",
         bound=("AP_SoOP builds and links into the NAVCORE_SoOP firmware; the pins it uses "
-               "(PC4/PA4 capture, I2C1 tuner, PC0/PC1 moved to ADC3) are gated against the "
+               "(PC4/PA4 capture, I2C2 tuner, PC0/PC1 moved to ADC3) are gated against the "
                "netlist by the hwdef check"),
         evidence=("tuner lock, the 2 MSPS capture rate and the CPU share are properties of "
                   "the code on this silicon. ST's pin data confirms every ADC channel used, "
