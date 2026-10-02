@@ -351,19 +351,23 @@ CAMERA_REC = dict(name="XIAO ESP32S3 Sense", L=21.0, W=17.5, H=13.0, g=6.0,
                   nose_y_mm=78.0,
                   src="[D] Seeed: XIAO form factor 21 x 17.5 mm, OV2640/OV3660, microSD, 8 MB PSRAM; [L] ~GBP 10-14 AliExpress")
 
-#the MOTOR / ARM / SKID bolt pattern - one number, one home
+#the MOTOR / ARM / SKID bolt pattern - one number
+M3_WASHER = dict(t=0.5, od=7.0, bore=3.2,
+                 src="[D] DIN 125-A M3: 3.2 mm bore, 7.0 mm OD, 0.5 mm thick")
 MOTOR_JOINT = dict(
     pitch_mm=19.0,          #[D] BrotherHobby Avenger 2806.5: M3 at 19 x 19
     screw="M3",             #[D] same source
     screw_dia=3.0,
     #what the screw passes through, head first
     layers=(
-        ("frame arm", ("FRAME", "arm_t"), 3.2,
-         "[D] So1-V6 arm 6.0 mm; [A] 3.2 mm hole - the frame's motor holes are published "
-         "as the 19x19 PATTERN, not as diameters"),
+        ("M3 washer", ("M3_WASHER", "t"), 3.2,
+         "[D] DIN 125-A M3 - spreads the head's load on the TPU plate"),
         ("printed skid", ("SKID", "t"), 3.2,
          "[M] design.SKID - printed, so the hole is ours to specify; 3.2 mm is standard "
          "M3 close clearance for a 3.0 mm screw"),
+        ("frame arm", ("FRAME", "arm_t"), 3.2,
+         "[D] So1-V6 arm 6.0 mm; [A] 3.2 mm hole - the frame's motor holes are published "
+         "as the 19x19 PATTERN, not as diameters"),
     ),
     engages="motor tapped boss",
     tap_dia=3.0,
@@ -380,6 +384,9 @@ def fmt_pattern(pitches_mm):
 
 #the skid is a part you print
 SKID = dict(t=3.5, drop=45.0, hole_pitch=MOTOR_JOINT["pitch_mm"], printed=True,
+            #the printed part: a plate under the arm on the motor's screws
+            plate=34.0, relief_d=10.0, strut_w=6.0, strut_d=8.0, strut_x0=8.0, splay_deg=10.0,
+            foot=(12.0, 10.0), flare=3.0, material="TPU 95A", density=1.21, infill=0.8,
             #drop raised 25 -> 40 mm to give the LD06 a home, then 45 mm
             src="[D] 19x19 pitch is the motor's bolt pattern (BrotherHobby Avenger); [M] 3.5 mm thickness is a design choice for a printed part")
 
@@ -438,12 +445,26 @@ MOUNTING = dict(gap=3.0, grommet_d=6.0, screw="M3", screw_dia=3.0,
 
 ESC = dict(name="SpeedyBee BLS 60A", L=45.6, W=44.0, pcb=1.6, parts=6.2,
            mount=30.5, conn="JST-SH 8P", cells="3-6S", amps=60,
-           H=7.8, g=10.5, cont_A=60.0, burst_A=80.0, proto="DSHOT300/600",
+           H=7.8, g=23.5, cont_A=60.0, burst_A=80.0, proto="DSHOT300/600",
            cur_scale_mv_per_A=40.0,
            #the 8-pin JST-SH order as the ESC'S manual documents IT
            pin_order=("GND", "VBAT", "M1", "M2", "M3", "M4", "CUR", "TEL"),
-           src="[D] SpeedyBee BLS 60A manual")
+           src="[D] SpeedyBee BLS 60A manual; [L] 23.5 g from speedybee.com's product page")
 assert ESC["amps"] == ESC["cont_A"], "ESC amps and cont_A are the same rating"
+
+#between the ESC and this board's underside
+FOAM = dict(
+    baro=dict(t=3.0, size=(8.0, 6.0), over=("U4",), part_h=1.0,
+              material="open-cell PU foam, a small block over the MS5611",
+              why="shields the baro's port from light, prop wash and the ESC's warm air "
+                  "without sealing it"),
+    imu_shroud=dict(t=1.5, size=(30.0, 20.0), over=("U2", "U3", "U4"), part_h=0.91,
+                    material="closed-cell foam pad, adhesive-backed, on the ESC's top face",
+                    why="a radiation and convection break between the ESC and the IMUs; "
+                        "it does not touch the board"),
+    src="[D] MS5611 1.0 mm, ICM-42688-P 0.91 mm package height; [A] foam thicknesses chosen "
+        "to leave >= 1 mm of air to the facing part",
+)
 
 SKATE = dict(name="SO1-V6-skate.stl", L=75.96, W=102.17, t=6.00, drop=6.00,
              printable=True,
@@ -679,6 +700,9 @@ MOUNTED = dict(
     range_down=dict(name="Benewake TFS20-L", L=15.0, W=21.0, H=7.87, g=1.35,
                     src="[D] Benewake TFS20-L datasheet: 21 x 15 mm board, 7.87 mm tall, "
                         "1.35 g, no mounting holes, so it sits in a cradle under a lid"),
+    remote_id=dict(name="Holybro Remote ID (PCB, ArduRemoteID)", L=35.3, W=23.5, H=6.0, g=6.0,
+                   src="[L] docs.holybro.com Remote ID: PCB 35.3 x 23.5 mm, 4 g, JST-GH 4P CAN, "
+                       "IPEX antenna; [A] 6 mm over its parts and 2 g for the antenna"),
 )
 
 _TOP_Z = FRAME["bottom_t"] + TOP_PLATE_MOUNT["rear_standoff"] + FRAME["upper_t"]
@@ -760,11 +784,44 @@ MOUNTS = dict(
                      layers=[("lid", "lid_t"), ("cradle", "body_h"),
                              ("bottom plate", FRAME["bottom_t"])], into="nut")],
         print_note="top down"),
+    #the Remote ID board on the rear-port arm's top face
+    rid_tray=dict(
+        carries=("remote_id",),
+        r=63.6, arm=(-1, 1), base_t=2.0, wall=1.6, cover_t=1.5, gap=0.2, tie_u=(-10.0, 10.0),
+        joints=[dict(where="Remote ID cover to its tray", size="M2", qty=2,
+                     layers=[("cover", "cover_t")], into="insert")],
+        print_note="base on the bed; the cover top down"),
 )
 OFFBOARD["lidar"]["mount_y_mm"] = MOUNTS["lidar_bracket"]["lidar_y0"]
 
 
 #mass, one source of truth
+#the printed skid's heights (z from the bottom plate's underside, as drone.scad)
+def skid_geometry():
+    import math
+    S = SKID
+    top = FRAME["bottom_t"]                       #arm underside = the plate's top face
+    contact = -(S["drop"] + S["t"])
+    z0 = top - S["t"]                             #plate underside, where the struts start
+    z1 = contact + S["flare"]                     #strut ends, where the foot flares out
+    reach = S["strut_x0"] + (z0 - z1) * math.tan(math.radians(S["splay_deg"]))
+    return dict(top=top, contact=contact, z0=z0, z1=z1, reach=reach,
+                half=max(S["plate"] / 2, reach + S["foot"][0] / 2))
+
+
+#four skids, from their geometry (plate less its holes, splayed struts, 45 deg feet)
+def skid_mass_g():
+    import math
+    S, g = SKID, skid_geometry()
+    plate = (S["plate"] ** 2 - 4 * math.pi * 1.6 ** 2 - math.pi * (S["relief_d"] / 2) ** 2) * S["t"]
+    struts = 2 * S["strut_w"] * S["strut_d"] * (g["z0"] - g["z1"]) / math.cos(
+        math.radians(S["splay_deg"]))
+    a1, a2 = S["strut_w"] * S["strut_d"], S["foot"][0] * S["foot"][1]
+    am = (S["strut_w"] + S["foot"][0]) / 2 * (S["strut_d"] + S["foot"][1]) / 2
+    feet = 2 * S["flare"] / 6 * (a1 + 4 * am + a2)
+    return 4 * (plate + struts + feet) / 1000 * S["density"] * S["infill"]
+
+
 MASS_ITEMS = [
     ("frame",                            FRAME["g"],      FRAME["src"]),
     ("4x motors",                        4 * MOTOR["g"],  MOTOR["src"]),
@@ -786,7 +843,9 @@ MASS_ITEMS = [
     ("TFS20-L",                          1.4,             "[D]"),
     ("LD06 360 lidar (deferred, budgeted)", OFFBOARD["lidar"]["g"],
      "[D] LDROBOT LD06 datasheet - REPLACES the superseded 25 g ToF ring + mux"),
-    ("skids",                            12,              "[A]"),
+    ("Remote ID (Holybro, rear-port arm)", MOUNTED["remote_id"]["g"], MOUNTED["remote_id"]["src"]),
+    ("skids",                            round(skid_mass_g(), 1),
+     "[M] design.SKID geometry x TPU 1.21 g/cm3 x [A] 80% infill (skid_mass_g)"),
     ("wiring/straps",                    60,              "[A]"),
 ]
 AUW_G    = sum(g for _n, g, _s in MASS_ITEMS)
@@ -1692,8 +1751,8 @@ LOAD_CURRENT = {
         "J23.2": 0.25,
         #[D] U21 is the +3V3_CAN LDO feed for the SN65HVD230
         "U21.3": 0.10,
-        #[A] one small DroneCAN node (J6 powers the bus per design.py:2098)
-        "J6.1": 0.10,
+        #[A] the DroneCAN node on J6 - the Remote ID module
+        "J6.1": 0.15,
     },
     "+3V3A": {
         #[D] OPA2374: 585 uA per amplifier, two amplifiers (LOADS_3V3A row)
@@ -1937,7 +1996,13 @@ MODULES = {
         needs_board_change=None,
         gbp=0, status="fitted",
         ma_5v=0, counted=True,
-        note="TPS54332 5V/2.5A switching buck U20 powering the servos on J17/J23 and the lidar on J11"),
+        note="LMR33630A buck U20 (2.1 A through L5) powering the servos on J17/J23, the lidar "
+             "on J11, J22 and the DroneCAN node on J6"),
+    "remote_id": dict(
+        what="Holybro Remote ID: direct broadcast ID, UK rule for home-built UAS >= 100 g with "
+             "a camera from 1 Jan 2028", lands_on=["J6"], conn="JST-GH 4P on J6 (DroneCAN)",
+        needs_board_change=None, gbp=35, status="later", ma_5v=150, counted=False, bec=True,
+        note="ArduRemoteID over DroneCAN; confirm the CAA's broadcast standard before buying"),
     "src": "[M] every lands_on asserted against real footprints by the module check",
 }
 

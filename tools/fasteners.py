@@ -62,7 +62,7 @@ for _name, _ref, _hole, _src in _MJ["layers"]:
     _d, _k = _ref
     _t = getattr(design, _d)[_k]
     _JOINT_LAYERS.append((f"{_name}, hole {_hole:.1f}", _t, _src))
-joint("Motor to arm, skid sandwiched", _MJ["screw_dia"], _JOINT_LAYERS, 16,
+joint("Motor to arm, skid under the arm", _MJ["screw_dia"], _JOINT_LAYERS, 16,
       f"skids MUST match the MOTOR's {_MJ['pitch_mm']:.0f}x{_MJ['pitch_mm']:.0f} pattern, "
       "not the frame's 16x16 - the fit check verifies the printed part")
 

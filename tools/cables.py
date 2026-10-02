@@ -83,6 +83,21 @@ def _tfs20_slot():
     return (0.0, _R["y"] + _R["yl"] / 2, -_R["body_h"] + 1.5)
 
 
+#the Remote ID tray's lead slot
+def _rid_slot():
+    import math
+    r = gen_scad_mounts.G["rid"]
+    a = math.radians(r["ang"])
+    u = -(r["lp"] / 2 + r["wall"])
+    return (r["cx"] + u * math.cos(a), r["cy"] + u * math.sin(a), r["z0"] + r["base_t"] + 2.5)
+
+
+def _rid_dir():
+    import math
+    a = math.radians(gen_scad_mounts.G["rid"]["ang"])
+    return (math.cos(a), math.sin(a), 0.0)
+
+
 #the XIAO's 5V/GND pins on its port edge
 def _xiao_pins():
     return (-6.0, _N["cam_y"] + design.MOUNTED["xiao"]["W"] / 2 + 0.3 + _N["cw"], -8.0)
@@ -180,11 +195,14 @@ CABLES = {
         via=[(36.0, 6.7, 23.5), (36.0, 1.0, 12.0), (36.0, 0.0, -3.5)],
         touches={}, buy=None),
     "J6": dict(
-        to="DroneCAN node - UNDEFINED (no node position in design.py)",
+        to="Holybro Remote ID on the rear-port arm (MOUNTS['rid_tray'])",
         lead="JST-GH 4P to JST-GH 4P (DroneCAN standard)", type="gh", wires=4, far="gh",
-        end=None, undefined="no CAN node has a position in design.MOUNTS",
-        #out past the line of the rear posts
-        via=[(5.6, 34.0, 23.5)], touches={}, buy=None),
+        end=_rid_slot(), end_dir=_rid_dir(),
+        end_src="[M] the tray's lead slot (gen_scad_mounts); [A] the board's GH socket behind it",
+        #out past the line of the rear posts, then down and out to the port arm
+        via=[(5.6, 34.0, 23.5), (-4.0, 40.0, 18.0), (-20.0, 36.0, 14.0),
+             (-24.0, 24.0, 13.0)],
+        touches={}, buy=150),
     "J21": dict(
         to="companion computer - UNDEFINED (design.PI deferred, does not fit the top plate)",
         lead="JST-GH 6P (Pixhawk TELEM order)", type="gh", wires=6, far="gh",

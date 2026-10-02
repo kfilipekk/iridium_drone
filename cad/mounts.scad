@@ -223,14 +223,89 @@ module belly_sensor() {
         box(-7.5, 7.5, -10.5, 10.5, 0, 7.87);
 }
 
+// ---- Remote ID on the rear-port arm (Holybro Remote ID (PCB, ArduRemoteID)) ----------------------
+// A tray on the arm's top face holds the board in a pocket; the cover screws into the
+// tray's two M2 inserts and traps it; two cable ties over the cover's grooves hold the lot
+// to the arm. Local u runs out along the arm, v across it.
+module rid_place() { translate([-44.972, 44.972, 8.5]) rotate([0, 0, 135.0]) children(); }
+module rid_tray_local() {
+    lp = 35.699999999999996; wp = 23.9; w = 1.6; b = 2.0;
+    h = 6.0; bu = 21.250;
+    difference() {
+        union() {
+            box(-lp / 2 - w, lp / 2 + w, -wp / 2 - w, wp / 2 + w, 0, b + h);
+            for (s = [-1, 1]) translate([s * bu, 0, 0]) cylinder(d = 6.800000000000001, h = b + h, $fn = 32);
+        }
+        box(-lp / 2, lp / 2, -wp / 2, wp / 2, b, b + h + 1);                  // the board's pocket
+        box(-lp / 2 - w - 1, -lp / 2 + 0.01, -4, 4, b, b + 4);                 // CAN lead and antenna out
+        for (s = [-1, 1]) translate([s * bu, 0, b + h]) bore(ins_m2);
+    }
+}
+module rid_cover_local() {
+    lp = 35.699999999999996; wp = 23.9; w = 1.6; z = 8.0;
+    bu = 21.250; t = 1.5;
+    difference() {
+        hull() {
+            box(-lp / 2 - w, lp / 2 + w, -wp / 2 - w, wp / 2 + w, z, z + t);
+            for (s = [-1, 1]) translate([s * bu, 0, z]) cylinder(d = 6.800000000000001, h = t, $fn = 32);
+        }
+        for (s = [-1, 1]) translate([s * bu, 0, z]) hole(2.4, t);
+        for (u = [-10.0, 10.0]) box(u - 1.5, u + 1.5, -wp, wp, z + t - 0.8, z + t + 1);
+    }
+}
+module rid_tray()  { color("#d9822b") rid_place() rid_tray_local(); }
+module rid_cover() { color("#e0a050") rid_place() rid_cover_local(); }
+module remote_id() {
+    color("#2a2f36") rid_place()
+        box(-17.65, 17.65, -11.75, 11.75,
+            2.0, 8.0);
+}
+
 module mounts() {
     antenna_tower(); gps_pod(); gps_lid(); nose_mount(); xiao_lid(); rx_cover();
     lidar_bracket();
     range_cradle(); range_lid();
+    rid_tray(); rid_cover();
 }
 module mounted_parts() {
     gps(); iridium_antenna(); rx(); elrs_antennas();
 }
+
+
+// ---- the landing skid (design.SKID, TPU 95A) ----------------------------------
+// A plate under the arm on the motor's 19x19 screws, two struts splayed
+// 10 deg along the arm, and a 45 deg foot on each: prints plate-down without support.
+// Local x points outward along the arm; z is drone.scad's, from the bottom plate's underside.
+skid_motor_off = 113.1371;
+skid_contact_z = -48.50;
+module skid_strut(s) {
+    hull() {
+        translate([s * 8.0 - 3.0, -4.0, -1.000 - 0.01]) cube([6.0, 8.0, 0.01]);
+        translate([s * 15.8466 - 3.0, -4.0, -45.500]) cube([6.0, 8.0, 0.01]);
+    }
+    hull() {
+        translate([s * 15.8466 - 3.0, -4.0, -45.500]) cube([6.0, 8.0, 0.01]);
+        translate([s * 15.8466 - 6.0, -5.0, -48.500]) cube([12.0, 10.0, 0.01]);
+    }
+}
+module skid_local() {
+    difference() {
+        union() {
+            translate([-17.0, -17.0, -1.000])
+                cube([34.0, 34.0, 3.5]);
+            for (s = [-1, 1]) skid_strut(s);
+        }
+        for (x = [-9.5, 9.5], y = [-9.5, 9.5])
+            translate([x, y, -1.000]) hole(3.2, 3.5);
+        translate([0, 0, -1.000]) hole(10.0, 3.5);
+    }
+}
+module skids() {
+    for (sx = [-1, 1], sy = [-1, 1])
+        translate([sx * skid_motor_off, sy * skid_motor_off, 0])
+            rotate([0, 0, atan2(sy, sx)]) color("#d0d0d0") skid_local();
+}
+module skid() { skid_local(); }
 
 // ---- laid out for printing: each part on the bed, in the orientation it prints ---------
 module print_antenna_tower() { translate([0, 0, seat_z]) rotate([180, 0, 0]) antenna_tower(); }
@@ -242,3 +317,6 @@ module print_rx_cover()      { translate([0, 0, -(rx_bot - 1.5)]) rx_cover(); }
 module print_lidar_bracket() { translate([0, 0, lidar_bracket_t]) lidar_bracket(); }
 module print_range_cradle()  { rotate([180, 0, 0]) range_cradle(); }
 module print_range_lid()     { translate([0, 0, range_body_h + 1.5]) range_lid(); }
+module print_rid_tray()      { rid_tray_local(); }
+module print_rid_cover()     { translate([0, 0, 9.5]) rotate([180, 0, 0]) rid_cover_local(); }
+module print_skid()          { translate([0, 0, 2.5]) rotate([180, 0, 0]) skid_local(); }

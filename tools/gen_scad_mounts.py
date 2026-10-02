@@ -3,6 +3,7 @@
 #Usage: python3 tools/gen_scad_mounts.py [--check] [--stl]
 #--check  fail if cad/mounts.scad is stale
 #--stl    also export each printed part to cad/print/, laid out for printing
+import math
 import os
 import subprocess
 import sys
@@ -83,6 +84,15 @@ def geometry():
     g["range"] = dict(y=rc["y0"], x=rc["x"], yl=rc["y"], top_t=rc["top_t"], lid_t=rc["lid_t"],
                       body_h=rc["top_t"] + rd["H"] + 0.3, holes=[list(j[:2]) for j in
                                                                    rc["joints"][0]["at"]])
+    rt, rb = MT["rid_tray"], MP["remote_id"]
+    ux, uy = rt["arm"][0] / 2 ** 0.5, rt["arm"][1] / 2 ** 0.5
+    lp, wp = rb["L"] + 2 * rt["gap"], rb["W"] + 2 * rt["gap"]
+    bd = boss_d("M2")
+    g["rid"] = dict(cx=ux * rt["r"], cy=uy * rt["r"], ang=math.degrees(math.atan2(uy, ux)),
+                    z0=F["bottom_t"] + F["arm_t"], lp=lp, wp=wp, wall=rt["wall"],
+                    base_t=rt["base_t"], h=rb["H"], cover_t=rt["cover_t"], bd=bd,
+                    #the boss runs into the end wall; its insert bore stays out of the pocket
+                    boss_u=lp / 2 + bd / 2, tie_u=list(rt["tie_u"]))
     return g
 
 
@@ -91,6 +101,52 @@ G = geometry()
 
 def ins(size):
     return f"[{INS[size]['bore']}, {bore_depth(size)}, {boss_d(size):.1f}]"
+
+
+#the landing skid (design.SKID): local x outward along the arm
+def skid_scad():
+    import math
+    S, g = design.SKID, design.skid_geometry()
+    mo = F["wb"] / 2 / math.sqrt(2)
+    hp = S["hole_pitch"] / 2
+    w, d = S["strut_w"] / 2, S["strut_d"] / 2
+    fx, fy = S["foot"][0] / 2, S["foot"][1] / 2
+    return f"""
+// ---- the landing skid (design.SKID, {S['material']}) ----------------------------------
+// A plate under the arm on the motor's {S['hole_pitch']:.0f}x{S['hole_pitch']:.0f} screws, two struts splayed
+// {S['splay_deg']:.0f} deg along the arm, and a 45 deg foot on each: prints plate-down without support.
+// Local x points outward along the arm; z is drone.scad's, from the bottom plate's underside.
+skid_motor_off = {mo:.4f};
+skid_contact_z = {g['contact']:.2f};
+module skid_strut(s) {{
+    hull() {{
+        translate([s * {S['strut_x0']} - {w}, -{d}, {g['z0']:.3f} - 0.01]) cube([{2 * w}, {2 * d}, 0.01]);
+        translate([s * {g['reach']:.4f} - {w}, -{d}, {g['z1']:.3f}]) cube([{2 * w}, {2 * d}, 0.01]);
+    }}
+    hull() {{
+        translate([s * {g['reach']:.4f} - {w}, -{d}, {g['z1']:.3f}]) cube([{2 * w}, {2 * d}, 0.01]);
+        translate([s * {g['reach']:.4f} - {fx}, -{fy}, {g['contact']:.3f}]) cube([{2 * fx}, {2 * fy}, 0.01]);
+    }}
+}}
+module skid_local() {{
+    difference() {{
+        union() {{
+            translate([-{S['plate'] / 2}, -{S['plate'] / 2}, {g['z0']:.3f}])
+                cube([{S['plate']}, {S['plate']}, {S['t']}]);
+            for (s = [-1, 1]) skid_strut(s);
+        }}
+        for (x = [-{hp}, {hp}], y = [-{hp}, {hp}])
+            translate([x, y, {g['z0']:.3f}]) hole(3.2, {S['t']});
+        translate([0, 0, {g['z0']:.3f}]) hole({S['relief_d']}, {S['t']});
+    }}
+}}
+module skids() {{
+    for (sx = [-1, 1], sy = [-1, 1])
+        translate([sx * skid_motor_off, sy * skid_motor_off, 0])
+            rotate([0, 0, atan2(sy, sx)]) color("#d0d0d0") skid_local();
+}}
+module skid() {{ skid_local(); }}
+"""
 
 
 def scad():
@@ -322,15 +378,55 @@ module belly_sensor() {{
         box({-rd['L'] / 2}, {rd['L'] / 2}, {-rd['W'] / 2}, {rd['W'] / 2}, 0, {rd['H']});
 }}
 
+// ---- Remote ID on the rear-port arm ({MP['remote_id']['name']}) ----------------------
+// A tray on the arm's top face holds the board in a pocket; the cover screws into the
+// tray's two M2 inserts and traps it; two cable ties over the cover's grooves hold the lot
+// to the arm. Local u runs out along the arm, v across it.
+module rid_place() {{ translate([{G['rid']['cx']:.3f}, {G['rid']['cy']:.3f}, {G['rid']['z0']}]) rotate([0, 0, {G['rid']['ang']:.1f}]) children(); }}
+module rid_tray_local() {{
+    lp = {G['rid']['lp']}; wp = {G['rid']['wp']}; w = {G['rid']['wall']}; b = {G['rid']['base_t']};
+    h = {G['rid']['h']}; bu = {G['rid']['boss_u']:.3f};
+    difference() {{
+        union() {{
+            box(-lp / 2 - w, lp / 2 + w, -wp / 2 - w, wp / 2 + w, 0, b + h);
+            for (s = [-1, 1]) translate([s * bu, 0, 0]) cylinder(d = {G['rid']['bd']}, h = b + h, $fn = 32);
+        }}
+        box(-lp / 2, lp / 2, -wp / 2, wp / 2, b, b + h + 1);                  // the board's pocket
+        box(-lp / 2 - w - 1, -lp / 2 + 0.01, -4, 4, b, b + 4);                 // CAN lead and antenna out
+        for (s = [-1, 1]) translate([s * bu, 0, b + h]) bore(ins_m2);
+    }}
+}}
+module rid_cover_local() {{
+    lp = {G['rid']['lp']}; wp = {G['rid']['wp']}; w = {G['rid']['wall']}; z = {G['rid']['base_t'] + G['rid']['h']};
+    bu = {G['rid']['boss_u']:.3f}; t = {G['rid']['cover_t']};
+    difference() {{
+        hull() {{
+            box(-lp / 2 - w, lp / 2 + w, -wp / 2 - w, wp / 2 + w, z, z + t);
+            for (s = [-1, 1]) translate([s * bu, 0, z]) cylinder(d = {G['rid']['bd']}, h = t, $fn = 32);
+        }}
+        for (s = [-1, 1]) translate([s * bu, 0, z]) hole({CLEAR['M2']}, t);
+        for (u = {G['rid']['tie_u']}) box(u - {TIE['w'] / 2 + 0.25}, u + {TIE['w'] / 2 + 0.25}, -wp, wp, z + t - 0.8, z + t + 1);
+    }}
+}}
+module rid_tray()  {{ color("#d9822b") rid_place() rid_tray_local(); }}
+module rid_cover() {{ color("#e0a050") rid_place() rid_cover_local(); }}
+module remote_id() {{
+    color("#2a2f36") rid_place()
+        box({-MP['remote_id']['L'] / 2}, {MP['remote_id']['L'] / 2}, {-MP['remote_id']['W'] / 2}, {MP['remote_id']['W'] / 2},
+            {G['rid']['base_t']}, {G['rid']['base_t'] + MP['remote_id']['H']});
+}}
+
 module mounts() {{
     antenna_tower(); gps_pod(); gps_lid(); nose_mount(); xiao_lid(); rx_cover();
     lidar_bracket();
     range_cradle(); range_lid();
+    rid_tray(); rid_cover();
 }}
 module mounted_parts() {{
     gps(); iridium_antenna(); rx(); elrs_antennas();
 }}
 
+{skid_scad()}
 // ---- laid out for printing: each part on the bed, in the orientation it prints ---------
 module print_antenna_tower() {{ translate([0, 0, seat_z]) rotate([180, 0, 0]) antenna_tower(); }}
 module print_gps_pod()       {{ translate([0, 0, -seat_z]) gps_pod(); }}
@@ -341,18 +437,22 @@ module print_rx_cover()      {{ translate([0, 0, -(rx_bot - {N['rx_cover']})]) r
 module print_lidar_bracket() {{ translate([0, 0, lidar_bracket_t]) lidar_bracket(); }}
 module print_range_cradle()  {{ rotate([180, 0, 0]) range_cradle(); }}
 module print_range_lid()     {{ translate([0, 0, range_body_h + {R['lid_t']}]) range_lid(); }}
+module print_rid_tray()      {{ rid_tray_local(); }}
+module print_rid_cover()     {{ translate([0, 0, {G['rid']['base_t'] + G['rid']['h'] + G['rid']['cover_t']}]) rotate([180, 0, 0]) rid_cover_local(); }}
+module print_skid()          {{ translate([0, 0, {design.skid_geometry()['top']}]) rotate([180, 0, 0]) skid_local(); }}
 """
 
 
 PRINTED = ["antenna_tower", "gps_pod", "gps_lid", "nose_mount", "xiao_lid", "rx_cover", "lidar_bracket",
-           "range_cradle", "range_lid"]
+           "range_cradle", "range_lid", "rid_tray", "rid_cover", "skid"]
 
 
-def export_stl():
-    os.makedirs(PRINT_DIR, exist_ok=True)
+#each printed part as an STL in dest
+def export_stl(dest=PRINT_DIR, quiet=False):
+    os.makedirs(dest, exist_ok=True)
     for name in PRINTED:
-        out = os.path.join(PRINT_DIR, name + ".stl")
-        src = os.path.join(PRINT_DIR, "." + name + ".scad")
+        out = os.path.join(dest, name + ".stl")
+        src = os.path.join(dest, "." + name + ".scad")
         open(src, "w").write(f"use <{OUT}>\n$fn = 48;\nprint_{name}();\n")
         try:
             r = subprocess.run(["openscad", "-o", out, src], capture_output=True, text=True,
@@ -361,7 +461,8 @@ def export_stl():
             os.unlink(src)
         if not os.path.exists(out):
             sys.exit(f"FAIL: {name} did not export\n{r.stderr[-1500:]}")
-        print(f"  wrote cad/print/{name}.stl")
+        if not quiet:
+            print(f"  wrote {os.path.relpath(out, ROOT)}")
 
 
 def main():
