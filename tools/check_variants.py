@@ -16,7 +16,7 @@ import pcbnew, design  # noqa: E402
 BOARD = "NAVCORE-SoOP.kicad_pcb"
 FAB = "fab"
 DEFAULT = f"{FAB}/BOM-NAVCORE-SoOP.csv"
-VARIANTS = ("", "-economic", "-nofpv")
+VARIANTS = ("", "-economic")
 BOM_COLS = ["Comment", "Designator", "Footprint", "LCSC", "Qty", "DNP"]
 CPL_COLS = ["Designator", "Mid X", "Mid Y", "Layer", "Rotation"]
 

@@ -24,8 +24,11 @@ RETIRED = [
      "SLVSD26 5.4 gives 118.6 C/W (JEDEC) and 57.2 C/W (EVM); publish them as a bracket"),
     (r"\b48/48\b", "the LCSC code count when the community mirror still worked",
      "56/56 codes resolve, via JLCPCB's live API (tools/check_stock.py)"),
+    (r"\bnofpv\b|\bno-fpv\b", "the -nofpv variant, dropped as a byte-identical copy of the default",
+     "there is one build and an -economic variant"),
     (r"NAVCORE-SoOP-fpv\b", "a BOM/CPL variant name retired two revisions ago",
-     "the no-video variant is -nofpv, and today it is byte-identical to the default"),
+     "there is one build and an -economic variant; the -nofpv variant was dropped as a "
+     "byte-identical copy of the default"),
     (r"\b64% routed\b", "the stale routing figure from before the board was finished",
      "the board is fully routed; check_traces.py and DRC both pass"),
     (r"6\.0\s?mm\s?\"?\s?nominal|nominal\s?6\.0\s?mm|allowance (is|of) 6\.0\s?mm",

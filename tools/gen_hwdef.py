@@ -32,6 +32,12 @@ DROP = [
     (r'^IMU Invensense SPI:mpu6000',  "MPU6000 not fitted"),
     (r'^SPIDEV icm20602',        "ICM-20602 not fitted"),
     (r'^SPIDEV mpu6000',         "MPU6000 not fitted"),
+    (r'^PC7 TIM3_CH2 TIM3 RCININT',
+     "RC is CRSF over USART6 (SERIAL7_PROTOCOL 23), so the timer input on the same pin goes, "
+     "and TIM3 drives M1/M2 instead (PPM/SBUS-by-timer receivers lose their input)"),
+    (r'^PB13 SPI2_SCK',          "SPI2 served only the analogue OSD, which is not fitted"),
+    (r'^PB14 SPI2_MISO',         "SPI2 served only the analogue OSD, which is not fitted"),
+    (r'^PB15 SPI2_MOSI',         "SPI2 served only the analogue OSD, which is not fitted"),
     (r'^PE1 UART8_TX',
      "ESC telemetry is receive-only, so UART8 needs only PE0/RX. PE1 is left "
      "unwired rather than declared and unconnected"),
@@ -70,6 +76,22 @@ REPLACE = [
     (r'^PD11\s+PINIO2.*',
      "PD11 FLOW_MOTION INPUT PULLDOWN GPIO(86)",
      "PD11 is reserved for an optical flow motion interrupt. It is not wired on Rev C (J14.6 is GND), so the pull-down holds it idle."),
+]
+
+#timers: same pins, other timers
+REPLACE += [
+    (r'^PB0\s+TIM8_CH2N.*', "PB0  TIM3_CH3 TIM3  PWM(1)  GPIO(50) BIDIR",
+     "M1 moves from TIM8_CH2N (complementary - no input capture, so no BDShot) to TIM3_CH3 "
+     "on the same pin, as MatekH743-bdshot does. BIDIR is set on the first channel of each "
+     "pair, which reads for both."),
+    (r'^PB1\s+TIM8_CH3N.*', "PB1  TIM3_CH4 TIM3  PWM(2)  GPIO(51)", "M2: TIM3_CH4, same pin."),
+    (r'^PA0\s+TIM5_CH1.*', "PA0  TIM5_CH1  TIM5  PWM(3)  GPIO(52) BIDIR",
+     "M3/M4 stay on TIM5 (MatekH743-bdshot moves them to TIM2, but TIM2_CH1 is the passive "
+     "buzzer's tone on PA15)."),
+    (r'^PC7 USART6_RX USART6 NODMA ALT\(1\)', "PC7 USART6_RX USART6 NODMA",
+     "USART6_RX is PC7's only function now that the timer RC input is gone."),
+    (r'^DMA_NOSHARE SPI1\* SPI4\*$', "DMA_NOSHARE SPI1* SPI4* TIM3* TIM5*",
+     "the BDShot timers get DMA streams of their own, as the IMU buses do"),
 ]
 
 EXTRA = """
@@ -149,14 +171,20 @@ RC_PROTOCOLS 512
 # No separate telemetry radio is fitted or needed.
 
 SERVO_BLH_AUTO 1
+# 2806.5 motors are 12N14P.
+SERVO_BLH_POLES 14
 
+# Throttle-referenced notch until there is RPM telemetry. ~108 Hz is the expected hover
+# (docs/VERIFICATION.md); set FREQ/REF from the first hover's FFT log (runbook T5).
 INS_HNTCH_ENABLE 1
 INS_HNTCH_MODE 1
 INS_HNTCH_REF 0.35
-INS_HNTCH_FREQ 60
-INS_HNTCH_BW 30
+INS_HNTCH_FREQ 80
+INS_HNTCH_BW 40
 INS_HNTCH_HMNCS 3
-# Bidirectional DShot on motors 1-4.
+# Bidirectional DShot: the hwdef supports it on motors 1-4 (BIDIR on TIM3/TIM5), but the
+# BLS 60A ships BLHeli_S, which never answers. After flashing Bluejay (runbook T3) set
+# SERVO_BLH_BDMASK 15 and INS_HNTCH_MODE 3. Shipped off, so a stock ESC still spins.
 SERVO_BLH_BDMASK 0
 
 GPS2_TYPE 0

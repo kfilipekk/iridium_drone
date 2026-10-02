@@ -240,16 +240,13 @@ gated check --- fails if any pair disagrees with the board.
 \toprule
 \textbf{Variant} & \textbf{BOM lines} & \textbf{Placements} & \textbf{Difference from default} \\
 \midrule
-\file{NAVCORE-SoOP} (default) & 70 & \textbf{162} & --- \\
-\file{NAVCORE-SoOP-economic} & 70 & \textbf{161} & omits \file{U3} only \\
-\file{NAVCORE-SoOP-nofpv} & 70 & \textbf{162} & \textbf{none --- byte-identical} \\
+\file{NAVCORE-SoOP} (default) & 82 & \textbf{180} & --- \\
+\file{NAVCORE-SoOP-economic} & 82 & \textbf{179} & omits \file{U3} only \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-\file{-nofpv} is byte-identical to the default pair: the board has no 9 V VTX block for it
-to omit (\file{L5} is the payload buck's inductor, and a VTX runs from
-\file{+5V\_PAYLOAD} on \file{J22}). It is a label, not a saving. Choosing Economic only makes sense if you want to hand-fit the second IMU.
+There is one build and an Economic variant; a VTX runs from \file{+5V\_PAYLOAD} on \file{J22}. Choosing Economic only makes sense if you want to hand-fit the second IMU.
 
 \subsection{Parts worth checking before you pay}
 
@@ -1534,8 +1531,6 @@ placed where it reads as its own pad's, has nowhere to go among them.
 \item \textbf{The payload rail cannot carry every payload connector at once}: 1.43 A is
 inside \file{L5}'s 2.1 A, but puts \file{U20} at about 132\,\degC{} against 125\,\degC{}
 (\file{check\_modules.py}). Each declared mission fits.
-\item \textbf{\file{-nofpv} is byte-identical to the default pair.} A variant that ships the
-same bytes as another is a place for someone to pick the wrong file.
 \item \textbf{The Economic variant saves one part and not the feeder fees}, which makes it a
 worse deal than it reads as (Section 15.1).
 \item \textbf{In4 rail fragmentation} is an accepted warning on this board.

@@ -38,7 +38,10 @@
     "PB8/PB9": "UART4 (SERIAL6) - the expansion/companion UART on pads P72/P73 with 5 V and GND on P71/P74; PPS on P44",
     "PC4": "ADC1 ch4  - I channel from OPA2374 difference amp",
     "PA4": "ADC2 ch18 - Q channel, dual-simultaneous with PC4",
-    "PC5": "spare - the MAX2112 has no analogue RSSI pin; signal level is read over I2C"
+    "PC5": "spare - the MAX2112 has no analogue RSSI pin; signal level is read over I2C",
+    "PB0/PB1/PA0": "motor timers, same pins: M1/M2 on TIM3_CH3/CH4 (not MatekH743's TIM8_CH2N/CH3N, which cannot capture) and BIDIR on PB0 and PA0, so all four motors can run bidirectional DShot once the ESC runs Bluejay. A stock MatekH743 or MatekH743-bdshot binary still drives the motors on these pins.",
+    "PC7": "USART6_RX only: the RC timer input (RCININT on TIM3_CH2) is dropped, since RC is CRSF on SERIAL7 and TIM3 now drives M1/M2. PPM receivers are not supported.",
+    "PB13/PB14/PB15": "SPI2 not declared: it served only the analogue OSD, which is not fitted."
   },
   "unpopulated_matek_features": [
     "MAX7456 OSD",

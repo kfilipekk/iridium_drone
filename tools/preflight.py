@@ -888,6 +888,11 @@ def firmware(board):
           "hwdef is consistent with the netlist" if "is consistent" in out
           else "hwdef and netlist disagree - see tools/check_hwdef.py")
 
+    rc, out = run("check_bdshot.py")
+    check("firmware", "motors can run bidirectional DShot", rc == 0,
+          "BIDIR timers on all four motors, each with DMA of its own" if rc == 0
+          else "a motor cannot capture its ESC's reply - see tools/check_bdshot.py")
+
     rc, out = run("check_traces.py")
     m = re.search(r'^(\d+) item\(s\) over their stated limit', out, re.M)
     over = int(m.group(1)) if m else -1

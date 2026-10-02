@@ -9,6 +9,9 @@ PREREQUISITES = [
     #the board is the design it claims to be
     dict(id="design.netlist", cls=GATED, tool="check_design.py",
          claim="the netlist matches the schematic, and every MCU pin used is declared"),
+    dict(id="fw.bdshot", cls=GATED, tool="check_bdshot.py",
+         claim="all four motors sit on capture-capable timer channels with BIDIR and DMA of "
+               "their own, so RPM telemetry and the RPM notch work once Bluejay is flashed"),
     dict(id="design.hwdef", cls=GATED, tool="check_hwdef.py",
          claim="ArduPilot's hwdef agrees with the netlist pin for pin"),
     dict(id="design.symbols", cls=GATED, tool="check_symbol_pinout.py",

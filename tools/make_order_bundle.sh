@@ -35,13 +35,11 @@ echo "  $n_cu copper layers ok"
 echo "regenerating BOM and CPL, all three variants ..."
 python3 tools/gen_bom.py            >/dev/null
 python3 tools/gen_bom.py --economic >/dev/null
-python3 tools/gen_bom.py --no-fpv   >/dev/null
 
 mkdir -p "$STAGE/gerbers"
 cp fab/gerbers/* "$STAGE/gerbers/"
 for f in BOM-NAVCORE-SoOP.csv CPL-NAVCORE-SoOP.csv \
-         BOM-NAVCORE-SoOP-economic.csv CPL-NAVCORE-SoOP-economic.csv \
-         BOM-NAVCORE-SoOP-nofpv.csv CPL-NAVCORE-SoOP-nofpv.csv; do
+         BOM-NAVCORE-SoOP-economic.csv CPL-NAVCORE-SoOP-economic.csv; do
   if [ ! -f "fab/$f" ]; then
     echo "REFUSING: fab/$f is missing - the bundle would ship without it." >&2
     exit 1
@@ -124,8 +122,6 @@ ASSEMBLY
   Variants, if you want them instead of the default:
     *-economic.csv  U3 (second IMU) left off for hand-fitting. That is the ONLY
                     difference from the default pair.
-    *-nofpv.csv     byte-identical to the default pair: Revision C removed the 9 V
-                    VTX block this variant used to omit. Use the default pair.
 
 BEFORE YOU PAY - the things no offline check can confirm
   - Accept JLCPCB's free DFM review. It is the only thing that checks pad LAND

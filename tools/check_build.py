@@ -5,7 +5,7 @@ Usage:
   python3 tools/check_build.py
   python3 tools/check_build.py --bom     # substitution candidates for at-risk parts
 """
-import csv, math, os, sys
+import csv, math, os, re, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import design as _d
 
@@ -162,8 +162,11 @@ def power(loads):
                   "[M] check_power_cut.py")
 
 
+MOTOR_PEAK_A = 30.0    #[A] 2806.5 on 4S with a 7040, at full throttle
+
+
 def currents():
-    per = 30.0            #[A] 2806.5 on 4S with a 7040, at full throttle
+    per = MOTOR_PEAK_A
     check("current", "ESC continuous rating", per <= ESC["cont_A"],
           f"~{per:.0f} A per motor against {ESC['cont_A']:.0f} A per channel continuous",
           f"[A] motor draw; {ESC['src']} for the ESC")
@@ -242,8 +245,10 @@ def geometry(board):
 def buses():
     check("buses", "motor protocol", "600" in ESC["proto"],
           f"DShot600 (MOT_PWM_TYPE 6) against the ESC's {ESC['proto']}", ESC["src"])
-    check("buses", "battery chemistry", "4S" in "3-6S" or True,
-          f"4S pack within the ESC's {ESC['cells']} input range", ESC["src"])
+    lo, hi = (int(x) for x in re.findall(r"\d+", ESC["cells"])[:2])
+    check("buses", "battery cell count within the ESC's range", lo <= _d.CELLS <= hi,
+          f"{_d.CELLS}S design maximum (design.CELLS) against the ESC's {ESC['cells']}",
+          ESC["src"])
     #compared to the shipped file, not to a literal
     derived = 1000.0 / ESC["cur_scale_mv_per_A"]
     shipped = shipped_param("BATT_AMP_PERVLT")
@@ -253,6 +258,12 @@ def buses():
            f"{DEFAULTS} ships {shipped}; this board adds no divider"
            if shipped is not None else
            f"BATT_AMP_PERVLT is absent from {DEFAULTS}"), ESC["src"])
+    #the current sense reads to 3.3 V on PC1
+    full = 3.3 * derived
+    note("buses", "ESC current reads up to the ADC's full scale",
+         f"{full:.1f} A at 3.3 V ({derived:.1f} A/V) - a full-throttle punch on a 7-inch "
+         f"(~{4 * MOTOR_PEAK_A:.0f} A, currents() below) clips there, so consumed mAh reads "
+         f"low on punch-outs; the hover and cruise range is unaffected", ESC["src"])
     #J2 vs the manual
     J2_SIGNAL = {"GND": "GND", "VBAT_IN": "VBAT", "M1": "M1", "M2": "M2", "M3": "M3",
                  "M4": "M4", "ESC_CUR": "CUR", "ESC_TEL": "TEL"}

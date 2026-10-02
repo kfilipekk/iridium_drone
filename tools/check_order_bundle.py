@@ -16,8 +16,7 @@ BUNDLE = os.path.join(REPO, "fab", "NAVCORE-SoOP-order-bundle.zip")
 GERBERS = os.path.join(REPO, "fab", "gerbers")
 
 FLAT = ["BOM-NAVCORE-SoOP.csv", "CPL-NAVCORE-SoOP.csv",
-        "BOM-NAVCORE-SoOP-economic.csv", "CPL-NAVCORE-SoOP-economic.csv",
-        "BOM-NAVCORE-SoOP-nofpv.csv", "CPL-NAVCORE-SoOP-nofpv.csv"]
+        "BOM-NAVCORE-SoOP-economic.csv", "CPL-NAVCORE-SoOP-economic.csv"]
 REQUIRED = ["HOW-TO-ORDER.txt", "gerbers.zip", "BOM-NAVCORE-SoOP.csv",
             "CPL-NAVCORE-SoOP.csv"]
 
@@ -42,7 +41,7 @@ def main():
     flat_ok = flat_bad = 0
     for name in FLAT:
         if name not in names:
-            continue                      #the *-economic/-nofpv variants are optional
+            continue                      #the *-economic variant is optional
         disk = os.path.join(REPO, "fab", name)
         if not os.path.exists(disk):
             fails.append(f"{name} is in the bundle but not on disk - cannot verify it")
