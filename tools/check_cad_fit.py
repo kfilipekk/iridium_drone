@@ -50,7 +50,7 @@ SKY = {"gps": (15.0, None),
 SKY_BLOCKERS = [p for p in PARTS if p not in PRINTED]
 
 GROUND_PARTS = {
-    "lidar360":     5.0,   #LD06, 33.30 mm tall - the reason SKID drop went 25 -> 40 mm
+    "lidar360":     5.0,   #LD06, 33.30 mm tall - the reason SKID drop went 25 -> 45 mm
     "belly_sensor": 5.0,   #downward rangefinder
     "range_lid":    5.0,
     "xiao_lid":     5.0,   #the nose camera hangs under the mid plate
