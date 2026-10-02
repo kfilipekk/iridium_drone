@@ -20,6 +20,7 @@ sys.path.insert(0, HERE)
 
 import readiness  # noqa: E402
 import preflight  # noqa: E402  (imported here so run_gate can reach it)
+import design     # noqa: E402
 
 #audit_gate_patterns.capture() leaves subprocess.run patched
 _REAL_RUN = subprocess.run
@@ -325,6 +326,32 @@ def _no_defaults():
         os.path.exists = real
 
 
+@contextlib.contextmanager
+def _oversize_peg_sink():
+    old = design.MODEL_EXPECTED_SINK.get("J8")
+    design.MODEL_EXPECTED_SINK["J8"] = 2.0
+    try:
+        yield
+    finally:
+        if old is not None:
+            design.MODEL_EXPECTED_SINK["J8"] = old
+        else:
+            design.MODEL_EXPECTED_SINK.pop("J8", None)
+
+
+_ACTIVE_CAPTURE = {}
+
+
+@contextlib.contextmanager
+def _mounts_fail():
+    real = _ACTIVE_CAPTURE.get("check_cad_fit.py", "")
+    _ACTIVE_CAPTURE["check_cad_fit.py"] = real.replace("carries", "carries").replace("joint(s)  ok", "joint(s)  FAIL", 1)
+    try:
+        yield
+    finally:
+        _ACTIVE_CAPTURE["check_cad_fit.py"] = real
+
+
 TIER_B = [
     dict(pid="assy.twosided", group="assembly", check="two-sided assembly",
          fault=lambda: _fab_file("CPL-NAVCORE-SoOP.csv", _cpl_all_top),
@@ -363,6 +390,9 @@ TIER_B = [
     dict(pid="fab.planes", group="integrity", check="planes carry no routing",
          fault=_track_on_a_plane,
          why="signal copper on In1.Cu must fail the plane check"),
+    dict(pid="fab.pegdepth", group="fabrication", check="locating peg sink depth within board core",
+         fault=_oversize_peg_sink,
+         why="a locating peg deeper than the board thickness must fail the exemption"),
     dict(pid="assy.bom", group="assembly", check="BOM matches the board",
          fault=lambda: _fab_file("BOM-NAVCORE-SoOP.csv", _bom_wrong_value),
          why="a BOM value that differs from the board must fail"),
@@ -372,15 +402,21 @@ TIER_B = [
     dict(pid="fw.defaults", group="firmware", check="default parameters shipped",
          fault=_no_defaults,
          why="a board shipped without defaults.parm must fail"),
+    dict(pid="mech.mounts", group="firmware", check="every part off the board is mounted, with screws",
+         fault=_mounts_fail,
+         why="a mount that fails its joints check must fail the mounts gate"),
 ]
 
 
 def run_inline_fault(capture, group_name, fault):
     """Run ONE preflight group with `fault` applied."""
+    _ACTIVE_CAPTURE.clear()
+    _ACTIVE_CAPTURE.update(capture)
+
     def patched(args, *a, **k):
         argv = [str(x) for x in (args if isinstance(args, (list, tuple)) else [args])]
         tool = next((os.path.basename(x) for x in argv if x.endswith(".py")), None)
-        return _Synth(0, capture.get(tool, "") if tool else "")
+        return _Synth(0, _ACTIVE_CAPTURE.get(tool, "") if tool else "")
 
     subprocess.run = patched
     preflight.results.clear()

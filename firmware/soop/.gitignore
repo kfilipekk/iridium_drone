@@ -3,4 +3,5 @@ sgp4_host_test
 dsp_host
 nav_host
 iq_import
+ant_host
 *.o

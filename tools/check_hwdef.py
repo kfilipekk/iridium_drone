@@ -19,8 +19,9 @@ def main():
         for sp in specs:
             ref, pin = sp.split(".", 1)
             if ref != "U1": continue
-            nm = h7.get(pin, pin)
-            used.add(nm.split("-")[0])
+            nm = h7.get(pin, pin).split("-")[0]
+            #the H7's analogue-switch pads (PC2_C, PC3_C ...) are their GPIO in a hwdef
+            used.add(nm[:-2] if nm.endswith("_C") else nm)
     for pin in list(pins):
         pass
 

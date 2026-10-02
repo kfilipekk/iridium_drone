@@ -36,6 +36,8 @@ PREREQUISITES = [
          claim="track, via and drill sizes are inside JLCPCB's free-tier capability"),
     dict(id="fab.backside", cls=GATED, tool="check_backside.py",
          claim="no through-hole pin or post lands under a part on the other side"),
+    dict(id="fab.pegdepth", cls=GATED, check="locating peg sink depth within board core",
+         claim="locating pegs sink within board core and clear opposite-side copper"),
     dict(id="fab.silkowner", cls=GATED, tool="check_silk_owner.py",
          claim="every printed label sits nearer the part it names than any other part"),
     dict(id="fab.models", cls=GATED, tool="check_model_alignment.py",
@@ -73,6 +75,10 @@ PREREQUISITES = [
     #mechanically sound
     dict(id="mech.connectors", cls=GATED, tool="check_connectors.py",
          claim="every connector's mouth faces off-board with room for its plug"),
+    dict(id="mech.floorplan", cls=GATED, tool="check_floorplan.py",
+         claim="every perimeter port sits on its edge, mates, and leaves room for its neighbours"),
+    dict(id="mech.cables", cls=GATED, tool="check_cables.py",
+         claim="every cable routed through the airframe meets length, bend radius and clearance"),
     dict(id="mech.stack", cls=GATED, tool="check_mechanical.py",
          claim="the board, ESC and frame fit in Z"),
     dict(id="mech.interference", cls=GATED, tool="check_cad_fit.py",
@@ -135,6 +141,8 @@ PREREQUISITES = [
          claim="no retired figure is presented as current in the live documentation"),
     dict(id="fw.defaults", cls=GATED, check="default parameters shipped",
          claim="the defaults.parm that ships is the one this board needs"),
+    dict(id="fw.antfeed", cls=GATED, tool="check_soop_ant.py",
+         claim="the active antenna feed monitor reads parts right, handles faults and compiles"),
 
     dict(id="adv.decoupling", cls=ADVISORY, tool="check_placement.py",
          why="a PRE-routing placement guide whose limits relax once routing forces a part "

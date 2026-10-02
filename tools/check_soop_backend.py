@@ -59,6 +59,30 @@ def main():
           f"{READ} is {size if size is not None else 'absent'} bytes "
           f"(floor {FLOOR}), GPS_TYPE_SOOP selectable ({ty} SoOP strings)")
 
+    #2b. antenna monitor symbols and SOA log format in the ELF
+    ant_up_size = _nm_size(elf, "AP_SoOP::ant_update")
+    soop_ant_size = _nm_size(elf, "soop_ant_step")
+    has_ant_syms = ant_up_size is not None and ant_up_size >= FLOOR and soop_ant_size is not None and soop_ant_size >= FLOOR
+    ok &= has_ant_syms
+    print(f"  {'ok  ' if has_ant_syms else 'FAIL'}  antenna monitor in firmware: "
+          f"AP_SoOP::ant_update is {ant_up_size if ant_up_size is not None else 'absent'} bytes, "
+          f"soop_ant_step is {soop_ant_size if soop_ant_size is not None else 'absent'} bytes")
+
+    s_out = subprocess.run(["strings", "-a", "-n", "3", elf], capture_output=True, text=True).stdout
+    has_soa = "SOA" in s_out.splitlines() and "TimeUS,St,mA,En,Flt,Rt" in s_out
+    ok &= has_soa
+    print(f"  {'ok  ' if has_soa else 'FAIL'}  firmware logs active antenna telemetry: "
+          f"SOA format string {'present' if has_soa else 'missing'}")
+
+    #2c. hwdef configures BIAS_EN on PC5 driven HIGH
+    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    hwdef_file = os.path.join(repo_root, "firmware/NAVCORE_SoOP/hwdef.dat")
+    hwdef_txt = open(hwdef_file).read() if os.path.exists(hwdef_file) else ""
+    bias_en_match = bool(re.search(r"^\s*PC5\s+BIAS_EN\s+OUTPUT\s+HIGH", hwdef_txt, re.M))
+    ok &= bias_en_match
+    print(f"  {'ok  ' if bias_en_match else 'FAIL'}  hwdef drives antenna feed: "
+          f"PC5 BIAS_EN OUTPUT HIGH {'present' if bias_en_match else 'missing'}")
+
     #the SITL binary must carry it too, or the EKF test is testing nothing
     self_elf = os.path.join(AP, "build/sitl/bin/arducopter")
     if os.path.exists(self_elf):

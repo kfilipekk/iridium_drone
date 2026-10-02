@@ -14,6 +14,23 @@ import pcbnew, design, fplib, symlib, jlcpaths
 BOARD = sys.argv[1] if len(sys.argv) > 1 else "NAVCORE-SoOP.kicad_pcb"
 
 
+def geometry(fp):
+    """[(num, x, y, size, size)] in library coordinates, sorted, to 0.01 mm."""
+    out = []
+    for p in fp.Pads():
+        q = p.GetFPRelativePosition()          #mirrored on a flipped footprint
+        y = -q.y if fp.IsFlipped() else q.y
+        s = p.GetSize()
+        out.append((p.GetNumber(), round(q.x / 1e6, 2), round(y / 1e6, 2) + 0.0,
+                    *sorted((round(s.x / 1e6, 2), round(s.y / 1e6, 2)))))
+    return sorted(out)
+
+
+def lib_geometry(info):
+    return sorted((p["num"], round(p["x"], 2), round(p["y"], 2) + 0.0,
+                   *sorted((round(p["sx"], 2), round(p["sy"], 2)))) for p in info["pads"])
+
+
 def main():
     print(f"symbols    : {jlcpaths.SYMBOLS}")
     print(f"footprints : {jlcpaths.FOOTPRINTS}")
@@ -53,11 +70,12 @@ def main():
           f"{len([s for s in sym_refs if s.split(':', 1)[1] in syms])} symbol(s)")
 
     #2. identical
-    board_pads = {}
+    board_pads, board_geom = {}, {}
     if os.path.exists(BOARD):
         bd = pcbnew.LoadBoard(BOARD)
         for f in bd.GetFootprints():
             board_pads[f.GetReference()] = sorted(p.GetNumber() for p in f.Pads())
+            board_geom[f.GetReference()] = geometry(f)
     else:
         fails.append(f"{BOARD} not found - cannot compare the library to the board")
 
@@ -85,7 +103,12 @@ def main():
                              + "; ".join(detail or
                                          [f"same numbers, different order? lib={lib_pads} "
                                           f"board={board_pads[ref]}"]))
-    print(f"compared   : {checked} ref(s) library pad-set vs board pad-set")
+            elif board_geom[ref] != lib_geometry(info):
+                #same pad numbers is not the same land
+                diff = [(b, l) for b, l in zip(board_geom[ref], lib_geometry(info)) if b != l]
+                fails.append(f"{ref} ({fpid}): pad geometry differs from the library, first "
+                             f"pad board {diff[0][0]} vs library {diff[0][1]} - swap_footprint")
+    print(f"compared   : {checked} ref(s) library pads vs board pads (numbers, positions, sizes)")
 
     wired = 0
     for netname, specs in design.NETS.items():

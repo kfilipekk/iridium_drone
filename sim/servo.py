@@ -87,7 +87,7 @@ def _step(i_from, i_to):
 def main(chk=None):
     chk = chk or Checks()
     mission, stall = loads()
-    print(f"TVC servo rail: {S['ref']} on {S['net']}, {S['count']} servos "
+    print(f"TVC servo rail: {'/'.join(S['refs'])} on {S['net']}, {S['count']} servos "
           f"({S['run_a']*1e3:.0f} mA run / {S['stall_a']*1e3:.0f} mA stall each)")
     print(f"  lander mission load {mission:.3f} A; double stall {stall:.3f} A "
           f"({(stall - mission)*1e3:.0f} mA of extra load)")
@@ -127,12 +127,13 @@ def main(chk=None):
            f"dip {total_dip*1e3:.1f} mV vs {headroom*1e3:.0f} mV of headroom")
 
     #topology: which rail the stall lands on
-    on_payload = f"{S['ref']}.5" in D.NETS.get("+5V_PAYLOAD", [])
-    on_fc = f"{S['ref']}.5" in D.NETS.get("+5V", [])
-    print(f"  {S['ref']}.5 is on +5V_PAYLOAD: {on_payload}; on the FC's +5V: {on_fc}")
+    pins = [f"{r}.2" for r in S["refs"]]
+    on_payload = all(p in D.NETS.get("+5V_PAYLOAD", []) for p in pins)
+    on_fc = any(p in D.NETS.get("+5V", []) for p in pins)
+    print(f"  {', '.join(pins)} on +5V_PAYLOAD: {on_payload}; on the FC's +5V: {on_fc}")
     chk.ok(on_payload and not on_fc,
            "the stalled servo load cannot disturb the flight controller's own +5 V",
-           f"{S['ref']}.5 on {S['net']}, not +5V")
+           f"{', '.join(pins)} on {S['net']}, not +5V")
     print()
     print("  The inductor model is power.py's open-loop switch node (right for the "
           "filter,\n  silent on the loop); the step model is an ideal regulator into the "

@@ -44,7 +44,7 @@ EDITS = [
      "#ifdef HAL_SOOP_CAPTURE_ENABLED\n    if (index == 0) {\n        return;     // ADC1 was never started: AP_SoOP_Capture owns it\n    }\n#endif\n"),
     ("libraries/AP_HAL_ChibiOS/hwdef/scripts/STM32H743xx.py",
      "ADC3_map = {\n",
-     '    "PC0"\t:\t10,\n    "PC1"\t:\t11,\n'),
+     '    "PC0"\t:\t10,\n    "PC1"\t:\t11,\n    "PC2"\t:\t0,\n'),
 ]
 
 #(file, text, replacement) where an insertion cannot express it
@@ -61,7 +61,7 @@ SOOP_TASK = ["AP_SoOP.h", "AP_SoOP.cpp", "AP_SoOP_MAX2112.h", "AP_SoOP_MAX2112.c
              "AP_SoOP_Capture.h", "AP_SoOP_Capture.cpp"]
 SOOP_CORE = ["soop_signal.h", "soop_dsp.h", "soop_dsp.c", "sgp4.h", "sgp4.c",
              "soop_ephem.h", "soop_ephem.c", "soop_nav.h", "soop_nav.c", "soop_guard.h",
-             "soop_guard.c"]
+             "soop_guard.c", "soop_ant.h", "soop_ant.c"]
 
 
 def main():

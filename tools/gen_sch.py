@@ -9,7 +9,7 @@ STOCK = "/usr/share/kicad/symbols"
 U = lambda: str(uuid.uuid4())
 #the printed sheet's identity - the PDF is what a reviewer opens first
 TITLE_BLOCK = ['\t(title_block', '\t\t(title "NAVCORE-SoOP flight controller")',
-               '\t\t(date "2026-09-23")', '\t\t(rev "C")',
+               '\t\t(date "2026-10-01")', '\t\t(rev "D")',
                '\t\t(company "Krystian Filipek - University of Cambridge / CUSF")',
                '\t\t(comment 1 "6-layer STM32H743 flight controller with Iridium SoOP Doppler navigation")',
                '\t\t(comment 2 "Generated from tools/design.py by tools/gen_sch.py - edit the source, not this file")',
@@ -110,8 +110,9 @@ def main():
         units = sorted({u for (_x, _y, _r, u) in pidx[lid].values()}) or [1]   #a fiducial has no pins
         for ui in units:
             ox = cx + (ui - 1) * 30.48
+            in_bom = "no" if (ref.startswith(("FID", "LOGO")) or lid in ("Connector:TestPoint", "Connector:TC2030")) else "yes"
             out += [f'\t(symbol (lib_id "{lid}") (at {ox:.2f} {cy:.2f} 0) (unit {ui})',
-                    '\t\t(exclude_from_sim no) (in_bom yes) (on_board yes)'
+                    f'\t\t(exclude_from_sim no) (in_bom {in_bom}) (on_board yes)'
                     f' (dnp {"yes" if dnp else "no"})',
                     f'\t\t(uuid "{U()}")',
                     f'\t\t(property "Reference" "{ref}" (at {ox:.2f} {cy-3.81:.2f} 0)'

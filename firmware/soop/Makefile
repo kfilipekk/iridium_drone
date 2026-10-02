@@ -10,13 +10,14 @@ SGP4_TEST    = sgp4_host_test
 NAV_HOST     = nav_host
 DSP_HOST     = dsp_host
 IMPORT       = iq_import
-ARM_SRC      = soop_solve.c sgp4.c soop_ephem.c soop_nav.c soop_guard.c soop_dsp.c
+ANT_HOST     = ant_host
+ARM_SRC      = soop_solve.c sgp4.c soop_ephem.c soop_nav.c soop_guard.c soop_dsp.c soop_ant.c
 ARMFLAGS     = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-d16 -mfloat-abi=hard
 
 .PHONY: all host arm clean
 all: host
 
-host: $(HOST) $(SGP4_TEST) $(NAV_HOST) $(DSP_HOST) $(IMPORT)
+host: $(HOST) $(SGP4_TEST) $(NAV_HOST) $(DSP_HOST) $(IMPORT) $(ANT_HOST)
 
 $(HOST): main_host.c soop_solve.c soop_solve.h sgp4.c sgp4.h
 	$(CC) $(CFLAGS) -o $@ main_host.c soop_solve.c sgp4.c -lm
@@ -30,6 +31,9 @@ $(NAV_HOST): nav_host.c soop_nav.c soop_nav.h soop_ephem.c soop_ephem.h soop_gua
 $(DSP_HOST): dsp_host.c soop_dsp.c soop_dsp.h soop_signal.h
 	$(CC) $(CFLAGS) -o $@ dsp_host.c soop_dsp.c -lm
 
+$(ANT_HOST): ant_host.c soop_ant.c soop_ant.h
+	$(CC) $(CFLAGS) -o $@ ant_host.c soop_ant.c
+
 $(IMPORT): iq_import.c soop_signal.h
 	$(CC) $(CFLAGS) -o $@ iq_import.c -lm
 
@@ -40,4 +44,4 @@ arm: $(ARM_SRC)
 	done
 
 clean:
-	rm -f $(HOST) $(SGP4_TEST) $(NAV_HOST) $(DSP_HOST) $(IMPORT) *.o
+	rm -f $(HOST) $(SGP4_TEST) $(NAV_HOST) $(DSP_HOST) $(IMPORT) $(ANT_HOST) *.o

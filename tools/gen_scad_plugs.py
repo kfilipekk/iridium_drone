@@ -56,6 +56,14 @@ def plug_of(board, ref):
     #from the courtyard centre out to its face along the mating direction
     half = (abs(vx) * (cr - cl) + abs(vy) * (cb - ct)) / 2
     mx, my = cx + vx * half, cy + vy * half
+    #where the body's measured front face is known it is the mouth
+    body = design.CONN_BODY.get(str(fp.GetFPID().GetLibItemName()))
+    if body:
+        fx, fy = local_to_board(fp, 0.0, body[1])
+        if abs(vx) > abs(vy):
+            mx = fx
+        else:
+            my = fy
     #width from the SIGNAL pads, projected across the mating direction
     if ref not in design.MATING_PLUG:
         raise SystemExit(f"{ref}: design.MATING_PLUG has no plug width for it")

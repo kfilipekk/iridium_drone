@@ -109,41 +109,50 @@ DATASHEET_VERIFIED = {
         "symbol's combined 1=C/2=C/3=A common-node topology matches a device that "
         "clamps each line to the shared pin 3",
         "2026-10-01"),
+    "LQW15AN27NH00D": (
+        "Murata LQW15AN27N datasheet, 0402 wirewound RF inductor, 2 terminals, non-polarised",
+        "2 used pins: 1, 2",
+        "2026-10-01"),
+    "PTVS5V0S1UR": (
+        "Nexperia PTVS5V0S1UR datasheet, SOD-123FL unidirectional TVS clamp: "
+        "pin 1 is the cathode (banded, +5V_PAYLOAD) and pin 2 is the anode (GND)",
+        "2 used pins: 1 = K, 2 = A",
+        "2026-10-01"),
+    "D_TVS": (
+        "KiCad Device:D_TVS bidirectional TVS diode symbol, 2 passive terminals",
+        "2 used pins: 1 = A1, 2 = A2",
+        "2026-10-01"),
 }
-
-
-def _blocks(text):
-    for m in re.finditer(r'\(symbol\s+"([^"]+)"', text):
-        i = m.start(); d = 0; j = i
-        while j < len(text):
-            if text[j] == '(':
-                d += 1
-            elif text[j] == ')':
-                d -= 1
-                if d == 0:
-                    break
-            j += 1
-        yield m.group(1), text[i:j + 1]
 
 
 def pinmap(path, name):
     """{pin number: pin name} for a symbol, following extends and unit children."""
     if not os.path.exists(path):
         return None, f"library missing: {path}"
-    blocks = dict(_blocks(open(path).read()))
-    if name not in blocks:
+    text = open(path).read()
+    m = re.search(r'\(symbol\s+"%s"' % re.escape(name), text)
+    if not m:
         return None, f"symbol {name!r} not in {os.path.basename(path)}"
-    base = name
-    ext = re.search(r'\(extends\s+"([^"]+)"', blocks[name])
+    i = m.start(); d = 0; j = i
+    while j < len(text):
+        if text[j] == '(':
+            d += 1
+        elif text[j] == ')':
+            d -= 1
+            if d == 0:
+                break
+        j += 1
+    sym_body = text[i:j + 1]
+    ext = re.search(r'\(extends\s+"([^"]+)"', sym_body)
     if ext:
         base = ext.group(1)
+        if base != name:
+            return pinmap(path, base)
     out = {}
-    for nm, b in blocks.items():
-        if nm == base or nm.startswith(base + "_"):
-            for m in re.finditer(
-                    r'\(pin\s+\S+\s+\S+.*?\(name\s+"([^"]*)".*?\(number\s+"([^"]*)"',
-                    b, re.S):
-                out[m.group(2)] = m.group(1)
+    for pm in re.finditer(
+            r'\(pin\s+\S+\s+\S+.*?\(name\s+"([^"]*)".*?\(number\s+"([^"]*)"',
+            sym_body, re.S):
+        out[pm.group(2)] = pm.group(1)
     return out, None
 
 

@@ -117,6 +117,8 @@ def main():
                 errors.append(f"{ref}: board says {fp.GetValue()!r}, "
                               f"design.py says {comp[2]!r}")
 
+        #pad by pad
+        single = {n for n, pins in design.NETS.items() if len(set(pins)) == 1}
         pad_diff = []
         for fp in _b.GetFootprints():
             ref = fp.GetReference()
@@ -130,6 +132,8 @@ def main():
                 if have.startswith(("unconnected-", "Net-(")):
                     have = ""
                 want = owner.get((ref, num), "")
+                if want in single:
+                    want = ""
                 if have != want:
                     pad_diff.append(f"{ref}.{num} is {have or 'unconnected'} on the board, "
                                     f"{want or 'unconnected'} in design.py")

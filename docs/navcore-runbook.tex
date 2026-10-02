@@ -69,7 +69,7 @@
 
 \begin{tabular}{@{}ll@{}}
 \toprule
-Board & 45.1 $\times$ 47.3 mm, 6-layer, STM32H743VIT6, Revision C \\
+Board & 46.5 $\times$ 47.2 mm, 6-layer, STM32H743VIT6, Revision D \\
 Gate verdict & \good{READY TO ORDER} --- every gated prerequisite proven (the gate prints the count) \\
 Hardware verdict & \flag{NOT READY TO FLY} --- 6 items need hardware, none of which can change what is ordered \\
 Toolchain & KiCad 9.0.8, ArduPilot Copter-4.7.0, Python 3 + pcbnew \\
@@ -188,14 +188,14 @@ The power planes are missing and the board will not work. It must show six.
 \textbf{Setting} & \textbf{Value} & \textbf{Why} \\
 \midrule
 Layers & \textbf{6} & In1 is a solid GND plane; In4 carries the rails \\
-Dimensions & 45.1 $\times$ 47.3 mm & KiCad's box; JLCPCB shows 45.0 $\times$ 47.2 \\
+Dimensions & 46.5 $\times$ 47.2 mm & the outline in \file{design.BOARD} \\
 Thickness & 1.6 mm & 30.5 mm stack standard \\
 Outer copper & \textbf{1 oz} & every current figure assumes it \\
 Surface finish & ENIG & 0402s and LGA-14s want a flat finish \\
 Min track / spacing & \textbf{0.1016 mm (4 mil)} & should be free tier \\
 Min via / drill & \textbf{0.45 mm / 0.20 mm} & \\
 Impedance control & No & USB is a plain pair; the RF run loses $<$1.5 dB \\
-Via covering & \textbf{Epoxy Filled \& Capped} & 31 vias sit in SMD pads \\
+Via covering & \textbf{Epoxy Filled \& Capped} & some vias sit in SMD pads \\
 Stencil & not needed & everything machine-placed but Section~\ref{sec:solder} \\
 Mark on PCB & \textbf{Remove Mark} & no JLC marker on the board; small fee \\
 \bottomrule
@@ -247,9 +247,9 @@ gated check --- fails if any pair disagrees with the board.
 \end{tabular}
 \end{center}
 
-\file{-nofpv} is byte-identical to the default pair: Revision C removed the 9 V VTX block it
-used to omit (\file{L5} is now the payload buck's inductor, and a VTX runs from
-\file{+5V\_PAYLOAD}). It is a label, not a saving. Choosing Economic only makes sense if you want to hand-fit the second IMU.
+\file{-nofpv} is byte-identical to the default pair: the board has no 9 V VTX block for it
+to omit (\file{L5} is the payload buck's inductor, and a VTX runs from
+\file{+5V\_PAYLOAD} on \file{J22}). It is a label, not a saving. Choosing Economic only makes sense if you want to hand-fit the second IMU.
 
 \subsection{Parts worth checking before you pay}
 
@@ -271,7 +271,7 @@ to \textbf{1 unit} with no published restock date when \file{check\_stock.py} wa
 
 \textbf{One designator ships unpopulated: \file{R15}}, the 120\,$\Omega$ CAN bus terminator.
 A CAN bus is terminated at its two \emph{ends}; fit \file{R15} (0402, across \file{CANH}
-and \file{CANL}) only if this board is the last node on the bus. Revision C fits everything
+and \file{CANL}) only if this board is the last node on the bus. Revision D fits everything
 else, including the CAN transceiver \file{U11} (on its own \file{+3V3\_CAN} LDO, \file{U21},
 fed from the payload rail) and the payload buck \file{U20}.
 
@@ -282,7 +282,7 @@ Do not type this list --- \file{make\_order\_bundle.sh} derives it from the BOM 
 \label{sec:upload}
 
 \begin{itemize}
-\item Outline and board size: \textbf{45.1 $\times$ 47.3 mm}
+\item Outline and board size: \textbf{46.5 $\times$ 47.2 mm}
 \item Copper layer count: \textbf{6}
 \item Drill count and the 0.20 mm minimum
 \item \textbf{The placement preview: nothing should need turning.} Every rotation and centre
@@ -292,7 +292,7 @@ replaced). A part that still looks turned is a finding --- report it rather than
 it by hand
 \item \textbf{1 oz outer copper}, explicitly
 \item \textbf{Panel by JLCPCB.} Standard assembly requires a single PCB of at least
-$70 \times 70$~mm and this board is $45.1 \times 47.3$~mm, so the panel and its breakaway
+$70 \times 70$~mm and this board is $46.5 \times 47.2$~mm, so the panel and its breakaway
 rails have to come from somewhere. Their own panelisation is the low-risk answer: you then
 confirm the panel outline in the same preview as the CPL.
 \end{itemize}
@@ -333,13 +333,13 @@ NAVCORE-SoOP PCB + assembly & 1 order & 190 & JLCPCB \\
 ST-Link V2 programmer & 1 & 4 & AliExpress \\
 microSD card, 32GB & 1 & 8 & AliExpress / anywhere \\
 USB-C cable, data-capable & 1 & 3 & anywhere \\
-JST-SH 1.0mm 8-pin pigtail (spare J2 ESC lead) & 2 & 3 & AliExpress \\
+JST GH 8P single-ended pigtail, GHR-08V-S (T1 bench feed into J2) & 2 & 3 & AliExpress \\
 Bench power supply, adjustable with CURRENT LIMIT & 1 & 35 & AliExpress \\
 Thermocouple meter or IR thermometer & 1 & 14 & AliExpress \\
 \end{longtable}
 Already have: Soldering iron and basic tools, Multimeter with continuity buzzer.
 
-\subsubsection*{A2 --- Iridium navigation, no aircraft} 6 lines, about GBP 186.
+\subsubsection*{A2 --- Iridium navigation, no aircraft} 5 lines, about GBP 176.
 The receive chain the board cannot supply, and the bench reference receiver for T3b step 1. The tuner (U13) is on the board; this is what feeds it.
 
 \begin{longtable}{@{}P{0.50\textwidth}P{0.12\textwidth}rP{0.22\textwidth}@{}}
@@ -349,15 +349,14 @@ The receive chain the board cannot supply, and the bench reference receiver for 
 \bottomrule
 \endfoot
 Tallysman HC610 active Iridium helical antenna & 1 & 130 & DigiKey \\
-SMA bias tee, 10 MHz-6 GHz (powers the HC610) & 1 & 15 & AliExpress \\
-Antenna coax: SMA jumper 10 cm + SMA-male to U.FL pigtail 20 cm & 1 set & 8 & AliExpress \\
-U.FL retention clip + ferrite for the bias tee's DC lead & 1 each & 3 & AliExpress \\
+MMCX to SMA pigtail, 15 cm, RG178 or RG316, right-angle SMA (J12 to the HC610) & 2 & 6 & AliExpress \\
+SMA DC block, inline, 10 MHz-6 GHz (bench) & 1 & 10 & AliExpress \\
 RTL-SDR Blog V4 (R820T2, with bias tee) & 1 & 30 & AliExpress / RTL-SDR Blog \\
 gr-iridium + iridium-toolkit (software) & 1 & 0 & GitHub (muccc) \\
 \end{longtable}
 Already have: Raspberry Pi 5.
 
-\subsubsection*{B1 --- The aircraft - minimum to fly on GPS} 28 lines, about GBP 365.
+\subsubsection*{B1 --- The aircraft - minimum to fly on GPS} 27 lines, about GBP 369.
 Frame, propulsion, radio, GPS, fasteners, looms. Every optional sensor ships disabled, so nothing in B2 is needed for a GPS flight.
 
 \begin{longtable}{@{}P{0.50\textwidth}P{0.12\textwidth}rP{0.22\textwidth}@{}}
@@ -388,12 +387,11 @@ M3 nylon washers (under the stack bolts' heads) & 1 pack & 2 & AliExpress \\
 M3 socket screw assortment (10/12/14/16/20 mm) + M3 washers & 1 kit & 5 & AliExpress \\
 M3 silicone grommets, spare set (30.5 mm stack) & 1 pack & 2 & AliExpress \\
 Heat-set inserts, CNC Kitchen M2 x 3 / M2.5 x 4 & 1 small pack of each & 12 & CNC Kitchen store \\
-Brass screws M2x6, M2x8 (beside the GPS) & 1 small set & 6 & AliExpress \\
+Brass screws M2x8 (beside the GPS) & 1 small set & 6 & AliExpress \\
 M2 and M2.5 socket screws + M2 nylon lock nuts & 1 kit & 5 & AliExpress \\
-JST-SH 1.0mm 4-pin pigtails (the sensor and RC leads) & 1 pack of 10 & 5 & AliExpress \\
-JST-GH 1.25mm 6-pin spare lead (J3 GPS port) & 1 & 2 & AliExpress \\
-JST-SH 1.0mm 6-pin pigtail (J17 servo/actuator header) & 2 & 3 & AliExpress \\
-JST-SH 1.0mm 3-pin pigtail (J15 LED strip) & 1 & 2 & AliExpress \\
+JST GH 4P pigtails, GHR-04V-S (the sensor, RC and CAN leads) & 1 pack of 10 & 5 & AliExpress \\
+ESC lead, JST GH 8P to SH 8P, straight-through (J2 to the ESC) & 2 & 6 & AliExpress \\
+JST GH 6P leads, GHR-06V-S (J21 companion; spares for J3 GPS and J14 flow) & 3 & 5 & AliExpress \\
 \end{longtable}
 Already have: 4S LiPo packs, LiPo balance charger.
 
@@ -410,10 +408,10 @@ Benewake TFS20-L lidar & 1 & 32 & AliExpress (or 3DXR UK GBP35.70) \\
 VL53L1X ToF module (GY-53-L1X) & 1 & 6 & AliExpress \\
 LDROBOT LD06 360 lidar (INDOOR USE ONLY) & 1 & 14 & eBay - Okdo Lidar Hat kit (use the LIDAR UNIT only) \\
 XIAO ESP32S3 Sense (recording camera) & 1 & 14 & AliExpress \\
-Camera power: thin silicone wire + 2-pin JST pigtails & 1 kit & 2 & AliExpress \\
+JST GH 3P lead, GHR-03V-S pigtail (J22 payload 5 V) & 2 & 2 & AliExpress \\
 \end{longtable}
 
-Total, everything to buy: about GBP 876. Generated from \file{docs/PARTS.csv} by \file{tools/gen\_doc\_tables.py}; every row's reasoning and link is in the CSV, and \file{docs/BUYING.md} is the same list with prices and provenance tags.
+Total, everything to buy: about GBP 870. Generated from \file{docs/PARTS.csv} by \file{tools/gen\_doc\_tables.py}; every row's reasoning and link is in the CSV, and \file{docs/BUYING.md} is the same list with prices and provenance tags.
 % END GENERATED ORDER
 
 \flag{Do not buy a bare PMW3901 or VL53L1X chip to hand-fit.} Both were deleted from the
@@ -445,15 +443,18 @@ with the kit's the top plate touches it at the loose-grommet corner. Do \emph{no
 standoffs for the stack pattern; the top plate has no 30.5 mm holes. \\
 spare \textbf{JST-GH 6-pin} lead &
 the residual \file{J3} risk is a \emph{bulky moulded boot} on the lead you receive, not the
-board: the 5.30 mm clear run meets its derived 3.6 mm requirement. Test-fit the plug before
-soldering; a second lead is then the fallback rather than an interruption. \\
-\textbf{10} JST-SH pigtails, not 4 &
-the first one you crimp badly is then not a project stall. \\
-\textbf{the HC610 antenna, its bias tee, the Blog V4 dongle and the coax}, all with
-the first order &
-T3b cannot be started without the first two, and the SoOP chain cannot be \emph{flown}
-without the last two --- this document listed neither until 2026-09-19.
-\file{docs/PARTS.csv} now carries all four \\
+board. Test-fit the plug on arrival; a second lead is then the fallback rather than an
+interruption. \\
+\textbf{10} pre-crimped JST-GH 4P pigtails, a GH 3P and the GH 6P leads &
+four ports (\file{J5}, \file{J6}, \file{J9}, \file{J11}) take a GH 4P, \file{J22} a GH 3P and
+\file{J21} a GH 6P; a spare of each means a bad solder joint is not a project stall \\
+\textbf{the GH 8P to SH 8P ESC lead}, two &
+\file{J2} is JST-GH and the ESC's socket JST-SH, so the leads in the ESC's box do not fit;
+without this lead nothing flies \\
+\textbf{the HC610 antenna, its MMCX to SMA pigtail, the DC block and the Blog V4 dongle},
+all with the first order &
+T3b step 1 needs the antenna and the dongle; the aircraft needs the antenna and the
+pigtail; the DC block protects any bench instrument from the +5 V on \file{J12} \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -461,10 +462,10 @@ without the last two --- this document listed neither until 2026-09-19.
 Three things need the parts in hand: the frame kit's top-plate standoff spacing (the kit
 supplies it), the camera mount (deferred, and the XIAO is the camera it must take), and the
 Radxa Zero 3W's hole pattern (deferred \emph{with the companion} --- the vendor never
-published it, so the tray is a print against a measured board). Note the asymmetry: the
-Radxa and the flow camera are deferred \emph{purchases}, deferred because \file{J4} does not
-exist to connect them, while the XIAO records to its own microSD over two wires and so is
-ordered now.
+published it, so the tray is a print against a measured board). The Radxa and the flow
+camera are deferred \emph{purchases}; when they come, the Radxa talks over \file{J21} and
+takes its own BEC. The XIAO records to its own microSD and takes only 5 V from \file{J22},
+so it is ordered now.
 
 \subsection{The bench measurements that could have cost you a purchase}
 \label{sec:benchbounds}
@@ -547,16 +548,14 @@ not to cross, while 4544 free IDs sit below it.
 \item \textbf{Read the two screw warnings in Section~\ref{sec:screws} twice.} They are the
 ones that strip a frame.
 \item \textbf{Print \file{docs/img/padmap.svg} and the assembly drawings
-\file{fab/assembly-top.svg} and \file{fab/assembly-bottom.svg}.} The silkscreen names ten
-connectors by function (ESC, GPS, RC, CAN, I2C, SERVO, PYRO, SWD, USB, ANT); \file{J11},
-\file{J16} and \file{J20} carry their reference instead, and the two it has no room for tell
-themselves apart: \file{J14} (FLOW) is the only 6-pin SH on the bottom, \file{J15} (LED) the
-only 3-pin connector. Pads print their function (\file{5V}, \file{TX6}, \file{GND} \dots)
-rather than a designator, and only where it sits unambiguously beside its pad; every
-reference designator is on the assembly drawings. Six pads arrive with no label
+\file{fab/assembly-top.svg} and \file{fab/assembly-bottom.svg}.} Every reference designator
+is on the assembly drawings, and Section~\ref{sec:plugs} has every connector by edge. Pads
+print their function (\file{L5V}, \file{DIN}, \file{BZ} \dots) rather than a designator,
+and only where it sits unambiguously beside its pad. Four pads arrive with no label
 (Section~\ref{sec:T3d}).
-\item \textbf{Decide the USB edge orientation before cutting any loom.} All four edges
-carry a connector; there may be exactly one orientation that works.
+\item \textbf{Decide the board's orientation before cutting any loom.} All four edges carry
+connectors, top and bottom; the aft edge (\file{J3} GPS, \file{J12} antenna) faces the
+antenna tower. Read the orientation flag in Section~\ref{sec:T0} first.
 \item \textbf{Dry-run the SITL suite} if you have a Linux box:
 \cmd{bash sitl/run\_scenarios.sh}.
 \end{enumerate}
@@ -611,34 +610,35 @@ Every figure here is recomputed by \cmd{python3 tools/check\_mechanical.py}; if 
 has moved since this was compiled, run it rather than trust the table.
 
 \begin{itemize}
-\item \textbf{Centre-plate opening} clears 45.1 $\times$ 47.3 mm plus the plug protrusions
-below. The FC plate is 48.50 mm across the binding axis, so the board has only
-\flag{0.55 mm} on the tight side in the worst-case orientation --- Revision C grew the
-board 1.2 mm on that axis, and this was 1.15 mm before. Check it with the real plate.
-\item \textbf{\file{J1} USB-C --- the tight one.} Its mouth is flush with the board edge, and
-the plug needs \textbf{5.8 mm clear beyond the top edge} at z 25.9--29.1 mm. A standoff on
-another plate, a plate lip or the battery strap across that edge makes the port unusable,
-and it is the only way to flash the board.
-\item \textbf{\file{J2} ESC lead} needs 3.6 mm clear beyond the left edge, and its body sits
-\textbf{1.02 mm} from the nearest grommet --- the tightest clearance on the board. Route the
-lead away from that corner, not over it.
-\item \textbf{\file{J3} GPS} plug stays inside the outline, with 5.30 mm to \file{R21} against
-a derived 3.6 mm. Test-fit the received plug; a bulky moulded boot is the one thing that can
-spoil it.
-\item \textbf{microSD} ejects on the \textbf{bottom} side, toward the bottom edge, and needs
-about \textbf{9.8 mm} of travel through a gap only 3.0 mm tall. Assume you will pull the
-board to change the card, and decide now whether that is acceptable.
-\item \textbf{Board rotation.} All four edges carry a connector, so there may be exactly one
-orientation that works. Decide it before cutting a loom. The firmware assumes the
-silkscreen arrow (it points at the USB edge) faces the nose; any other way round needs
-\file{AHRS\_ORIENTATION} set to match.
+\item \textbf{Centre-plate opening} clears 46.5 $\times$ 47.2 mm plus the plugs on every
+edge. The FC plate is 48.50 mm across the binding axis, so the board has only
+\flag{0.55 mm} on the tight side in the worst-case orientation (the generated spatial table
+in \file{docs/BUYING.md}). Check it with the real plate.
+\item \flag{Orientation.} The aft edge carries \file{J3} (GPS) and \file{J12} (antenna) and
+faces the tower; the fore edge carries the servo headers. The silkscreen arrow points at the
+fore edge, and the hwdef's IMU rotations are derived with that edge forward
+(\file{BOARD\_FORWARD} in \file{tools/design.py}), so mounted this way \file{AHRS\_ORIENTATION}
+stays 0. Mounted any other way, set it to match.
+Confirm it on the bench at T3.1 (roll and pitch it, watch the horizon) before any flight.
+\item \textbf{\file{J1} USB-C} is on the east edge and needs about \textbf{9 mm} clear in
+front of it for the plug's overmould. A standoff, a plate lip or the battery strap across
+that edge makes the port unusable, and it is the only way to flash the board.
+\item \textbf{The servo plugs} on \file{J17}/\file{J23} sit on pins that overhang the fore
+edge and need about \textbf{17 mm} clear for the plug and the lead's bend
+(\file{design.MATING\_CLEARANCE}); the printed clip sits over them.
+\item \textbf{Every JST-GH port} needs about 6 mm in front of its mouth, top and bottom.
+\file{J2} (ESC) and \file{J22} (payload) are side entry on the west edge, so their plugs go
+in horizontally.
+\item \textbf{microSD} is on the underside of the west edge and needs about 14 mm to withdraw
+the card. Assume you will pull the board to change the card, and decide now whether that is
+acceptable.
 \item \textbf{Grommets} must hold 3.0 mm between the ESC's parts and this board's under
-compression: 12.2 mm PCB face to PCB face, which is what the 12 mm spacer sets. The
+compression; the four 15 mm nylon female-female spacers set the ESC-to-FC separation. The
 compressed height of the rubber is the one \emph{assumed} figure in the stack.
 \item \textbf{Nothing metal wider than a cap head at any hole.} The nearest copper to a hole
-is \file{TP20} at 2.83 mm: an M3 cap head (2.75 mm radius) clears by 0.08 mm and a 7 mm
-washer overlaps by 0.67 mm. A 6 mm silicone grommet flange overlaps by 0.17 mm too, but it
-is an insulator --- the gate lists it as a bench item to measure, not a failure.
+centre reads 3.32 mm (\file{TP9}) on \file{tools/dimensions.py}: an M3 cap head (2.75 mm
+radius) clears by 0.57 mm and a 7 mm washer overlaps by 0.18 mm, so the washers under the
+heads are nylon (\file{design.FC\_HOLE\_HARDWARE}).
 \item \textbf{Skids match the 19 $\times$ 19 mm motor pattern}, not the frame's 16 $\times$ 16.
 \end{itemize}
 
@@ -680,24 +680,24 @@ plus a washer is the fix.
 length.} \file{free\_island} is not involved; the point is that both joints are decided by
 a measurement you have not taken yet, so own every plausible length.
 
-\subsection{Screw heads against copper --- 0.08 mm}
+\subsection{Screw heads against copper}
 
-\textbf{No copper is under any screw head, and the margin is thin.} The closest is
-\file{TP20} at \textbf{2.83 mm} against a \textbf{2.75 mm} cap-head radius ---
-\flag{0.08 mm}, and that assumes \textbf{no washers}. A washer, or a head even 0.1 mm over
-nominal diameter, puts metal on copper. If you add washers, re-measure before trusting
-this line.
+\textbf{No copper is under any screw head.} The closest is \file{TP9} at \textbf{3.32 mm}
+from a hole centre against a \textbf{2.75 mm} cap-head radius --- 0.57 mm --- and the washer
+under each head is nylon, so even a 7 mm washer that reaches the pad puts no metal on
+copper. If the board has moved since this was compiled, \cmd{python3 tools/dimensions.py
+--md} prints the current figure.
 
 \subsection{Sequence}
 
 \begin{enumerate}
 \item \textbf{Inspect the boards} (Section 4.1).
-\item \textbf{Print the assembly drawings and the pad map.} Six unlabelled pads ---
+\item \textbf{Print the assembly drawings and the pad map.} Four unlabelled pads ---
 Section~\ref{sec:T3d}.
-\item \textbf{Dry-fit the FC into the centre plate.} Confirm nothing blocks the bottom
-edge where the microSD ejects.
-\item \textbf{Buzz the ESC cable} both ends against the \file{J2} pinout below, before
-anything is powered.
+\item \textbf{Dry-fit the FC into the centre plate.} Confirm nothing blocks the west
+edge's underside, where the microSD ejects.
+\item \textbf{Buzz the GH 8P to SH 8P ESC lead}, all eight pins end to end, against the
+\file{J2} pinout below, before anything is powered.
 \item \textbf{Sit a skid under each arm}, holes aligned. Motor on top, wires inboard.
 Thread all four screws by hand before tightening any; tighten diagonally.
 \item \textbf{Solder the ESC's capacitor first.} The ESC comes with a low-ESR electrolytic
@@ -708,9 +708,8 @@ plug-in (32.5 V peak in simulation against the regulators' 38 V limit), but the 
 shrinks to 5.5 V. If the box has none, buy a 35 V, 470--1000\,\textmu F low-ESR part.
 \item \textbf{The stack, bottom to top: ESC, grommets, FC.} Fit the silicone grommets into
 the FC's four mounting holes; ESC into the frame on its 30.5 mm pattern; FC on top with
-the silkscreen arrow toward the nose. If USB-C has to face somewhere else, turn the board
-and set \file{AHRS\_ORIENTATION} (\file{Yaw90}, \file{Yaw180}, \file{Yaw270}) to the arrow's
-direction.
+its aft edge (\file{J3}, \file{J12}) toward the antenna tower and the silkscreen arrow
+pointing at the nose; \file{AHRS\_ORIENTATION} stays 0 (Section~\ref{sec:T0}).
 \item \textbf{4 $\times$ M3 $\times$ 35 through the stack}, with the four 15 mm
 female-female spacers setting the ESC-to-FC separation.
 \item \textbf{The top plate on the bought standoffs} --- 25 mm at the front, over the
@@ -719,69 +718,130 @@ top plate is not flat.
 \end{enumerate}
 
 \subsection{What plugs in where}
+\label{sec:plugs}
 
-\begin{center}
-\begin{tabular}{@{}lll@{}}
+Every cable port is a latching JST-GH 1.25 mm connector except the two servo headers and the
+antenna. Pin 1 first; ``underside'' is the board's bottom face. From
+\file{design.FLOORPLAN\_REV\_D} and the netlist.
+
+\begin{longtable}{@{}P{0.21\textwidth}P{0.19\textwidth}P{0.52\textwidth}@{}}
 \toprule
-\textbf{Module} & \textbf{Port} & \textbf{Pin order, 1 $\rightarrow$ 4} \\
+\textbf{Port} & \textbf{Part} & \textbf{Pins, and what plugs in} \\
 \midrule
-GPS + compass & \file{J3}, JST-GH 6P & the module's own lead, latched \\
-ELRS receiver & \file{J5}, JST-SH 4P & 5 V, TX, RC\_IN, GND \\
-I2C rangefinders & \file{J9}, JST-SH 4P & 5 V, SCL, SDA, GND \\
-360 lidar (later) & \file{J11}, JST-SH 4P & \file{+5V\_PAYLOAD}, TX, RX, GND \\
-SoOP antenna chain & \file{J12}, U.FL & coax from the bias tee; the bias tee's DC from \file{PV1}/\file{PV2} \\
-recording camera, FPV & \file{PV1}/\file{PV2} & \file{+5V\_PAYLOAD} and GND, soldered \\
-LED strip & \file{J15}, JST-SH 3P & \file{+5V\_PAYLOAD}, data, GND \\
-buzzer & \file{J16}, JST-SH 2P & +5 V, drain \\
-CAN / DroneCAN & \file{J6}, JST-SH 4P & \file{+5V\_PAYLOAD}, CANH, CANL, GND \\
-SWD (fallback flash) & \file{J19}, JST-SH 4P & +3V3, SWDIO, SWCLK, GND \\
-TVC servos (lander) & \file{J17}, JST-SH \textbf{6P} & PWM7, PWM8, PWM9, PWM10, \file{+5V\_PAYLOAD}, GND \\
-pyro / e-match (lander) & \file{J18}, JST-SH 2P & \file{VBAT\_FUSED}, drain --- \flag{arming switch in series} \\
-touchdown switch (lander) & \file{J20}, JST-SH 2P & \file{TOUCHDOWN}, GND \\
-companion (deferred) & \file{P71}--\file{P74} + \file{P44} & 5 V, UART4 TX, UART4 RX, GND; PPS on \file{P44} \\
+\endhead
 \bottomrule
-\end{tabular}
-\end{center}
+\endfoot
+\multicolumn{3}{@{}l}{\textbf{Aft edge} --- toward the antenna tower} \\
+\file{J3} GPS, top & GH 6P & 1 +5V, 2 \file{USART2\_TX}, 3 \file{USART2\_RX}, 4 \file{I2C1\_SCL},
+5 \file{I2C1\_SDA}, 6 GND. The GPS module's own lead, latched \\
+\file{J12} antenna, top, NE corner & MMCX, right angle & the HC610's pigtail.
+\flag{Carries +5 V DC} whenever the feed is on (the default) \\
+\file{J9} I2C, underside & GH 4P & 1 +5V, 2 SCL, 3 SDA, 4 GND. The rangefinders, split at a junction \\
+\file{J6} DroneCAN, underside & GH 4P & 1 \file{+5V\_PAYLOAD}, 2 CANH, 3 CANL, 4 GND. A DroneCAN node's own GH lead mates \\
+\midrule
+\multicolumn{3}{@{}l}{\textbf{Fore edge}} \\
+\file{J17} SERVO1, top & 1$\times$3 2.54 mm male, SMD right angle & 1 \file{PWM7}, 2 \file{+5V\_PAYLOAD}, 3 GND --- the standard servo order \\
+\file{J23} SERVO2, top & same & 1 \file{PWM8}, 2 \file{+5V\_PAYLOAD}, 3 GND \\
+\file{J5} RC, underside & GH 4P & 1 +5V, 2 \file{USART6\_TX}, 3 \file{RC\_IN}, 4 GND. The ELRS receiver \\
+\file{J11} lidar, underside & GH 4P & 1 \file{+5V\_PAYLOAD}, 2 \file{USART1\_TX}, 3 \file{USART1\_RX}, 4 GND. The LD06 (later) \\
+\midrule
+\multicolumn{3}{@{}l}{\textbf{East edge}} \\
+\file{J21} COMPANION, top & GH 6P & UART7 = \file{SERIAL1}, Pixhawk TELEM order: 1 +5V, 2 TX, 3 RX, 4 CTS, 5 RTS, 6 GND \\
+\file{J1} USB-C, top & USB-C & setup and flashing; unplugged before flight \\
+\file{J14} flow, underside & GH 6P & SPI3: 1 +3V3, 2 SCK, 3 MISO, 4 MOSI, 5 CS, 6 GND \\
+\midrule
+\multicolumn{3}{@{}l}{\textbf{West edge}} \\
+\file{J2} ESC, top & GH 8P, side entry & 1 GND, 2 VBAT, 3--6 M1--M4, 7 CUR, 8 TEL --- SpeedyBee's order \\
+\file{J22} PAYLOAD, top & GH 3P, side entry & 1 \file{+5V\_PAYLOAD}, 2 GND, 3 GND. A 5 V VTX or the recording camera \\
+\file{J8} microSD, underside & TF-01A & the card: logs and Lua scripts \\
+\midrule
+\multicolumn{3}{@{}l}{\textbf{Soldered pads}} \\
+\file{P151}--\file{P153}, SE corner & pads & \file{+5V\_PAYLOAD}, WS2812 data, GND --- the LED strip \\
+\file{P161}--\file{P163}, SW corner & pads & +5V, buzzer $-$, GND --- the passive buzzer across \file{P161}/\file{P162} \\
+\midrule
+\multicolumn{3}{@{}l}{\textbf{Bench port}} \\
+\file{J19} SWD & Tag-Connect TC2030-NL & 1 +3V3, 2 SWDIO, 3 NRST, 4 SWCLK, 5--6 GND; fallback only (Part~8) \\
+\end{longtable}
 
 \textbf{Serial leads cross over.} The board's TX goes to the module's RX and the board's RX
 to the module's TX: on \file{J5}, pin 2 (TX) to the receiver's RX and pin 3
-(\file{RC\_IN}) to its TX. A Pixhawk GPS lead on \file{J3} is already crossed. DroneCAN
-nodes ship with JST-GH leads; \file{J6} is JST-SH in the same pin order, so make a GH-to-SH
-lead.
+(\file{RC\_IN}) to its TX. A Pixhawk GPS lead on \file{J3} is already crossed.
 
-\textbf{Hobby servos on \file{J17}.} Servo plugs are 3-pin 2.54 mm females: signal
-(orange, yellow or white), + (red, middle), ground (brown or black). Make a lead from a
-6-pin JST-SH pigtail and two 3-pin male headers: \file{J17} pin 1 (\file{PWM7}) and pin 2
-(\file{PWM8}) to the two signal pins, pin 6 to both grounds. For two 9\,g micro servos, pin 5
-can feed both red wires. Anything bigger goes on its own 5--6\,V BEC, with the BEC's ground
-joined to pin 6 and pin 5 left unconnected. A JST-SH contact is rated 1\,A, and
-\file{+5V\_PAYLOAD} budgets 0.5\,A for \file{J17}. \file{lander.parm} already drives
+\textbf{\file{J21}, the companion port --- three rules.}
+\begin{enumerate}
+\item \textbf{Pin 1 is +5 V for a radio-class load only} --- a SiK radio, an ESP32 MAVLink
+bridge. A companion computer (a Radxa wants 5 V at 2 A) takes its own BEC and uses pins 2--6,
+with its ground joined to pin 6.
+\item \textbf{It is a Pixhawk TELEM port}, so a lead made for one mates; check that the far
+end crosses TX and RX. CTS and RTS are on pins 4 and 5; set \file{BRD\_SER1\_RTSCTS} to match
+what the far end wires, and leave it 0 if only TX/RX/GND are connected.
+\item \textbf{It is the only spare serial port.} UART4 (\file{SERIAL6}) reaches no pad, and
+\file{J11} is earmarked for the lidar. A second serial device means giving one up.
+\end{enumerate}
+
+\flag{\file{J12} carries +5 V.} The antenna feed (\file{U24}, current-limited to 95--155 mA;
+a dead short folds back to about 35 mA) is on from power-up, because \file{PC5} is pulled up
+and the firmware keeps it on. That powers the HC610's LNA up the coax --- and it will push DC
+into anything else you connect. \textbf{A bench SDR, a signal generator or a spectrum
+analyser on \file{J12} or its pigtail goes through the DC block}, or put \file{ant\_feed 0}
+in \file{APM/SOOP/soop.cfg} and reboot first. Never short the centre pin to test it.
+
+\textbf{The ESC lead is GH 8P at the board and SH 8P at the ESC.} \file{J2} is wired in the
+SpeedyBee's own order, so the lead is \emph{straight-through}: pin 1 to pin 1, through pin 8.
+The SH-to-SH leads in the ESC's box do not fit \file{J2}. \flag{Buzz the lead you buy or
+splice, all eight pins, before any VBAT}: pin 2 is the battery, and a lead with two pins
+swapped puts VBAT on a motor signal or ground.
+
+\textbf{Servos on \file{J17} and \file{J23}.} Each is a male 1$\times$3 header in the
+standard order, so a servo's own female plug goes straight on: signal (orange, yellow or
+white) on pin 1, red in the middle, brown or black on pin 3 --- check pin 1 on the
+assembly drawing before pushing the plug home, because a reversed plug fits. The pins
+overhang the fore edge; \textbf{fit the printed clip over both plugs} so a pulled lead loads
+the clip and not the solder joints. For two 9\,g micro servos the header's own pin 2 feeds
+them from \file{+5V\_PAYLOAD}. Anything bigger goes on its own 5--6\,V BEC, with the BEC's
+ground joined to pin 3 and pin 2 left unconnected. \file{lander.parm} already drives
 \file{SERVO7}/\file{SERVO8}; check the travel direction with the props off.
 
 \textbf{Mount the compass as far from the ESC and the battery leads as the frame allows.}
 There is no magnetometer on the FC by design: one 15 mm from a 60 A 4-in-1 is useless.
 
-\flag{\file{J17} is six pins, not eight.} Servo power is \emph{pin 5 only}; pin 6 is GND.
-\file{docs/LANDER-COMPATIBILITY.md} described an 8-pin header with +5 V on pins 5 and 6
-until 2026-09-22 --- a loom built to that table shorts the payload rail to ground.
-
 \textbf{The payload rail is budgeted per mission.} \file{U20} and its inductor \file{L5}
-carry 1.6 A continuous. The drone's payload (VTX, camera, Iridium antenna, LD06, LED, CAN) is
-1.0 A; the lander's (two TVC servos, LED, CAN) is 0.76 A. \flag{Wire one mission's payload,
-not all of it}: every payload connector at once is 1.67 A, over the inductor and about
-147\,\degC{} at \file{U20}'s worst corner. \file{check\_modules.py} fails any declared
-mission that does not fit.
+carry 2.1 A continuous. The drone's payload (VTX or camera on \file{J22}, LED, LD06, CAN) is
+about 1.0 A; the lander's (two TVC servos, LED, CAN) is 0.76 A. \flag{Wire one mission's
+payload, not all of it}: every payload connector at once is over what \file{U20} should
+carry continuously, and \file{check\_modules.py} fails any declared mission that does not
+fit. The Iridium antenna is not on this rail: its feed comes off the flight controller's
++5 V through \file{U24}.
 
-\subsection{The pyro channel (lander only) --- arming is not optional}
+\subsection{Attaching the Iridium antenna}
 
-\file{J18} fires an e-match from \file{VBAT\_FUSED} (3 A fuse \file{F1}) through the
-low-side MOSFET \file{Q5}. Between the MCU and a firing there is exactly \emph{one} GPIO
-(\file{PC5}): \file{R55} (47\,k$\Omega$) holds the gate off through reset and under stock
-MatekH743 firmware, and the NAVCORE firmware ships \file{PYRO\_FIRE} \cmd{OUTPUT LOW} ---
-but a single firmware fault still fires it. \flag{Put a physical arming switch or a removable
-shunt plug in series with the e-match in the \file{J18} lead, open until the vehicle is on
-the pad.} It is on \file{docs/PARTS.csv} for that reason. Do not bench-test the channel with
-an e-match connected; use a resistor or an LED.
+One cable: the MMCX to SMA pigtail (15 cm, RG178 or RG316, straight MMCX, right-angle SMA).
+
+\begin{enumerate}
+\item \textbf{Fit the HC610 to the tower seat} with its two M2.5 $\times$ 8 screws into its
+own threads (6 mm deep --- never longer than 10), its SMA male pointing down the column.
+\item \textbf{Mate the pigtail's SMA female onto the HC610's SMA} inside the column, finger
+tight and then a small turn with a wrench. The right-angle end turns the cable straight
+out through the column's starboard window.
+\item \textbf{Tie the coax round the column} just below the window, so the snap and the SMA
+carry no strain. Keep the first bend at least 10 mm from each connector.
+\item \textbf{Route it forward outboard of the battery} and in past the top plate's starboard
+edge to the board's aft edge (the route \file{tools/check\_cables.py} checks), and snap the
+MMCX plug onto \file{J12} until it clicks. Tie it down 10--15 mm from the plug with a little
+slack, so vibration works on the tie and not the snap.
+\end{enumerate}
+
+\textbf{First power with the antenna on.} Check these at T2, once the firmware is on:
+\begin{itemize}
+\item The GCS shows \emph{SoOP: antenna ok, 15.0 mA} --- about 15 mA is the HC610's LNA.
+\emph{SoOP: antenna open} (under 3 mA) means the pigtail is not mated or the antenna is
+dead; \emph{SoOP: antenna short} (28 mA or more, or the switch's fault flag) means a short
+on the coax --- the firmware turns a short that lasts 5 s off for 10 s and retries. The log
+records it once a second as \file{SOA}.
+\item The tuner locks: \emph{SoOP: tuner locked, VCO n} at boot (Part~11, step 2).
+\item The orbits on the card are fresh: \file{APM/SOOP/iridium.tle} fetched within the
+last few days. The filter ignores elements older than 7 days (Part~11, TLEs and time).
+\end{itemize}
 
 \subsection{The harness --- six runs, and how not to make a nest of them}
 
@@ -790,12 +850,12 @@ an e-match connected; use a resistor or an LED.
 \toprule
 \textbf{Run} & \textbf{Wires} & \textbf{Note} \\
 \midrule
-\file{J2} $\rightarrow$ ESC & 8 & comes with the ESC; stays inside the stack \\
-\file{J3} $\rightarrow$ GPS & 6 & the module's lead; the compass rides on it \\
+\file{J2} $\rightarrow$ ESC & 8 & the GH 8P to SH 8P lead; stays inside the stack \\
+\file{J3} $\rightarrow$ GPS & 6 & the module's lead, aft to the tower; the compass rides on it \\
+\file{J12} $\rightarrow$ HC610 & coax & the MMCX to SMA pigtail, aft to the tower, tied to its arm \\
 \file{J9} $\rightarrow$ rangefinders & 4 & one lead, split at a junction: down and up \\
-\file{J5} $\rightarrow$ ELRS & 4 & \\
-\file{J12} + \file{PV1}/\file{PV2} $\rightarrow$ bias tee & coax + 2 & the antenna chain and its power \\
-\file{PZ}, \file{PL} $\rightarrow$ buzzer, LEDs & 2 + 3 & the LED strip is optional \\
+\file{J5} $\rightarrow$ ELRS & 4 & forward to the nose mount \\
+\file{P151}--\file{P153}, \file{P161}--\file{P163} & 3 + 2 & the LED strip and the buzzer, soldered \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -807,7 +867,7 @@ They carry kilowatts switched at tens of kHz. On a normal quad that is good prac
 one it is the difference between hearing Iridium bursts and not (T3b).
 \item Route along the arms and plate edges, zip-tied every 40--50 mm. Slack belongs in one
 service loop near the stack.
-\item Leave the \textbf{USB edge} clear (Section~\ref{sec:T0}).
+\item Leave the \textbf{USB port on the east edge} clear (Section~\ref{sec:T0}).
 \item The ELRS antennas and the Iridium antenna get separation from everything else, and from
 each other: ELRS at the nose, the Iridium helix on the tower at the tail.
 \end{enumerate}
@@ -819,9 +879,10 @@ each other: ELRS at the nose, the Iridium helix on the tower at the tail.
 hard-case pack on build day.
 \item The frame offers 16 $\times$ 16 and 19 $\times$ 19 motor patterns. The motors are 19 $\times$ 19.
 \item Measure both tapped depths before committing sixteen screws.
-\item Six pads are unlabelled; the one wire pad among them is \file{P44} (PPS). Every supply pad prints its function.
-\item The ESC cable is a gamble until you buzz it.
-\item \file{J17} is six pins: servo power is pin 5 only, pin 6 is GND.
+\item The ESC's own leads do not fit \file{J2}; the GH 8P to SH 8P lead is a gamble until you buzz it.
+\item \file{J12} carries +5 V: a bench instrument goes on through the DC block.
+\item A servo plug fits either way round on its header; signal is pin 1.
+\item Four pads are unlabelled; identify every pad on the padmap, never by counting from a neighbour.
 \item The board is \textbf{5S maximum} --- the input TVS sets it (Part~1).
 \item Wire one mission's payload onto \file{+5V\_PAYLOAD}, not every payload at once.
 \item Confirm 1 oz outer copper on the order; 0.5 oz halves every trace's rating.
@@ -829,9 +890,10 @@ hard-case pack on build day.
 
 \subsection{\file{J2}, the ESC connector --- confirmed rather than assumed}
 
-Wired \textbf{1 GND, 2 VBAT, 3 M1, 4 M2, 5 M3, 6 M4, 7 CUR, 8 TEL} (pins 9/10 are the
-shell tabs). Betaflight's board page for the SpeedyBee F405 V4 gives the same FC-side
-order, so it \textbf{matches} --- no cable rework needed.
+Wired \textbf{1 GND, 2 VBAT, 3 M1, 4 M2, 5 M3, 6 M4, 7 CUR, 8 TEL} on a JST-GH 8P
+side-entry socket. Betaflight's board page for the SpeedyBee F405 V4 gives the same FC-side
+order on the SpeedyBee's JST-SH 8P, so the GH 8P to SH 8P lead is straight-through --- no
+pin is moved.
 
 The vendor table reads oddly because it lists the two \emph{ends} of the cable in opposite
 order, since they face each other. Reverse the ESC column and every pair lines up:
@@ -839,12 +901,11 @@ order, since they face each other. Reverse the ESC column and every pair lines u
 \file{M1}$\leftrightarrow$\file{S1}, \ldots, \file{CUR}$\leftrightarrow$\file{CURRENT}.
 
 \textbf{Buzz it anyway.} One automated read of a wiki table is not the same as measuring
-the cable you received. An 8-pin JST-SH is re-pinnable with a fine pick --- a mismatch
-costs a cable rework, not a respin.
+the lead you have. A spliced lead is the easiest place to swap two wires.
 
 \begin{quote}
 \textbf{Pin 8 is inert.} The ESC end is \file{N/A} --- stock BLHeli\_S has no telemetry
-output at all. \file{SERIAL5\_PROTOCOL 16} and the \file{UART8\_RX} wire are correct and
+output at all. \file{SERIAL5\_PROTOCOL 16} and the \file{ESC\_TEL} wire are correct and
 cost nothing, but they will receive nothing until a telemetry-capable ESC (BLHeli\_32,
 AM32) is fitted. That is why the board ships \file{INS\_HNTCH\_MODE 1} (throttle) rather
 than 3 (RPM). The upgrade path needs no wiring: flash \textbf{BlueJay} or \textbf{AM32}
@@ -855,20 +916,20 @@ available on this aircraft.
 \end{quote}
 
 % =============================================================================
-\section{Part 6 --- Soldering: four joints minimum to fly}
+\section{Part 6 --- Soldering: the buzzer and the LED strip}
 \label{sec:solder}
 
-Everything else plugs in.
+Everything else plugs in. Identify every pad on \file{docs/img/padmap.svg} before the iron
+touches it --- never by counting from a neighbour; three of these six pads print no label.
 
 \begin{itemize}
-\item \textbf{Buzzer} --- plug into \file{J16} (pin 1 +5 V, pin 2 drain). Must be a \textbf{passive}
-piezo: PA15 is a timer channel and ArduPilot generates the tone patterns itself. An active
-buzzer has its own oscillator and loses every arming and failsafe pattern.
-\item \textbf{LED strip, optional} --- plug into \file{J15} (\file{+5V\_PAYLOAD}, data, GND).
-5 V WS2812B.
-\item \flag{\file{P41} is +5 V.} The camera's and the bias tee's power leads land on \file{PV1}/\file{PV2}
-(the payload rail), \emph{not} on \file{P41}. Identify every pad on the printed gerber
-before the iron touches it --- never by counting from a neighbour.
+\item \textbf{Buzzer} --- to the pads in the SW corner: its + to \file{P161} (+5 V), its
+$-$ to \file{P162} (the drain of \file{Q1}). \file{P163} is a spare ground. Must be a
+\textbf{passive} piezo: PA15 is a timer channel and ArduPilot generates the tone patterns
+itself. An active buzzer has its own oscillator and loses every arming and failsafe pattern.
+\item \textbf{LED strip, optional} --- to the pads in the SE corner: \file{P151}
+(\file{+5V\_PAYLOAD}), \file{P152} (data, 5 V from \file{U17}), \file{P153} (GND). 5 V
+WS2812B only.
 \end{itemize}
 
 % =============================================================================
@@ -881,8 +942,9 @@ nothing.
 
 Bench supply on \file{VBAT}, \textbf{16.8 V, current limit 100 mA}. \file{VBAT\_IN} reaches
 only \file{J2.2} --- there are no separate battery pads --- so feed it through the bare-ended
-8-pin JST-SH pigtail from the order (\file{J2.1} GND, \file{J2.2} VBAT). Powering through the
-ESC instead works, but the ESC's own draw then sits inside the 80 mA below.
+GH 8P pigtail from the order (\file{J2.1} GND, \file{J2.2} VBAT, the other six insulated).
+Powering through the ESC instead works, but the ESC's own draw then sits inside the 80 mA
+below.
 
 \begin{center}
 \begin{tabular}{@{}cP{0.19\textwidth}P{0.22\textwidth}P{0.44\textwidth}@{}}
@@ -894,8 +956,9 @@ ESC instead works, but the ESC's own draw then sits inside the 80 mA below.
 1.2 & \file{+5V} rail & \textbf{5.02 V} $\pm$0.2 & \file{U8} LMR33630ARNXR, \file{L2}, divider \file{R6}/\file{R7} \\
 1.3 & \file{+3V3} rail & 3.3 V $\pm$0.1 & \file{U9} TLV75733P \\
 1.4 & \file{+3V3A} rail & 3.3 V $\pm$0.1 & \file{U10} TLV75533 \\
-1.5 & \file{+5V\_PAYLOAD} rail (\file{PV1}) & \textbf{5.02 V} $\pm$0.2, on at power-on & \file{U20} LMR33630ARNXR, \file{L5}, divider \file{R42}/\file{R43}; if dead, \file{Q3} is holding \file{U20}'s EN low --- check \file{R45} \\
+1.5 & \file{+5V\_PAYLOAD} rail (\file{J22.1}) & \textbf{5.02 V} $\pm$0.2, on at power-on & \file{U20} LMR33630ARNXR, \file{L5}, divider \file{R42}/\file{R43}; if dead, \file{Q3} is holding \file{U20}'s EN low --- check \file{R45} \\
 1.6 & \file{+3V3\_CAN} rail & 3.3 V $\pm$0.1 & \file{U21} XC6206, fed from \file{+5V\_PAYLOAD} \\
+1.7 & antenna feed, \file{J12} centre pin, nothing attached & about 5 V & \file{U24} (enabled by \file{R59}'s pull-up), \file{R62}, \file{L6}. Meter only --- never short it \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -905,9 +968,9 @@ Raise the limit to 500 mA only once every rail is correct.
 \textbf{Then load both bucks.} A regulator on the edge of stability reads a perfect 5.02 V
 at no load. Each buck has 2 $\times$ 22\,\textmu F on its output where TI's reference uses
 4 $\times$ 22\,\textmu F, so check them under load before trusting them. Raise the limit
-to 2 A. Put a 5\,$\Omega$, 10 W resistor across \file{PV1}/\file{PV2} (1 A from
-\file{+5V\_PAYLOAD}) and a 10\,$\Omega$, 5 W one across \file{P71}/\file{P74} (0.5 A from
-\file{+5V}). Both rails must stay 4.9--5.1 V, and \file{L2}, \file{L5}, \file{U8} and
+to 2 A. Put a 5\,$\Omega$, 10 W resistor across \file{J22} pins 1 and 2 (1 A from
+\file{+5V\_PAYLOAD}, through a GH 3P pigtail) and a 10\,$\Omega$, 5 W one across \file{J9}
+pins 1 and 4 (0.5 A from \file{+5V}, through a GH 4P pigtail). Both rails must stay 4.9--5.1 V, and \file{L2}, \file{L5}, \file{U8} and
 \file{U20} must not whine or get too hot to touch within a minute. With a scope, connecting
 the load should give one dip that settles within about 100\,\textmu s, not a ring or a
 steady oscillation. \flag{If either rail rings or whines}, solder a 22\,\textmu F 16 V 1206
@@ -962,9 +1025,10 @@ hand.} The build script does not package it into the \file{.apj}. Without it,
 \file{FS\_EKF\_ACTION 0} ships with no GPS-loss response at all.
 \end{enumerate}
 
-\textbf{SWD, if DFU never appears.} An ST-Link V2 on \file{J19} (JST-SH 4P: 1 +3V3 as the
-target-voltage reference, 2 SWDIO, 3 SWCLK, 4 GND) through a 4-pin pigtail --- or on the
-\file{TP1}/\file{TP2}/\file{TP20}/\file{TP21} pads, which carry the same four nets --- with
+\textbf{SWD, if DFU never appears.} \file{J19} is a Tag-Connect TC2030-NL pad set (1 +3V3 as
+the target-voltage reference, 2 SWDIO, 3 NRST, 4 SWCLK, 5--6 GND), reached with a
+TC2030-IDC-NL cable and an adapter to the ST-Link's header --- neither is on the buy list,
+because DFU is the route. Flash with
 \cmd{st-flash write Tools/bootloaders/NAVCORE\_SoOP\_bl.bin 0x08000000} or
 STM32CubeProgrammer. It gets the same bootloader onto the same address; from step 4 on
 nothing differs.
@@ -1003,8 +1067,18 @@ mount it as far from the 60 A ESC as the frame allows \\
 lock-detect bit; a meter on \file{C56} (\file{VTUNE}) & \file{VTUNE} should sit between the
 rails, not pinned to 0 V or 3.3 V. Pinned means the loop filter is not doing its job.
 The driver must set the charge pump to 600\,\textmu A (\file{CPS}=0, \file{ICP}=0): the loop
-filter keeps 39--76\degree{} of phase margin there, but only 23\degree{} at 1200\,\textmu A \\
+filter keeps 39--76$^\circ$ of phase margin there, but only 23$^\circ$ at 1200\,\textmu A \\
+3.13 & Antenna feed monitor & multimeter on \file{U25.1} (\file{PC2\_C}), GCS text, \file{SOA} log & open: $\approx$0\,V ($<$3\,mA); OK with HC610: $\approx$1.65\,V (15\,mA); short: saturated $\sim$3.3\,V ($\ge$28\,mA). Safe retry test with resistor (Section~\ref{sec:ant_bench}) \\
 \end{longtable}
+
+\subsection{Antenna feed monitor bench test}
+\label{sec:ant_bench}
+The active antenna bias feed (\file{U24}, \file{U25}) supplies +5\,V on \file{J12} MMCX to power the HC610's internal LNA. Current is sensed by \file{U25} (INA180A2, $\times 50$) across \file{R62} (2.2\,$\Omega$) and digitized by ADC3 on \file{PC2\_C}. Verify all three operational states on the bench:
+\begin{enumerate}
+\item \textbf{Open circuit (no antenna connected):} Probe \file{U25.1} (\file{ANT\_CURRENT}) with a DMM: output voltage sits near \textbf{0\,V} ($<$25\,mV, corresponding to $<$0.25\,mA). The GCS displays \cmd{SoOP: antenna open (0 mA)} once on transition, and the DataFlash \file{SOA} log records state \file{St=1} (\cmd{OPEN}) with \file{mA} under 3.0.
+\item \textbf{Normal active load (HC610 antenna connected):} Plug the HC610 helical antenna into \file{J12} via the RG178 pigtail. The LNA draws nominal 15\,mA. \file{U25.1} reads approximately \textbf{1.65\,V} ($15\,\mathrm{mA} \times 2.2\,\Omega \times 50$). The GCS reports \cmd{SoOP: antenna ok (15 mA)}, and the \file{SOA} log records \file{St=2} (\cmd{OK}) with \file{En=1}.
+\item \textbf{Short-circuit detection and automatic retry:} Do \emph{not} dead-short the coax centre pin directly to shield with a screwdriver. Instead, connect a \textbf{100\,$\Omega$ or 50\,$\Omega$ 1/4\,W test resistor} across an SMA pigtail on \file{J12} (drawing 50--100\,mA, well above the 28\,mA threshold). \file{U25.1} saturates near \textbf{3.25--3.30\,V}. After the 0.5\,s settle filter, the GCS reports \cmd{SoOP: antenna shorted (retry in 5s)}, and \file{SOA} records \file{St=3} (\cmd{SHORT}). After 5\,s of continuous fault, the firmware de-asserts \file{PC5} (\cmd{En=0}), turning \file{U24} off for 10\,s (\file{retry\_off\_s}) to protect the switch from dissipation. Disconnecting the test resistor allows the feed to recover to \cmd{OK} or \cmd{OPEN} on the next retry.
+\end{enumerate}
 
 \textbf{Everything optional ships disabled in \file{defaults.parm} and must be turned on
 here.} That is deliberate: a rangefinder configured but absent fails prearm, and a bare
@@ -1052,10 +1126,10 @@ keeps those numbers); the \emph{same silicon} in the 12-pin RNX VQFN has a 3.9 $
 2.9 mm courtyard, and it was swapped in place on 2026-09-20, taking the worst corner from
 117\degC{} to \textbf{87\degC}.
 
-\flag{The rule that keeps it there:} nothing that is \emph{payload} draws from this board's
-buck. The Iridium antenna, the recording camera, an FPV AIO and the LD06 run from the
-\textbf{payload 5 V BEC} (stage B2, ~GBP 4); with the first two alone on the FC rail the
-worst corner would be 154\degC. \file{check\_modules.py} fails any module that is neither in
+\flag{The rule that keeps it there:} nothing that is \emph{payload} draws from this
+buck. The recording camera, an FPV AIO, the LD06, the servos and the CAN node run from the
+payload buck \file{U20} on \file{+5V\_PAYLOAD}. The one exception is the Iridium antenna's
+15 mA, which the antenna feed \file{U24} takes from \file{U8}'s +5 V. \file{check\_modules.py} fails any module that is neither in
 \file{design.LOADS\_5V} nor marked BEC-powered, so a load cannot land on \file{U8}
 unbudgeted.
 
@@ -1150,7 +1224,11 @@ in 23.8\,Hz steps, and the filter is told the one actually programmed.
 \file{APM/SOOP/replay.iq}, add \file{replay 1} to \file{soop.cfg} and reboot. The log's
 \file{SOS.CPU} is the DSP's share of real time on the H743; keep it well under 50\%. Remove
 \file{replay} afterwards.
-\item \textbf{Live capture}, outdoors, the antenna on \file{ANT} through its bias tee.
+\item \textbf{Antenna feed.} The GCS shows \emph{SoOP: antenna ok, 15.0 mA} with the HC610
+on \file{J12}; \emph{open} or \emph{short} is the coax or the antenna, not the sky
+(Section~\ref{sec:plugs}). \file{SOA} in the log has it once a second.
+\item \textbf{Live capture}, outdoors, the HC610 on \file{J12} through its pigtail; the board
+feeds its LNA.
 \file{SOS.Bps} (bursts per second) should be comparable to step 1. If the board hears nothing
 the bench kit hears, try \file{swap\_iq 1} (swapped I and Q mirror the spectrum); if
 \file{SOS.Ovr} counts up, the capture or the DSP is not keeping up with 2\,MSPS on these
@@ -1234,54 +1312,49 @@ Do this with the \textbf{stack assembled}, not the board in free air, because th
 \emph{is} the thermal environment.
 
 % =============================================================================
-\section{Part 13 --- T3d: the six unlabelled pads}
+\section{Part 13 --- T3d: the four unlabelled pads}
 \label{sec:T3d}
 
-Of the \textbf{22} pads and test points on the board, \textbf{16} print their function
-(\file{5V}, \file{TX6}, \file{GND} \dots) at 1.0\,mm. A label is printed only where it is
+Of the \textbf{10} pads and test points on the board, \textbf{6} print their function
+(\file{L5V}, \file{DIN}, \file{BZ} \dots) at 1.0\,mm. A label is printed only where it is
 legal silkscreen \emph{and} sits clearly nearer its own pad than any other part ---
 \file{tools/check\_silk\_owner.py} gates that --- because a label that reads as its
-neighbour's is worse than a blank pad: it will be trusted. These \textbf{6} have no such
+neighbour's is worse than a blank pad: it will be trusted. These \textbf{4} have no such
 place, so they are blank on the board and named on \file{docs/img/padmap.svg} and the
 assembly drawings; \file{design.PAD\_LABELS\_UNPRINTED} gives each reason:
 
 \begin{center}
-\file{P44} (PPS)\quad \file{TP2} (SWD clock)\quad \file{TP3} (servo 5)\quad
-\file{TP5} (TX2)\quad \file{TP8} (buzzer)\quad \file{TP22} (servo rail)
+\file{P151} (LED 5 V)\quad \file{P153} (LED GND)\quad \file{P161} (buzzer 5 V)\quad
+\file{TP3} (servo 5)
 \end{center}
 
-\flag{\file{P44} is the one wire pad among them.} \file{TP2} carries the same signal as
-\file{J19} (SWD). Never identify a gold square by counting from its neighbour --- use the
-printed gerber and \file{docs/img/padmap.svg}. Preflight fails any other pad left blank, so
-treat any other list you read as stale.
+\flag{Three of them are wire pads} --- the LED strip's supply and ground and the buzzer's
+supply. Never identify a gold square by counting from its neighbour --- use the printed
+gerber and \file{docs/img/padmap.svg}. Preflight fails any other pad left blank, so treat
+any other list you read as stale.
 
 % =============================================================================
 \section{Part 14 --- T4/T5: tethered, then flight, strictly in this order}
 
 \subsection{Staking the plugs}
 
-Before the first tethered hover, and not before: until T3 passes, plugs come in and out.
-The leads that leave the core of the airframe --- \file{J3} GPS, \file{J5} receiver,
-\file{J6} CAN, \file{J9} I2C, \file{J11} lidar --- are JST-GH and latch; check each one
-clicks. The rest are JST-SH, which only grips by friction, and a 7-inch quad's vibration walks
-a friction plug out over a few flights. There is no room for a printed clamp over them: at the
-loose-grommet corner the top plate is 6.8 mm above the board and \file{J3} alone takes 4.4 mm
-of it. So they are \textbf{staked} (the NASA-STD-8739.1 practice):
+Before the first tethered hover, check how each plug is held, because a 7-inch quad's
+vibration walks a friction plug out over a few flights. On this board nothing needs a bead
+of silicone:
 
 \begin{itemize}
-\item a bead of \textbf{neutral-cure} RTV silicone --- alkoxy or oxime, never acetoxy, whose
-acetic acid corrodes copper --- from the top of the plug housing, over the header, down onto
-the board, on the side away from the pins; none on the mating face and none on the pins;
-\item on \file{J2} (ESC), \file{J14} (flow), \file{J15} (LED), \file{J16} (buzzer),
-\file{J17} (TVC servos), \file{J18} (pyro) and \file{J20} (touchdown), and a single dot
-over the mated U.FL on \file{J12}, its usual retention;
-\item 24 hours to cure before flight. It peels off cleanly with tweezers when a plug has to
-come out; restake after.
+\item every JST-GH port --- \file{J2}, \file{J3}, \file{J5}, \file{J6}, \file{J9},
+\file{J11}, \file{J14}, \file{J21}, \file{J22} --- latches: check each one clicks, and pull
+gently on the lead to prove it;
+\item the MMCX on \file{J12} snaps on with a detent; tie the coax down 10--15 mm from it;
+\item the servo plugs on \file{J17}/\file{J23} are a friction fit, held by the printed clip
+over both --- fit the clip before flight;
+\item the LED strip and buzzer are soldered.
 \end{itemize}
 
 \file{J1} (USB) and \file{J19} (SWD) are bench ports: unplug them before flight.
 \file{tools/check\_connectors.py} fails if a connector is added without saying how it stays
-in, or if a staked one is missing from this list.
+in, or if one declared staked is missing from this list.
 
 \subsection{Order of flights}
 
@@ -1324,9 +1397,9 @@ The board is machine-assembled, so the soldering is deliberately minimal. What r
 \toprule
 \textbf{Item} & \textbf{Joints} & \textbf{Risk and mitigation} \\
 \midrule
-Buzzer, \file{J16} & 0--2 & low. Must be a \textbf{passive} piezo; fitting an active
+Buzzer, \file{P161}/\file{P162} & 2 & low. Must be a \textbf{passive} piezo; fitting an active
 one costs you every arming and failsafe tone pattern, which you will only notice in the air \\
-LED strip, \file{J15} & 0--3 & low, and optional \\
+LED strip, \file{P151}--\file{P153} & 3 & low, and optional \\
 \file{U3}, second IMU & 14-pin LGA & \flag{only if you chose Economic.} An LGA-14 has no
 accessible leads, so it needs hot air or a stencil, not an iron. Standard assembly fits it
 and removes this entirely \\
@@ -1357,7 +1430,7 @@ is why the screw length is not a fixed number \\
 Board connectors & the GPS, RC, I2C, lidar and ESC leads all plug in; no crimping except
 the spare pigtails \\
 The first flash & the H743's ROM DFU needs only USB and the \file{BOOT} button
-(Part~8). SWD --- the \file{J19} socket, or the four test pads --- is the
+(Part~8). SWD --- the \file{J19} Tag-Connect pads --- is the
 fallback, not the route \\
 The GPS-loss applet & \file{copter-deadreckon-home.lua} must be copied to the microSD by
 hand; the build does not package it into the \file{.apj} \\
@@ -1366,22 +1439,10 @@ Companion mount & no mount exists yet. Deferred with the companion, so nothing b
 \end{tabular}
 \end{center}
 
-\textbf{Two structural constraints worth naming, because neither is removable now. Note
-that the first reads like a defect and is not --- it is the opposite, and worth reading for
-how it was settled:}
+\textbf{One structural constraint worth naming, because it is not removable now:}
 
 \begin{itemize}
-\item \file{J3}'s GPS clearance \textbf{passes, because the requirement was re-derived
-rather than the board changed.} The clear run before \file{R21} is \textbf{5.30 mm}. The
-table's old figure of 6.0 mm was a JST-GH \emph{class} nominal, and it assumed a bend
-allowance that nothing in that corridor needs: a pre-wired GH shell exits its wires at the
-rear, already parallel to the board, and the only neighbour is a 0402 resistor 0.55 mm tall.
-Shell half-width 2.6 mm plus 1.0 mm of handling margin is 3.6 mm, so 5.30 mm clears by
-1.7 mm. \textbf{Relocating \file{R21} was mapped and rejected} --- \file{TP20}'s courtyard
-and a via fence leave no position in the span that yields 6.0 mm, so there was never a fix
-available there. The residual risk is a bulky moulded boot, which is why a spare JST-GH lead
-is on the order list and T2 fits the plug \emph{before} the headers are soldered.
-\item \flag{The board is 45.1 $\times$ 47.3 mm, below JLCPCB's 70 $\times$ 70 mm Standard
+\item \flag{The board is 46.5 $\times$ 47.2 mm, below JLCPCB's 70 $\times$ 70 mm Standard
 minimum.} Confirmed against their capability page: Standard single-PCB assembly runs
 70 $\times$ 70 mm to 460 $\times$ 500 mm, while Economic runs 10 $\times$ 10 mm up. So
 Standard needs the board panelled with breakaway rails --- an extra fabrication step and an
@@ -1414,15 +1475,15 @@ Press-nut tapped depth (30.5 mm joint) & M3 $\times$ 35 vs 33 + washer, on 8.0 m
 engagement & your calipers \\
 Skid thickness, \textbf{assumed} 3.5 mm & sets the motor screw length entirely & you, because
 you print them. Measure the print \\
-\textbf{Grommet flange} $\leq$ 5.9 mm & at 6.0 mm it touches a printed label; a 7 mm washer
-overlaps by 0.52 mm & calipers on the grommets you receive \\
-\textbf{ESC cable continuity} & whether \file{J2} matches the ESC you were sent. Wrong here
+\textbf{Grommet flange} $\leq$ 6.0 mm & the nearest copper is 3.32 mm from a hole centre; a
+6.0 mm flange clears it and a 7 mm washer overlaps by 0.18 mm (nylon, so no short) & calipers
+on the grommets you receive \\
+\textbf{ESC lead continuity} & whether the GH 8P to SH 8P lead is straight-through. Wrong here
 means a dead board or a smoked one & a multimeter, both ends, \textbf{before any VBAT} \\
-\file{J3} plug against 5.30 mm & whether the received GPS lead seats & fit the plug before
-the headers are soldered \\
+\file{J3} plug & whether the received GPS lead's boot seats & fit the plug on arrival \\
 \file{BATT\_AMP\_PERVLT} & battery failsafe and consumed-mAh. Ships 25.0; it is a property of
 the ESC's shunt, not of this board & a known load at T3.5 \\
-IMU orientations & \file{ROTATION\_YAW\_270} on both, worked out from the pads and
+IMU orientations & \file{ROTATION\_YAW\_180} (\file{U2}) / \file{ROTATION\_YAW\_90} (\file{U3}), worked out from the pads and
 re-checked by \file{check\_hwdef.py}, never measured. A mirrored axis means it does not fly & roll and pitch it, watch the horizon (T3.1) \\
 \file{U8} junction temperature & 70--87\degC{} modelled against a 125\degC{} recommended
 max, on an honest budget \emph{and a swapped part} since 2026-09-20; the worst corner has
@@ -1455,7 +1516,7 @@ explicitly not readable until it is measured.
 125\degC{} recommended maximum --- 38\degC{} of margin, after the 2026-09-20 swap to the
 LMR33630ARNXR. It is now a number to confirm rather than one to rescue, and the payload BEC
 is what stops a later addition eating the margin.
-\item \flag{The ESC cable and the tapped depths.} Cheap to check, catastrophic to skip. Both
+\item \flag{The ESC lead and the tapped depths.} Cheap to check, catastrophic to skip. Both
 are on this list only because they are properties of parts somebody else manufactured, and
 both are silenced by owning the M3 assortment and a multimeter.
 \end{enumerate}
@@ -1468,12 +1529,11 @@ can be fixed, and one of them (\file{U8}) may force one anyway.
 \begin{itemize}
 \item \textbf{USB runs the logic but not the payload rail}, and back-feeds about 4\,V onto
 \file{VBAT} and the ESC's battery pin through \file{U8} and \file{Q4}.
-\item \textbf{Six pads arrive unlabelled} (Section~\ref{sec:T3d}) because a 1.0\,mm label,
-placed where it reads as its own pad's, has nowhere to go among them. Smaller probe pads
-(1.0\,mm, no outline) would make room for the five test points in a later revision.
-\item \textbf{The payload rail cannot carry every payload connector at once} (1.67 A against
-\file{L5}'s 1.6 A). A 5 $\times$ 5 mm inductor would lift that to 2.1 A, but not on this
-placement.
+\item \textbf{Four pads arrive unlabelled} (Section~\ref{sec:T3d}) because a 1.0\,mm label,
+placed where it reads as its own pad's, has nowhere to go among them.
+\item \textbf{The payload rail cannot carry every payload connector at once}: 1.43 A is
+inside \file{L5}'s 2.1 A, but puts \file{U20} at about 132\,\degC{} against 125\,\degC{}
+(\file{check\_modules.py}). Each declared mission fits.
 \item \textbf{\file{-nofpv} is byte-identical to the default pair.} A variant that ships the
 same bytes as another is a place for someone to pick the wrong file.
 \item \textbf{The Economic variant saves one part and not the feeder fees}, which makes it a
@@ -1569,21 +1629,23 @@ that is the number T3b is really trying to meet.
 \item \cmd{bash tools/make\_order\_bundle.sh} --- regenerate everything
 \item Upload \file{fab/NAVCORE-SoOP-order-bundle.zip}, or the gerbers plus the default
 BOM/CPL pair
-\item 6 layers, 45.1 $\times$ 47.3 mm, 1.6 mm, \textbf{1 oz} outer, ENIG, 4 mil, via
+\item 6 layers, 46.5 $\times$ 47.2 mm, 1.6 mm, \textbf{1 oz} outer, ENIG, 4 mil, via
 0.45/0.20, vias \textbf{epoxy filled and capped}, Mark on PCB \textbf{Remove Mark}
 \item 5 bare boards, 2 assembled. Standard panelised 2 $\times$ 2 unless you want to
 hand-fit \file{U3}
 \item Confirm \file{Y1} = \file{C2682774} and \file{Y2} = \file{C5563878}; refresh the stock
 snapshot if it is over 7 days old
 \item Order the aircraft parts from \file{docs/PARTS.csv}, \textbf{including the M3
-assortment}, the HC610 with its bias tee, coax and U.FL clip, and the bias-tee dongle.
+assortment}, the GH 8P to SH 8P ESC lead, the GH pigtails, the HC610 with its MMCX to
+SMA pigtail, the DC block, and the Blog V4 dongle.
 Do not buy a bare PMW3901 or VL53L1X chip
-\item While waiting: prepare the board ID request, print the padmap, decide the USB edge
-\item On arrival: inspect under magnification, buzz the ESC cable, measure the tapped depths
+\item While waiting: prepare the board ID request, print the padmap, settle the board's
+orientation and \file{AHRS\_ORIENTATION}
+\item On arrival: inspect under magnification, buzz the ESC lead, measure the tapped depths
 \item T1 current-limited rails $\rightarrow$ T2 bootloader over USB DFU (\file{BOOT} +
 \file{RESET}) $\rightarrow$ T3 sensors, props off
 \item T3a thermal (\file{U8} needs a probe) $\rightarrow$ T3c IMU temp cal $\rightarrow$ T3d
-six unlabelled pads
+four unlabelled pads
 \item T3b before any position-hold claim: measure the real sigma
 \item SITL scenarios $\rightarrow$ tethered hover $\rightarrow$ GPS Loiter. \textbf{Props on
 last}

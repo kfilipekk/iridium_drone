@@ -6,6 +6,7 @@ Usage: python3 tools/check_backside.py [--board PATH]
 import os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import pcbnew
+import design
 
 BOARD = "NAVCORE-SoOP.kicad_pcb"
 T = pcbnew.ToMM
@@ -62,6 +63,18 @@ def main():
                 where = f"{fp.GetReference()} pad {p.GetNumber() or '(hole)'} at " \
                         f"({T(p.GetPosition().x):.2f}, {T(p.GetPosition().y):.2f})"
                 body = bodies[o.GetReference()]
+                #a locating peg that ends inside the board
+                sink = design.MODEL_EXPECTED_SINK.get(fp.GetReference())
+                if (p.GetAttribute() == pcbnew.PAD_ATTRIB_NPTH and sink is not None
+                        and sink < design.BOARD_T - CLEAR):
+                    for op in o.Pads():
+                        g = op.GetBoundingBox()
+                        g.Inflate(pcbnew.FromMM(CLEAR))
+                        if g.Intersects(hole):
+                            fails.append(f"{where} is under {o.GetReference()} pad "
+                                         f"{op.GetNumber()} on the other side")
+                            break
+                    continue
                 if body is not None:
                     g = pcbnew.BOX2I(body.GetOrigin(), body.GetSize())
                     g.Inflate(pcbnew.FromMM(CLEAR))

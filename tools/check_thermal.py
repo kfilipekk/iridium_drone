@@ -194,6 +194,63 @@ def main():
                  f"{tj_peak:.0f} C peak, {tj_max-tj_peak:.0f} C of margin", theta_src)
         print()
 
+    print("=== active antenna bias feed dissipation ===")
+    print(f"      U24 (AP22653W6-7) load switch and U25 (INA180A2) current sense amp,")
+    print(f"      ambient {T_AMBIENT_STACK:.0f} C [A]\n")
+
+    #U24: AP22653W6-7 in SOT-26
+    u24_part = design.COMPONENTS["U24"][2]
+    u24_theta = 120.0  #[D] Diodes DS41186 Dissipation Rating Table
+    u24_tj_max = 125.0
+    u24_p_rated_70c = 0.450
+    u24_i_norm = 0.015
+    u24_pd_norm = u24_i_norm**2 * 0.135
+    u24_tj_norm = T_AMBIENT_STACK + u24_pd_norm * u24_theta
+    u24_i_fold = 0.035
+    u24_pd_fold = 5.0 * u24_i_fold
+    u24_tj_fold = T_AMBIENT_STACK + u24_pd_fold * u24_theta
+
+    print(f"  U24 +5V_BIAS_SW  {u24_part} in SOT-26")
+    print(f"      normal LNA load    : {u24_i_norm*1e3:.0f} mA, Pd {u24_pd_norm*1e3:.2f} mW, Tj {u24_tj_norm:.0f} C")
+    print(f"      dead short foldback: {u24_i_fold*1e3:.0f} mA at 5.0 V drop -> Pd {u24_pd_fold*1e3:.0f} mW")
+    print(f"      theta_JA {u24_theta:.0f} C/W, limits {u24_tj_max:.0f} C recommended / 145 C shutdown / {u24_p_rated_70c*1e3:.0f} mW at 70 C")
+    print(f"      junction, foldback : {u24_tj_fold:.0f} C against {u24_tj_max:.0f} C limit")
+
+    if u24_tj_fold >= u24_tj_max:
+        fails.append(f"U24: foldback junction {u24_tj_fold:.0f} C exceeds {u24_tj_max:.0f} C limit")
+        line("FAIL", "U24 junction temperature", f"{u24_tj_fold:.0f} C in foldback exceeds {u24_tj_max:.0f} C")
+    elif u24_tj_fold >= u24_tj_max - 30:
+        notes.append(f"U24: foldback junction {u24_tj_fold:.0f} C leaves under 30 C of margin")
+        line("warn", "U24 junction temperature", f"{u24_tj_fold:.0f} C in foldback - under 30 C of margin",
+             "[D] Diodes DS41186 Dissipation Rating Table: SOT26 theta_JA 120 C/W")
+    else:
+        line("ok", "U24 junction temperature",
+             f"{u24_tj_fold:.0f} C in foldback, {u24_tj_max-u24_tj_fold:.0f} C of margin ({u24_pd_fold*1e3:.0f} mW Pd)",
+             "[D] Diodes DS41186 Dissipation Rating Table: SOT26 theta_JA 120 C/W")
+    print()
+
+    #U25: INA180A2IDBVR in SOT-23-5 (theta_JA 233.7 C/W, Iq 0.37 mA max, tj_max 125 C)
+    u25_part = design.COMPONENTS["U25"][2]
+    u25_theta = 233.7  #[D] TI SBOS853 Thermal Information
+    u25_tj_max = 125.0
+    u25_iq_max = 0.37e-3
+    u25_pd = 3.3 * u25_iq_max
+    u25_tj = T_AMBIENT_STACK + u25_pd * u25_theta
+
+    print(f"  U25 ANT_CURRENT  {u25_part} in SOT-23-5")
+    print(f"      quiescent draw     : {u25_iq_max*1e3:.2f} mA max from +3V3 -> Pd {u25_pd*1e3:.2f} mW")
+    print(f"      theta_JA {u25_theta:.1f} C/W, limit {u25_tj_max:.0f} C recommended")
+    print(f"      junction           : {u25_tj:.0f} C against {u25_tj_max:.0f} C limit")
+
+    if u25_tj >= u25_tj_max:
+        fails.append(f"U25: junction {u25_tj:.0f} C exceeds {u25_tj_max:.0f} C limit")
+        line("FAIL", "U25 junction temperature", f"{u25_tj:.0f} C exceeds {u25_tj_max:.0f} C")
+    else:
+        line("ok", "U25 junction temperature",
+             f"{u25_tj:.0f} C, {u25_tj_max-u25_tj:.0f} C of margin",
+             "[D] TI INAx180 SBOS853 Thermal Information: DBV theta_JA 233.7 C/W")
+    print()
+
     print("=== what this check cannot do ===")
     line("note", "RDS(on) and edge rate are [A]",
          "the component figure implies ~97% efficiency, optimistic for this part. "

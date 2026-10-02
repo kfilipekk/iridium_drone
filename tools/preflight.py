@@ -102,6 +102,35 @@ def fabrication(board):
     check("fabrication", "mounting holes", len(circles) == 4,
           f"{len(circles)} holes (need 4 for a 30.5 mm stack)")
 
+    #locating peg sink depths and copper clearance (design.MODEL_EXPECTED_SINK)
+    peg_fails = []
+    for fp in board.GetFootprints():
+        ref = fp.GetReference()
+        sink = design.MODEL_EXPECTED_SINK.get(ref)
+        if sink is None:
+            continue
+        max_sink = design.BOARD_T - 0.20
+        #legs soldered through plated holes (J12's MMCX) are meant to come out underneath
+        pegs = any(p.GetAttribute() == pcbnew.PAD_ATTRIB_NPTH for p in fp.Pads())
+        if pegs and sink >= max_sink:
+            peg_fails.append(f"{ref} peg sink {sink:.2f} mm exceeds core limit ({max_sink:.2f} mm)")
+        for p in fp.Pads():
+            if p.GetAttribute() != pcbnew.PAD_ATTRIB_NPTH:
+                continue
+            hole = p.GetBoundingBox()
+            for other in board.GetFootprints():
+                if other.IsFlipped() == fp.IsFlipped() or other.GetReference() == ref:
+                    continue
+                for op in other.Pads():
+                    if op.GetAttribute() == pcbnew.PAD_ATTRIB_SMD:
+                        g = op.GetBoundingBox()
+                        g.Inflate(pcbnew.FromMM(0.20))
+                        if g.Intersects(hole):
+                            peg_fails.append(f"{ref} peg hole under {other.GetReference()} pad {op.GetNumber()}")
+    check("fabrication", "locating peg sink depth within board core", not peg_fails,
+          f"{len(design.MODEL_EXPECTED_SINK)} part(s) with short pegs stop inside core (< {design.BOARD_T - 0.20:.2f} mm) and clear opposite copper"
+          if not peg_fails else "; ".join(peg_fails))
+
 
 def assembly(board):
     #the base build is what gets gated
@@ -313,6 +342,23 @@ def silkscreen(board):
               + (f"; BLANK and not in PAD_LABELS_UNPRINTED: {', '.join(unlisted)}" if unlisted else "")
               + (f"; labelled but still listed as unprinted: {', '.join(stale)}" if stale else ""))
     check("fabrication", "pad silkscreen labels", ok, detail)
+
+    #the same for connector names (silk_names.py prints them as board texts)
+    printed = {d.GetText() for d in board.GetDrawings()
+               if d.Type() == pcbnew.PCB_TEXT_T and d.IsVisible()
+               and d.GetLayer() in (pcbnew.F_SilkS, pcbnew.B_SilkS)}
+    names = getattr(design, "SILK_NAMES", {})
+    on = sorted(r for r, n in names.items() if n in printed)
+    off = sorted(set(names) - set(on))
+    listed = set(getattr(design, "SILK_NAMES_UNPRINTED", {}))
+    unlisted = sorted(set(off) - listed)
+    stale = sorted(listed & set(on))
+    check("fabrication", "connector names on the silkscreen", not unlisted and not stale,
+          f"{len(on)}/{len(names)} connectors named"
+          + (f"; unprinted by design, on padmap.svg: {', '.join(sorted(set(off) & listed))}"
+             if set(off) & listed else "")
+          + (f"; BLANK and not in SILK_NAMES_UNPRINTED: {', '.join(unlisted)}" if unlisted else "")
+          + (f"; named but still listed as unprinted: {', '.join(stale)}" if stale else ""))
 
 
 def project(board):
@@ -565,6 +611,12 @@ def firmware(board):
            f"all {len(design.MATING_FACE)} openings clear the board"
            + (f", {nf.group(2)} warning(s)" if nf and nf.group(2) != '0' else "")))
 
+    rc, out = run("check_floorplan.py")
+    m = re.search(r'(\d+) failure\(s\), (\d+) ports', out)
+    check("fabrication", "perimeter floorplan and plug clearances", rc == 0,
+          (f"all {m.group(2) if m else '?'} perimeter ports seated, latches and plugs clear" if rc == 0 else
+           "perimeter port or plug clearance violation - see tools/check_floorplan.py"))
+
     rc, out = run("check_mechanical.py")
     m = re.search(r'^(\d+) computed check\(s\) ok', out, re.M)
     unk = "!! footprints with no declared height" in out
@@ -599,6 +651,12 @@ def firmware(board):
           (f"{m.group(1)}/{m.group(2)} assertions across {m.group(3)} decks" if m
            else "the suite printed no tally - see sim/run_suite.py") if rc == 0 else
           "a simulation bound is violated, or a deck did not run - see sim/run_suite.py")
+
+    rc, out = run("check_soop_ant.py")
+    m = re.search(r'ANT CHECK (?:PASSED|FAILED): (\d+) failure\(s\), (\d+) steps simulated', out)
+    check("firmware", "antenna bias feed monitor", rc == 0,
+          (f"active antenna feed monitor verified ({m.group(2) if m else '?'} simulated steps)" if rc == 0 else
+           "antenna bias feed monitor failed - see tools/check_soop_ant.py"))
 
     rc, out = run("check_params.py")
     fw = re.search(r'^firmware\s+:\s+(.+?)\s+\(tag (\S+)\)', out, re.M)
@@ -685,6 +743,12 @@ def firmware(board):
           "sitl/README.md scenarios and docs/HARDWARE.md frame table are current" if rc == 0
           else "a generated table is stale - run tools/gen_doc_tables.py")
 
+    #the pad map is where every unprinted label is documented
+    rc, out = run("gen_padmap.py --check")
+    check("fabrication", "pad map matches the board", rc == 0,
+          "docs/img/padmap.svg shows every pad and connector as built" if rc == 0
+          else "docs/img/padmap.svg is stale - run tools/gen_padmap.py")
+
     rc, out = run("gen_scad_frame.py --check")
     check("mechanical", "CAD frame matches design.FRAME", rc == 0,
           "cad/frame.scad is current" if rc == 0
@@ -746,6 +810,12 @@ def firmware(board):
               if belly_ok else
               f"FAILED - {worst[0]} at {worst[1]} mm above the skid contact plane: "
               f"see tools/check_cad_fit.py")
+
+    rc, out = run("check_cables.py")
+    m = re.search(r'PASS - (\d+) cables routed', out)
+    check("mechanical", "cable harness routing and clearances", rc == 0,
+          (f"{m.group(1) if m else '?'} cables routed, bend radii and clearances met" if rc == 0 else
+           "cable routing, bend or clearance violation - see tools/check_cables.py"))
 
     #the bolted joints, as joints
     rc, out = run("check_fit.py")

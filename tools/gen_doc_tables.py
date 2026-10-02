@@ -124,9 +124,9 @@ def spatial_table():
     rows = [
         ("stack height", f"**{s['below']+s['stack']:.1f} mm** "
          f"({s['below']:.1f} frame + {s['stack']:.1f} stack)",
-         f"under the top plate at **{s['top_plate_z']:.1f} mm** (the kit's "
+         f"under the top plate at **{s['top_plate_z']:.1f} mm** (the bought "
          f"{s['buy']:.0f} mm front standoffs on the mid plate + {F['arm_t']+F['medium_t']:.0f} "
-         f"mm of arms and plate); nothing to buy"),
+         f"mm of arms and plate)"),
         ("clearance above the FC", f"{s['slack']:.1f} mm",
          f"to the top plate, tallest part `{s['topref']}`"),
         ("FC/ESC mounting", f"{design.MOUNTING['pitch']} x {design.MOUNTING['pitch']} mm",

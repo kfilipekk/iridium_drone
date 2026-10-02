@@ -106,6 +106,16 @@ NOT_FOOTPRINTS = {
     "R55": "pyro gate pull-down - removed in Rev C with J18",
     "R56": "touchdown pull-up - removed in Rev C with J20",
     "C87": "pyro gate hold-down - removed in Rev C with J18",
+    #Rev D: the wire-pad looms became latching ports
+    "P41": "companion 5 V pad - Rev D, the companion is on J21 (GH-6P, UART7)",
+    "P44": "companion PPS pad - Rev D, dropped with the pads; nothing in the firmware used it",
+    "P46": "companion GND pad - Rev D, now J21.6",
+    "P71": "SERIAL6 5 V pad - Rev D, removed; UART4 has no landing",
+    "P72": "SERIAL6 TX pad - Rev D, removed; UART4 has no landing",
+    "P73": "SERIAL6 RX pad - Rev D, removed; UART4 has no landing",
+    "P74": "SERIAL6 GND pad - Rev D, removed",
+    "PV1": "payload +5 V pad - Rev D, now J22 (GH-3P)",
+    "PV2": "payload GND pad - Rev D, now J22",
 }
 docs = [q for q in (REPO / "docs").glob("*.md") if q.name != "HISTORY.md"]
 docs.append(REPO / "README.md")

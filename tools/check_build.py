@@ -114,13 +114,16 @@ def load_parts():
 def connectors(text):
     """Every connector and pad group must have something to plug into it."""
     need = [("J1  USB-C",        ["usb-c cable", "usb-c"],       "cable to flash the board"),
-            ("J2  JST-SH 8pin",  ["esc"],                        "cable supplied with the ESC"),
+            ("J2  JST-GH 8pin",  ["gh 8p to sh 8p", "ghr-08v"],  "GH-8P to SH-8P ESC lead - the "
+                                                                 "ESC's own cable is SH both ends"),
             ("J3  JST-GH 6pin",  ["gps"],                        "GPS module and its cable"),
             ("J8  microSD",      ["microsd"],                    "the card itself - logs AND Lua scripts"),
-            ("P71-74+P44 companion", ["pi zero", "raspberry", "radxa"], "5 wires to the companion"),
+            ("J12 MMCX",         ["mmcx"],                       "MMCX to SMA pigtail to the antenna"),
+            ("J21 companion",    ["ghr-06v", "gh 6p"],           "GH-6P lead to the companion"),
+            ("J22 payload",      ["ghr-03v", "gh 3p"],           "GH-3P lead to the VTX / camera"),
             ("J5  RC",           ["elrs", "receiver"],           "ELRS receiver"),
-            ("J15 LED",          ["ws2812", "led strip"],        "addressable strip"),
-            ("J16 buzzer",       ["buzzer", "piezo"],            "5 V piezo"),
+            ("P151-153 LED",     ["ws2812", "led strip"],        "addressable strip, soldered"),
+            ("P161-163 buzzer",  ["buzzer", "piezo"],            "5 V piezo, soldered"),
             ("XT60 power",       ["xt60"],                       "battery lead"),
             ("battery plug",     ["ec5"],                        "EC5 adapter - the Zeee packs are not XT60")]
     for label, keys, why in need:

@@ -9,12 +9,11 @@ CAD  = os.path.join(os.path.dirname(HERE), "cad")
 SCAD = os.path.join(CAD, "drone.scad")
 
 #the SCAD module that draws each part design.MOUNTED and design.MOUNTS name
-MODULE = {"iridium_antenna": "iridium_antenna", "gps": "gps", "bias_tee": "bias_tee", "rx": "rx",
+MODULE = {"iridium_antenna": "iridium_antenna", "gps": "gps", "rx": "rx",
           "elrs_antenna": "elrs_antennas", "xiao": "rec_cam", "lidar": "lidar360",
           "range_down": "belly_sensor"}
 #the printed parts that close a mount
 LIDS = {"gps_pod": ("antenna_tower", "gps"), "gps_lid": ("gps_pod", "gps"),
-        "bias_strap": ("antenna_tower", "bias_tee"),
         "xiao_lid": ("nose_mount", "xiao"), "rx_cover": ("nose_mount", "rx"),
         "range_lid": ("range_cradle", "range_down")}
 MOUNTS = sorted(design.MOUNTS)
@@ -412,6 +411,34 @@ def main():
     except Exception as e:                     #a gate must fail, not vanish, on error
         fails.append(f"real-hardware plug pass could not run: {e}")
         print(f"  real-hardware plug pass could not run: {e}")
+
+    print("\nmated right-angle SMA end in the antenna tower duct (gated)")
+    T = gen_scad_mounts.G["tower"]
+    hc610_tip_z = T["seat_z"] - 10.0            #SMA jack extends 10 mm below the seat
+    tower_foot_z = T["foot_z"] + T["foot_t"]    #top face of the tower foot
+    duct_gap = hc610_tip_z - tower_foot_z       #12.5 mm
+    min_duct_gap = 12.0                         #mm minimum duct gap
+    sma_ra_drop_from_tip = 4.0                  #mm rigid body below SMA tip
+    sma_ra_clearance = duct_gap - sma_ra_drop_from_tip  #8.5 mm
+    straight_sma_len = 20.0                     #mm rigid body of straight SMA plug
+
+    ok_gap = duct_gap >= min_duct_gap
+    print(f"  duct gap: HC610 SMA tip z={hc610_tip_z:.2f} mm to tower foot z={tower_foot_z:.2f} mm "
+          f"-> {duct_gap:.2f} mm (need >= {min_duct_gap:.1f} mm)  {'ok' if ok_gap else 'FAIL'}")
+    if not ok_gap:
+        fails.append(f"antenna duct gap {duct_gap:.2f} mm < {min_duct_gap:.1f} mm: "
+                     f"not enough room for mated right-angle SMA connector")
+
+    #flag that a straight SMA would collide
+    if straight_sma_len > duct_gap:
+        print(f"  straight SMA ({straight_sma_len:.1f} mm) exceeds {duct_gap:.1f} mm duct "
+              f"by {straight_sma_len - duct_gap:.1f} mm (right-angle SMA required)  ok")
+
+    ok_clear = sma_ra_clearance > 0.0
+    print(f"  right-angle SMA mated end (extends {sma_ra_drop_from_tip:.1f} mm past tip) "
+          f"clears tower foot by {sma_ra_clearance:.2f} mm  {'ok' if ok_clear else 'FAIL'}")
+    if not ok_clear:
+        fails.append(f"mated right-angle SMA connector overlaps tower foot by {-sma_ra_clearance:.2f} mm")
 
     print("\nsky view (nothing but plastic above the elevation mask)")
     for n, (mask, zc) in SKY.items():
