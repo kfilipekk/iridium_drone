@@ -120,10 +120,10 @@ def hazards(fc_z, rs, plugs):
             pz = z_mid + design.MOTOR["h_mm"] + 4.0      #as drone.scad's props()
             H.append((f"{tag} prop", vcyl(m[0], m[1], design.PROP["dia_mm"] / 2, pz, pz + 1.2),
                       "prop"))
-            sk = design.SKID["hole_pitch"] / 2 + 2.0
+            sg = design.skid_geometry()
+            sk = sg["half"]          #the plate and the splayed feet, whichever reaches further
             H.append((f"{tag} skid", box(m[0] - sk, m[0] + sk, m[1] - sk, m[1] + sk,
-                                         -(design.SKID["drop"] + design.SKID["t"]), z_arm),
-                      "carbon"))
+                                         sg["contact"], z_arm), "carbon"))
     r_post = TPM["post_od"] / 2
     for x, y in TPM["front_posts"]:
         H.append((f"front post ({x:+.1f},{y:+.1f})", vcyl(x, y, r_post, z_stack, top_z), "carbon"))

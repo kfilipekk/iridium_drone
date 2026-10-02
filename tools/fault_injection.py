@@ -69,6 +69,8 @@ LAST_RUN = {}          #the rows, tool exits and sources of the latest run_gate 
 #tier D: every gate tool added since the tiers above
 SELF_TESTS = [
     ("fw.bdshot", ["tools/check_bdshot.py", "--self-test"]),
+    ("mech.prints", ["tools/check_prints.py", "--self-test"]),
+    ("mech.balance", ["tools/check_balance.py", "--self-test"]),
 ]
 
 

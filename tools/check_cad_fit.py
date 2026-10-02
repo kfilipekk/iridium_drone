@@ -11,11 +11,11 @@ SCAD = os.path.join(CAD, "drone.scad")
 #the SCAD module that draws each part design.MOUNTED and design.MOUNTS name
 MODULE = {"iridium_antenna": "iridium_antenna", "gps": "gps", "rx": "rx",
           "elrs_antenna": "elrs_antennas", "xiao": "rec_cam", "lidar": "lidar360",
-          "range_down": "belly_sensor"}
+          "range_down": "belly_sensor", "remote_id": "remote_id"}
 #the printed parts that close a mount
 LIDS = {"gps_pod": ("antenna_tower", "gps"), "gps_lid": ("gps_pod", "gps"),
         "xiao_lid": ("nose_mount", "xiao"), "rx_cover": ("nose_mount", "rx"),
-        "range_lid": ("range_cradle", "range_down")}
+        "range_lid": ("range_cradle", "range_down"), "rid_cover": ("rid_tray", "remote_id")}
 MOUNTS = sorted(design.MOUNTS)
 PRINTED = MOUNTS + sorted(LIDS)
 #parts that belong to the airframe and are held by it
@@ -60,8 +60,7 @@ GROUND_PARTS = {
 CONTACT_OK = {
     ("frame", "motors"):        "motors bolt to the arms",
     ("motors", "props"):        "props mount on the motor bells",
-    ("frame", "skids"):         "skids are sandwiched between motor and arm",
-    ("motors", "skids"):        "skids bolt to the motor's 19x19 pattern",
+    ("frame", "skids"):         "the skid's plate bolts up under the arm",
     ("esc", "stack_screws"):    "the M3 bolt passes through the ESC's holes",
     ("fc", "stack_screws"):     "the M3 bolt passes through the board's holes",
     ("frame", "stack_screws"):  "the bolt passes through the plates",
@@ -488,9 +487,11 @@ def main():
 
     print(f"\nprinted parts, laid out for printing ({design.PRINTER['name']}, "
           f"{design.PRINTER['x']:.0f} x {design.PRINTER['y']:.0f} x {design.PRINTER['z']:.0f})")
+    #every printed part
+    bed = PRINTED + ["skid"]
     res = render_many([(f"print_{n}();", os.path.join(out, f"print_{n}.stl"))
-                       for n in PRINTED])
-    for n, r in zip(PRINTED, res):
+                       for n in bed])
+    for n, r in zip(bed, res):
         if r is not True:
             fails.append(f"print_{n}: export failed"); continue
         tris = read_stl(os.path.join(out, f"print_{n}.stl"))

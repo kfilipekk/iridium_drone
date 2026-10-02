@@ -9,6 +9,12 @@ PREREQUISITES = [
     #the board is the design it claims to be
     dict(id="design.netlist", cls=GATED, tool="check_design.py",
          claim="the netlist matches the schematic, and every MCU pin used is declared"),
+    dict(id="mech.balance", cls=GATED, tool="check_balance.py",
+         claim="every mass has a position, the CG sits over the thrust centre, and the "
+               "aircraft stands on its skids through a 45 deg lean"),
+    dict(id="mech.prints", cls=GATED, tool="check_prints.py",
+         claim="every printed part - each mount, its lids and the skid - is in cad/print, and "
+               "each STL is the solid today's design exports"),
     dict(id="fw.bdshot", cls=GATED, tool="check_bdshot.py",
          claim="all four motors sit on capture-capable timer channels with BIDIR and DMA of "
                "their own, so RPM telemetry and the RPM notch work once Bluejay is flashed"),

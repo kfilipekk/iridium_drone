@@ -92,6 +92,14 @@ def main():
          f"{sep:.2f} mm between the ESC's PCB top face and this board's PCB underside "
          f"(ESC parts {ESC['parts']:.1f} + air {GAP['mm']:.1f} + bottom parts "
          f"{BOT_PARTS['mm']:.2f}); compressed grommet height is [A]", GAP["src"])
+    #the foam between the ESC and the board must leave air to the part it faces
+    for name, f in design.FOAM.items():
+        if not isinstance(f, dict):
+            continue
+        room = sep - ESC["parts"] - f["part_h"] - f["t"]
+        line("ok" if room >= 1.0 else "FAIL", f"{name} foam fits the ESC gap",
+             f"{f['t']:.1f} mm {f['material'].split(',')[0]} under {', '.join(f['over'])} "
+             f"leaves {room:.1f} mm of air (>= 1.0)", design.FOAM["src"])
     #Required_standoff() returns buy=None when the stack is taller than the longest stock length
     line("FAIL" if z_max > STO["top_plate_z"] else "ok", "tallest point of the stack",
          f"{z_max:.1f} mm against the top plate's underside at {STO['top_plate_z']:.1f} mm "

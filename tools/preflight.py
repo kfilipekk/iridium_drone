@@ -825,6 +825,20 @@ def firmware(board):
         check("mechanical", "belly parts clear the ground", False,
               "check_cad_fit.py reported no ground clearances")
 
+    rc, out = run("check_balance.py")
+    m = re.search(r'static tip angle ([\d.]+) deg', out)
+    o = re.search(r'CG ([\d.]+) mm from the thrust centre', out)
+    check("mechanical", "centre of gravity and tip-over", rc == 0,
+          f"CG {o.group(1) if o else '?'} mm off the thrust centre; tips past "
+          f"{m.group(1) if m else '?'} deg" if rc == 0
+          else "the CG is off-centre or the skids tip too easily - see tools/check_balance.py")
+
+    rc, out = run("check_prints.py")
+    m = re.search(r'(\d+) printed parts', out)
+    check("mechanical", "printed parts are current STLs", rc == 0,
+          f"{m.group(1) if m else '?'} parts in cad/print, each the solid today's design exports"
+          if rc == 0 else "a printed part is missing or stale - see tools/check_prints.py")
+
     rc, out = run("check_cables.py")
     m = re.search(r'PASS - (\d+) cables routed', out)
     check("mechanical", "cable harness routing and clearances", rc == 0,
