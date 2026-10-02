@@ -37,9 +37,9 @@ PC15 IMU1_CS CS
 
 # SPI2 for MAX7456 OSD
 # [removed: no analogue OSD fitted] PB12 MAX7456_CS CS
-PB13 SPI2_SCK SPI2
-PB14 SPI2_MISO SPI2
-PB15 SPI2_MOSI SPI2
+# [removed: SPI2 served only the analogue OSD, which is not fitted] PB13 SPI2_SCK SPI2
+# [removed: SPI2 served only the analogue OSD, which is not fitted] PB14 SPI2_MISO SPI2
+# [removed: SPI2 served only the analogue OSD, which is not fitted] PB15 SPI2_MOSI SPI2
 
 # SPI3 - external
 PB3 SPI3_SCK SPI3
@@ -142,13 +142,15 @@ PB9 UART4_TX UART4
 PB8 UART4_RX UART4
 
 # USART6 (RC input), SERIAL7
-PC7 TIM3_CH2 TIM3 RCININT PULLDOWN LOW
+# [removed: RC is CRSF over USART6 (SERIAL7_PROTOCOL 23), so the timer input on the same pin goes, and TIM3 drives M1/M2 instead (PPM/SBUS-by-timer receivers lose their input)] PC7 TIM3_CH2 TIM3 RCININT PULLDOWN LOW
 PC6 USART6_TX USART6 NODMA
 
 # as an alternative config setup the RX6 pin as a uart. This allows
 # for bi-directional UART based receiver protocols such as FPort
 # without any extra hardware
-PC7 USART6_RX USART6 NODMA ALT(1)
+# [was: PC7 USART6_RX USART6 NODMA ALT(1)]
+# USART6_RX is PC7's only function now that the timer RC input is gone.
+PC7 USART6_RX USART6 NODMA
 
 # UART7 (telem1)
 PE7 UART7_RX UART7
@@ -166,9 +168,18 @@ PD1 CAN1_TX CAN1
 PD3 GPIO_CAN1_SILENT OUTPUT PUSHPULL SPEED_LOW LOW GPIO(70)
 
 # Motors
-PB0  TIM8_CH2N TIM8  PWM(1)  GPIO(50)
-PB1  TIM8_CH3N TIM8  PWM(2)  GPIO(51)
-PA0  TIM5_CH1  TIM5  PWM(3)  GPIO(52)
+# [was: PB0  TIM8_CH2N TIM8  PWM(1)  GPIO(50)]
+# M1 moves from TIM8_CH2N (complementary - no input capture, so no BDShot) to
+# TIM3_CH3 on the same pin, as MatekH743-bdshot does. BIDIR is set on the
+# first channel of each pair, which reads for both.
+PB0  TIM3_CH3 TIM3  PWM(1)  GPIO(50) BIDIR
+# [was: PB1  TIM8_CH3N TIM8  PWM(2)  GPIO(51)]
+# M2: TIM3_CH4, same pin.
+PB1  TIM3_CH4 TIM3  PWM(2)  GPIO(51)
+# [was: PA0  TIM5_CH1  TIM5  PWM(3)  GPIO(52)]
+# M3/M4 stay on TIM5 (MatekH743-bdshot moves them to TIM2, but TIM2_CH1 is the
+# passive buzzer's tone on PA15).
+PA0  TIM5_CH1  TIM5  PWM(3)  GPIO(52) BIDIR
 PA1  TIM5_CH2  TIM5  PWM(4)  GPIO(53)
 PA2  TIM5_CH3  TIM5  PWM(5)  GPIO(54)
 PA3  TIM5_CH4  TIM5  PWM(6)  GPIO(55)
@@ -219,7 +230,9 @@ SPIDEV icm42605  SPI4 DEVID1 IMU2_CS      MODE3  2*MHZ 16*MHZ
 # [removed: no analogue OSD fitted] SPIDEV osd       SPI2 DEVID4 MAX7456_CS   MODE0 10*MHZ 10*MHZ
 
 
-DMA_NOSHARE SPI1* SPI4*
+# [was: DMA_NOSHARE SPI1* SPI4*]
+# the BDShot timers get DMA streams of their own, as the IMU buses do
+DMA_NOSHARE SPI1* SPI4* TIM3* TIM5*
 
 # SPI3 external connections
 SPIDEV pixartflow   SPI3 DEVID1  EXT_CS1  MODE3   2*MHZ  2*MHZ

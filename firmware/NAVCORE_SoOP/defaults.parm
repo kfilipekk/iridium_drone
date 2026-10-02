@@ -43,14 +43,20 @@ RC_PROTOCOLS 512
 # No separate telemetry radio is fitted or needed.
 
 SERVO_BLH_AUTO 1
+# 2806.5 motors are 12N14P.
+SERVO_BLH_POLES 14
 
+# Throttle-referenced notch until there is RPM telemetry. ~108 Hz is the expected hover
+# (docs/VERIFICATION.md); set FREQ/REF from the first hover's FFT log (runbook T5).
 INS_HNTCH_ENABLE 1
 INS_HNTCH_MODE 1
 INS_HNTCH_REF 0.35
-INS_HNTCH_FREQ 60
-INS_HNTCH_BW 30
+INS_HNTCH_FREQ 80
+INS_HNTCH_BW 40
 INS_HNTCH_HMNCS 3
-# Bidirectional DShot on motors 1-4.
+# Bidirectional DShot: the hwdef supports it on motors 1-4 (BIDIR on TIM3/TIM5), but the
+# BLS 60A ships BLHeli_S, which never answers. After flashing Bluejay (runbook T3) set
+# SERVO_BLH_BDMASK 15 and INS_HNTCH_MODE 3. Shipped off, so a stock ESC still spins.
 SERVO_BLH_BDMASK 0
 
 GPS2_TYPE 0

@@ -1622,7 +1622,6 @@ NET_VMAX.update({
 })
 
 #in Rev C, both buck switchers (U8 Core 5V and U20 Payload 5V) are fully fitted
-POPULATE_VTX = True
 POPULATE_BLIND_SENSORS = False
 
 #the two bucks, keyed on the fitted part

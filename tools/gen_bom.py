@@ -40,16 +40,9 @@ def cpl_rotation(fp):
 
 def main():
     economic = "--economic" in sys.argv
-    no_fpv = "--no-fpv" in sys.argv
-    if economic and no_fpv:
-        print("--economic and --no-fpv are different builds; pick one")
-        return 1
-    suffix = "-economic" if economic else ("-nofpv" if no_fpv else "")
-    vtx = set(getattr(design, "VTX_BUCK_DNP", ()))
+    suffix = "-economic" if economic else ""
 
     def is_dnp(ref, dnp):
-        if no_fpv and ref in vtx:
-            return True
         return bool(dnp)
 
     b = pcbnew.LoadBoard(BOARD)
@@ -104,17 +97,6 @@ def main():
     #count the rows actually written
     print(f"CPL: {n_cpl} placements, {n_fit} placed from JLCPCB's own footprint "
           f"(tools/jlc_orientation.py), {n_cpl - n_fit} from the footprint rules")
-    if no_fpv:
-        print(f"NO-FPV variant - the 9 V VTX buck is left off ({len(vtx)} parts):")
-        print(f"   {', '.join(sorted(vtx))}")
-        import filecmp
-        for kind in ("BOM", "CPL"):
-            a = os.path.join(OUT, f"{kind}-NAVCORE-SoOP.csv")
-            bfile = os.path.join(OUT, f"{kind}-NAVCORE-SoOP-nofpv.csv")
-            if os.path.exists(a) and os.path.exists(bfile) and filecmp.cmp(a, bfile,
-                                                                          shallow=False):
-                print(f"   note {kind} is IDENTICAL to the main {kind} - the 9 V block "
-                      f"is DNP already, so this variant changes nothing today")
     if economic:
         print("ECONOMIC variant - these are left off for hand-fitting:")
         for r, why in sorted(STANDARD_ONLY.items()):
