@@ -37,7 +37,7 @@ COMPONENTS = {
  "U11": ("jlc_parts:SN65HVD230DR",          "jlc:SOIC-8_L4.9-W3.9-P1.27-LS6.0-BL",      "SN65HVD230",    "C12084",   False),
  "U12": ("jlc_parts:USBLC6-2SC6_C2687116",  "jlc:SOT-23-6_L2.9-W1.6-P0.95-LS2.8-BL",    "USBLC6-2SC6",   "C2687116", False),
  "J1" : ("jlc_parts:TYPE-C_16PIN_2MD(073)", "jlc:USB-C-SMD_TYPE-C-16PIN-2MD-073",       "USB-C",         "C2765186", False),
- "J2" : ("jlc_parts:SM08B-GHS-TB(LF)(SN)", "jlc:CONN-SMD_SM08B-GHS-TB-LF-SN",       "ESC 8P",        "C265111",  False),
+ "J2" : ("jlc_parts:SM08B-GHS-TB(LF)(SN)", "jlc:CONN-SMD_SM08B-GHS-TB-LF-SN",       "ESC 8P",        "C42376901",  False),  #Shou Han GH clone; the JST part (C265111) is out of stock
  "J3" : ("jlc_parts:XY-SM06B-GHS-TB",       "jlc:CONN-SMD_XY-SM06B-GHS-TB",            "GPS+I2C",       "C51940119",False),
  "J5" : ("jlc_parts:BX-GH1_25-4PWT",        "jlc:CONN-SMD_4P-P1.25_BX-GH1.25-4PWT","RC IN",   "C18077720",False),
  "J6" : ("jlc_parts:BX-GH1_25-4PWT",        "jlc:CONN-SMD_4P-P1.25_BX-GH1.25-4PWT","CAN 4P",  "C18077720",False),
@@ -1668,7 +1668,7 @@ NET_SOURCE = {
 NET_CURRENT = {
     #J2's VBAT pin to Q4: everything the board takes from the pack
     "VBAT_IN": 1.2,
-    "VBAT": 2.5,
+    "VBAT": 1.2,            #the same current, after Q4: the bucks are all VBAT feeds
     "+5V":  0.95,
     "+5V_PAYLOAD": 1.5,
     "+5V_BIAS_SW": 0.155,   #AP22653 limit, RLIM 210k, max (DS41186)
@@ -1986,7 +1986,8 @@ PAYLOAD_BREAKOUT["headroom_a"] = RAIL_5V["headroom_a"]
 #bare copper pads are board features
 NOT_A_PART = {ref for ref, spec in COMPONENTS.items()
               if spec[1] in ("TestPoint:TestPoint_Pad_1.5x1.5mm",
-                             "Fiducial:Fiducial_1mm_Mask2mm")}
+                             "Fiducial:Fiducial_1mm_Mask2mm",
+                             "Connector:Tag-Connect_TC2030-IDC-NL_2x03_P1.27mm_Vertical")}
 
 
 #silkscreen: the function name printed beside each connector
@@ -2003,7 +2004,6 @@ PAD_LABELS = {
 }
 #pads the silkscreen has no room to name
 PAD_LABELS_UNPRINTED = {
-    "P162": "buzzer drain pad between P161 and P163, whose labels take the room within 3 mm",
 }
 #connector names the silkscreen has no room for (tools: silk_names.py, 4 mm search)
 SILK_NAMES_UNPRINTED = {
@@ -2023,6 +2023,9 @@ SILK_TITLE_SIDE = {"IRIDIUM NAV": "bottom", "KRYSTIAN FILIPEK": "top"}
 #3D models: bodies that legitimately sit off their outline or reach into the board
 MODEL_EXPECTED = {
     "J12": (0.01, -1.22),  #the MMCX barrel overhangs the north edge
+    #servo headers: the box is the housing
+    "J17": (-0.01, -0.40),
+    "J23": (-0.01, -0.40),
 }
 MODEL_EXPECTED_SINK = {
     "J1": 0.78,            #USB-C shell legs in their slots
