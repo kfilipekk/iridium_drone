@@ -1054,8 +1054,11 @@ pads, never measured} \\
 3.5 & \textbf{Battery current} & known load & ships \textbf{\file{BATT\_AMP\_PERVLT 25.0}} --- a
 starting point, not a calibration \\
 3.6 & RC input & \file{RC\_PROTOCOLS 512} (CRSF) & set to 1 for SBUS/FPort \\
-3.7 & ESC telemetry & RPM with \file{SERIAL5\_PROTOCOL 16} & receive-only, and inert on a
-BLHeli\_S ESC \\
+3.7 & Motor RPM (BDShot) & flash \textbf{Bluejay} onto the BLS 60A (ESC Configurator,
+over the FC's passthrough), then \file{SERVO\_BLH\_BDMASK 15}; the ESC tab shows four RPMs at
+idle & the board's timers already support it (\file{check\_bdshot.py}); BLHeli\_S as shipped
+never answers, which is why the mask ships 0. Once RPMs read true, \file{INS\_HNTCH\_MODE 3}
+for the RPM notch. \file{J2.8} (\file{ESC\_TEL}) stays receive-only and inert on this ESC \\
 3.8 & \textbf{Motor order and direction} & motor test, \textbf{props off} & \file{J2.3}--\file{J2.6}
 = M1--M4 \\
 3.9 & Buzzer, LEDs & arming tone, strip lights & \\
@@ -1068,6 +1071,14 @@ rails, not pinned to 0 V or 3.3 V. Pinned means the loop filter is not doing its
 The driver must set the charge pump to 600\,\textmu A (\file{CPS}=0, \file{ICP}=0): the loop
 filter keeps 39--76$^\circ$ of phase margin there, but only 23$^\circ$ at 1200\,\textmu A \\
 3.13 & Antenna feed monitor & multimeter on \file{U25.1} (\file{PC2\_C}), GCS text, \file{SOA} log & open: $\approx$0\,V ($<$3\,mA); OK with HC610: $\approx$1.65\,V (15\,mA); short: saturated $\sim$3.3\,V ($\ge$28\,mA). Safe retry test with resistor (Section~\ref{sec:ant_bench}) \\
+3.14 & IMU heater & \file{HEAT} log, IMU temperature in the GCS & warms to
+\file{BRD\_HEAT\_TARG} (45\,\degC) within minutes and holds; arming waits until it is within
+\file{BRD\_HEAT\_LOWMGN}. \file{R76}--\file{R79} sit 9--14\,mm from the IMUs, so expect a slow,
+board-wide warm-up rather than a held 45\,\degC{} in prop wash \\
+3.15 & Remote ID, once fitted & module on \file{J6}; \file{CAN\_P1\_DRIVER 1},
+\file{CAN\_D1\_PROTOCOL 1}, \file{DID\_ENABLE 1}, \file{DID\_CANDRIVER 1}, then the CAA operator
+ID & a phone's Remote ID app sees the beacon. Shipped off: a configured but absent module
+blocks arming. UK rule from 1 Jan 2028 \\
 \end{longtable}
 
 \subsection{Antenna feed monitor bench test}
@@ -1104,6 +1115,10 @@ LMR33630ARNXR (VQFN-12), swapped in place 2026-09-20, sandwiched between a 60 A 
 battery & junction \textbf{70--87\degC} against a \textbf{125\degC} \emph{recommended} max
 --- 38\degC{} of margin at the worst corner; \flag{still an estimate until a thermocouple
 says so} \\
+\file{U20} (payload buck) & the same LMR33630A carrying \file{+5V\_PAYLOAD}: servos, the
+VTX/camera on \file{J22}, the lidar, the LED strip and the DroneCAN node & junction
+\textbf{107\degC} at the worst drone mission against \textbf{125\degC} --- under 30\degC{} of
+margin, so \flag{probe it under that mission's load} \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -1208,6 +1223,30 @@ never uses (it anchors on GPS first).
 bursts gr-iridium finds in the Ring Alert band.
 \end{itemize}
 
+\subsection{Step 1b --- self-interference, with the bench kit on the aircraft}
+
+\file{tools/check\_rf.py} (\file{fly.rfbench}) gates ready-to-fly on four measurements in
+\file{fab/rf-bench-results.json}. Start the file with
+\cmd{python3 tools/check\_rf.py --template > fab/rf-bench-results.json}. Fit the HC610 in its
+flight position on the tower, run its pigtail to the RTL-SDR on the ground beside the aircraft,
+and take the four steps in one session, in this order, without moving the antenna:
+
+\begin{enumerate}
+\item \textbf{baseline}: aircraft unpowered;
+\item \textbf{board\_powered}: battery in, motors off;
+\item \textbf{motors\_spinning}: props off, tethered, about hover throttle;
+\item \textbf{elrs\_tx}: as above, with the ELRS link transmitting.
+\end{enumerate}
+
+For each step, record five minutes with Step~1's \cmd{rtl\_sdr} line (\cmd{-n 600000000}),
+then run \file{soop\_bench.py}. Its \emph{DSP: N bursts, n/min} line gives
+\file{bursts\_per\_min}. For \file{noise\_floor\_dbm}, run
+\cmd{rtl\_power -f 1616M:1626.5M:10k -g 40 -i 10 -e 60 floor.csv} and take the median bin. It is relative dB, not calibrated dBm, but the gain is the same in all four steps, so the steps can be compared.
+Fill in \file{utc} and \file{sky} (clear, or the cloud cover), then run \cmd{python3 tools/check\_rf.py}.
+A step passes if it keeps at least half the baseline's bursts. Because the steps are cumulative,
+the first step to fail names the culprit: the board's switchers, then the ESC and motor leads,
+then the control link.
+
 \subsection{Step 2 --- the board on the bench, after T3}
 
 On the SD card: \file{APM/SOOP/iridium.tle}, a copy of \file{sitl/tle/iridium-next.tle}
@@ -1288,10 +1327,12 @@ either.
 
 Free, and it attacks the dominant error term: inertial drift is quadratic and dominated by
 attitude error leaking gravity into the horizontal channel, and gyro and accelerometer bias
-are strongly temperature-dependent in a stack with almost no airflow. A Pixhawk FMUv6X does
-this in hardware with IMU heaters; this board (like the MatekH743 it is pin-identical to) has
-none, so ArduPilot's software equivalent, \file{INS\_TCAL*}, is the answer. It is deliberately
-\emph{not} in \file{defaults.parm}: it is a learning mode, not a flight setting.
+are strongly temperature-dependent in a stack with almost no airflow. A Pixhawk FMUv6X holds
+its IMUs warm with heaters; this board has one too (\file{R76}--\file{R79} on \file{PE15}),
+but it sits away from the IMUs and cannot hold them in prop wash, so ArduPilot's software
+correction, \file{INS\_TCAL*}, still matters. Set \file{BRD\_HEAT\_TARG -1} for the sweep so
+the heater does not fight it, and back to 45 after. It is deliberately \emph{not} in
+\file{defaults.parm}: it is a learning mode, not a flight setting.
 
 \begin{enumerate}
 \item Run a full six-axis accelerometer calibration first --- it sets the
@@ -1334,6 +1375,23 @@ any other list you read as stale.
 
 % =============================================================================
 \section{Part 14 --- T4/T5: tethered, then flight, strictly in this order}
+
+\subsection{Foam, shroud and coating, after the bench and before the first flight}
+
+\begin{itemize}
+\item \textbf{Baro foam} (\file{design.FOAM}): a 3\,mm open-cell block over \file{U4}
+(MS5611) on the board's underside. It keeps light, prop wash and the ESC's warm air off the
+port without sealing it. Glue only its edge.
+\item \textbf{IMU shroud}: a 1.5\,mm adhesive closed-cell pad on the ESC's top face, under
+\file{U2}, \file{U3} and \file{U4}. \file{check\_mechanical.py} proves both leave over 1\,mm
+of air in the ESC gap; neither may touch the board.
+\item \textbf{Conformal coating}, only after T3 passes: acrylic with a UV tracer, inspected
+under a UV torch. Mask first: every connector mouth (\file{J1}--\file{J23}), the microSD
+socket \file{J8}, the MMCX \file{J12}, \file{SW1}/\file{SW2}, the Tag-Connect pads \file{J19},
+every test and solder pad (\file{docs/img/padmap.svg}), the four stack holes, and \file{U4}'s
+baro port --- coat that and the barometer reads the coating. Coat both sides, let it cure,
+then refit the foam.
+\end{itemize}
 
 \subsection{Staking the plugs}
 

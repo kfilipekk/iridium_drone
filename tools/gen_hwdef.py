@@ -96,6 +96,19 @@ REPLACE += [
 
 EXTRA = """
 
+# IMU heater: R76-R79 (4 x 150R, 0.67 W) switched by Q6 from PE15, held at a set temperature
+# by IMU0's own sensor - as ARK_FPV and Pixhawk6C do it. R81 holds Q6 off at reset.
+PE15 HEATER_EN OUTPUT LOW GPIO(80)
+define HAL_HEATER_GPIO_PIN 80
+define HAL_HAVE_IMU_HEATER 1
+define HAL_IMU_TEMP_DEFAULT 45
+define HAL_IMUHEAT_P_DEFAULT 50
+define HAL_IMUHEAT_I_DEFAULT 0.07
+
+# Remote ID over DroneCAN (the Holybro module on J6): the UK requires direct broadcast ID
+# from 2028 for home-built aircraft over 100 g with a camera.
+define AP_OPENDRONEID_ENABLED 1
+
 # W25Q128 on SPI3 EXT_CS2 - holds the Iridium TLE catalogue, not firmware.
 SPIDEV tle_flash  SPI3 DEVID2 EXT_CS2 MODE3 8*MHZ 32*MHZ
 

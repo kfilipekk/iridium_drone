@@ -9,6 +9,9 @@ PREREQUISITES = [
     #the board is the design it claims to be
     dict(id="design.netlist", cls=GATED, tool="check_design.py",
          claim="the netlist matches the schematic, and every MCU pin used is declared"),
+    dict(id="elec.esd", cls=GATED, tool="check_esd.py",
+         claim="every signal that leaves the board on a cable has a clamp at its connector, "
+               "and every series resistor is in the path, not beside it"),
     dict(id="mech.balance", cls=GATED, tool="check_balance.py",
          claim="every mass has a position, the CG sits over the thrust centre, and the "
                "aircraft stands on its skids through a 45 deg lean"),
@@ -152,6 +155,10 @@ PREREQUISITES = [
          claim="the defaults.parm that ships is the one this board needs"),
     dict(id="fw.antfeed", cls=GATED, tool="check_soop_ant.py",
          claim="the active antenna feed monitor reads parts right, handles faults and compiles"),
+    dict(id="fw.max2112", cls=GATED, tool="check_soop_max2112.py",
+         check="tuner registers match the MAX2112 datasheet",
+         claim="the tuner's register image and lock decode follow the MAX2112 datasheet "
+               "field by field, the LO carries correctly, and the code compiles for the H743"),
 
     dict(id="adv.decoupling", cls=ADVISORY, tool="check_placement.py",
          why="a PRE-routing placement guide whose limits relax once routing forces a part "

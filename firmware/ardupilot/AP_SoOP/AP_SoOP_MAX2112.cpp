@@ -1,7 +1,5 @@
 #include "AP_SoOP_MAX2112.h"
 
-#include <math.h>
-
 extern const AP_HAL::HAL& hal;
 
 bool AP_SoOP_MAX2112::write_regs(uint8_t first, const uint8_t *v, uint8_t n)
@@ -33,29 +31,10 @@ bool AP_SoOP_MAX2112::init(uint8_t bus, double lo_hz, uint8_t bbg)
         return false;
     }
 
-    //n.F with R = 1: f_LO = F_REF * (N + F / 2^20)
-    const double ratio = lo_hz / F_REF;
-    const uint32_t N = uint32_t(ratio);
-    const uint32_t F = uint32_t(lround((ratio - N) * 1048576.0)) & 0xFFFFF;
-    if (N < 19 || N > 251) {
+    uint8_t regs[SOOP_MAX2112_NREGS];
+    if (soop_max2112_regs(lo_hz, F_REF, bbg, regs, &_lo) != 0) {
         return false;
     }
-    _lo = F_REF * (N + F / 1048576.0);
-
-    const uint8_t regs[12] = {
-        uint8_t(0x80 | ((N >> 8) & 0x7F)),  //0x00 FRAC = 1, N[14:8]
-        uint8_t(N & 0xFF),                  //0x01 N[7:0]
-        uint8_t(0x10 | ((F >> 16) & 0x0F)), //0x02 CPMP = 00, CPLIN = 01, F[19:16]
-        uint8_t((F >> 8) & 0xFF),           //0x03 F[15:8]
-        uint8_t(F & 0xFF),                  //0x04 F[7:0] - loading it starts VCO autoselect
-        0x01,                               //0x05 XD = /1, R = 1
-        0x00,                               //0x06 D24 = 0 (LO >= 1125 MHz), CPS = 0, ICP = 0: 600 uA
-        uint8_t((0x19 << 3) | 0x04),        //0x07 VCO start 11001, VAS = 1, ADL = 0, ADE = 0
-        12,                                 //0x08 LPF: 4 MHz + (12 - 12) x 290 kHz, the minimum
-        uint8_t(bbg & 0x0F),                //0x09 STBY = 0, PWDN = 0, baseband gain
-        0x00,                               //0x0A everything powered
-        0x08,                               //0x0B CPTST = 000, TURBO = 1, LDMUX = 000
-    };
     hal.scheduler->delay(1);                //registers only after 100 us from power-up
     {
         //the baro shares I2C2: hold the bus for the writes
@@ -93,11 +72,6 @@ bool AP_SoOP_MAX2112::check_lock()
         _locked = false;
         return false;
     }
-    const bool vas_done = (s1 & 0x20) && (s1 & 0x40);   //VASE and VASA
-    const bool ld = s1 & 0x10;
-    _vco = s2 >> 3;
-    _adc = s2 & 0x07;
-    //ADC[2:0] (Table 17): 000 and 111 are out of lock
-    _locked = vas_done && ld && _adc != 0 && _adc != 7;
+    _locked = soop_max2112_locked(s1, s2, &_vco, &_adc);
     return _locked;
 }

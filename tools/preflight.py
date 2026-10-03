@@ -667,6 +667,13 @@ def firmware(board):
           (f"active antenna feed monitor verified ({m.group(2) if m else '?'} simulated steps)" if rc == 0 else
            "antenna bias feed monitor failed - see tools/check_soop_ant.py"))
 
+    rc, out = run("check_soop_max2112.py")
+    m = re.search(r'(\d+) register images and (\d+) status pairs', out)
+    check("firmware", "tuner registers match the MAX2112 datasheet", rc == 0,
+          (f"{m.group(1)} register images and {m.group(2)} status pairs decoded field by field"
+           if rc == 0 and m else "the tuner's register image or lock decode disagrees with "
+           "the datasheet - see tools/check_soop_max2112.py"))
+
     rc, out = run("check_params.py")
     fw = re.search(r'^firmware\s+:\s+(.+?)\s+\(tag (\S+)\)', out, re.M)
     check("firmware", "parameters exist in the target build", rc == 0,
@@ -901,6 +908,12 @@ def firmware(board):
     check("firmware", "hwdef matches the netlist", rc == 0,
           "hwdef is consistent with the netlist" if "is consistent" in out
           else "hwdef and netlist disagree - see tools/check_hwdef.py")
+
+    rc, out = run("check_esd.py")
+    m = re.search(r'(\d+) off-board signal pin', out)
+    check("signal integrity", "off-board signals clamped at their connectors", rc == 0,
+          f"{m.group(1) if m else '?'} cable-facing pins, each with a clamp, series R in the path"
+          if rc == 0 else "a cable-facing pin is unclamped or bypassed - see tools/check_esd.py")
 
     rc, out = run("check_bdshot.py")
     check("firmware", "motors can run bidirectional DShot", rc == 0,

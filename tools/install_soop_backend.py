@@ -61,7 +61,7 @@ SOOP_TASK = ["AP_SoOP.h", "AP_SoOP.cpp", "AP_SoOP_MAX2112.h", "AP_SoOP_MAX2112.c
              "AP_SoOP_Capture.h", "AP_SoOP_Capture.cpp"]
 SOOP_CORE = ["soop_signal.h", "soop_dsp.h", "soop_dsp.c", "sgp4.h", "sgp4.c",
              "soop_ephem.h", "soop_ephem.c", "soop_nav.h", "soop_nav.c", "soop_guard.h",
-             "soop_guard.c", "soop_ant.h", "soop_ant.c"]
+             "soop_guard.c", "soop_ant.h", "soop_ant.c", "soop_max2112.h", "soop_max2112.c"]
 
 
 def main():

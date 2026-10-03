@@ -1068,7 +1068,7 @@ net("PWM11","U1.PE5"); net("PWM12","U1.PE6")
 net("USART1_TX","U1.PA9"); net("USART1_RX","U1.PA10")
 net("USART3_TX","U1.PD8"); net("USART3_RX","U1.PD9")
 net("PE1_SPARE","U1.PE1")       #UART8_TX, unused: ESC telemetry is receive-only
-net("PE15_SPARE","U1.PE15"); net("PB2_SPARE","U1.PB2")
+net("PB2_SPARE","U1.PB2")
 net("PC3_SPARE","U1.PC3_C")
 #SoOP analogue front end (SoOP config, DNP)
 net("SOOP_I_ADC","U1.PC4","U14.1")
@@ -1440,6 +1440,87 @@ NETS["USART1_RX"] += ["J11.3"]
 NETS["GND"] += ["J11.4", "J11.5", "J11.6"]
 
 #placement intent
+#10
+#connector -> TVS -> series R -> MCU
+F_TVS4, S_TVS4 = "Package_SON:USON-10_2.5x1.0mm_P0.5mm", "Power_Protection:TPD4E05U06DQA"
+F_RN4, S_RN4 = "Resistor_SMD:R_Array_Convex_4x0402", "Device:R_Pack04"
+TVS4_IO = ("1", "2", "4", "5")          #[D] TPD4E05U06 DQA: four independent clamps
+SERIES = {}                             #MCU-side net -> (series part, connector-side net)
+
+
+def _protect(net_name, jpin, part, j_pin, mcu_pin, clamp):
+    """Move jpin off net_name onto net_name_J, the series element between."""
+    NETS[net_name].remove(jpin)
+    jn = net_name + "_J"
+    NETS.setdefault(jn, []).extend([jpin, f"{part}.{j_pin}", clamp])
+    NETS[net_name].append(f"{part}.{mcu_pin}")
+    SERIES[net_name] = (part, jn)
+
+
+def port_net(n):
+    """A connector-side net's function: M1_J is M1 through its series resistor."""
+    return n[:-2] if n.endswith("_J") and n[:-2] in SERIES else n
+
+
+for ref in ("U26", "U27", "U28", "U29", "U30"):
+    add(ref, S_TVS4, F_TVS4, "TPD4E05U06", "C138714", False)
+    NETS["GND"] += [f"{ref}.3", f"{ref}.8"]
+for ref in ("RN1", "RN2", "RN3"):
+    add(ref, S_RN4, F_RN4, "33R x4", "C25501", False)
+#J2, the ESC: four DShot lines through RN1
+for k, (m, jp) in enumerate((("M1", "J2.3"), ("M2", "J2.4"), ("M3", "J2.5"), ("M4", "J2.6"))):
+    _protect(m, jp, "RN1", str(8 - k), str(1 + k), f"U26.{TVS4_IO[k]}")
+RES("R70", "100R"); RES("R71", "2k2")
+_protect("ESC_TEL", "J2.8", "R70", "1", "2", "U27.1")
+_protect("ESC_CUR", "J2.7", "R71", "1", "2", "U27.2")      #with C44, a 2.2k corner well above 100 Hz
+#J21, the companion's UART7
+for k, (n, jp) in enumerate((("UART7_TX", "J21.2"), ("UART7_RX", "J21.3"),
+                             ("UART7_CTS", "J21.4"), ("UART7_RTS", "J21.5"))):
+    _protect(n, jp, "RN2", str(8 - k), str(1 + k), f"U28.{TVS4_IO[k]}")
+#J14, the flow port - on its own stub
+for k, (n, jp) in enumerate((("SPI3_SCK", "J14.2"), ("SPI3_MISO", "J14.3"),
+                             ("SPI3_MOSI", "J14.4"), ("EXT_CS1", "J14.5"))):
+    _protect(n, jp, "RN3", str(8 - k), str(1 + k), f"U29.{TVS4_IO[k]}")
+#J11 (lidar) and J23 (servo 2), side by side on the south edge, share U30
+RES("R72", "100R"); RES("R73", "100R"); RES("R74", "100R")
+_protect("USART1_TX", "J11.2", "R72", "1", "2", "U30.1")
+_protect("USART1_RX", "J11.3", "R73", "1", "2", "U30.2")
+_protect("PWM8", "J23.1", "R74", "1", "2", "U30.4")
+#J17 (servo 1), on its own
+add("D9", "Device:D_TVS", "jlc:DSN0603-2_L0.6-W0.3-P0.40-BI", "PESD5V0C1BSF", "C477955", False)
+NETS["GND"].append("D9.2")
+RES("R75", "100R")
+_protect("PWM7", "J17.1", "R75", "1", "2", "D9.1")
+
+#every off-board connector's signals
+ESD = dict(
+    clamps=("U12", "U22", "U23", "D6", "D7", "U26", "U27", "U28", "U29", "U30", "D9"),
+    max_mm=10.0,      #[A] a clamp this near its pin, behind the series R
+    #where the board leaves no nearer place, the limit for that port and why
+    port_max_mm={"J21": (13.0, "J21 (top) and J14 (bottom) share the east edge; the RF corner "
+                               "fills both sides inboard of them, so U28/U29 sit 11-12.5 mm off"),
+                 "J14": (13.0, "as J21"),
+                 "J3": (11.0, "U22 clamps J3 and J9 together, between the two (Rev C)")},
+    exempt={"J8": "the microSD socket takes a card, not a cable",
+            "J19": "Tag-Connect SWD pads, bench only, a cable held by hand",
+            "J22": "power and ground only"},
+    exempt_nets={"CC1": "USB-C role detection, 5.1k to ground; USB is a bench port, unplugged "
+                        "in flight", "CC2": "as CC1"},
+    src="[A] connector-level ESD: the clamp at the connector, as close as the board allows",
+)
+
+#11
+#ArduPilot holds the IMU at a set temperature
+for ref in ("R76", "R77", "R78", "R79"):
+    add(ref, R, F_R0603, "150R", "C873675", False)
+    NETS["+5V"].append(f"{ref}.1")
+add("Q6", "jlc_parts:AO3400A", F_SOT23, "AO3400A", "C20917", False)
+RES("R80", "1k"); RES("R81", "10k")
+net("HEATER_EN", "U1.PE15", "R80.1")
+net("HEATER_G", "R80.2", "Q6.1", "R81.1")
+NETS["GND"] += ["Q6.2", "R81.2"]
+net("HEATER_D", "Q6.3", "R76.2", "R77.2", "R78.2", "R79.2")
+
 ADJACENCY = {
     #MCU VDD decoupling - one per supply pin, as close as the package allows
     "C1": ("U1", "11", 2.0), "C2": ("U1", "27", 2.0), "C3": ("U1", "50", 2.0),
@@ -1518,6 +1599,19 @@ ADJACENCY = {
     "R18": ("U1", "15", 5.0), "R19": ("U1", "15", 4.0),
     "C43": ("U1", "15", 2.0), "C44": ("U1", "16", 2.0),
 }
+#port protection: each clamp at its connector
+ADJACENCY.update({
+    "U26": ("J2", "3", 6.0), "U27": ("J2", "7", 6.0), "RN1": ("U26", "1", 3.0),
+    "R70": ("U27", "1", 3.0), "R71": ("U27", "2", 3.0),
+    "U28": ("J21", "2", 6.0), "RN2": ("U28", "1", 3.0),
+    "U29": ("J14", "2", 6.0), "RN3": ("U29", "1", 3.0),
+    "U30": ("J11", "2", 6.0), "R72": ("U30", "1", 3.0), "R73": ("U30", "2", 3.0),
+    "R74": ("U30", "4", 4.0), "D9": ("J17", "1", 4.0), "R75": ("D9", "1", 3.0),
+    #the heater's four resistors round the IMUs, its switch anywhere near
+    "R76": ("U2", "5", 6.0), "R77": ("U2", "5", 6.0), "R78": ("U3", "5", 6.0),
+    "R79": ("U3", "5", 6.0), "Q6": ("R76", "2", 15.0), "R80": ("Q6", "1", 3.0),
+    "R81": ("Q6", "1", 3.0),
+})
 
 ADJACENCY["D1"]  = ("J2",  "2", 5.0)     #TVS at the power entry, not the buck
 ADJACENCY["SW2"] = ("U1", "14", 6.0)     #reset button near NRST
@@ -1594,6 +1688,7 @@ PASSIVE_LCSC = {
     ("0R",   F_R0402): "C17168",  ("100p", F_C0402): "C1546",
     ("1n",   F_C0402): "C1523",
     ("100R", F_R0402): "C25076",  ("120R", F_R0402): "C25862",
+    ("2k2",  F_R0402): "C25879",
     ("1k",   F_R0402): "C11702",  ("4k7",  F_R0402): "C25900",
     ("330R", F_R0402): "C25104",  ("470R", F_R0402): "C25117",
     ("5k1",  F_R0402): "C25905",  ("6k8",  F_R0402): "C25917",
@@ -1684,6 +1779,7 @@ LOADS_5V = [
     ("TFS20-L rangefinder on J9",       0.106, 0.106, "[D] 0.35 W at 3.3 V via its inline LDO - optional (stage B2), budgeted as fitted"),
     ("GY-53-L1X upward ToF on J9",      0.020, 0.020, "[D] VL53L1X module ~20 mA - optional (stage B2), budgeted as fitted"),
     ("HC610 LNA through U24 on J12",    0.015, 0.015, "[D] Tallysman HC610: 15 mA at 2.2-12 V, fed down the coax"),
+    ("IMU heater R76-R79 (4 x 150R)",   0.133, 0.133, "[M] 5 V into 37.5 ohm at full duty; ArduPilot dithers it below that once warm"),
 ]
 LOADS_5V_CONT_A = round(sum(r[1] for r in LOADS_5V), 3)
 LOADS_5V_PEAK_A = round(sum(r[2] for r in LOADS_5V), 3)
@@ -1701,6 +1797,8 @@ PART_HEIGHT = {
     "L_APV_ANR5040": 4.0,            #L5; [D] 5.0 x 5.0 x 4.0 mm
     "L0402": 0.5,                    #L6 LQW15AN; [D] Murata 0.5 mm max
     "DSN0603-2": 0.3,                #D7 PESD5V0C1BSF; [D] Nexperia DSN0603-2, 0.3 mm
+    "USON-10_2.5x1.0mm": 0.55,       #TPD4E05U06 DQA; [D] TI: 0.55 mm max
+    "R_Array_Convex_4x0402": 0.35,   #4D02 33R x4; [D] UniOhm 0402x4 array 0.35 mm
     "Tag-Connect_TC2030-IDC-NL": 0.0,  #J19: bare pads, the cable clips on from above
     "USB-C": 3.2, "TF-SMD": 1.9, "COB": 2.3, "DO-214": 2.3,
     "OPTO": 1.6, "SOIC": 1.8, "SOP": 1.8,
@@ -1837,7 +1935,7 @@ NET_CURRENT = {
     #J2's VBAT pin to Q4: everything the board takes from the pack
     "VBAT_IN": 1.2,
     "VBAT": 1.2,            #the same current, after Q4: the bucks are all VBAT feeds
-    "+5V":  0.95,
+    "+5V":  1.1,            #the LOADS_5V sum with the IMU heater on
     "+5V_PAYLOAD": 1.5,
     "+5V_BIAS_SW": 0.155,   #AP22653 limit, RLIM 210k, max (DS41186)
     "+5V_BIAS": 0.155,
@@ -1884,6 +1982,7 @@ LOAD_CURRENT = {
     },
     #the +5V rows of LOADS_5V, per pad
     "+5V": {
+        "R76.1": 0.034, "R77.1": 0.034, "R78.1": 0.034, "R79.1": 0.034,   #the IMU heater
         "U9.1": 0.294,                  #U9 (+3V3 LDO) input
         "U10.1": 0.107, "U10.3": 0.0,   #U10 (+3V3A LDO) input; pin 3 is EN
         "J3.1": 0.05,                   #M10 GPS + compass
@@ -1951,6 +2050,7 @@ PIN_INTENT = {
     "BATT_V_DIV": dict(mcu="analog", why="11:1 pack divider into ADC1"),
     "ESC_CUR":    dict(mcu="analog", why="ESC current-sense output into ADC1"),
     "ESC_TEL":    dict(mcu="in",     why="ESC transmits telemetry to the FC - RX pin"),
+    "HEATER_EN":  dict(mcu="out",    why="IMU heater MOSFET Q6; R81 holds its gate low at reset"),
 
     #IMU1 / IMU2 SPI
     "SPI1_SCK": dict(mcu="out", why="clock to ICM-42688-P"),
@@ -2159,8 +2259,8 @@ RF_BENCH = dict(
     #a step keeping this fraction of baseline bursts is a pass
     min_fraction_of_baseline=0.5,
     mitigations=["antenna placement and separation", "ferrites on the motor leads",
-                 "keep the SDR off the airframe entirely - the receive chain is "
-                 "laptop-side, so this board allows it"],
+                 "move the tuner's antenna feed further from U8/U20 in Rev E - the receive "
+                 "chain is on this board, so the bench SDR only locates the source"],
     src="[A] min_fraction_of_baseline is a judgement call; every other field is a slot "
         "for an [M]easured value recorded by runbook T3b",
 )
@@ -2173,9 +2273,9 @@ RAIL_5V = dict(
     fitted_load_a=LOADS_5V_CONT_A,   #[M] derived from LOADS_5V above, continuous
     fitted_peak_a=LOADS_5V_PEAK_A,   #[M] the same list at its peak column (inductor Isat)
     headroom_a=1.6 - LOADS_5V_CONT_A,
-    note="Neither fitted inductor sits on a land too small for it any more: L2 and L5 "
-         "are both 4.0x4.0x3.0 mm FNR4030s on L_APV_ANR4030. L5 was on a 1210 land until "
-         "2026-09-21, where check_ratings measured its terminal overhanging by 0.18 mm in "
+    note="Neither fitted inductor sits on a land too small for it any more: L2 is a "
+         "4.0x4.0x3.0 mm FNR4030 on L_APV_ANR4030, and L5 a 5x5 CKCS5040 on L_APV_ANR5040 "
+         "(RAIL_5V_PAYLOAD). L5 was on a 1210 land until 2026-09-21, where check_ratings measured its terminal overhanging by 0.18 mm in "
          "Y - solderable, but the wrong land for the part, and now moot. If a future "
          "inductor is put on a 1210 land, do not 'fix' it by swapping in a part that "
          "land takes but the current does not.",

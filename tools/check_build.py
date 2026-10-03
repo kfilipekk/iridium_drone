@@ -272,7 +272,7 @@ def buses():
     for name, pins in _d.NETS.items():
         for p in pins:
             if p.startswith("J2.") and p[3:].isdigit():
-                pin_net[int(p[3:])] = name
+                pin_net[int(p[3:])] = _d.port_net(name)   #M1_J is M1 behind RN1
     seq = [J2_SIGNAL.get(pin_net.get(i), pin_net.get(i, "missing"))
            for i in range(1, len(want) + 1)]
     check("buses", "J2 pin order matches the ESC manual", seq == want,

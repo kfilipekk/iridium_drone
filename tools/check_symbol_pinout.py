@@ -36,6 +36,12 @@ CROSS_CHECK = {
 
 #parts with no KiCad equivalent
 DATASHEET_VERIFIED = {
+    #KiCad's own symbol is the one placed
+    "TPD4E05U06DQA": ("TI TPD4E05U06 datasheet (SLVSBN9, 2024) Table 4-2 Pin Functions and "
+                      "Figure 4-3, DQA 10-pin USON top view",
+                      "1 D1+, 2 D1-, 3 GND, 4 D2+, 5 D2-, 6/7/9/10 NC, 8 GND - four "
+                      "independent clamps on 1, 2, 4, 5 (design.TVS4_IO)",
+                      "2026-10-02"),
     #KiCad has the TLV757P only in DBV and DRV
     "TLV75733PDYDR": ("docs/datasheets/TLV757P-TI.pdf Table 4-1 Pin Functions, DYD column, "
                       "and Figure 4-2",
