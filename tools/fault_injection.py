@@ -73,6 +73,7 @@ SELF_TESTS = [
     ("mech.balance", ["tools/check_balance.py", "--self-test"]),
     ("elec.esd", ["tools/check_esd.py", "--self-test"]),
     ("elec.traces", ["tools/check_traces.py", "--self-test"]),
+    ("assy.cpl", ["tools/check_cpl.py", "--self-test"]),
     ("fw.max2112", ["tools/check_soop_max2112.py", "--self-test"]),
 ]
 
