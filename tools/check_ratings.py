@@ -11,7 +11,7 @@ DERATE = 2.0          #warn below this multiple of the working voltage
 #package power ratings, W
 R_POWER = {"0402": 0.0625, "0603": 0.10, "0805": 0.125, "1206": 0.25}
 #parts rated above their package's generic figure, by LCSC code
-R_POWER_PART = {"C873675": (0.25, "[L] JLCPCB C873675: Yageo SR0603FR-7T150RL, 0603 250 mW")}
+R_POWER_PART = {}
 #capacitors that must not be a Class II dielectric, and why
 CLASS1_REQUIRED = {
     "C15": "crystal load cap - a Class II part pulls the oscillator with temperature",

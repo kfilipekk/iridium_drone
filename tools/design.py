@@ -673,14 +673,14 @@ OFFBOARD = dict(
 
 #payload provisions: what a future module can actually have
 PAYLOAD = dict(
-    pwm=[("PWM5", "PA2", "TP3", "SERVO5_FUNCTION"),
+    pwm=[("PWM5", "PB9", "TP3", "SERVO5_FUNCTION"),
          ("PWM6", "PA3", "TP4", "SERVO6_FUNCTION")],
     #J21's UART7 is the companion's
     serial=[(2, "USART1", "J11", "EARMARKED for the 360 lidar "
                                  "(PRX1_TYPE 16); free only until that is fitted")],
     serial_unrouted=[(4, "USART3"),   #PD8/PD9 stop at the MCU
                      (5, "UART8"),    #declared in hwdef, no nets in the design at all
-                     (6, "UART4")],   #PB9/PB8 stop at the MCU since the wire pads went
+                     (6, "EMPTY")],   #UART4 gave PB8 to servo PWM7; SERIAL6 has no UART
     serial_earmarked=[(1, "companion computer, MAVLink2 + OPTICAL_FLOW on J21"),
                       (2, "360 lidar, PRX1_TYPE 16")],
     power_5v=["J21.1", "J22.1", "P151", "J5.1", "J9.1", "J11.1"],
@@ -1021,7 +1021,7 @@ net("SPI1_MOSI","U1.PD7","U2.14"); net("IMU1_CS","U1.PC15","U2.12")
 #IMU2 (SPI4)
 net("SPI4_SCK","U1.PE12","U3.13"); net("SPI4_MISO","U1.PE13","U3.1")
 net("SPI4_MOSI","U1.PE14","U3.14"); net("IMU2_CS","U1.PE11","U3.12")
-net("IMU3_CS","U1.PC13")                                        #hwdef-declared, unpopulated
+#PC13 was MatekH743's third-IMU chip select
 #SPI3: flow + flash
 net("SPI3_SCK","U1.PB3","U5.6"); net("SPI3_MISO","U1.PB4","U5.2")
 net("SPI3_MOSI","U1.PB5","U5.5")
@@ -1039,7 +1039,7 @@ net("USART2_TX","U1.PD5","J3.2"); net("USART2_RX","U1.PD6","J3.3")   #GPS1
 net("UART7_TX","U1.PE8");  net("UART7_RX","U1.PE7")        #companion (J21)
 net("UART7_CTS","U1.PE10"); net("UART7_RTS","U1.PE9")
 net("USART6_TX","U1.PC6","J5.2"); net("RC_IN","U1.PC7","J5.3")
-net("UART4_TX","U1.PB9");  net("UART4_RX","U1.PB8")        #expansion UART (PB9/PB8 spare)
+#PB8/PB9 were UART4, never brought out
 net("CAN1_RX","U1.PD0","U11.4"); net("CAN1_TX","U1.PD1","U11.1")
 net("CAN1_SILENT","U1.PD3","R14.1","U11.8")
 net("CANH","U11.7","J6.2","R15.1"); net("CANL","U11.6","J6.3","R15.2")
@@ -1062,8 +1062,8 @@ net("BUZZER","U1.PA15"); net("WS2812","U1.PA8")
 #unpopulated MatekH743 features (kept defined so ERC is clean)
 net("MAX7456_CS","U1.PB12")     #pull high, no OSD fitted
 net("SPI2_SCK","U1.PB13"); net("SPI2_MISO","U1.PB14"); net("SPI2_MOSI","U1.PB15")
-net("PWM5","U1.PA2"); net("PWM6","U1.PA3")
-net("PWM7","U1.PD12"); net("PWM8","U1.PD13"); net("PWM9","U1.PD14"); net("PWM10","U1.PD15")
+net("PWM5","U1.PB9"); net("PWM6","U1.PA3")   #PB9 faces TP3; PA2 faced the RF corner
+net("PWM8","U1.PD13")   #PD14/PD15 (PWM9/10) gave TIM4_CH3/CH4 to PWM7 and PWM5
 net("PWM11","U1.PE5"); net("PWM12","U1.PE6")
 net("USART1_TX","U1.PA9"); net("USART1_RX","U1.PA10")
 net("USART3_TX","U1.PD8"); net("USART3_RX","U1.PD9")
@@ -1327,14 +1327,14 @@ for _f in ("FID1", "FID2", "FID3"):
     add(_f, "Mechanical:Fiducial", "Fiducial:Fiducial_1mm_Mask2mm", "Fiducial", "", False)
 
 #7
-#breaks out SPI3 + PD4 (EXT_CS1) + PD11 (FLOW_MOTION) onto a 6-pin JST-GH connector
+#breaks out SPI3 + PC13 (EXT_CS1) onto a 6-pin JST-GH connector
 add("J14", "jlc_parts:XY-SM06B-GHS-TB",
     "jlc:CONN-SMD_XY-SM06B-GHS-TB", "FLOW 6P", "C51940119", False)
 NETS["+3V3"] += ["J14.1"]
 NETS["SPI3_SCK"] += ["J14.2"]
 NETS["SPI3_MISO"] += ["J14.3"]
 NETS["SPI3_MOSI"] += ["J14.4"]
-net("EXT_CS1", "U1.PD4", "J14.5")
+net("EXT_CS1", "U1.PC13", "J14.5")   #PC13 faces J14; PD4 was across the board
 NETS["GND"] += ["J14.6", "J14.7", "J14.8"]
 net("FLOW_MOTION", "U1.PD11")
 
@@ -1343,7 +1343,7 @@ net("FLOW_MOTION", "U1.PD11")
 SERVO_HDR = ("jlc_parts:KH-2_54PH-1X3P-L13_5-WT", "jlc:HDR-SMD_3P-P2.54-H-M_KH-2.54PH-1X3P-L13.5-WT")
 add("J17", *SERVO_HDR, "SERVO1", "C20610212", False)
 add("J23", *SERVO_HDR, "SERVO2", "C20610212", False)
-net("PWM7",  "U1.PD12", "J17.1")
+net("PWM7",  "U1.PB8", "J17.1")   #PB8 on U1's south edge, nearer J17 than PD12
 net("PWM8",  "U1.PD13", "J23.1")
 NETS["GND"] += ["J17.3", "J23.3"]
 
@@ -1457,6 +1457,11 @@ def _protect(net_name, jpin, part, j_pin, mcu_pin, clamp):
     SERIES[net_name] = (part, jn)
 
 
+def _clamp(net_name, clamp):
+    """A clamp on the net itself, with no series element."""
+    NETS[net_name].append(clamp)
+
+
 def port_net(n):
     """A connector-side net's function: M1_J is M1 through its series resistor."""
     return n[:-2] if n.endswith("_J") and n[:-2] in SERIES else n
@@ -1465,22 +1470,21 @@ def port_net(n):
 for ref in ("U26", "U27", "U28", "U29", "U30"):
     add(ref, S_TVS4, F_TVS4, "TPD4E05U06", "C138714", False)
     NETS["GND"] += [f"{ref}.3", f"{ref}.8"]
-for ref in ("RN1", "RN2", "RN3"):
+for ref in ("RN1",):
     add(ref, S_RN4, F_RN4, "33R x4", "C25501", False)
 #J2, the ESC: four DShot lines through RN1
 for k, (m, jp) in enumerate((("M1", "J2.3"), ("M2", "J2.4"), ("M3", "J2.5"), ("M4", "J2.6"))):
-    _protect(m, jp, "RN1", str(8 - k), str(1 + k), f"U26.{TVS4_IO[k]}")
+    #j-side pads 5-8 face U26 pins 1-5 in the same order
+    _protect(m, jp, "RN1", str(5 + k), str(4 - k), f"U26.{TVS4_IO[k]}")
 RES("R70", "100R"); RES("R71", "2k2")
-_protect("ESC_TEL", "J2.8", "R70", "1", "2", "U27.1")
-_protect("ESC_CUR", "J2.7", "R71", "1", "2", "U27.2")      #with C44, a 2.2k corner well above 100 Hz
-#J21, the companion's UART7
-for k, (n, jp) in enumerate((("UART7_TX", "J21.2"), ("UART7_RX", "J21.3"),
-                             ("UART7_CTS", "J21.4"), ("UART7_RTS", "J21.5"))):
-    _protect(n, jp, "RN2", str(8 - k), str(1 + k), f"U28.{TVS4_IO[k]}")
-#J14, the flow port - on its own stub
-for k, (n, jp) in enumerate((("SPI3_SCK", "J14.2"), ("SPI3_MISO", "J14.3"),
-                             ("SPI3_MOSI", "J14.4"), ("EXT_CS1", "J14.5"))):
-    _protect(n, jp, "RN3", str(8 - k), str(1 + k), f"U29.{TVS4_IO[k]}")
+#current on U27's outer channel
+_protect("ESC_TEL", "J2.8", "R70", "1", "2", "U27.2")
+_protect("ESC_CUR", "J2.7", "R71", "1", "2", "U27.1")      #with C44, a 2.2k corner well above 100 Hz
+#J21, the companion's UART7, and J14, the flow port's SPI3
+for k, n in enumerate(("UART7_TX", "UART7_RX", "UART7_CTS", "UART7_RTS")):
+    _clamp(n, f"U28.{TVS4_IO[k]}")
+for k, n in enumerate(("SPI3_SCK", "SPI3_MISO", "SPI3_MOSI", "EXT_CS1")):
+    _clamp(n, f"U29.{TVS4_IO[k]}")
 #J11 (lidar) and J23 (servo 2), side by side on the south edge, share U30
 RES("R72", "100R"); RES("R73", "100R"); RES("R74", "100R")
 _protect("USART1_TX", "J11.2", "R72", "1", "2", "U30.1")
@@ -1491,6 +1495,14 @@ add("D9", "Device:D_TVS", "jlc:DSN0603-2_L0.6-W0.3-P0.40-BI", "PESD5V0C1BSF", "C
 NETS["GND"].append("D9.2")
 RES("R75", "100R")
 _protect("PWM7", "J17.1", "R75", "1", "2", "D9.1")
+
+#[D] TPD4E05U06 Table 4-2: pins 6, 7, 9 and 10 are not connected
+TVS4_FLOW = {"1": "10", "2": "9", "4": "7", "5": "6"}
+for ref in ("U26", "U27", "U28", "U29", "U30"):
+    for io, nc in TVS4_FLOW.items():
+        on = next((n for n, v in NETS.items() if f"{ref}.{io}" in v), None)
+        if on:
+            NETS[on].append(f"{ref}.{nc}")
 
 #every off-board connector's signals
 ESD = dict(
@@ -1510,16 +1522,7 @@ ESD = dict(
 )
 
 #11
-#ArduPilot holds the IMU at a set temperature
-for ref in ("R76", "R77", "R78", "R79"):
-    add(ref, R, F_R0603, "150R", "C873675", False)
-    NETS["+5V"].append(f"{ref}.1")
-add("Q6", "jlc_parts:AO3400A", F_SOT23, "AO3400A", "C20917", False)
-RES("R80", "1k"); RES("R81", "10k")
-net("HEATER_EN", "U1.PE15", "R80.1")
-net("HEATER_G", "R80.2", "Q6.1", "R81.1")
-NETS["GND"] += ["Q6.2", "R81.2"]
-net("HEATER_D", "Q6.3", "R76.2", "R77.2", "R78.2", "R79.2")
+#the respin carried one (3-4 x 150R switched from a spare pin)
 
 ADJACENCY = {
     #MCU VDD decoupling - one per supply pin, as close as the package allows
@@ -1603,14 +1606,9 @@ ADJACENCY = {
 ADJACENCY.update({
     "U26": ("J2", "3", 6.0), "U27": ("J2", "7", 6.0), "RN1": ("U26", "1", 3.0),
     "R70": ("U27", "1", 3.0), "R71": ("U27", "2", 3.0),
-    "U28": ("J21", "2", 6.0), "RN2": ("U28", "1", 3.0),
-    "U29": ("J14", "2", 6.0), "RN3": ("U29", "1", 3.0),
+    "U28": ("J21", "2", 6.0), "U29": ("J14", "2", 6.0),
     "U30": ("J11", "2", 6.0), "R72": ("U30", "1", 3.0), "R73": ("U30", "2", 3.0),
     "R74": ("U30", "4", 4.0), "D9": ("J17", "1", 4.0), "R75": ("D9", "1", 3.0),
-    #the heater's four resistors round the IMUs, its switch anywhere near
-    "R76": ("U2", "5", 6.0), "R77": ("U2", "5", 6.0), "R78": ("U3", "5", 6.0),
-    "R79": ("U3", "5", 6.0), "Q6": ("R76", "2", 15.0), "R80": ("Q6", "1", 3.0),
-    "R81": ("Q6", "1", 3.0),
 })
 
 ADJACENCY["D1"]  = ("J2",  "2", 5.0)     #TVS at the power entry, not the buck
@@ -1779,7 +1777,6 @@ LOADS_5V = [
     ("TFS20-L rangefinder on J9",       0.106, 0.106, "[D] 0.35 W at 3.3 V via its inline LDO - optional (stage B2), budgeted as fitted"),
     ("GY-53-L1X upward ToF on J9",      0.020, 0.020, "[D] VL53L1X module ~20 mA - optional (stage B2), budgeted as fitted"),
     ("HC610 LNA through U24 on J12",    0.015, 0.015, "[D] Tallysman HC610: 15 mA at 2.2-12 V, fed down the coax"),
-    ("IMU heater R76-R79 (4 x 150R)",   0.133, 0.133, "[M] 5 V into 37.5 ohm at full duty; ArduPilot dithers it below that once warm"),
 ]
 LOADS_5V_CONT_A = round(sum(r[1] for r in LOADS_5V), 3)
 LOADS_5V_PEAK_A = round(sum(r[2] for r in LOADS_5V), 3)
@@ -1935,7 +1932,7 @@ NET_CURRENT = {
     #J2's VBAT pin to Q4: everything the board takes from the pack
     "VBAT_IN": 1.2,
     "VBAT": 1.2,            #the same current, after Q4: the bucks are all VBAT feeds
-    "+5V":  1.1,            #the LOADS_5V sum with the IMU heater on
+    "+5V":  0.95,
     "+5V_PAYLOAD": 1.5,
     "+5V_BIAS_SW": 0.155,   #AP22653 limit, RLIM 210k, max (DS41186)
     "+5V_BIAS": 0.155,
@@ -1982,7 +1979,6 @@ LOAD_CURRENT = {
     },
     #the +5V rows of LOADS_5V, per pad
     "+5V": {
-        "R76.1": 0.034, "R77.1": 0.034, "R78.1": 0.034, "R79.1": 0.034,   #the IMU heater
         "U9.1": 0.294,                  #U9 (+3V3 LDO) input
         "U10.1": 0.107, "U10.3": 0.0,   #U10 (+3V3A LDO) input; pin 3 is EN
         "J3.1": 0.05,                   #M10 GPS + compass
@@ -2050,7 +2046,6 @@ PIN_INTENT = {
     "BATT_V_DIV": dict(mcu="analog", why="11:1 pack divider into ADC1"),
     "ESC_CUR":    dict(mcu="analog", why="ESC current-sense output into ADC1"),
     "ESC_TEL":    dict(mcu="in",     why="ESC transmits telemetry to the FC - RX pin"),
-    "HEATER_EN":  dict(mcu="out",    why="IMU heater MOSFET Q6; R81 holds its gate low at reset"),
 
     #IMU1 / IMU2 SPI
     "SPI1_SCK": dict(mcu="out", why="clock to ICM-42688-P"),
@@ -2086,8 +2081,6 @@ PIN_INTENT = {
     "BIAS_FAULT": dict(mcu="in", why="bias-tee load switch fault flag"),
     "USART6_TX": dict(mcu="out", why="to receiver, or half-duplex CRSF"),
     "RC_IN":     dict(mcu="in",  why="receiver drives the FC"),
-    "UART4_TX":  dict(mcu="out", why="to rangefinder/peripheral RX"),
-    "UART4_RX":  dict(mcu="in",  why="from rangefinder/peripheral TX"),
 
     "CAN1_RX":     dict(mcu="in",  why="transceiver RXD drives the MCU"),
     "CAN1_TX":     dict(mcu="out", why="MCU drives transceiver TXD"),
@@ -2117,17 +2110,15 @@ PIN_INTENT = {
                        why="Q3 gate: LOW leaves the 5V Payload rail enabled, HIGH cuts it"),
 
     #TVC servos / secondary actuators (TIM4 on J17)
-    "PWM7":  dict(mcu="out", why="TIM4_CH1 servo PWM on J17"),
+    "PWM7":  dict(mcu="out", why="TIM4_CH3 servo PWM on J17 (PB8)"),
     "PWM8":  dict(mcu="out", why="TIM4_CH2 servo PWM on J23"),
-    "PWM9":  dict(mcu="out", why="TIM4_CH3, spare - no connector"),
-    "PWM10": dict(mcu="out", why="TIM4_CH4, spare - no connector"),
 
     #lander / recovery peripherals
 
     #brought out to test pads only, no device fitted
     "USART1_TX": dict(mcu="out", why="telem2 TX on test pad TP5"),
     "USART1_RX": dict(mcu="in",  why="telem2 RX on test pad TP6"),
-    "PWM5": dict(mcu="out", why="spare motor output on test pad TP3"),
+    "PWM5": dict(mcu="out", why="spare servo output (TIM4_CH4, PB9) on test pad TP3"),
     "PWM6": dict(mcu="out", why="spare motor output on test pad TP4"),
 
     #debug

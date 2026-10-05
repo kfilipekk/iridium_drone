@@ -72,10 +72,11 @@ def self_test(pads, parts):
         x, y = far[k]
         far[k] = (x + 25.0, y)
     c = copy.deepcopy(design.NETS)
-    c["UART7_TX_J"].append("U1.PE8")
+    mcu = next(q for q in design.NETS["M2"] if q.startswith("U1."))
+    c["M2_J"].append(mcu)
     for name, args in (("a clamp taken off M1", (a, design.SERIES, pads, parts)),
                        ("U28 moved 25 mm away", (design.NETS, design.SERIES, far, parts)),
-                       ("RN2 bridged on UART7_TX", (c, design.SERIES, pads, parts))):
+                       ("RN1 bridged on M2", (c, design.SERIES, pads, parts))):
         caught = bool(evaluate(*args)[0])
         ok &= caught
         print(f"  {'caught' if caught else 'MISSED'}  {name}")
