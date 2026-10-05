@@ -1,4 +1,9 @@
 #include "AP_SoOP_Capture.h"
+#include "soop_signal.h"
+
+static_assert(SOOP_CAPTURE_RAW_HZ <= 1000000U, "INP18 is a slow channel: 1 MSPS at most");
+static_assert((SOOP_CAPTURE_OVS & (SOOP_CAPTURE_OVS - 1U)) == 0U, "the oversampler shifts by log2(OVS)");
+static_assert(SOOP_CAPTURE_RAW_HZ / SOOP_CAPTURE_OVS == (unsigned)SOOP_FS, "the DSP is built for SOOP_FS");
 
 extern const AP_HAL::HAL& hal;
 
@@ -66,7 +71,8 @@ bool AP_SoOP_Capture::start(bool swap_iq)
     grp.cfgr = ADC_CFGR_EXTEN_RISING | ADC_CFGR_EXTSEL_SRC(EXTSEL_TIM6_TRGO) | ADC_CFGR_RES_16BITS;
     //average SOOP_CAPTURE_OVS triggered conversions (TROVS)
     grp.cfgr2 = ADC_CFGR2_ROVSE | ADC_CFGR2_TROVS
-              | ((SOOP_CAPTURE_OVS - 1U) << ADC_CFGR2_OVSR_Pos) | (2U << ADC_CFGR2_OVSS_Pos);
+              | ((SOOP_CAPTURE_OVS - 1U) << ADC_CFGR2_OVSR_Pos)
+              | (uint32_t(__builtin_ctz(SOOP_CAPTURE_OVS)) << ADC_CFGR2_OVSS_Pos);
     grp.ccr = ADC_CCR_DUAL_REG_SIMULT;
     grp.pcsel = (1U << 4) | (1U << 18);
     grp.smpr[0] = ADC_SMPR1_SMP_AN4(ADC_SMPR_SMP_2P5);

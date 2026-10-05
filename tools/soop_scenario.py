@@ -46,9 +46,9 @@ RRC = rrc_taps()
 
 
 #preamble (unmodulated carrier), the downlink unique word
-def burst_symbols(n_data, rng, modulation="dqpsk"):
+def burst_symbols(n_data, rng, modulation="dqpsk", preamble=sig.PREAMBLE_SYMBOLS):
     phase, out = 0.0, []
-    for _ in range(sig.PREAMBLE_SYMBOLS):
+    for _ in range(preamble):
         out.append(cmath.exp(1j * phase))
     for d in sig.UNIQUE_WORD_DL:
         phase += int(d) * math.pi / 2
@@ -161,6 +161,38 @@ def make_iq(outdir, slots, seed, cn0_lo, cn0_hi, noise_counts, max_bursts=3):
                  bursts=bursts)
     json.dump(truth, open(os.path.join(outdir, "truth.json"), "w"), indent=1)
     return truth
+
+
+#Duplex-channel bursts only
+def make_duplex(outdir, slots, seed, cn0_lo, cn0_hi, noise_counts, max_bursts=3):
+    rng = random.Random(seed)
+    os.makedirs(outdir, exist_ok=True)
+    fe = FrontEnd(rng, noise_counts)
+    ra = sig.baseband_hz(sig.F_RING_ALERT)
+    folding = [f for f in sig.DUPLEX_CHANNELS if abs(sig.baseband_hz(f)) < sig.TUNER_LPF_HZ
+               and abs(sig.fold(sig.baseband_hz(f))[0] - ra) < 60_000]
+    slot_len = int(sig.SIMPLEX_SLOT_S * FS)
+    n = 0
+    with open(os.path.join(outdir, "iq.bin"), "wb") as f:
+        for _ in range(slots):
+            buf = [complex(rng.gauss(0, math.sqrt(0.5)), rng.gauss(0, math.sqrt(0.5)))
+                   for _ in range(slot_len)]
+            for _ in range(1 + rng.randrange(max_bursts)):
+                f_bb = sig.baseband_hz(rng.choice(folding)) + rng.uniform(-sig.MAX_DOPPLER_HZ,
+                                                                          sig.MAX_DOPPLER_HZ)
+                f_out, gain = sig.fold(f_bb)
+                pole = 1.0 / math.sqrt(1.0 + (f_out / sig.OPA_POLE_HZ) ** 2)   #FrontEnd adds this
+                amp = math.sqrt(10 ** (rng.uniform(cn0_lo, cn0_hi) / 10) / FS) * gain / pole
+                syms = burst_symbols(rng.randrange(150, 190), rng,
+                                     preamble=sig.DUPLEX_PREAMBLE_SYMBOLS)
+                wave = burst_waveform(syms, f_out, rng.uniform(-400.0, 0.0), rng.uniform(0, 2 * math.pi))
+                start = rng.randrange(max(1, slot_len - len(wave)))
+                for i, c in enumerate(wave[:slot_len - start]):
+                    buf[start + i] += amp * c
+                n += 1
+            for i, q in fe.run(buf):
+                f.write(struct.pack("<hh", i, q))
+    return dict(fs=FS, slots=slots, bursts=n, channels=len(folding))
 
 
 #rtl mode

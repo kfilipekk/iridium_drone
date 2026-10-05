@@ -1,4 +1,5 @@
 #iridium simplex-channel facts and this board's capture plan, in one place
+import math
 
 #the air interface
 SYMBOL_RATE = 25_000.0            #symbols/s, all Iridium channels
@@ -20,13 +21,30 @@ MAX_DOPPLER_HZ = 41_000.0         #f * v / c at the worst-case LEO range rate, r
 
 #this board's capture
 FS_CAPTURE = 500_000.0            #complex samples/s out of the ADC pair (after oversampling)
-ADC_RAW_RATE = 2_000_000.0        #per ADC, before the x4 hardware oversampler
+ADC_RAW_RATE = 1_000_000.0        #per ADC: PA4 is a slow channel, 1 MSPS at most
+ADC_OVS = 2                       #hardware oversampler: pairs averaged down to FS_CAPTURE
+TUNER_LPF_HZ = 4_000_000.0        #MAX2112 baseband filter at its minimum
 LO_OFFSET_HZ = 62_500.0           #LO above Ring Alert: RA lands at -62.5 kHz baseband
 TCXO_PPM = 2.5                    #Y2, at the carrier: +-4 kHz
 MCU_PPM = 20.0                    #Y1, the sample clock
 DC_NOTCH_HZ = 400.0               #MAX2112 DC-offset loop corner with 47 nF (datasheet)
 OPA_POLE_HZ = 1.0 / (2 * 3.141592653589793 * 10e3 * 100e-12)   #R50/C76, ~159 kHz
 ADC_FULL_SCALE = 32767            #16-bit, centred
+
+
+#the duplex band below the simplex band, on the same 41.667 kHz grid
+DUPLEX_CHANNELS = tuple(1_616_020_833.0 + k * CHANNEL_SPACING for k in range(240))
+DUPLEX_PREAMBLE_SYMBOLS = 16
+
+
+#where a baseband frequency lands after the ADC's raw sampling and the oversampler's
+def fold(f_bb):
+    def wrap(f, fs):
+        return (f + fs / 2) % fs - fs / 2
+    f_raw = wrap(f_bb, ADC_RAW_RATE)
+    pole = 1.0 / math.sqrt(1.0 + (f_bb / OPA_POLE_HZ) ** 2)
+    box = abs(math.cos(math.pi * f_raw / ADC_RAW_RATE)) if ADC_OVS == 2 else 1.0
+    return wrap(f_raw, FS_CAPTURE), pole * box
 
 
 #where an RF frequency lands in the complex capture
