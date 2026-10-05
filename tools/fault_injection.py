@@ -72,6 +72,7 @@ SELF_TESTS = [
     ("mech.prints", ["tools/check_prints.py", "--self-test"]),
     ("mech.balance", ["tools/check_balance.py", "--self-test"]),
     ("elec.esd", ["tools/check_esd.py", "--self-test"]),
+    ("elec.traces", ["tools/check_traces.py", "--self-test"]),
     ("fw.max2112", ["tools/check_soop_max2112.py", "--self-test"]),
 ]
 
@@ -464,6 +465,12 @@ TIER_B = [
          fault=lambda: _cli_reports(
              erc="\n[erc_pin_not_driven] input pin not driven\n"),
          why="an ERC report with a violation in it must fail the ERC check"),
+    dict(pid="fab.erc", group="fabrication", check="ERC clean",
+         fault=lambda: _cli_reports(erc=None),
+         why="a schematic kicad-cli cannot load writes no report, and must not pass as clean"),
+    dict(pid="fab.drc", group="fabrication", check="DRC errors",
+         fault=lambda: _cli_reports(drc=None),
+         why="a board kicad-cli cannot load writes no report, and must not pass as clean"),
     dict(pid="fab.routed", group="fabrication", check="all nets routed (fitted parts)",
          fault=lambda: _cli_reports(drc="\n  @[+5V] of U8\n"),
          why="an unrouted FITTED net must fail the routing check"),

@@ -27,17 +27,23 @@ def check(group, name, ok, detail, hard=True):
 
 
 def cli(args, out):
-    subprocess.run(args, capture_output=True, timeout=900)
-    return open(out).read() if os.path.exists(out) else ""
+    """The report kicad-cli writes, or None if it did not run."""
+    if os.path.exists(out):
+        os.remove(out)
+    r = subprocess.run(args, capture_output=True, timeout=900)
+    return open(out).read() if r.returncode == 0 and os.path.exists(out) else None
 
 
 def fabrication(board):
     rpt = cli(["kicad-cli", "pcb", "drc", "--output", "/tmp/nav/pf_drc.rpt",
                "--severity-error", BOARD], "/tmp/nav/pf_drc.rpt")
+    check("fabrication", "kicad-cli loads the board", rpt is not None,
+          "DRC ran" if rpt is not None else "kicad-cli pcb drc failed - the board did not load")
+    ran, rpt = rpt is not None, rpt or ""
     cls = re.findall(r'^\[([a-z_]+)\]', rpt, re.M)
     hard = len([c for c in cls if c != "unconnected_items"])
     unconn = cls.count("unconnected_items")
-    check("fabrication", "DRC errors", hard == 0, f"{hard} errors")
+    check("fabrication", "DRC errors", ran and hard == 0, f"{hard} errors" if ran else "DRC did not run")
     #split the unrouted nets by whether anything is actually fitted on them
     unrouted_nets = set(re.findall(r"^\s+@.*?\[([A-Z0-9_+.]+)\] (?:of|on)", rpt, re.M))
     unrouted_nets |= set(re.findall(r'Zone \[([A-Z0-9_+.]+)\]', rpt))
@@ -59,8 +65,11 @@ def fabrication(board):
 
     erc = cli(["kicad-cli", "sch", "erc", "--output", "/tmp/nav/pf_erc.rpt",
                "--severity-error", "--severity-warning", SCH], "/tmp/nav/pf_erc.rpt")
-    ne = len(re.findall(r'^\[', erc, re.M))
-    check("fabrication", "ERC clean", ne == 0, f"{ne} violations")
+    check("fabrication", "kicad-cli loads the schematic", erc is not None,
+          "ERC ran" if erc is not None else "kicad-cli sch erc failed - the schematic did not load")
+    ne = len(re.findall(r'^\[', erc or "", re.M))
+    check("fabrication", "ERC clean", erc is not None and ne == 0,
+          f"{ne} violations" if erc is not None else "ERC did not run")
 
     #all six copper layers must be exported
     want = ["F_Cu", "In1_Cu", "In2_Cu", "In3_Cu", "In4_Cu", "B_Cu",
