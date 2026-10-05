@@ -454,65 +454,66 @@ def firmware(board):
         name, *extra = tool.split()
         r = sp.run([sys.executable, f"tools/{name}", *extra], capture_output=True,
                    text=True, timeout=1800)
-        TOOL_RESULTS[name] = r.returncode
-        _LAST_TOOL[0] = name
+        key = readiness.tool_id([name, *extra])
+        TOOL_RESULTS[key] = r.returncode
+        _LAST_TOOL[0] = key
         return r.returncode, (r.stdout or "") + (r.stderr or "")
 
-    rc, out = run("check_topology.py")
+    rc, out = run("check_circuit.py topology")
     check("fabrication", "datasheet-required externals present", rc == 0,
           "every IC has the external components its datasheet requires" if rc == 0 else
-          "a required component is ABSENT - see tools/check_topology.py")
+          "a required component is ABSENT - see tools/check_circuit.py topology")
 
-    rc, out = run("check_backside.py")
+    rc, out = run("check_board.py backside")
     m = re.search(r'(\d+) through-holes checked', out)
     check("fabrication", "no pin lands under a part on the other side", rc == 0,
           (f"{m.group(1) if m else '?'} through-holes clear of every opposite-side body"
            if rc == 0 else
-           "a through-hole pin or post lands under a part - see tools/check_backside.py"))
+           "a through-hole pin or post lands under a part - see tools/check_board.py backside"))
 
     #a label nearer a neighbour than its own part is read as the neighbour's
-    rc, out = run("check_silk_owner.py")
+    rc, out = run("check_board.py silk_owner")
     m = re.search(r'(\d+) printed labels checked', out)
     check("fabrication", "every label reads as its own part's", rc == 0,
           (f"{m.group(1) if m else '?'} printed labels, each nearest the part it names"
            if rc == 0 else
-           "a label sits nearer another part - see tools/check_silk_owner.py"))
+           "a label sits nearer another part - see tools/check_board.py silk_owner"))
 
     #the 3D bodies the renders and any enclosure CAD are drawn
-    rc, out = run("check_model_alignment.py")
+    rc, out = run("check_board.py model_alignment")
     m = re.search(r'(\d+) bodies tested against each other', out)
     check("fabrication", "3D bodies sit on their footprints and overlap nothing", rc == 0,
           (f"{m.group(1) if m else '?'} bodies, each on its footprint, none overlapping another "
            "or the stack hardware"
            if rc == 0 else
            "a 3D body is misplaced, overlaps another or sits under the stack hardware - see "
-           "tools/check_model_alignment.py"))
+           "tools/check_board.py model_alignment"))
 
-    rc, out = run("check_build.py")
+    rc, out = run("check_mech.py build")
     m = re.search(r'BUILD CHECKS PASS - (\d+) checks across (\d+)', out)
     check("mechanical", "aircraft-level build checks", rc == 0,
           (f"{m.group(1)} checks across {m.group(2)} areas" if m else
-           "see tools/check_build.py") if rc == 0 else
-          "the aircraft does not add up - see tools/check_build.py")
+           "see tools/check_mech.py build") if rc == 0 else
+          "the aircraft does not add up - see tools/check_mech.py build")
 
     #stock and part resolution against JLCPCB itself, from a dated snapshot
-    rc, out = run("check_stock.py")
+    rc, out = run("check_order.py stock")
     m = re.search(r'(\d+)/(\d+) line\(s\) resolved with stock', out)
     age = re.search(r'snapshot\s+:\s+\S+ \((\d+) day', out)
     check("assembly", "every BOM line is buyable", rc == 0,
           (f"{m.group(1)}/{m.group(2)} lines in stock for the order, snapshot "
            f"{age.group(1)} day(s) old" if m else
-           "stock/part check failed - see tools/check_stock.py") if rc == 0 else
+           "stock/part check failed - see tools/check_order.py stock") if rc == 0 else
           "a BOM line is unavailable, unreachable or resolves to the wrong part - "
-          "see tools/check_stock.py")
+          "see tools/check_order.py stock")
 
-    rc, out = run("check_rf.py")
+    rc, out = run("check_order.py rf")
     check("fly", "link budget has bench data", rc == 0,
           "T3b measurements recorded and within budget" if rc == 0 else
           "no T3b bench measurements yet - gates FLYING, not ordering", hard=False)
 
-    rc, out = run("check_sitl.py")
-    #the count comes from the line check_sitl.py actually prints
+    rc, out = run("check_firmware.py sitl")
+    #the count comes from the line check_firmware.py sitl actually prints
     m = re.search(r'mechanisms\s*:\s*(\d+)/(\d+) asserting', out)
     n_info = re.search(r'measurement:\s*(\d+) informational', out)
     first_problem = re.search(r'^FAIL - \d+ problem\(s\):\n\s+- (.+)$', out, re.M)
@@ -525,103 +526,103 @@ def firmware(board):
                  f"NOT green - {first_problem.group(1).strip()}" if m else
                  f"the suite is NOT green - {first_problem.group(1).strip()}")
     elif m:
-        _sitl = (f"{m.group(1)}/{m.group(2)} asserting scenarios pass, but check_sitl.py "
+        _sitl = (f"{m.group(1)}/{m.group(2)} asserting scenarios pass, but check_firmware.py sitl "
                  f"exited non-zero and named no problem - its output above says why")
     else:
         #no count at all
-        _sitl = ("check_sitl.py reported no scenario count - its output above says why; "
+        _sitl = ("check_firmware.py sitl reported no scenario count - its output above says why; "
                  "a suite that has not run is not a passing suite")
     check("firmware", "SITL scenarios pass", rc == 0, _sitl)
 
     #the real-ephemeris prerequisite
-    rc, out = run("check_soop_ephemeris.py")
+    rc, out = run("check_soop.py ephemeris")
     m = re.search(r'EPHEMERIS OK - (\d+)/(\d+) assertions on (\d+) real', out)
     check("firmware", "real Iridium ephemeris inverts the geometry", rc == 0,
           (f"SGP4 + TLE, {m.group(3)} satellites, {m.group(1)}/{m.group(2)} assertions"
-           if m else "see tools/check_soop_ephemeris.py") if rc == 0 else
+           if m else "see tools/check_soop.py ephemeris") if rc == 0 else
           "the SGP4/TLE ephemeris or the TEME->ECEF frame conversion does not hold - "
-          "see tools/check_soop_ephemeris.py")
+          "see tools/check_soop.py ephemeris")
 
     #the C SGP4 propagator, gated
-    rc, out = run("check_soop_sgp4.py")
+    rc, out = run("check_soop.py sgp4")
     m = re.search(r'(\d+) checks against Python reference \(tol: (\d+) m', out)
     check("firmware", "C SGP4 propagator agrees with Python reference and builds for the target",
           rc == 0,
           (f"{m.group(1)} checks, tol {m.group(2)} m, cross-compiled Cortex-M7"
-           if m else "see tools/check_soop_sgp4.py") if rc == 0 else
+           if m else "see tools/check_soop.py sgp4") if rc == 0 else
           "the C SGP4 propagator disagrees with Python sgp4.api.Satrec or does not "
-          "cross-compile - see tools/check_soop_sgp4.py")
+          "cross-compile - see tools/check_soop.py sgp4")
 
     #the burst-DSP prerequisite, gated
-    rc, out = run("check_soop_burst.py")
+    rc, out = run("check_soop.py burst")
     m = re.search(r'BURST DSP OK - (\d+)/(\d+) assertions, p90 ([\d.]+) Hz < 5 Hz '
                   r'at C/N0 (\d+) dB-Hz', out)
     check("firmware", "burst detection and carrier estimation meet the 5 Hz target",
           rc == 0,
           (f"{m.group(1)}/{m.group(2)} assertions, p90 {m.group(3)} Hz, "
            f"C/N0 {m.group(4)} dB-Hz on synthetic I/Q" if m else
-           "see tools/check_soop_burst.py") if rc == 0 else
+           "see tools/check_soop.py burst") if rc == 0 else
           "the burst detector or the carrier estimator does not meet the solver's "
-          "precision - see tools/check_soop_burst.py")
+          "precision - see tools/check_soop.py burst")
 
     #the on-board DSP in C
-    rc, out = run("check_soop_dsp.py")
+    rc, out = run("check_soop.py dsp")
     m = re.search(r'SOOP-DSP OK - (\d+)/(\d+) assertions', out)
     p = re.search(r'carrier error p90 ([\d.]+) Hz at >= (\d+) dB-Hz', out)
     check("firmware", "the on-board DSP finds bursts and meets 5 Hz on a simulated sky",
           rc == 0,
           (f"{m.group(1)}/{m.group(2)} assertions, p90 {p.group(1)} Hz at >= {p.group(2)} dB-Hz, "
            f"C built for the H743" if m and p else
-           "see tools/check_soop_dsp.py") if rc == 0 else
+           "see tools/check_soop.py dsp") if rc == 0 else
           "the C burst DSP misses, invents or mis-measures bursts on the simulated sky - "
-          "see tools/check_soop_dsp.py")
+          "see tools/check_soop.py dsp")
 
     #the on-board navigation in C
-    rc, out = run("check_soop_nav.py")
+    rc, out = run("check_soop.py nav")
     m = re.search(r'SOOP-NAV OK - (\d+)/(\d+) assertions', out)
     e = re.search(r'median (\d+) m, p95 (\d+) m, max (\d+) m', out)
     check("firmware", "the on-board navigation holds position through simulated denied flights",
           rc == 0,
           (f"{m.group(1)}/{m.group(2)} assertions, median {e.group(1)} m, p95 {e.group(2)} m "
            f"over the denied flights, C built for the H743" if m and e else
-           "see tools/check_soop_nav.py") if rc == 0 else
+           "see tools/check_soop.py nav") if rc == 0 else
           "the C navigation loses position, reports an accuracy it does not have, or "
-          "credits bursts to the wrong satellite - see tools/check_soop_nav.py")
+          "credits bursts to the wrong satellite - see tools/check_soop.py nav")
 
     #the C port of the solve, gated
-    rc, out = run("check_soop_c.py")
+    rc, out = run("check_soop.py solver")
     m = re.search(r'SOOP-C OK - C solver agrees with Python to ([\d.eE+-]+) m', out)
     check("firmware", "the C solver agrees with the Python reference and builds for the target",
           rc == 0,
           (f"differential on identical observations, agreement {m.group(1)} m, "
            f"cross-compiled Cortex-M7" if m else
-           "see tools/check_soop_c.py") if rc == 0 else
+           "see tools/check_soop.py solver") if rc == 0 else
           "the C solver disagrees with the Python reference, or does not build for the "
-          "target - see tools/check_soop_c.py")
+          "target - see tools/check_soop.py solver")
 
     #the SoOP AP_GPS backend, gated
-    rc, out = run("check_soop_backend.py")
+    rc, out = run("check_firmware.py soop_backend")
     m = re.search(r'AP_GPS_SoOP::read\(\) is (\d+) bytes', out)
     check("firmware", "the SoOP GPS backend is registered and compiled into the firmware",
           rc == 0,
           (f"GPS_TYPE_SOOP = 27; backend read() {m.group(1)} bytes in the board and SITL "
-           f"firmwares" if m else "see tools/check_soop_backend.py") if rc == 0 else
+           f"firmwares" if m else "see tools/check_firmware.py soop_backend") if rc == 0 else
           "the SoOP backend is not registered or not in the firmware - see "
-          "tools/check_soop_backend.py")
+          "tools/check_firmware.py soop_backend")
 
-    rc, out = run("check_soop_sitl.py")
+    rc, out = run("check_firmware.py soop_sitl")
     check("firmware", "SoOP fix reaches the EKF", rc == 0,
           "GPS_RAW_INT has a 3D SoOP fix and EKF publishes global position"
-          if rc == 0 else "see tools/check_soop_sitl.py")
+          if rc == 0 else "see tools/check_firmware.py soop_sitl")
 
-    rc, out = run("check_bench_bounds.py")
+    rc, out = run("check_order.py bench_bounds")
     n = re.search(r'^(\d+) items accounted for: (.*)$', out, re.M)
     check("mechanical", "no bench item can change what is ordered", rc == 0,
           (f"{n.group(1)} classified - {n.group(2)}" if n else
-           "see tools/check_bench_bounds.py") if rc == 0 else
-          "a bench item could force a board change - see tools/check_bench_bounds.py")
+           "see tools/check_order.py bench_bounds") if rc == 0 else
+          "a bench item could force a board change - see tools/check_order.py bench_bounds")
 
-    rc, out = run("check_connectors.py")
+    rc, out = run("check_board.py connectors")
     nf = re.search(r'^(\d+) failure\(s\), (\d+) warning\(s\)', out, re.M)
     bad = re.findall(r'^  FAIL  (\S+):', out, re.M)
     check("fabrication", "connectors face off-board", rc == 0,
@@ -629,32 +630,32 @@ def firmware(board):
            f"all {len(design.MATING_FACE)} openings clear the board"
            + (f", {nf.group(2)} warning(s)" if nf and nf.group(2) != '0' else "")))
 
-    rc, out = run("check_floorplan.py")
+    rc, out = run("check_board.py floorplan")
     m = re.search(r'(\d+) failure\(s\), (\d+) ports', out)
     check("fabrication", "perimeter floorplan and plug clearances", rc == 0,
           (f"all {m.group(2) if m else '?'} perimeter ports seated, latches and plugs clear" if rc == 0 else
-           "perimeter port or plug clearance violation - see tools/check_floorplan.py"))
+           "perimeter port or plug clearance violation - see tools/check_board.py floorplan"))
 
-    rc, out = run("check_mechanical.py")
+    rc, out = run("check_mech.py mechanical")
     m = re.search(r'^(\d+) computed check\(s\) ok', out, re.M)
     unk = "!! footprints with no declared height" in out
     check("fabrication", "mechanical fit in the stack", rc == 0 and not unk,
           ("some footprints have no declared height" if unk else
            f"{m.group(1) if m else '?'} computed checks ok; frame items listed for measurement"))
 
-    rc, out = run("check_pin_semantics.py")
+    rc, out = run("check_circuit.py pin_semantics")
     bad = re.search(r'^(\d+) pin\(s\) are wired or configured the wrong way', out, re.M)
     check("firmware", "pins run the right way", rc == 0,
           f"{bad.group(1)} pin(s) wrong" if bad else "direction, reset level and role agree")
 
     #ratings: is each part actually rated for the net it sits on?
-    rc, out = run("check_ratings.py")
+    rc, out = run("check_circuit.py ratings")
     m = re.search(r'^(\d+) failure\(s\), (\d+) warning\(s\), (\d+) unrated', out, re.M)
     check("firmware", "parts rated for their nets", rc == 0,
           (f"{m.group(1)} over-rating/package failure(s)" if m and m.group(1) != '0' else
            f"all capacitors rated; {m.group(2) if m else '?'} derating note(s)"))
 
-    rc, out = run("check_electrical.py")
+    rc, out = run("check_circuit.py electrical")
     m = re.search(r'^ERRORS \((\d+)\)', out, re.M)
     w = re.search(r'^WARNINGS \((\d+)\)', out, re.M)
     check("firmware", "electrical values", rc == 0,
@@ -663,42 +664,42 @@ def firmware(board):
           + (f"; {w.group(1)} warning(s)" if w else ""))
 
     #the SPICE suite simulates the analogue blocks from design.py and fails on a bound
-    rc, out = run("check_sim.py")
+    rc, out = run("check_soop.py spice")
     m = re.search(r'SIM OK - (\d+)/(\d+) assertions across (\d+) deck', out)
     check("firmware", "analogue blocks simulate inside their limits", rc == 0,
           (f"{m.group(1)}/{m.group(2)} assertions across {m.group(3)} decks" if m
            else "the suite printed no tally - see sim/run_suite.py") if rc == 0 else
           "a simulation bound is violated, or a deck did not run - see sim/run_suite.py")
 
-    rc, out = run("check_soop_ant.py")
+    rc, out = run("check_soop.py antenna")
     m = re.search(r'ANT CHECK (?:PASSED|FAILED): (\d+) failure\(s\), (\d+) steps simulated', out)
     check("firmware", "antenna bias feed monitor", rc == 0,
           (f"active antenna feed monitor verified ({m.group(2) if m else '?'} simulated steps)" if rc == 0 else
-           "antenna bias feed monitor failed - see tools/check_soop_ant.py"))
+           "antenna bias feed monitor failed - see tools/check_soop.py antenna"))
 
-    rc, out = run("check_soop_max2112.py")
+    rc, out = run("check_soop.py max2112")
     m = re.search(r'(\d+) register images and (\d+) status pairs', out)
     check("firmware", "tuner registers match the MAX2112 datasheet", rc == 0,
           (f"{m.group(1)} register images and {m.group(2)} status pairs decoded field by field"
            if rc == 0 and m else "the tuner's register image or lock decode disagrees with "
-           "the datasheet - see tools/check_soop_max2112.py"))
+           "the datasheet - see tools/check_soop.py max2112"))
 
-    rc, out = run("check_params.py")
+    rc, out = run("check_firmware.py params")
     fw = re.search(r'^firmware\s+:\s+(.+?)\s+\(tag (\S+)\)', out, re.M)
     check("firmware", "parameters exist in the target build", rc == 0,
           (f"validated against {fw.group(1)} / {fw.group(2)}" if fw
            else "could not validate - run tools/build_firmware.sh"))
 
     #check_params.py proves a parameter name is real
-    rc, out = run("check_firmware_features.py")
+    rc, out = run("check_firmware.py features")
     m = re.search(r'^(\d+) enabled feature', out, re.M)
     check("firmware", "enabled features are IN the binary", rc == 0,
           (f"{m.group(1)} feature(s) traced from defaults.parm into linked symbols"
            if m and rc == 0 else
            "a parameter selects a driver this build does not contain - see "
-           "tools/check_firmware_features.py"))
+           "tools/check_firmware.py features"))
 
-    rc, out = run("check_power_cut.py")
+    rc, out = run("check_board.py power_cut")
     tight = re.findall(r'^\s+(\S+): tightest cut is \S+ mm carrying ~([\d.]+) A',
                        out, re.M)
     check("firmware", "power copper reaches the loads", rc == 0,
@@ -706,37 +707,37 @@ def firmware(board):
            + min(tight, key=lambda t: float(t[1]))[1] + " A") if tight
           else "could not measure")
 
-    rc, out = run("check_cpl.py")
+    rc, out = run("check_board.py cpl")
     m = re.search(r'cross-checked\s+:\s+(\d+) parts across (\d+)', out)
     check("assembly", "CPL rotations self-consistent", rc == 0,
           (f"{m.group(1)} parts across {m.group(2)} shared footprints agree on pin 1"
-           if m else "geometry check failed - see tools/check_cpl.py"))
+           if m else "geometry check failed - see tools/check_board.py cpl"))
 
     #the order bundle is the artefact that actually gets uploaded
-    rc, out = run("check_order_bundle.py")
+    rc, out = run("check_order.py bundle")
     m = re.search(r'gerbers\s+:\s+(\d+) identical, (\d+) diverged, (\d+) absent', out)
     check("assembly", "order bundle matches the tree", rc == 0,
           (f"{m.group(1) if m else '?'} gerber(s) and every BOM/CPL copy identical to "
            f"fab/; placement counts re-derived from the bundled CPL") if rc == 0 else
           "the order bundle is stale or incomplete - re-run tools/make_order_bundle.sh")
 
-    rc, out = run("check_variants.py")
+    rc, out = run("check_order.py variants")
     m = re.search(r'^(\d+) variant pair\(s\) checked', out, re.M)
     check("assembly", "every BOM/CPL variant matches the board", rc == 0,
           (f"{m.group(1)} variant pair(s) agree with the board and the design" if m else
            "checked, but the count was not reported") if rc == 0 else
-          "a variant BOM/CPL describes a different board - see tools/check_variants.py")
+          "a variant BOM/CPL describes a different board - see tools/check_order.py variants")
 
-    rc, out = run("check_symbol_pinout.py")
+    rc, out = run("check_circuit.py symbol_pinout")
     m = re.search(r'(\d+) symbol\(s\) have NO outside authority', out)
     check("fabrication", "symbol pinouts match an outside authority", rc == 0,
           "every active part agrees with KiCad's library or its datasheet" if rc == 0
           else (f"{m.group(1)} symbol(s) verified against nothing - see "
-                f"tools/check_symbol_pinout.py" if m else
-                "a symbol DISAGREES with its authority - see tools/check_symbol_pinout.py"))
+                f"tools/check_circuit.py symbol_pinout" if m else
+                "a symbol DISAGREES with its authority - see tools/check_circuit.py symbol_pinout"))
 
     #"The library is in git" and "the project still builds" are different properties
-    rc, out = run("check_libraries.py")
+    rc, out = run("check_board.py libraries")
     m = re.search(r'compared\s+:\s+(\d+) ref', out)
     o = re.search(r'vendored\s+:\s+(\d+) file\(s\), (\d+) unreferenced', out)
     check("fabrication", "vendored part library is load-bearing", rc == 0,
@@ -744,9 +745,9 @@ def firmware(board):
            f"{o.group(1) if o else '?'} footprint(s), "
            f"{o.group(2) if o else '?'} orphaned") if rc == 0 else
           "the vendored library is incomplete, diverged from the board, or has orphaned "
-          "files - see tools/check_libraries.py")
+          "files - see tools/check_board.py libraries")
 
-    rc, out = run("check_design.py")
+    rc, out = run("check_circuit.py design")
     w = re.search(r'^WARNINGS \((\d+)\)', out, re.M)
     check("fabrication", "schematic matches the netlist", rc == 0 and "no errors" in out,
           "netlist, pin coverage and hwdef agree"
@@ -784,33 +785,33 @@ def firmware(board):
           "cad/mounts.scad is current" if rc == 0
           else "cad/mounts.scad is stale - run tools/gen_scad_mounts.py")
 
-    rc, out = run("check_purchase.py")
+    rc, out = run("check_order.py purchase")
     m = re.search(r'^(\d+) interface\(s\) still rest on an ASSUMED', out, re.M)
     check("mechanical", "buy-to-buy interfaces mate", rc == 0,
           ("every buy-to-buy interface asserted"
            + (f"; {m.group(1)} still on an ASSUMED source - confirm on the listing" if m
               else "")) if rc == 0
-          else "an interface does not mate - see tools/check_purchase.py")
+          else "an interface does not mate - see tools/check_order.py purchase")
 
-    rc, out = run("check_modules.py")
+    rc, out = run("check_order.py modules")
     m = re.search(r'(\d+)/(\d+) modules attach', out)
     check("firmware", "later modules still have somewhere to land", rc == 0,
           f"{m.group(1)}/{m.group(2)} modules attach to the board as fabricated; "
           f"the +5 V rail cannot carry them all at once" if m and rc == 0
-          else "a module's landing pads are missing - see tools/check_modules.py")
+          else "a module's landing pads are missing - see tools/check_order.py modules")
 
-    rc, out = run("check_payload.py")
+    rc, out = run("check_order.py payload")
     m = re.search(r'payload provisions intact: (.+)$', out, re.M)
     check("firmware", "payload provisions still spare", rc == 0,
           m.group(1).strip() if m
-          else "a payload provision has been consumed - see tools/check_payload.py")
+          else "a payload provision has been consumed - see tools/check_order.py payload")
 
     #geometric fit of the whole aircraft
-    rc, out = run("check_cad_fit.py")
+    rc, out = run("check_mech.py cad_fit")
     m = re.search(r'PASS - (\d+) pairs', out)
     check("mechanical", "assembly has no interference", rc == 0,
           f"{m.group(1)} part pairs checked by intersection volume, all clear" if m
-          else "parts overlap in the assembly - see tools/check_cad_fit.py")
+          else "parts overlap in the assembly - see tools/check_mech.py cad_fit")
 
     mounts = re.findall(r'^  (\w+)\s+carries .* joint\(s\)\s+(ok|FAIL)$', out, re.M)
     sky = re.findall(r'^  (\w+)\s+highest obstruction\s+([-\d.]+) deg.*(ok|FAIL)$', out, re.M)
@@ -822,11 +823,11 @@ def firmware(board):
           f"{len(mounts)} printed mounts, every joint derived and sold; {len(printed)} printed "
           f"parts fit the printer as closed solids; nothing rises more than "
           f"{max(float(v[1]) for v in sky):.1f} deg above the GPS or the Iridium antenna" if good else
-          "a part lacks a mount, a joint or its sky - see tools/check_cad_fit.py")
+          "a part lacks a mount, a joint or its sky - see tools/check_mech.py cad_fit")
 
     g = re.findall(r'^\s+(\w+)\s+lowest z\s+[-\d.]+\s+clearance\s+([-\d.]+) mm'
                    r'\s+\(need ([\d.]+)\)', out, re.M)
-    #each part against its own need (check_cad_fit.GROUND_PARTS)
+    #each part against its own need (check_mech.GROUND_PARTS)
     short = [(n_, float(c), float(nd)) for n_, c, nd in g if float(c) < float(nd) - 1e-6]
     if g:
         worst = min(g, key=lambda x: float(x[1]) - float(x[2]))
@@ -836,52 +837,52 @@ def firmware(board):
               if not short else
               "FAILED - " + ", ".join(f"{n_} {c:.2f} mm (needs {nd:.1f})"
                                       for n_, c, nd in short)
-              + " above the skid contact plane: see tools/check_cad_fit.py")
+              + " above the skid contact plane: see tools/check_mech.py cad_fit")
     else:
         check("mechanical", "belly parts clear the ground", False,
-              "check_cad_fit.py reported no ground clearances")
+              "check_mech.py cad_fit reported no ground clearances")
 
-    rc, out = run("check_balance.py")
+    rc, out = run("check_mech.py balance")
     m = re.search(r'static tip angle ([\d.]+) deg', out)
     o = re.search(r'CG ([\d.]+) mm from the thrust centre', out)
     check("mechanical", "centre of gravity and tip-over", rc == 0,
           f"CG {o.group(1) if o else '?'} mm off the thrust centre; tips past "
           f"{m.group(1) if m else '?'} deg" if rc == 0
-          else "the CG is off-centre or the skids tip too easily - see tools/check_balance.py")
+          else "the CG is off-centre or the skids tip too easily - see tools/check_mech.py balance")
 
-    rc, out = run("check_prints.py")
+    rc, out = run("check_mech.py prints")
     m = re.search(r'(\d+) printed parts', out)
     check("mechanical", "printed parts are current STLs", rc == 0,
           f"{m.group(1) if m else '?'} parts in cad/print, each the solid today's design exports"
-          if rc == 0 else "a printed part is missing or stale - see tools/check_prints.py")
+          if rc == 0 else "a printed part is missing or stale - see tools/check_mech.py prints")
 
-    rc, out = run("check_cables.py")
+    rc, out = run("check_mech.py cables")
     m = re.search(r'PASS - (\d+) cables routed', out)
     check("mechanical", "cable harness routing and clearances", rc == 0,
           (f"{m.group(1) if m else '?'} cables routed, bend radii and clearances met" if rc == 0 else
-           "cable routing, bend or clearance violation - see tools/check_cables.py"))
+           "cable routing, bend or clearance violation - see tools/check_mech.py cables"))
 
     #the bolted joints, as joints
-    rc, out = run("check_fit.py")
+    rc, out = run("check_mech.py fit")
     check("mechanical", "bolted joints fit by declaration", rc == 0,
           "motor/arm/skid joint, stack bolt, top-plate clearance and standoff posts "
-          "all verified - see tools/check_fit.py" if rc == 0
-          else "a joint does not fit - see tools/check_fit.py")
+          "all verified - see tools/check_mech.py fit" if rc == 0
+          else "a joint does not fit - see tools/check_mech.py fit")
 
-    rc, out = run("check_thermal.py")
+    rc, out = run("check_circuit.py thermal")
     warns_t = re.findall(r'^\s+- (\S+): (.+)$', out, re.M)
     #a finding that needs a thermocouple is not a pass
     check("thermal", "regulator junction temperature", rc == 0 and not warns_t,
           ("; ".join(f"{r} {d}" for r, d in warns_t)[:400] + " - MEASURE AT T3a"
            if warns_t else
            ("all regulators within their junction limits" if rc == 0
-            else "see tools/check_thermal.py")), hard=False)
+            else "see tools/check_circuit.py thermal")), hard=False)
 
-    rc, out = run("check_footprints.py")
+    rc, out = run("check_board.py footprints")
     m_fp = re.search(r'(\d+) footprint\(s\) agree', out)
     check("assembly", "footprints match JLCPCB's pad count", rc == 0 and bool(m_fp),
           f"{m_fp.group(1)} footprint(s) agree with JLCPCB's joint count"
-          if rc == 0 and m_fp else "MISMATCH or no authority - see tools/check_footprints.py")
+          if rc == 0 and m_fp else "MISMATCH or no authority - see tools/check_board.py footprints")
 
     rc, out = run("windowpane_paste.py --scan")
     m_wp = re.search(r'(\d+) pad\(s\) need windowpaning', out)
@@ -890,53 +891,53 @@ def firmware(board):
           else (f"{m_wp.group(1) if m_wp else '?'} exposed pad(s) still carry a solid "
                 f"100% aperture - run tools/windowpane_paste.py <REF> <PAD> --apply"))
 
-    rc, out = run("check_links.py")
+    rc, out = run("check_order.py links")
     m_frag = re.search(r'(\d+) AliExpress item link', out)
     check("assembly", "buying links are recoverable", rc == 0,
           (f"{m_frag.group(1)} fragile link(s), all with a fallback search term; none "
            f"geo-gated" if rc == 0 and m_frag
-           else "see tools/check_links.py"))
+           else "see tools/check_order.py links"))
 
     #check_links.py proves the buying links resolve
-    rc, out = run("check_doc_figures.py")
+    rc, out = run("check_order.py doc_figures")
     m_ret = re.search(r'(\d+) mention\(s\) of', out)
     n_exc = re.search(r'(\d+) mention\(s\) are marked as retired', out)
     check("assembly", "no retired figure reads as current", rc == 0,
           (f"{n_exc.group(1) if n_exc else m_ret.group(1) if m_ret else '?'} retired "
            f"mention(s) in the live docs, every one marked as retired" if rc == 0
-           else "a retired figure is presented as current - run tools/check_doc_figures.py"))
+           else "a retired figure is presented as current - run tools/check_order.py doc_figures"))
 
-    rc, out = run("check_module_wiring.py")
+    rc, out = run("check_order.py module_wiring")
     m = re.search(r'(\d+) module\(s\) wire cleanly, (\d+) need a cable splice', out)
     check("firmware", "modules plug in without splicing cables", rc == 0,
           (f"{m.group(1)} clean, {m.group(2)} splice(s)" if m and rc == 0 else
            f"{m.group(2) if m else '?'} module(s) need a cable splice - "
-           "see tools/check_module_wiring.py"))
+           "see tools/check_order.py module_wiring"))
 
-    rc, out = run("check_hwdef.py")
+    rc, out = run("check_firmware.py hwdef")
     check("firmware", "hwdef matches the netlist", rc == 0,
           "hwdef is consistent with the netlist" if "is consistent" in out
-          else "hwdef and netlist disagree - see tools/check_hwdef.py")
+          else "hwdef and netlist disagree - see tools/check_firmware.py hwdef")
 
-    rc, out = run("check_esd.py")
+    rc, out = run("check_circuit.py esd")
     m = re.search(r'(\d+) off-board signal pin', out)
     check("signal integrity", "off-board signals clamped at their connectors", rc == 0,
           f"{m.group(1) if m else '?'} cable-facing pins, each with a clamp, series R in the path"
-          if rc == 0 else "a cable-facing pin is unclamped or bypassed - see tools/check_esd.py")
+          if rc == 0 else "a cable-facing pin is unclamped or bypassed - see tools/check_circuit.py esd")
 
-    rc, out = run("check_bdshot.py")
+    rc, out = run("check_firmware.py bdshot")
     check("firmware", "motors can run bidirectional DShot", rc == 0,
           "BIDIR timers on all four motors, each with DMA of its own" if rc == 0
-          else "a motor cannot capture its ESC's reply - see tools/check_bdshot.py")
+          else "a motor cannot capture its ESC's reply - see tools/check_firmware.py bdshot")
 
-    rc, out = run("check_traces.py")
+    rc, out = run("check_board.py traces")
     m = re.search(r'^(\d+) item\(s\) over their stated limit', out, re.M)
     over = int(m.group(1)) if m else -1
     check("signal integrity", "trace lengths and pair matching", rc == 0 and over == 0,
           f"{over} net(s) over their stated limit" if over > 0
           else "lengths, skew and crystal stray capacitance within limits")
 
-    rc, out = run("check_placement.py")
+    rc, out = run("check_board.py placement")
     far = len(re.findall(r'^\s+\S+\s+-> \S+\s+[\d.]+ mm\s+\(max', out, re.M))
     check("signal integrity", "decoupling placement (report only)", True,
           f"{far} part(s) beyond their pre-routing guide - accepted, see docs/VERIFICATION.md"

@@ -75,7 +75,7 @@ Then:
 
 ```bash
 python3 tools/gen_hwdef.py       # regenerates hwdef.dat and hwdef-bl.dat
-python3 tools/check_hwdef.py     # must print "hwdef is consistent with the netlist"
+python3 tools/check_firmware.py hwdef     # must print "hwdef is consistent with the netlist"
 ```
 
 The project builds its firmware with `tools/build_firmware.sh`, pinned to
@@ -92,7 +92,7 @@ The project builds its firmware with `tools/build_firmware.sh`, pinned to
 3. **The registry line**, as above.
 4. **A build proof**: the issue body should say the hwdef builds, and this repo can back
    that with `tools/build_firmware.sh` producing a working `arducopter.apj`
-   (`tools/check_hwdef.py` and `tools/check_firmware_features.py` gate it).
+   (`tools/check_firmware.py hwdef` and `tools/check_firmware.py features` gate it).
 
 ## Issue text
 

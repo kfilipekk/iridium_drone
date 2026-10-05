@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Prove a gate check can FAIL, not merely that it passes.
+"""Prove every gated check can fail, not merely that it passes.
 
-Usage:  python3 tools/fault_injection.py [--list-gaps]
+Usage:  python3 tools/fault_injection.py [--recapture] [--list-gaps]
 """
 import argparse
 import math
@@ -22,14 +22,39 @@ import readiness  # noqa: E402
 import preflight  # noqa: E402  (imported here so run_gate can reach it)
 import design     # noqa: E402
 
-#audit_gate_patterns.capture() leaves subprocess.run patched
+#keep the real subprocess.run
 _REAL_RUN = subprocess.run
 
 GATED = readiness.GATED
 CAPTURE_DIR = os.path.join("/tmp", "nav_gate_toolout")
 
 
-#capture parsing
+def capture_tools(outdir):
+    """Run the real gate with every subprocess's output teed to `outdir`."""
+    os.makedirs(outdir, exist_ok=True)
+    for f in os.listdir(outdir):
+        os.unlink(os.path.join(outdir, f))
+
+    def patched(args, *a, **k):
+        r = _REAL_RUN(args, *a, **k)
+        argv = [str(x) for x in (args if isinstance(args, (list, tuple)) else [args])]
+        label = (readiness.tool_id(argv) or os.path.basename(argv[0])).replace(".py", "")
+        text = lambda x: x.decode("utf-8", "replace") if isinstance(x, bytes) else (x or "")
+        with open(os.path.join(outdir, f"{label}.txt"), "a", encoding="utf-8") as fh:
+            fh.write(f"\n##### argv={' '.join(argv)} rc={r.returncode}\n{text(r.stdout)}")
+            if r.stderr:
+                fh.write(f"\n##### stderr\n{text(r.stderr)}")
+        return r
+
+    subprocess.run = patched
+    try:
+        preflight.BOARD = "NAVCORE-SoOP.kicad_pcb"
+        preflight.main()
+    finally:
+        subprocess.run = _REAL_RUN
+
+
+
 def parse_capture(directory):
     """{tool basename: stdout it printed when green}, from the auditor's tee."""
     out = {}
@@ -46,8 +71,7 @@ def parse_capture(directory):
             if not head.startswith("argv="):
                 continue                       #the "stderr" marker, already folded in
             argv_str, _, rc = head[len("argv="):].rpartition(" rc=")
-            tool = next((os.path.basename(tok) for tok in argv_str.split()
-                         if tok.endswith(".py")), None)
+            tool = readiness.tool_id(argv_str.split())
             if tool is None:
                 continue                       #kicad-cli writes a report FILE, not stdout
             out.setdefault(tool, bodies[i + 1] if i + 1 < len(bodies) else "")
@@ -68,13 +92,13 @@ LAST_RUN = {}          #the rows, tool exits and sources of the latest run_gate 
 
 #tier D: every gate tool added since the tiers above
 SELF_TESTS = [
-    ("fw.bdshot", ["tools/check_bdshot.py", "--self-test"]),
-    ("mech.prints", ["tools/check_prints.py", "--self-test"]),
-    ("mech.balance", ["tools/check_balance.py", "--self-test"]),
-    ("elec.esd", ["tools/check_esd.py", "--self-test"]),
-    ("elec.traces", ["tools/check_traces.py", "--self-test"]),
-    ("assy.cpl", ["tools/check_cpl.py", "--self-test"]),
-    ("fw.max2112", ["tools/check_soop_max2112.py", "--self-test"]),
+    ("fw.bdshot", ["tools/check_firmware.py", "bdshot", "--self-test"]),
+    ("mech.prints", ["tools/check_mech.py", "prints", "--self-test"]),
+    ("mech.balance", ["tools/check_mech.py", "balance", "--self-test"]),
+    ("elec.esd", ["tools/check_circuit.py", "esd", "--self-test"]),
+    ("elec.traces", ["tools/check_board.py", "traces", "--self-test"]),
+    ("assy.cpl", ["tools/check_board.py", "cpl", "--self-test"]),
+    ("fw.max2112", ["tools/check_soop.py", "max2112", "--self-test"]),
 ]
 
 
@@ -83,7 +107,7 @@ def make_gate_runner(capture, real_run):
     def run_gate(fail_tool):
         def patched(args, *a, **k):
             argv = [str(x) for x in (args if isinstance(args, (list, tuple)) else [args])]
-            tool = next((os.path.basename(x) for x in argv if x.endswith(".py")), None)
+            tool = readiness.tool_id(argv)
             if tool is None:
                 return _Synth(0)               #kicad-cli: the report file is what matters
             return _Synth(1 if tool == fail_tool else 0, capture.get(tool, ""))
@@ -363,12 +387,12 @@ _ACTIVE_CAPTURE = {}
 
 @contextlib.contextmanager
 def _mounts_fail():
-    real = _ACTIVE_CAPTURE.get("check_cad_fit.py", "")
-    _ACTIVE_CAPTURE["check_cad_fit.py"] = real.replace("carries", "carries").replace("joint(s)  ok", "joint(s)  FAIL", 1)
+    real = _ACTIVE_CAPTURE.get("check_mech.py cad_fit", "")
+    _ACTIVE_CAPTURE["check_mech.py cad_fit"] = real.replace("carries", "carries").replace("joint(s)  ok", "joint(s)  FAIL", 1)
     try:
         yield
     finally:
-        _ACTIVE_CAPTURE["check_cad_fit.py"] = real
+        _ACTIVE_CAPTURE["check_mech.py cad_fit"] = real
 
 
 @contextlib.contextmanager
@@ -446,13 +470,13 @@ def _hwdef_changed():
 
 @contextlib.contextmanager
 def _belly_low():
-    real = _ACTIVE_CAPTURE.get("check_cad_fit.py", "")
-    _ACTIVE_CAPTURE["check_cad_fit.py"] = re.sub(
+    real = _ACTIVE_CAPTURE.get("check_mech.py cad_fit", "")
+    _ACTIVE_CAPTURE["check_mech.py cad_fit"] = re.sub(
         r"(lowest z\s+[-\d.]+\s+clearance\s+)[-\d.]+( mm)", r"\g<1>1.00\2", real, count=1)
     try:
         yield
     finally:
-        _ACTIVE_CAPTURE["check_cad_fit.py"] = real
+        _ACTIVE_CAPTURE["check_mech.py cad_fit"] = real
 
 
 TIER_B = [
@@ -544,7 +568,7 @@ def run_inline_fault(capture, group_name, fault):
 
     def patched(args, *a, **k):
         argv = [str(x) for x in (args if isinstance(args, (list, tuple)) else [args])]
-        tool = next((os.path.basename(x) for x in argv if x.endswith(".py")), None)
+        tool = readiness.tool_id(argv)
         return _Synth(0, _ACTIVE_CAPTURE.get(tool, "") if tool else "")
 
     subprocess.run = patched
@@ -561,16 +585,17 @@ def run_inline_fault(capture, group_name, fault):
 
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--recapture", action="store_true",
+                    help="run the gate again to refresh the captured tool output")
     ap.add_argument("--list-gaps", action="store_true",
                     help="only list gated prerequisites no injection covers")
     a = ap.parse_args()
 
-    if not os.path.isdir(CAPTURE_DIR) or not os.listdir(CAPTURE_DIR):
+    if a.recapture or not os.path.isdir(CAPTURE_DIR) or not os.listdir(CAPTURE_DIR):
         print(f"no capture at {CAPTURE_DIR}; running it (this takes a few minutes)...")
-        import audit_gate_patterns
         sys.argv = [sys.argv[0]]                  #keep preflight.BOARD at its default
         os.chdir(REPO)
-        audit_gate_patterns.capture(CAPTURE_DIR)
+        capture_tools(CAPTURE_DIR)
         os.chdir(REPO)
 
     capture = parse_capture(CAPTURE_DIR)

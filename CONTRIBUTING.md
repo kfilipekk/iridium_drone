@@ -39,6 +39,6 @@ Edit the source and regenerate rather than editing these by hand:
 
 Run `tools/preflight.py` and make sure the tree is clean. If you add a check, make sure it
 can fail: run it once against a board with the fault in it. `tools/fault_injection.py`
-proves every gated check still can - add your check's fault (Tier B) and keep it at 53/53.
-If you correct a number in the docs, add the old value to `tools/check_doc_figures.py` so it
+proves every gated check still can - add your check's fault (Tier B) and keep every check reacting.
+If you correct a number in the docs, add the old value to `tools/check_order.py doc_figures` so it
 can't come back.

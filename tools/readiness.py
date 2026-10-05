@@ -7,25 +7,25 @@ GATED, ADVISORY, ORDER_CHECK, ORDER_ACTION, BENCH, FLY, BUILD = (
 
 PREREQUISITES = [
     #the board is the design it claims to be
-    dict(id="design.netlist", cls=GATED, tool="check_design.py",
+    dict(id="design.netlist", cls=GATED, tool="check_circuit.py design",
          claim="the netlist matches the schematic, and every MCU pin used is declared"),
-    dict(id="elec.esd", cls=GATED, tool="check_esd.py",
+    dict(id="elec.esd", cls=GATED, tool="check_circuit.py esd",
          claim="every signal that leaves the board on a cable has a clamp at its connector, "
                "and every series resistor is in the path, not beside it"),
-    dict(id="mech.balance", cls=GATED, tool="check_balance.py",
+    dict(id="mech.balance", cls=GATED, tool="check_mech.py balance",
          claim="every mass has a position, the CG sits over the thrust centre, and the "
                "aircraft stands on its skids through a 45 deg lean"),
-    dict(id="mech.prints", cls=GATED, tool="check_prints.py",
+    dict(id="mech.prints", cls=GATED, tool="check_mech.py prints",
          claim="every printed part - each mount, its lids and the skid - is in cad/print, and "
                "each STL is the solid today's design exports"),
-    dict(id="fw.bdshot", cls=GATED, tool="check_bdshot.py",
+    dict(id="fw.bdshot", cls=GATED, tool="check_firmware.py bdshot",
          claim="all four motors sit on capture-capable timer channels with BIDIR and DMA of "
                "their own, so RPM telemetry and the RPM notch work once Bluejay is flashed"),
-    dict(id="design.hwdef", cls=GATED, tool="check_hwdef.py",
+    dict(id="design.hwdef", cls=GATED, tool="check_firmware.py hwdef",
          claim="ArduPilot's hwdef agrees with the netlist pin for pin"),
-    dict(id="design.symbols", cls=GATED, tool="check_symbol_pinout.py",
+    dict(id="design.symbols", cls=GATED, tool="check_circuit.py symbol_pinout",
          claim="every active part's symbol pinout matches KiCad's library or its datasheet"),
-    dict(id="design.library", cls=GATED, tool="check_libraries.py",
+    dict(id="design.library", cls=GATED, tool="check_board.py libraries",
          claim="the vendored library is complete and its footprints equal the board's"),
     dict(id="design.lcscprops", cls=GATED, tool="sync_lcsc_props.py",
          claim="every symbol and footprint carries the LCSC code design.py assigns "
@@ -46,38 +46,38 @@ PREREQUISITES = [
          claim="no signal copper sits on the In1/In4 plane layers"),
     dict(id="fab.limits", cls=GATED, check="JLCPCB 6-layer limits",
          claim="track, via and drill sizes are inside JLCPCB's free-tier capability"),
-    dict(id="fab.backside", cls=GATED, tool="check_backside.py",
+    dict(id="fab.backside", cls=GATED, tool="check_board.py backside",
          claim="no through-hole pin or post lands under a part on the other side"),
     dict(id="fab.pegdepth", cls=GATED, check="locating peg sink depth within board core",
          claim="locating pegs sink within board core and clear opposite-side copper"),
-    dict(id="fab.silkowner", cls=GATED, tool="check_silk_owner.py",
+    dict(id="fab.silkowner", cls=GATED, tool="check_board.py silk_owner",
          claim="every printed label sits nearer the part it names than any other part"),
-    dict(id="fab.models", cls=GATED, tool="check_model_alignment.py",
+    dict(id="fab.models", cls=GATED, tool="check_board.py model_alignment",
          claim="every part's 3D body sits on its footprint - pegged parts with their pegs "
                "in the holes - no two bodies occupy the same space, and none sits under the "
                "washer or spacer bolted through a stack hole"),
-    dict(id="fab.bundle", cls=GATED, tool="check_order_bundle.py",
+    dict(id="fab.bundle", cls=GATED, tool="check_order.py bundle",
          claim="the bundle you upload matches the verified BOM, CPL and gerbers"),
 
     #absence detection: the class that hid the catch diode
-    dict(id="topology.externals", cls=GATED, tool="check_topology.py",
+    dict(id="topology.externals", cls=GATED, tool="check_circuit.py topology",
          claim="every datasheet-required external component is PRESENT "
                "(this is the only check that can see an absent part)"),
-    dict(id="topology.connections", cls=GATED, tool="check_module_wiring.py",
+    dict(id="topology.connections", cls=GATED, tool="check_order.py module_wiring",
          claim="modules plug in without splicing cables"),
-    dict(id="topology.pins", cls=GATED, tool="check_pin_semantics.py",
+    dict(id="topology.pins", cls=GATED, tool="check_circuit.py pin_semantics",
          claim="each pin's direction, reset level and role agree with its function"),
 
     #electrically sound
-    dict(id="elec.values", cls=GATED, tool="check_electrical.py",
+    dict(id="elec.values", cls=GATED, tool="check_circuit.py electrical",
          claim="dividers, decoupling and pull-ups are the right values"),
-    dict(id="elec.ratings", cls=GATED, tool="check_ratings.py",
+    dict(id="elec.ratings", cls=GATED, tool="check_circuit.py ratings",
          claim="every part is rated for the net it sits on"),
-    dict(id="elec.current", cls=GATED, tool="check_power_cut.py",
+    dict(id="elec.current", cls=GATED, tool="check_board.py power_cut",
          claim="copper carries each rail's current at every axis-aligned cut"),
-    dict(id="elec.traces", cls=GATED, tool="check_traces.py",
+    dict(id="elec.traces", cls=GATED, tool="check_board.py traces",
          claim="trace lengths, differential skew and crystal stray capacitance are in limit"),
-    dict(id="elec.sim", cls=GATED, tool="check_sim.py",
+    dict(id="elec.sim", cls=GATED, tool="check_soop.py spice",
          claim="the analogue blocks - the buck output filters, the payload buck under a "
                "double servo stall, the battery hot-plug transient, the MAX2112 PLL loop "
                "filter, the ANT_IN bias tee, the baseband difference amp, the battery sense "
@@ -85,17 +85,17 @@ PREREQUISITES = [
                "inside their datasheet and design bounds (sim/, nine decks)"),
 
     #mechanically sound
-    dict(id="mech.connectors", cls=GATED, tool="check_connectors.py",
+    dict(id="mech.connectors", cls=GATED, tool="check_board.py connectors",
          claim="every connector's mouth faces off-board with room for its plug"),
-    dict(id="mech.floorplan", cls=GATED, tool="check_floorplan.py",
+    dict(id="mech.floorplan", cls=GATED, tool="check_board.py floorplan",
          claim="every perimeter port sits on its edge, mates, and leaves room for its neighbours"),
-    dict(id="mech.cables", cls=GATED, tool="check_cables.py",
+    dict(id="mech.cables", cls=GATED, tool="check_mech.py cables",
          claim="every cable routed through the airframe meets length, bend radius and clearance"),
-    dict(id="mech.stack", cls=GATED, tool="check_mechanical.py",
+    dict(id="mech.stack", cls=GATED, tool="check_mech.py mechanical",
          claim="the board, ESC and frame fit in Z"),
-    dict(id="mech.interference", cls=GATED, tool="check_cad_fit.py",
+    dict(id="mech.interference", cls=GATED, tool="check_mech.py cad_fit",
          claim="no two placed parts overlap in the assembly"),
-    dict(id="mech.joints", cls=GATED, tool="check_fit.py",
+    dict(id="mech.joints", cls=GATED, tool="check_mech.py fit",
          claim="every bolted joint fits by declaration: pattern, hole, screw length, "
                "stack under the kit's top plate, standoff posts clear of the boards"),
     dict(id="mech.mounts", cls=GATED, check="every part off the board is mounted, with screws",
@@ -112,7 +112,7 @@ PREREQUISITES = [
          claim="the 30.5 mm 4-hole mounting pattern is present"),
 
     #assemblable by the fab
-    dict(id="assy.cpl", cls=GATED, tool="check_cpl.py",
+    dict(id="assy.cpl", cls=GATED, tool="check_board.py cpl",
          claim="CPL rotations derived from board geometry agree with the CPL"),
     dict(id="assy.bom", cls=GATED, check="BOM matches the board",
          claim="every BOM line matches what is on the board"),
@@ -122,55 +122,54 @@ PREREQUISITES = [
          claim="every thermal slug has a vented paste array"),
     dict(id="assy.twosided", cls=GATED, check="two-sided assembly",
          claim="the bottom-side placement is stated, so you order the right stencil"),
-    dict(id="assy.variants", cls=GATED, tool="check_variants.py",
+    dict(id="assy.variants", cls=GATED, tool="check_order.py variants",
          claim="every BOM/CPL variant - including the Economic pair the ordering "
                "document recommends at the checkout - matches the board, and no variant "
                "moves a part rather than omitting it"),
-    dict(id="assy.padcount", cls=GATED, tool="check_footprints.py",
+    dict(id="assy.padcount", cls=GATED, tool="check_board.py footprints",
          claim="each footprint's pad count, package family and pitch match JLCPCB's own "
                "package string for that part, from the live parts API"),
 
     #the aircraft, as a whole
-    dict(id="build.aircraft", cls=GATED, tool="check_build.py",
+    dict(id="build.aircraft", cls=GATED, tool="check_mech.py build",
          claim="power budget, mass, thrust, geometry and buses, with every value "
                "tagged [M]easured / [D]atasheet / [L]isting / [A]ssumed"),
-    dict(id="build.modules", cls=GATED, tool="check_modules.py",
+    dict(id="build.modules", cls=GATED, tool="check_order.py modules",
          claim="every module the documents claim has landing pads on the board"),
-    dict(id="build.payload", cls=GATED, tool="check_payload.py",
+    dict(id="build.payload", cls=GATED, tool="check_order.py payload",
          claim="the payload provisions the docs claim are still spare"),
-    dict(id="build.purchase", cls=GATED, tool="check_purchase.py",
+    dict(id="build.purchase", cls=GATED, tool="check_order.py purchase",
          claim="every buy-to-buy interface mates"),
 
-    #firmware
-    dict(id="fw.params", cls=GATED, tool="check_params.py",
+    dict(id="fw.params", cls=GATED, tool="check_firmware.py params",
          claim="every shipped parameter exists in the pinned firmware"),
-    dict(id="fw.drivers", cls=GATED, tool="check_firmware_features.py",
+    dict(id="fw.drivers", cls=GATED, tool="check_firmware.py features",
          claim="every parameter's DRIVER is compiled into this board's binary, "
                "measured by linked symbol size"),
     dict(id="fw.docs", cls=GATED, check="generated doc tables match the code",
          claim="generated tables in the docs are derived from the code, not typed"),
-    dict(id="fw.figures", cls=GATED, tool="check_doc_figures.py",
+    dict(id="fw.figures", cls=GATED, tool="check_order.py doc_figures",
          claim="no retired figure is presented as current in the live documentation"),
     dict(id="fw.defaults", cls=GATED, check="default parameters shipped",
          claim="the defaults.parm that ships is the one this board needs"),
-    dict(id="fw.antfeed", cls=GATED, tool="check_soop_ant.py",
+    dict(id="fw.antfeed", cls=GATED, tool="check_soop.py antenna",
          claim="the active antenna feed monitor reads parts right, handles faults and compiles"),
-    dict(id="fw.max2112", cls=GATED, tool="check_soop_max2112.py",
+    dict(id="fw.max2112", cls=GATED, tool="check_soop.py max2112",
          check="tuner registers match the MAX2112 datasheet",
          claim="the tuner's register image and lock decode follow the MAX2112 datasheet "
                "field by field, the LO carries correctly, and the code compiles for the H743"),
 
-    dict(id="adv.decoupling", cls=ADVISORY, tool="check_placement.py",
+    dict(id="adv.decoupling", cls=ADVISORY, tool="check_board.py placement",
          why="a PRE-routing placement guide whose limits relax once routing forces a part "
              "further from its pin. It measures distance to a pin, not electrical "
-             "behaviour, so it cannot fail a board that passes check_power_cut."),
-    dict(id="adv.thermal", cls=ADVISORY, tool="check_thermal.py",
+             "behaviour, so it cannot fail a board that passes check_board.py power_cut."),
+    dict(id="adv.thermal", cls=ADVISORY, tool="check_circuit.py thermal",
          why="the junction figures are BRACKETS between the datasheet's JEDEC and EVM "
              "copper, and this board is between them. No desk calculation narrows it; "
              "T3a measures it. U19 logs the board beside U9 every flight in the meantime."),
     dict(id="fab.padlabels", cls=GATED, check="pad silkscreen labels",
          claim="every solder pad and test point carries its function (design.PAD_LABELS) on "
-               "the silkscreen, where check_silk_owner.py reads it as that pad's - or is named "
+               "the silkscreen, where check_board.py silk_owner reads it as that pad's - or is named "
                "in design.PAD_LABELS_UNPRINTED with the reason, and on padmap.svg"),
     #checks that live in preflight itself, owned by name
     dict(id="fab.gerberlayers", cls=GATED, check=("gerber layers", "drill file"),
@@ -206,7 +205,7 @@ PREREQUISITES = [
          why="separate pours around separate pad groups, each tied to its rail - a note "
              "about shape, not a defect in connectivity."),
 
-    dict(id="order.stock", cls=GATED, tool="check_stock.py",
+    dict(id="order.stock", cls=GATED, tool="check_order.py stock",
          claim="every BOM line is in stock at JLCPCB in the quantity ordered, the code "
                "resolves to the manufacturer part number the design intends, and the "
                "snapshot is no older than 7 days"),
@@ -220,11 +219,11 @@ PREREQUISITES = [
     dict(id="act.copper", cls=ORDER_ACTION,
          claim="select 1 oz outer copper",
          why="half-ounce halves every trace's current rating and invalidates "
-             "check_power_cut.py. It is a checkout setting, not a design property."),
+             "check_board.py power_cut. It is a checkout setting, not a design property."),
     dict(id="act.dfm", cls=ORDER_ACTION,
          claim="accept JLCPCB's free DFM review",
          why="it is the only thing that checks pad LAND SIZE and paste apertures; "
-             "check_footprints.py verifies pad count, package and pitch but not those."),
+             "check_board.py footprints verifies pad count, package and pitch but not those."),
     dict(id="act.impedance", cls=ORDER_ACTION,
          claim="leave impedance control OFF",
          why="none is needed. USB is a plain differential pair. The 1.62 GHz J12 -> U13 "
@@ -261,7 +260,7 @@ PREREQUISITES = [
              "forward every flight.",
          refresh="runbook T3a (docs/navcore-runbook.tex Part 10)"),
     dict(id="bench.u20", cls=BENCH,
-         bound="104 C worst case against 125 C - 21 C of margin (check_thermal.py)",
+         bound="104 C worst case against 125 C - 21 C of margin (check_circuit.py thermal)",
          claim="U20's junction temperature at the worst payload mission",
          why="BOUND. U20 is the same LMR33630A RNX as U8, carrying the payload rail's "
              "worst mission (design.RAIL_5V_PAYLOAD); the figure is the single-theta_JA "
@@ -297,7 +296,7 @@ PREREQUISITES = [
                "with every prearm fault resolved"),
 
     #ready to FLY only
-    dict(id="fly.rfbench", cls=FLY, tool="check_rf.py",
+    dict(id="fly.rfbench", cls=FLY, tool="check_order.py rf",
          bound="recorded data; asserts nothing about the board",
          claim="the T3b bench measurements are recorded and within the link budget"),
 
@@ -342,6 +341,21 @@ PREREQUISITES = [
          claim="an in-process AP_GPS backend carries the on-board Doppler fix, so the "
                "EKF route does not depend on an external computer"),
 ]
+
+
+GROUPED = {"check_board.py", "check_circuit.py", "check_mech.py", "check_firmware.py",
+           "check_soop.py", "check_order.py"}
+
+
+def tool_id(argv):
+    """The tool a command runs: its script."""
+    for i, a in enumerate(argv):
+        if a.endswith(".py"):
+            name = os.path.basename(a)
+            if name in GROUPED and i + 1 < len(argv):
+                return f"{name} {argv[i + 1]}"
+            return name
+    return None
 
 
 def _names(p):
@@ -501,7 +515,7 @@ def render(rep, width=72):
         out.append(f"NOT READY TO FLY - {len(failed_fly) + len(rep['bench'])} "
                    f"item(s) need hardware.")
         out.append("     None can change what is ORDERED - each confirms a bound, sets a")
-        out.append("     parameter, or records a bought part (tools/check_bench_bounds.py).")
+        out.append("     parameter, or records a bought part (tools/check_order.py bench_bounds).")
         for p, bad in rep["fly"]:
             if bad:
                 out.append(f"     - {p['claim']}  [{bad}]" + bound_fmt(p))

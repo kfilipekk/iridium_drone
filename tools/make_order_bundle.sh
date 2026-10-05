@@ -68,7 +68,7 @@ STOCKLINE=$(python3 - <<'PY'
 import json, os
 p = "fab/stock-snapshot.json"
 if not os.path.exists(p):
-    print("(no snapshot on disk - run tools/check_stock.py --fetch)")
+    print("(no snapshot on disk - run tools/check_order.py stock --fetch)")
 else:
     d = json.load(open(p))
     bits = []
@@ -93,7 +93,7 @@ FABRICATION
   Dimensions        45.0 x 47.2 mm
   Thickness         1.6 mm
   Outer copper      1 oz       <- 0.5 oz halves every trace's current rating and
-                                  invalidates tools/check_power_cut.py
+                                  invalidates tools/check_board.py power_cut
   Surface finish    ENIG       <- 0402s and LGA parts want a flat finish
   Min track/space   4 mil (0.1016 mm)   should be free tier; an upcharge means
                                         the design rules drifted
@@ -125,7 +125,7 @@ ASSEMBLY
 
 BEFORE YOU PAY - the things no offline check can confirm
   - Accept JLCPCB's free DFM review. It is the only thing that checks pad LAND
-    SIZE and paste apertures; tools/check_footprints.py verifies pad count,
+    SIZE and paste apertures; tools/check_board.py footprints verifies pad count,
     package family and pitch, but not those.
   - Confirm the quote says 1 oz outer copper.
   - ABSENT BY DESIGN, read straight out of the BOM in this bundle (ref + value):
@@ -139,7 +139,7 @@ BEFORE YOU PAY - the things no offline check can confirm
     with quadrature baseband output.)
 
 WHAT THIS BOARD IS NOT, YET
-  Ready to order is not ready to fly. tools/check_rf.py fails until the T3b
+  Ready to order is not ready to fly. tools/check_order.py rf fails until the T3b
   bench measurements exist, and U8/U9 junction temperatures are computed, not
   measured. See docs/navcore-runbook.pdf, Parts 7-10 (T1-T3a), before powering anything.
 TXT

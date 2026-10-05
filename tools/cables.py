@@ -39,7 +39,7 @@ STOCK = dict(gh=(50, 100, 150, 200, 300), rg178=(100, 150, 200, 300),
 
 #clearance margins
 MARGIN = dict(
-    prop=10.0,       #[A] twice check_cad_fit's 5 mm for rigid parts
+    prop=10.0,       #[A] twice check_mech.py cad_fit's 5 mm for rigid parts
     carbon=1.0,      #[A] a cut carbon edge chafes through insulation
     board=1.0,       #[A] ESC, FC and the mated plugs
     battery=2.0,     #[A] the pack slides in under a strap

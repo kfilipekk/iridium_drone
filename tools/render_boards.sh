@@ -28,7 +28,7 @@ python3 tools/gen_padmap.py
 
 echo; echo "=== 2. does every body sit on its own footprint? ==="
 #measured in the exported GLB, which is what the viewer draws
-python3 tools/check_model_alignment.py | grep -v '^$' | tail -4
+python3 tools/check_board.py model_alignment | grep -v '^$' | tail -4
 
 echo; echo "=== 3. did any parts actually render? ==="
 python3 - "$JLC" <<'PY'

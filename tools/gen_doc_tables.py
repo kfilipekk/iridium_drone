@@ -92,10 +92,10 @@ def load_frame():
 
 
 def npairs():
-    """Ask check_cad_fit how many pairs it tests - do not restate the number."""
+    """Ask the CAD fit check how many pairs it tests."""
     sys.path.insert(0, str(REPO / "tools"))
-    import check_cad_fit
-    return len(check_cad_fit.PAIRS)
+    import check_mech
+    return len(check_mech.PAIRS)
 
 
 def load_standoff():
@@ -133,7 +133,7 @@ def spatial_table():
          "shared pattern, boards concentric"),
         ("board envelope", f"{bw:.2f} x {bh:.2f} mm",
          f"{tight:.2f} mm clear on the FC plate's tight side (worst-case orientation), "
-         f"{endc:.2f} mm at each end - same geometry as check_mechanical.py"),
+         f"{endc:.2f} mm at each end - same geometry as check_mech.py mechanical"),
         ("motor pattern",
          f"{design.MOTOR_JOINT['pitch_mm']:.0f} x "
          f"{design.MOTOR_JOINT['pitch_mm']:.0f} mm",
@@ -153,7 +153,7 @@ def spatial_table():
     out = ["| feature | value | note |", "|---|---|---|"]
     out += [f"| {a} | {b} | {c} |" for a, b, c in rows]
     out.append("")
-    out.append("Interference is not asserted here: `tools/check_cad_fit.py` exports every "
+    out.append("Interference is not asserted here: `tools/check_mech.py cad_fit` exports every "
                "part of `cad/drone.scad` and measures the **intersection volume** of all "
                f"{npairs()} pairs, plus their minimum separation.")
     return "\n".join(out)
@@ -253,7 +253,7 @@ def module_table():
     out += ["", "### They attach. They cannot all run at once.", "",
             f"Attaching and powering are different questions, and the +5 V rail answers the "
             f"second one more strictly. `L2` is rated **{rail['irms_a']} A RMS** and the "
-            f"fully-fitted load in `check_build.LOADS_5V` is already "
+            f"fully-fitted load in `design.LOADS_5V` is already "
             f"**{rail['fitted_load_a']:.3f} A**, leaving **{budget:.0f} mA**:", "",
             "| module not yet in that budget | draw |", "|---|---|"]
     out += [f"| `{n}` | {ma} mA |" for n, ma in unc]
@@ -289,7 +289,7 @@ STAGES = [
     ("B2", "Aircraft sensors and payload - optional",
      "`RNGFNDn_TYPE` and `PRX1_TYPE` ship at 0; enable each one at the bench after it "
      "is fitted. The +5 V rail cannot carry all of these at once - "
-     "`check_modules.py` prints the budget."),
+     "`check_order.py modules` prints the budget."),
 ]
 
 
@@ -363,7 +363,7 @@ def order_sheet():
             "sourced. A line can be quoted-but-assumed or estimated-but-datasheeted; "
             "conflating them hides which number to go and verify.",
             "",
-            "`tools/check_purchase.py` asserts every interface between two of these parts "
+            "`tools/check_order.py purchase` asserts every interface between two of these parts "
             "and names the ones still resting on an assumed source.",
             ""]
     if later:
@@ -435,7 +435,7 @@ def power_table():
     out += ["", f"**The payload rail, +5V_PAYLOAD (U20, on board since Rev C)** - "
             f"L5 {prail['irms_a']} A Irms. Budgeted per MISSION, because every connector "
             f"on it at once ({design.PAYLOAD_ALL_WIRED_A:.2f} A) is over the inductor; "
-            "`check_modules.py` fails any declared mission that does not fit:", "",
+            "`check_order.py modules` fails any declared mission that does not fit:", "",
             "| mission | loads (from design.LOAD_CURRENT) | continuous |", "|---|---|---:|"]
     for name, prof in design.PAYLOAD_PROFILES.items():
         loads = ", ".join(f"{k} {lc[k]*1000:.0f} mA" for k in prof["keys"])

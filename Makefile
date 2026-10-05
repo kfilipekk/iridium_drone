@@ -25,25 +25,25 @@ preflight:
 
 test-soop:
 	cd firmware/soop && $(MAKE) host
-	$(PY) tools/check_soop_sgp4.py
-	$(PY) tools/check_soop_c.py
-	$(PY) tools/check_soop_dsp.py
-	$(PY) tools/check_soop_nav.py
+	$(PY) tools/check_soop.py sgp4
+	$(PY) tools/check_soop.py solver
+	$(PY) tools/check_soop.py dsp
+	$(PY) tools/check_soop.py nav
 
 arm-soop:
 	cd firmware/soop && $(MAKE) arm
 
 sitl-check:
-	$(PY) tools/check_sitl.py
+	$(PY) tools/check_firmware.py sitl
 
 doc-check:
-	$(PY) tools/check_doc_figures.py
-	$(PY) tools/check_links.py
+	$(PY) tools/check_order.py doc_figures
+	$(PY) tools/check_order.py links
 	$(PY) tools/gen_doc_tables.py --check
 
 sitl-run:
 	nice -n 10 bash sitl/run_scenarios.sh
-	$(PY) tools/check_sitl.py --record
+	$(PY) tools/check_firmware.py sitl --record
 
 clean:
 	cd firmware/soop && $(MAKE) clean

@@ -345,7 +345,7 @@ BELLY_SENSOR = dict(
     mount="printed bracket under the bottom plate; needs a clear cone to the ground and "
           "must stay above the skid contact line so a landing does not crush it",
     src="[M] depth computed from design.SKID; [M] the 12 mm module envelope at this "
-        "position passes check_cad_fit's ground clearance with 31.50 mm of margin")
+        "position passes check_mech.py cad_fit's ground clearance with 31.50 mm of margin")
 
 PAYLOAD_BREAKOUT = dict(
     harness="2 wires: P41 (+5V) and P46 (GND) to the XIAO's 5V and GND pins",
@@ -689,8 +689,8 @@ PAYLOAD = dict(
     power_note="signal is 3.3 V logic, which every hobby servo and ESC accepts as a valid "
                "PWM high. Take a high-current servo's 5 V from its own BEC, not from this "
                "board - the rail has only 0.65 A of headroom and a stalled servo eats it",
-    mass_budget_g=885.0,   #payload at 40% hover throttle, from check_build
-    src="[D] hwdef.dat PWM/SERIAL_ORDER + [M] defaults.parm claims + [M] check_build "
+    mass_budget_g=885.0,   #payload at 40% hover throttle, from check_mech.py build
+    src="[D] hwdef.dat PWM/SERIAL_ORDER + [M] defaults.parm claims + [M] check_mech.py build "
         "power and payload figures")
 
 #the airframe, one source of truth
@@ -1942,7 +1942,7 @@ NET_CURRENT = {
     "VBUS": 0.5,
 }
 
-#per-load continuous currents for check_power_cut.py
+#per-load continuous currents for check_board.py power_cut
 LOAD_CURRENT = {
     "+5V_PAYLOAD": {
         #[M] Payload 5V port J22: VTX 0.30 + XIAO camera 0.25
@@ -2165,7 +2165,7 @@ MODULES = {
         note="[D] 180 mA running, but 300 mA at START-UP - which is why it is on the payload "
              "BEC and not this board's buck. 33.30 mm tall against 28.5 mm of belly at the "
              "old 25 mm skid drop - SKID['drop'] is now 45 mm, giving 10.20 mm of ground "
-             "clearance (check_cad_fit)"),
+             "clearance (check_mech.py cad_fit)"),
     "rc_link": dict(
         what="ELRS 2.4 GHz, ESP-based", lands_on=["J5"], conn="JST-GH 4P on J5 (USART6)",
         needs_board_change=None, gbp=12, status="fitted",
@@ -2227,7 +2227,7 @@ MODULES = {
         needs_board_change=None, gbp=35, status="later", ma_5v=150, counted=False, bec=True,
         note="ArduRemoteID over DroneCAN; confirm the CAA's broadcast standard before buying. "
              "On the rear-port arm (MOUNTS['rid_tray']), away from the GPS and the ELRS receiver"),
-    "src": "[M] every lands_on asserted against real footprints by tools/check_modules.py",
+    "src": "[M] every lands_on asserted against real footprints by tools/check_order.py modules",
 }
 
 
@@ -2266,7 +2266,7 @@ RAIL_5V = dict(
     headroom_a=1.6 - LOADS_5V_CONT_A,
     note="Neither fitted inductor sits on a land too small for it any more: L2 is a "
          "4.0x4.0x3.0 mm FNR4030 on L_APV_ANR4030, and L5 a 5x5 CKCS5040 on L_APV_ANR5040 "
-         "(RAIL_5V_PAYLOAD). L5 was on a 1210 land until 2026-09-21, where check_ratings measured its terminal overhanging by 0.18 mm in "
+         "(RAIL_5V_PAYLOAD). L5 was on a 1210 land until 2026-09-21, where check_circuit.py ratings measured its terminal overhanging by 0.18 mm in "
          "Y - solderable, but the wrong land for the part, and now moot. If a future "
          "inductor is put on a 1210 land, do not 'fix' it by swapping in a part that "
          "land takes but the current does not.",

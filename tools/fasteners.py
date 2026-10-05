@@ -66,7 +66,7 @@ for _name, _ref, _hole, _src in _MJ["layers"]:
     _JOINT_LAYERS.append((f"{_name}, hole {_hole:.1f}", _t, _src))
 joint("Motor to arm, skid under the arm", _MJ["screw_dia"], _JOINT_LAYERS, 16,
       f"skids MUST match the MOTOR's {_MJ['pitch_mm']:.0f}x{_MJ['pitch_mm']:.0f} pattern, "
-      "not the frame's 16x16 - tools/check_fit.py verifies the printed part")
+      "not the frame's 16x16 - tools/check_mech.py fit verifies the printed part")
 
 import pcbnew as _pcbnew
 _BOT = design.stack_heights(_pcbnew.LoadBoard(os.path.join(
