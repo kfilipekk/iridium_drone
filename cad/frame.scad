@@ -65,7 +65,7 @@ esc_pcb        = 1.6;
 esc_parts      = 6.2;
 
 skid_t          = 3.5;
-cam_drop        = 40.0;
+cam_drop        = 45.0;
 
 skid_hole_pitch = 19.0;
 gap             = 3.0;    // compressed grommet - [A], re-measure on assembly

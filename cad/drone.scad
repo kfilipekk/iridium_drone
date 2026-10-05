@@ -191,20 +191,7 @@ module camera() {
     }
 }
 
-module skid() {
-    //one TPU skid leg: two plates at the MOTOR's 19x19 pattern
-    contact_z = -cam_drop - skid_t;
-    //TO the ARM underside, not the arm top
-    leg_len   = z_arm + cam_drop + skid_t;    //contact line -> arm underside
-    for (sx = [-1, 1], sy = [-1, 1])
-        translate([sx * skid_hole_pitch/2, sy * skid_hole_pitch/2, contact_z])
-            color("#c8c8c8") cylinder(d = 4, h = leg_len);
-}
-
-module skids() {
-    for (sx = [-1, 1], sy = [-1, 1])
-        translate([sx * motor_off, sy * motor_off, 0]) skid();
-}
+//skid() and skids() are generated into mounts.scad from design.SKID (tools/gen_scad_mounts.py)
 
 //Radxa Zero 3W companion [D] 65 x 30
 //Radxa publishes 65 x 30 mm and NOTHING about the mounting holes

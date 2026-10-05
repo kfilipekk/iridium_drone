@@ -374,19 +374,23 @@ CAMERA_REC = dict(name="XIAO ESP32S3 Sense", L=21.0, W=17.5, H=13.0, g=6.0,
                       "8 MB PSRAM; [L] ~GBP 10-14 AliExpress; [A] 13 mm stacked height "
                       "and 6 g with the Sense expansion - MEASURE ON ARRIVAL")
 
-#the MOTOR / ARM / SKID bolt pattern - one number, one home
+#the MOTOR / ARM / SKID bolt pattern - one number
+M3_WASHER = dict(t=0.5, od=7.0, bore=3.2,
+                 src="[D] DIN 125-A M3: 3.2 mm bore, 7.0 mm OD, 0.5 mm thick")
 MOTOR_JOINT = dict(
     pitch_mm=19.0,          #[D] BrotherHobby Avenger 2806.5: M3 at 19 x 19
     screw="M3",             #[D] same source
     screw_dia=3.0,
     #what the screw passes through, head first
     layers=(
-        ("frame arm", ("FRAME", "arm_t"), 3.2,
-         "[D] So1-V6 arm 6.0 mm; [A] 3.2 mm hole - the frame's motor holes are published "
-         "as the 19x19 PATTERN, not as diameters"),
+        ("M3 washer", ("M3_WASHER", "t"), 3.2,
+         "[D] DIN 125-A M3 - spreads the head's load on the TPU plate"),
         ("printed skid", ("SKID", "t"), 3.2,
          "[M] design.SKID - printed, so the hole is ours to specify; 3.2 mm is standard "
          "M3 close clearance for a 3.0 mm screw"),
+        ("frame arm", ("FRAME", "arm_t"), 3.2,
+         "[D] So1-V6 arm 6.0 mm; [A] 3.2 mm hole - the frame's motor holes are published "
+         "as the 19x19 PATTERN, not as diameters"),
     ),
     engages="motor tapped boss",
     tap_dia=3.0,
@@ -402,11 +406,14 @@ def fmt_pattern(pitches_mm):
     return " / ".join(f"{p:.0f}x{p:.0f}" for p in sorted(pitches_mm))
 
 #the skid is a part you print
-SKID = dict(t=3.5, drop=40.0, hole_pitch=MOTOR_JOINT["pitch_mm"], printed=True,
-            #drop raised 25 -> 40 mm to give the LD06 a home
+SKID = dict(t=3.5, drop=45.0, hole_pitch=MOTOR_JOINT["pitch_mm"], printed=True,
+            #the printed part: a plate under the arm on the motor's screws
+            plate=34.0, relief_d=10.0, strut_w=6.0, strut_d=8.0, strut_x0=8.0, splay_deg=10.0,
+            foot=(12.0, 10.0), flare=3.0, material="TPU 95A", density=1.21, infill=0.8,
+            #drop raised 25 -> 40 mm to give the LD06 a home, then 45 mm
             src="[D] 19x19 pitch is the motor's bolt pattern (BrotherHobby Avenger); "
                 "[M] 3.5 mm thickness is a design choice for a printed part; "
-                "[M] 40 mm drop DERIVED from the LD06's datasheet height plus margin - "
+                "[M] 45 mm drop DERIVED from the LD06's datasheet height plus ~10 mm margin - "
                 "see BELLY_SENSOR and OFFBOARD['lidar']")
 
 #belly depth is SKID's drop plus its pad thickness
@@ -467,12 +474,26 @@ MOUNTING = dict(gap=3.0, grommet_d=6.0, screw="M3", screw_dia=3.0,
 
 ESC = dict(name="SpeedyBee BLS 60A", L=45.6, W=44.0, pcb=1.6, parts=6.2,
            mount=30.5, conn="JST-SH 8P", cells="3-6S", amps=60,
-           H=7.8, g=10.5, cont_A=60.0, burst_A=80.0, proto="DSHOT300/600",
+           H=7.8, g=23.5, cont_A=60.0, burst_A=80.0, proto="DSHOT300/600",
            cur_scale_mv_per_A=40.0,
            #the 8-pin JST-SH order as the ESC'S manual documents IT
            pin_order=("GND", "VBAT", "M1", "M2", "M3", "M4", "CUR", "TEL"),
-           src="[D] SpeedyBee BLS 60A manual")
+           src="[D] SpeedyBee BLS 60A manual; [L] 23.5 g from speedybee.com's product page")
 assert ESC["amps"] == ESC["cont_A"], "ESC amps and cont_A are the same rating"
+
+#between the ESC and this board's underside
+FOAM = dict(
+    baro=dict(t=3.0, size=(8.0, 6.0), over=("U4",), part_h=1.0,
+              material="open-cell PU foam, a small block over the MS5611",
+              why="shields the baro's port from light, prop wash and the ESC's warm air "
+                  "without sealing it"),
+    imu_shroud=dict(t=1.5, size=(30.0, 20.0), over=("U2", "U3", "U4"), part_h=0.91,
+                    material="closed-cell foam pad, adhesive-backed, on the ESC's top face",
+                    why="a radiation and convection break between the ESC and the IMUs; "
+                        "it does not touch the board"),
+    src="[D] MS5611 1.0 mm, ICM-42688-P 0.91 mm package height; [A] foam thicknesses chosen "
+        "to leave >= 1 mm of air to the facing part",
+)
 
 SKATE = dict(name="SO1-V6-skate.stl", L=75.96, W=102.17, t=6.00, drop=6.00,
              printable=True,
@@ -652,14 +673,14 @@ OFFBOARD = dict(
 
 #payload provisions: what a future module can actually have
 PAYLOAD = dict(
-    pwm=[("PWM5", "PA2", "TP3", "SERVO5_FUNCTION"),
+    pwm=[("PWM5", "PB9", "TP3", "SERVO5_FUNCTION"),
          ("PWM6", "PA3", "TP4", "SERVO6_FUNCTION")],
     #J21's UART7 is the companion's
     serial=[(2, "USART1", "J11", "EARMARKED for the 360 lidar "
                                  "(PRX1_TYPE 16); free only until that is fitted")],
     serial_unrouted=[(4, "USART3"),   #PD8/PD9 stop at the MCU
                      (5, "UART8"),    #declared in hwdef, no nets in the design at all
-                     (6, "UART4")],   #PB9/PB8 stop at the MCU since the wire pads went
+                     (6, "EMPTY")],   #UART4 gave PB8 to servo PWM7; SERIAL6 has no UART
     serial_earmarked=[(1, "companion computer, MAVLink2 + OPTICAL_FLOW on J21"),
                       (2, "360 lidar, PRX1_TYPE 16")],
     power_5v=["J21.1", "J22.1", "P151", "J5.1", "J9.1", "J11.1"],
@@ -776,6 +797,9 @@ MOUNTED = dict(
     range_down=dict(name="Benewake TFS20-L", L=15.0, W=21.0, H=7.87, g=1.35,
                     src="[D] Benewake TFS20-L datasheet: 21 x 15 mm board, 7.87 mm tall, "
                         "1.35 g, no mounting holes, so it sits in a cradle under a lid"),
+    remote_id=dict(name="Holybro Remote ID (PCB, ArduRemoteID)", L=35.3, W=23.5, H=6.0, g=6.0,
+                   src="[L] docs.holybro.com Remote ID: PCB 35.3 x 23.5 mm, 4 g, JST-GH 4P CAN, "
+                       "IPEX antenna; [A] 6 mm over its parts and 2 g for the antenna"),
 )
 
 _TOP_Z = FRAME["bottom_t"] + TOP_PLATE_MOUNT["rear_standoff"] + FRAME["upper_t"]
@@ -857,11 +881,44 @@ MOUNTS = dict(
                      layers=[("lid", "lid_t"), ("cradle", "body_h"),
                              ("bottom plate", FRAME["bottom_t"])], into="nut")],
         print_note="top down"),
+    #the Remote ID board on the rear-port arm's top face
+    rid_tray=dict(
+        carries=("remote_id",),
+        r=63.6, arm=(-1, 1), base_t=2.0, wall=1.6, cover_t=1.5, gap=0.2, tie_u=(-10.0, 10.0),
+        joints=[dict(where="Remote ID cover to its tray", size="M2", qty=2,
+                     layers=[("cover", "cover_t")], into="insert")],
+        print_note="base on the bed; the cover top down"),
 )
 OFFBOARD["lidar"]["mount_y_mm"] = MOUNTS["lidar_bracket"]["lidar_y0"]
 
 
 #mass, one source of truth
+#the printed skid's heights (z from the bottom plate's underside, as drone.scad)
+def skid_geometry():
+    import math
+    S = SKID
+    top = FRAME["bottom_t"]                       #arm underside = the plate's top face
+    contact = -(S["drop"] + S["t"])
+    z0 = top - S["t"]                             #plate underside, where the struts start
+    z1 = contact + S["flare"]                     #strut ends, where the foot flares out
+    reach = S["strut_x0"] + (z0 - z1) * math.tan(math.radians(S["splay_deg"]))
+    return dict(top=top, contact=contact, z0=z0, z1=z1, reach=reach,
+                half=max(S["plate"] / 2, reach + S["foot"][0] / 2))
+
+
+#four skids, from their geometry (plate less its holes, splayed struts, 45 deg feet)
+def skid_mass_g():
+    import math
+    S, g = SKID, skid_geometry()
+    plate = (S["plate"] ** 2 - 4 * math.pi * 1.6 ** 2 - math.pi * (S["relief_d"] / 2) ** 2) * S["t"]
+    struts = 2 * S["strut_w"] * S["strut_d"] * (g["z0"] - g["z1"]) / math.cos(
+        math.radians(S["splay_deg"]))
+    a1, a2 = S["strut_w"] * S["strut_d"], S["foot"][0] * S["foot"][1]
+    am = (S["strut_w"] + S["foot"][0]) / 2 * (S["strut_d"] + S["foot"][1]) / 2
+    feet = 2 * S["flare"] / 6 * (a1 + 4 * am + a2)
+    return 4 * (plate + struts + feet) / 1000 * S["density"] * S["infill"]
+
+
 MASS_ITEMS = [
     ("frame",                            FRAME["g"],      FRAME["src"]),
     ("4x motors",                        4 * MOTOR["g"],  MOTOR["src"]),
@@ -883,7 +940,9 @@ MASS_ITEMS = [
     ("TFS20-L",                          1.4,             "[D]"),
     ("LD06 360 lidar (deferred, budgeted)", OFFBOARD["lidar"]["g"],
      "[D] LDROBOT LD06 datasheet - REPLACES the superseded 25 g ToF ring + mux"),
-    ("skids",                            12,              "[A]"),
+    ("Remote ID (Holybro, rear-port arm)", MOUNTED["remote_id"]["g"], MOUNTED["remote_id"]["src"]),
+    ("skids",                            round(skid_mass_g(), 1),
+     "[M] design.SKID geometry x TPU 1.21 g/cm3 x [A] 80% infill (skid_mass_g)"),
     ("wiring/straps",                    60,              "[A]"),
 ]
 AUW_G    = sum(g for _n, g, _s in MASS_ITEMS)
@@ -962,7 +1021,7 @@ net("SPI1_MOSI","U1.PD7","U2.14"); net("IMU1_CS","U1.PC15","U2.12")
 #IMU2 (SPI4)
 net("SPI4_SCK","U1.PE12","U3.13"); net("SPI4_MISO","U1.PE13","U3.1")
 net("SPI4_MOSI","U1.PE14","U3.14"); net("IMU2_CS","U1.PE11","U3.12")
-net("IMU3_CS","U1.PC13")                                        #hwdef-declared, unpopulated
+#PC13 was MatekH743's third-IMU chip select
 #SPI3: flow + flash
 net("SPI3_SCK","U1.PB3","U5.6"); net("SPI3_MISO","U1.PB4","U5.2")
 net("SPI3_MOSI","U1.PB5","U5.5")
@@ -980,7 +1039,7 @@ net("USART2_TX","U1.PD5","J3.2"); net("USART2_RX","U1.PD6","J3.3")   #GPS1
 net("UART7_TX","U1.PE8");  net("UART7_RX","U1.PE7")        #companion (J21)
 net("UART7_CTS","U1.PE10"); net("UART7_RTS","U1.PE9")
 net("USART6_TX","U1.PC6","J5.2"); net("RC_IN","U1.PC7","J5.3")
-net("UART4_TX","U1.PB9");  net("UART4_RX","U1.PB8")        #expansion UART (PB9/PB8 spare)
+#PB8/PB9 were UART4, never brought out
 net("CAN1_RX","U1.PD0","U11.4"); net("CAN1_TX","U1.PD1","U11.1")
 net("CAN1_SILENT","U1.PD3","R14.1","U11.8")
 net("CANH","U11.7","J6.2","R15.1"); net("CANL","U11.6","J6.3","R15.2")
@@ -1003,13 +1062,13 @@ net("BUZZER","U1.PA15"); net("WS2812","U1.PA8")
 #unpopulated MatekH743 features (kept defined so ERC is clean)
 net("MAX7456_CS","U1.PB12")     #pull high, no OSD fitted
 net("SPI2_SCK","U1.PB13"); net("SPI2_MISO","U1.PB14"); net("SPI2_MOSI","U1.PB15")
-net("PWM5","U1.PA2"); net("PWM6","U1.PA3")
-net("PWM7","U1.PD12"); net("PWM8","U1.PD13"); net("PWM9","U1.PD14"); net("PWM10","U1.PD15")
+net("PWM5","U1.PB9"); net("PWM6","U1.PA3")   #PB9 faces TP3; PA2 faced the RF corner
+net("PWM8","U1.PD13")   #PD14/PD15 (PWM9/10) gave TIM4_CH3/CH4 to PWM7 and PWM5
 net("PWM11","U1.PE5"); net("PWM12","U1.PE6")
 net("USART1_TX","U1.PA9"); net("USART1_RX","U1.PA10")
 net("USART3_TX","U1.PD8"); net("USART3_RX","U1.PD9")
 net("PE1_SPARE","U1.PE1")       #UART8_TX, unused: ESC telemetry is receive-only
-net("PE15_SPARE","U1.PE15"); net("PB2_SPARE","U1.PB2")
+net("PB2_SPARE","U1.PB2")
 net("PC3_SPARE","U1.PC3_C")
 #SoOP analogue front end (SoOP config, DNP)
 net("SOOP_I_ADC","U1.PC4","U14.1")
@@ -1268,14 +1327,14 @@ for _f in ("FID1", "FID2", "FID3"):
     add(_f, "Mechanical:Fiducial", "Fiducial:Fiducial_1mm_Mask2mm", "Fiducial", "", False)
 
 #7
-#breaks out SPI3 + PD4 (EXT_CS1) + PD11 (FLOW_MOTION) onto a 6-pin JST-GH connector
+#breaks out SPI3 + PC13 (EXT_CS1) onto a 6-pin JST-GH connector
 add("J14", "jlc_parts:XY-SM06B-GHS-TB",
     "jlc:CONN-SMD_XY-SM06B-GHS-TB", "FLOW 6P", "C51940119", False)
 NETS["+3V3"] += ["J14.1"]
 NETS["SPI3_SCK"] += ["J14.2"]
 NETS["SPI3_MISO"] += ["J14.3"]
 NETS["SPI3_MOSI"] += ["J14.4"]
-net("EXT_CS1", "U1.PD4", "J14.5")
+net("EXT_CS1", "U1.PC13", "J14.5")   #PC13 faces J14; PD4 was across the board
 NETS["GND"] += ["J14.6", "J14.7", "J14.8"]
 net("FLOW_MOTION", "U1.PD11")
 
@@ -1284,7 +1343,7 @@ net("FLOW_MOTION", "U1.PD11")
 SERVO_HDR = ("jlc_parts:KH-2_54PH-1X3P-L13_5-WT", "jlc:HDR-SMD_3P-P2.54-H-M_KH-2.54PH-1X3P-L13.5-WT")
 add("J17", *SERVO_HDR, "SERVO1", "C20610212", False)
 add("J23", *SERVO_HDR, "SERVO2", "C20610212", False)
-net("PWM7",  "U1.PD12", "J17.1")
+net("PWM7",  "U1.PB8", "J17.1")   #PB8 on U1's south edge, nearer J17 than PD12
 net("PWM8",  "U1.PD13", "J23.1")
 NETS["GND"] += ["J17.3", "J23.3"]
 
@@ -1381,6 +1440,90 @@ NETS["USART1_RX"] += ["J11.3"]
 NETS["GND"] += ["J11.4", "J11.5", "J11.6"]
 
 #placement intent
+#10
+#connector -> TVS -> series R -> MCU
+F_TVS4, S_TVS4 = "Package_SON:USON-10_2.5x1.0mm_P0.5mm", "Power_Protection:TPD4E05U06DQA"
+F_RN4, S_RN4 = "Resistor_SMD:R_Array_Convex_4x0402", "Device:R_Pack04"
+TVS4_IO = ("1", "2", "4", "5")          #[D] TPD4E05U06 DQA: four independent clamps
+SERIES = {}                             #MCU-side net -> (series part, connector-side net)
+
+
+#move jpin off net_name onto net_name_J, the series element between
+def _protect(net_name, jpin, part, j_pin, mcu_pin, clamp):
+    NETS[net_name].remove(jpin)
+    jn = net_name + "_J"
+    NETS.setdefault(jn, []).extend([jpin, f"{part}.{j_pin}", clamp])
+    NETS[net_name].append(f"{part}.{mcu_pin}")
+    SERIES[net_name] = (part, jn)
+
+
+#a clamp on the net itself, with no series element
+def _clamp(net_name, clamp):
+    NETS[net_name].append(clamp)
+
+
+#a connector-side net's function: M1_J is M1 through its series resistor
+def port_net(n):
+    return n[:-2] if n.endswith("_J") and n[:-2] in SERIES else n
+
+
+for ref in ("U26", "U27", "U28", "U29", "U30"):
+    add(ref, S_TVS4, F_TVS4, "TPD4E05U06", "C138714", False)
+    NETS["GND"] += [f"{ref}.3", f"{ref}.8"]
+for ref in ("RN1",):
+    add(ref, S_RN4, F_RN4, "33R x4", "C25501", False)
+#J2, the ESC: four DShot lines through RN1
+for k, (m, jp) in enumerate((("M1", "J2.3"), ("M2", "J2.4"), ("M3", "J2.5"), ("M4", "J2.6"))):
+    #j-side pads 5-8 face U26 pins 1-5 in the same order
+    _protect(m, jp, "RN1", str(5 + k), str(4 - k), f"U26.{TVS4_IO[k]}")
+RES("R70", "100R"); RES("R71", "2k2")
+#current on U27's outer channel
+_protect("ESC_TEL", "J2.8", "R70", "1", "2", "U27.2")
+_protect("ESC_CUR", "J2.7", "R71", "1", "2", "U27.1")      #with C44, a 2.2k corner well above 100 Hz
+#J21, the companion's UART7, and J14, the flow port's SPI3
+for k, n in enumerate(("UART7_TX", "UART7_RX", "UART7_CTS", "UART7_RTS")):
+    _clamp(n, f"U28.{TVS4_IO[k]}")
+for k, n in enumerate(("SPI3_SCK", "SPI3_MISO", "SPI3_MOSI", "EXT_CS1")):
+    _clamp(n, f"U29.{TVS4_IO[k]}")
+#J11 (lidar) and J23 (servo 2), side by side on the south edge, share U30
+RES("R72", "100R"); RES("R73", "100R"); RES("R74", "100R")
+_protect("USART1_TX", "J11.2", "R72", "1", "2", "U30.1")
+_protect("USART1_RX", "J11.3", "R73", "1", "2", "U30.2")
+_protect("PWM8", "J23.1", "R74", "1", "2", "U30.4")
+#J17 (servo 1), on its own
+add("D9", "Device:D_TVS", "jlc:DSN0603-2_L0.6-W0.3-P0.40-BI", "PESD5V0C1BSF", "C477955", False)
+NETS["GND"].append("D9.2")
+RES("R75", "100R")
+_protect("PWM7", "J17.1", "R75", "1", "2", "D9.1")
+
+#[D] TPD4E05U06 Table 4-2: pins 6, 7, 9 and 10 are not connected
+TVS4_FLOW = {"1": "10", "2": "9", "4": "7", "5": "6"}
+for ref in ("U26", "U27", "U28", "U29", "U30"):
+    for io, nc in TVS4_FLOW.items():
+        on = next((n for n, v in NETS.items() if f"{ref}.{io}" in v), None)
+        if on:
+            NETS[on].append(f"{ref}.{nc}")
+
+#every off-board connector's signals
+ESD = dict(
+    clamps=("U12", "U22", "U23", "D6", "D7", "U26", "U27", "U28", "U29", "U30", "D9"),
+    max_mm=10.0,      #[A] a clamp this near its pin, behind the series R
+    #where the board leaves no nearer place, the limit for that port and why
+    port_max_mm={"J21": (13.0, "J21 (top) and J14 (bottom) share the east edge; the RF corner "
+                               "fills both sides inboard of them, so U28/U29 sit 11-12.5 mm off"),
+                 "J14": (13.0, "as J21"),
+                 "J3": (11.0, "U22 clamps J3 and J9 together, between the two (Rev C)")},
+    exempt={"J8": "the microSD socket takes a card, not a cable",
+            "J19": "Tag-Connect SWD pads, bench only, a cable held by hand",
+            "J22": "power and ground only"},
+    exempt_nets={"CC1": "USB-C role detection, 5.1k to ground; USB is a bench port, unplugged "
+                        "in flight", "CC2": "as CC1"},
+    src="[A] connector-level ESD: the clamp at the connector, as close as the board allows",
+)
+
+#11
+#the respin carried one (3-4 x 150R switched from a spare pin)
+
 ADJACENCY = {
     #MCU VDD decoupling - one per supply pin, as close as the package allows
     "C1": ("U1", "11", 2.0), "C2": ("U1", "27", 2.0), "C3": ("U1", "50", 2.0),
@@ -1459,6 +1602,14 @@ ADJACENCY = {
     "R18": ("U1", "15", 5.0), "R19": ("U1", "15", 4.0),
     "C43": ("U1", "15", 2.0), "C44": ("U1", "16", 2.0),
 }
+#port protection: each clamp at its connector
+ADJACENCY.update({
+    "U26": ("J2", "3", 6.0), "U27": ("J2", "7", 6.0), "RN1": ("U26", "1", 3.0),
+    "R70": ("U27", "1", 3.0), "R71": ("U27", "2", 3.0),
+    "U28": ("J21", "2", 6.0), "U29": ("J14", "2", 6.0),
+    "U30": ("J11", "2", 6.0), "R72": ("U30", "1", 3.0), "R73": ("U30", "2", 3.0),
+    "R74": ("U30", "4", 4.0), "D9": ("J17", "1", 4.0), "R75": ("D9", "1", 3.0),
+})
 
 ADJACENCY["D1"]  = ("J2",  "2", 5.0)     #TVS at the power entry, not the buck
 ADJACENCY["SW2"] = ("U1", "14", 6.0)     #reset button near NRST
@@ -1535,6 +1686,7 @@ PASSIVE_LCSC = {
     ("0R",   F_R0402): "C17168",  ("100p", F_C0402): "C1546",
     ("1n",   F_C0402): "C1523",
     ("100R", F_R0402): "C25076",  ("120R", F_R0402): "C25862",
+    ("2k2",  F_R0402): "C25879",
     ("1k",   F_R0402): "C11702",  ("4k7",  F_R0402): "C25900",
     ("330R", F_R0402): "C25104",  ("470R", F_R0402): "C25117",
     ("5k1",  F_R0402): "C25905",  ("6k8",  F_R0402): "C25917",
@@ -1641,6 +1793,8 @@ PART_HEIGHT = {
     "L_APV_ANR5040": 4.0,            #L5; [D] 5.0 x 5.0 x 4.0 mm
     "L0402": 0.5,                    #L6 LQW15AN; [D] Murata 0.5 mm max
     "DSN0603-2": 0.3,                #D7 PESD5V0C1BSF; [D] Nexperia DSN0603-2, 0.3 mm
+    "USON-10_2.5x1.0mm": 0.55,       #TPD4E05U06 DQA; [D] TI: 0.55 mm max
+    "R_Array_Convex_4x0402": 0.35,   #4D02 33R x4; [D] UniOhm 0402x4 array 0.35 mm
     "Tag-Connect_TC2030-IDC-NL": 0.0,  #J19: bare pads, the cable clips on from above
     "USB-C": 3.2, "TF-SMD": 1.9, "COB": 2.3, "DO-214": 2.3,
     "OPTO": 1.6, "SOIC": 1.8, "SOP": 1.8,
@@ -1731,7 +1885,6 @@ NET_VMAX.update({
 })
 
 #in Rev C, both buck switchers (U8 Core 5V and U20 Payload 5V) are fully fitted
-POPULATE_VTX = True
 POPULATE_BLIND_SENSORS = False
 
 #the two bucks, keyed on the fitted part
@@ -1802,8 +1955,8 @@ LOAD_CURRENT = {
         "J23.2": 0.25,
         #[D] U21 is the +3V3_CAN LDO feed for the SN65HVD230
         "U21.3": 0.10,
-        #[A] one small DroneCAN node (J6 powers the bus per design.py:2098)
-        "J6.1": 0.10,
+        #[A] the DroneCAN node on J6 - the Remote ID module
+        "J6.1": 0.15,
     },
     "+3V3A": {
         #[D] OPA2374: 585 uA per amplifier, two amplifiers (LOADS_3V3A row)
@@ -1926,8 +2079,6 @@ PIN_INTENT = {
     "BIAS_FAULT": dict(mcu="in", why="bias-tee load switch fault flag"),
     "USART6_TX": dict(mcu="out", why="to receiver, or half-duplex CRSF"),
     "RC_IN":     dict(mcu="in",  why="receiver drives the FC"),
-    "UART4_TX":  dict(mcu="out", why="to rangefinder/peripheral RX"),
-    "UART4_RX":  dict(mcu="in",  why="from rangefinder/peripheral TX"),
 
     "CAN1_RX":     dict(mcu="in",  why="transceiver RXD drives the MCU"),
     "CAN1_TX":     dict(mcu="out", why="MCU drives transceiver TXD"),
@@ -1957,17 +2108,15 @@ PIN_INTENT = {
                        why="Q3 gate: LOW leaves the 5V Payload rail enabled, HIGH cuts it"),
 
     #TVC servos / secondary actuators (TIM4 on J17)
-    "PWM7":  dict(mcu="out", why="TIM4_CH1 servo PWM on J17"),
+    "PWM7":  dict(mcu="out", why="TIM4_CH3 servo PWM on J17 (PB8)"),
     "PWM8":  dict(mcu="out", why="TIM4_CH2 servo PWM on J23"),
-    "PWM9":  dict(mcu="out", why="TIM4_CH3, spare - no connector"),
-    "PWM10": dict(mcu="out", why="TIM4_CH4, spare - no connector"),
 
     #lander / recovery peripherals
 
     #brought out to test pads only, no device fitted
     "USART1_TX": dict(mcu="out", why="telem2 TX on test pad TP5"),
     "USART1_RX": dict(mcu="in",  why="telem2 RX on test pad TP6"),
-    "PWM5": dict(mcu="out", why="spare motor output on test pad TP3"),
+    "PWM5": dict(mcu="out", why="spare servo output (TIM4_CH4, PB9) on test pad TP3"),
     "PWM6": dict(mcu="out", why="spare motor output on test pad TP4"),
 
     #debug
@@ -2013,8 +2162,8 @@ MODULES = {
         ma_5v=180, counted=False,
         note="[D] 180 mA running, but 300 mA at START-UP - which is why it is on the payload "
              "BEC and not this board's buck. 33.30 mm tall against 28.5 mm of belly at the "
-             "old 25 mm skid drop - SKID['drop'] is now 40 mm, giving 10.20 mm of ground "
-             "clearance"),
+             "old 25 mm skid drop - SKID['drop'] is now 45 mm, giving 10.20 mm of ground "
+             "clearance (check_cad_fit)"),
     "rc_link": dict(
         what="ELRS 2.4 GHz, ESP-based", lands_on=["J5"], conn="JST-GH 4P on J5 (USART6)",
         needs_board_change=None, gbp=12, status="fitted",
@@ -2068,7 +2217,14 @@ MODULES = {
         needs_board_change=None,
         gbp=0, status="fitted",
         ma_5v=0, counted=True,
-        note="TPS54332 5V/2.5A switching buck U20 powering the servos on J17/J23 and the lidar on J11"),
+        note="LMR33630A buck U20 (2.1 A through L5) powering the servos on J17/J23, the lidar "
+             "on J11, J22 and the DroneCAN node on J6"),
+    "remote_id": dict(
+        what="Holybro Remote ID: direct broadcast ID, UK rule for home-built UAS >= 100 g with "
+             "a camera from 1 Jan 2028", lands_on=["J6"], conn="JST-GH 4P on J6 (DroneCAN)",
+        needs_board_change=None, gbp=35, status="later", ma_5v=150, counted=False, bec=True,
+        note="ArduRemoteID over DroneCAN; confirm the CAA's broadcast standard before buying. "
+             "On the rear-port arm (MOUNTS['rid_tray']), away from the GPS and the ELRS receiver"),
     "src": "[M] every lands_on asserted against real footprints by tools/check_modules.py",
 }
 
@@ -2092,8 +2248,8 @@ RF_BENCH = dict(
     #a step keeping this fraction of baseline bursts is a pass
     min_fraction_of_baseline=0.5,
     mitigations=["antenna placement and separation", "ferrites on the motor leads",
-                 "keep the SDR off the airframe entirely - the receive chain is "
-                 "laptop-side, so this board allows it"],
+                 "move the tuner's antenna feed further from U8/U20 in Rev E - the receive "
+                 "chain is on this board, so the bench SDR only locates the source"],
     src="[A] min_fraction_of_baseline is a judgement call; every other field is a slot "
         "for an [M]easured value recorded by runbook T3b",
 )
@@ -2106,9 +2262,9 @@ RAIL_5V = dict(
     fitted_load_a=LOADS_5V_CONT_A,   #[M] derived from LOADS_5V above, continuous
     fitted_peak_a=LOADS_5V_PEAK_A,   #[M] the same list at its peak column (inductor Isat)
     headroom_a=1.6 - LOADS_5V_CONT_A,
-    note="Neither fitted inductor sits on a land too small for it any more: L2 and L5 "
-         "are both 4.0x4.0x3.0 mm FNR4030s on L_APV_ANR4030. L5 was on a 1210 land until "
-         "2026-09-21, where check_ratings measured its terminal overhanging by 0.18 mm in "
+    note="Neither fitted inductor sits on a land too small for it any more: L2 is a "
+         "4.0x4.0x3.0 mm FNR4030 on L_APV_ANR4030, and L5 a 5x5 CKCS5040 on L_APV_ANR5040 "
+         "(RAIL_5V_PAYLOAD). L5 was on a 1210 land until 2026-09-21, where check_ratings measured its terminal overhanging by 0.18 mm in "
          "Y - solderable, but the wrong land for the part, and now moot. If a future "
          "inductor is put on a 1210 land, do not 'fix' it by swapping in a part that "
          "land takes but the current does not.",
@@ -2143,6 +2299,8 @@ PAD_LABELS_UNPRINTED = {
 }
 #connector names the silkscreen has no room for (tools: silk_names.py, 4 mm search)
 SILK_NAMES_UNPRINTED = {
+    "J6": "GH-4P on the north edge, bottom; the free silk beside it is nearer TP4, so a "
+          "name there would read as TP4's",
     "J12": "the only coax jack on the board, inside the RF fence",
     "J14": "GH-6P under J21 on the bottom; its pads face a column of passives",
     "J19": "Tag-Connect footprint, bench-only, used with its own cable",

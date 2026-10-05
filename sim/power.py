@@ -37,7 +37,7 @@ Rload out 0 {vout / iout:.6g}
 
 
 #hand analysis vs ngspice for one rail at one input voltage
-def out_filter(name, vin, vout, L, C, iout):
+def out_filter(name, vin, vout, L, C, iout, rail):
     ripple = (vin - vout) * (vout / vin) / (FSW * L)
     i_pk, i_valley = iout + ripple / 2, iout - ripple / 2
     i_rms = (iout ** 2 + ripple ** 2 / 12) ** 0.5
@@ -49,7 +49,7 @@ def out_filter(name, vin, vout, L, C, iout):
         "hand_i_rms": i_rms, "hand_v_ripple": v_ripple,
         "sim_i_pk": sim_pk, "sim_i_valley": sim_valley,
         "sim_v_ripple": sim_vmax - sim_vmin,
-        "i_rated": D.RAIL_5V["irms_a"], "i_sat": D.RAIL_5V["isat_a"],
+        "i_rated": rail["irms_a"], "i_sat": rail["isat_a"],
     }
 
 
@@ -81,14 +81,14 @@ def main(chk=None):
     print(f"  peak inrush current: {i_pk:5.1f} A, settles to {v_fin:.3f} V\n")
 
     print(f"Buck output filters, LMR33630A @ {FSW/1e3:.0f} kHz, worst case 5S = {VIN_5S:.1f} V:")
-    for name, L, C, iout, vout in (
+    for name, L, C, iout, vout, rail in (
         ("+5V        (U8, L2, C22+C23)", D.COMPONENTS["L2"][2], 22e-6 + 22e-6,
-         D.INDUCTOR_LOAD_A["L2"], 5.016),
+         D.INDUCTOR_LOAD_A["L2"], 5.016, D.RAIL_5V),
         ("+5V_PAYLOAD(U20,L5, C69+C70+C80)", D.COMPONENTS["L5"][2], 22e-6 + 22e-6 + 1e-6,
-         D.INDUCTOR_LOAD_A["L5"], 5.016),
+         D.INDUCTOR_LOAD_A["L5"], 5.016, D.RAIL_5V_PAYLOAD),
     ):
         Lh = {"10uH": 10e-6}[L]
-        r = out_filter(name, VIN_5S, vout, Lh, C, iout)
+        r = out_filter(name, VIN_5S, vout, Lh, C, iout, rail)
         print(f"  {name}")
         print(f"    load {iout:.3f} A, switch D = {vout/VIN_5S:.3f}")
         print(f"    inductor ripple   hand {r['hand_i_ripple']:.3f} A   ngspice "
@@ -103,7 +103,7 @@ def main(chk=None):
             print("    *** peak exceeds inductor saturation")
         if r["hand_i_rms"] > r["i_rated"]:
             print("    *** RMS exceeds inductor rating")
-        #bounds: the fitted inductor's Isat / Irms (design.RAIL_5V)
+        #bounds: each rail's own inductor Isat / Irms (design.RAIL_5V, RAIL_5V_PAYLOAD)
         chk.ok(r["sim_i_pk"] < r["i_sat"],
                f"{name}: peak inductor current below Isat",
                f"sim {r['sim_i_pk']:.3f} A vs Isat {r['i_sat']:.1f} A")
