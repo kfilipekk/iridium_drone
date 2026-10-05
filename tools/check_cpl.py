@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 #verify the pick-and-place rotations from board geometry, independently of what wrote
-#Usage:  python3 tools/check_cpl.py [-v] [--svg DIR]
+#Usage:  python3 tools/check_cpl.py [-v] [--svg DIR] [--board PATH]
 import os, sys, csv, math, collections
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import pcbnew, pcbutil
 
-BOARD = "NAVCORE-SoOP.kicad_pcb"
+BOARD = sys.argv[sys.argv.index("--board") + 1] if "--board" in sys.argv else "NAVCORE-SoOP.kicad_pcb"
 CPL   = "fab/CPL-NAVCORE-SoOP.csv"
 TOMM  = pcbutil.TOMM
 TOL   = 12.0        #degrees; footprints place pin 1 on a coarse grid of directions
@@ -21,7 +21,45 @@ def pin1(fp):
     return pads[0] if pads else None
 
 
+#small silkscreen circles
+def silk_dots(fp):
+    return [g for g in fp.GraphicalItems()
+            if g.GetLayerName() in ("F.Silkscreen", "B.Silkscreen")
+            and g.GetShape() == pcbnew.SHAPE_T_CIRCLE and TOMM(g.GetRadius()) <= 0.3]
+
+
+#A pin-1 dot by the wrong pad does not move the machine
+def dot_errors(board):
+    dots, errs = 0, []
+    for fp in board.GetFootprints():
+        p1 = pin1(fp)
+        if p1 is None or len(fp.Pads()) < 3:
+            continue
+        for g in silk_dots(fp):
+            dots += 1
+            c = g.GetCenter()
+            near = min(fp.Pads(), key=lambda p: (p.GetPosition() - c).EuclideanNorm())
+            if near.GetNumber() != p1.GetNumber():
+                errs.append(f"{fp.GetReference()}: its silkscreen pin-1 dot at "
+                            f"({TOMM(c.x):.2f}, {TOMM(c.y):.2f}) is nearest pad "
+                            f"{near.GetNumber()}, not pad {p1.GetNumber()}")
+    return dots, errs
+
+
+#U8's dot moved back beside pad 11 must be caught
+def self_test():
+    b = pcbnew.LoadBoard(BOARD)
+    fp = b.FindFootprintByReference("U8")
+    silk_dots(fp)[0].Move(pcbnew.VECTOR2I(0, pcbnew.FromMM(2.6)))
+    _n, errs = dot_errors(b)
+    caught = any(e.startswith("U8:") for e in errs)
+    print(f"  {'ok  ' if caught else 'MISS'} U8's pin-1 dot moved to pad 11")
+    return 0 if caught else 1
+
+
 def main():
+    if "--self-test" in sys.argv:
+        return self_test()
     verbose = "-v" in sys.argv
     svgdir = None
     if "--svg" in sys.argv:
@@ -79,6 +117,9 @@ def main():
         elif verbose:
             print(f"  ok  {name:48} {len(items)} parts agree")
 
+    dots, wrong = dot_errors(b)
+    errs += wrong
+    print(f"pin-1 dots         : {dots} checked against the pad they sit beside")
     sides = collections.Counter(r["Layer"].strip() for r in rows)
     rots = collections.Counter(float(r["Rotation"]) for r in rows)
     print(f"CPL placements     : {len(rows)}  ({sides['top']} top, {sides['bottom']} bottom)")
