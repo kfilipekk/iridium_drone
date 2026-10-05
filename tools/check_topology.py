@@ -27,8 +27,14 @@ def check(ok, name, detail, cite=""):
 def netlist():
     if "--sch" in sys.argv or not os.path.exists(NET) or os.path.getmtime(NET) < os.path.getmtime(SCH):
         os.makedirs(os.path.dirname(NET), exist_ok=True)
-        subprocess.run(["kicad-cli", "sch", "export", "netlist", "--format", "kicadsexpr",
-                        "-o", NET, SCH], capture_output=True, timeout=600)
+        r = subprocess.run(["kicad-cli", "sch", "export", "netlist", "--format", "kicadsexpr",
+                            "-o", NET, SCH], capture_output=True, text=True, timeout=600)
+        if r.returncode != 0:
+            #an old netlist left in place would be checked instead of the schematic
+            if os.path.exists(NET):
+                os.remove(NET)
+            raise SystemExit(f"kicad-cli cannot export the netlist from {SCH}: "
+                             f"{(r.stderr or r.stdout).strip()}")
     t = open(NET).read()
     nets = {}
     for m in re.finditer(r'\(net \(code "\d+"\) \(name "([^"]+)"\)(.*?)(?=\(net \(code|\Z)',

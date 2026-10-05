@@ -29,6 +29,35 @@ def raw_symbol(libpath, name):
         i += 1
     return s[m.start():i+1]
 
+#the top-level (...) elements of a symbol block, in order
+def _parts(blk):
+    out, d, start = [], 0, None
+    for i, c in enumerate(blk):
+        if c == '(':
+            d += 1
+            if d == 2: start = i
+        elif c == ')':
+            if d == 2: out.append(blk[start:i+1])
+            d -= 1
+    return out
+
+#the symbol block with any (extends ...) resolved
+def flat_symbol(libpath, name):
+    blk = raw_symbol(libpath, name)
+    m = blk and re.search(r'\(extends "([^"]+)"\)', blk[:400])
+    if not m: return blk
+    parent = flat_symbol(libpath, m.group(1))
+    prop = lambda e: re.match(r'\(property "([^"]+)"', e)
+    mine = {prop(e).group(1): e for e in _parts(blk) if prop(e)}
+    body = []
+    for e in _parts(parent):
+        if prop(e):
+            body.append(mine.pop(prop(e).group(1), e))
+        else:
+            body.append(e.replace('(symbol "%s_' % m.group(1), '(symbol "%s_' % name))
+    body[0:0] = list(mine.values())
+    return '(symbol "%s"\n\t' % name + "\n\t".join(body) + "\n)"
+
 #lib_id -> (raw block, pin list)
 def collect():
     out, syms_jlc = {}, symlib.load()
@@ -36,7 +65,7 @@ def collect():
         if lib_id in out: continue
         nick, name = lib_id.split(":", 1)
         path = JLC if nick == "jlc_parts" else f"{STOCK}/{nick}.kicad_sym"
-        blk = raw_symbol(path, name)
+        blk = flat_symbol(path, name)
         if blk is None:
             raise SystemExit(f"symbol {lib_id} not found in {path}")
         blk = blk.replace('(symbol "%s"' % name, '(symbol "%s"' % lib_id, 1)

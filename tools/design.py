@@ -2160,6 +2160,8 @@ PAD_LABELS_UNPRINTED = {
 }
 #connector names the silkscreen has no room for (tools: silk_names.py, 4 mm search)
 SILK_NAMES_UNPRINTED = {
+    "J6": "GH-4P on the north edge, bottom; the free silk beside it is nearer TP4, so a "
+          "name there would read as TP4's",
     "J12": "the only coax jack on the board, inside the RF fence",
     "J14": "GH-6P under J21 on the bottom; its pads face a column of passives",
     "J19": "Tag-Connect footprint, bench-only, used with its own cable",
