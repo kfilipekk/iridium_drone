@@ -774,8 +774,9 @@ with its ground joined to pin 6.
 \item \textbf{It is a Pixhawk TELEM port}, so a lead made for one mates; check that the far
 end crosses TX and RX. CTS and RTS are on pins 4 and 5; set \file{BRD\_SER1\_RTSCTS} to match
 what the far end wires, and leave it 0 if only TX/RX/GND are connected.
-\item \textbf{It is the only spare serial port.} UART4 (\file{SERIAL6}) reaches no pad, and
-\file{J11} is earmarked for the lidar. A second serial device means giving one up.
+\item \textbf{It is the only spare serial port.} \file{SERIAL6} is unassigned (UART4's pins
+became the PWM5 and PWM7 outputs), and \file{J11} is earmarked for the lidar. A second serial
+device means giving one up.
 \end{enumerate}
 
 \flag{\file{J12} carries +5 V.} The antenna feed (\file{U24}, current-limited to 95--155 mA;
@@ -1071,10 +1072,6 @@ rails, not pinned to 0 V or 3.3 V. Pinned means the loop filter is not doing its
 The driver must set the charge pump to 600\,\textmu A (\file{CPS}=0, \file{ICP}=0): the loop
 filter keeps 39--76$^\circ$ of phase margin there, but only 23$^\circ$ at 1200\,\textmu A \\
 3.13 & Antenna feed monitor & multimeter on \file{U25.1} (\file{PC2\_C}), GCS text, \file{SOA} log & open: $\approx$0\,V ($<$3\,mA); OK with HC610: $\approx$1.65\,V (15\,mA); short: saturated $\sim$3.3\,V ($\ge$28\,mA). Safe retry test with resistor (Section~\ref{sec:ant_bench}) \\
-3.14 & IMU heater & \file{HEAT} log, IMU temperature in the GCS & warms to
-\file{BRD\_HEAT\_TARG} (45\,\degC) within minutes and holds; arming waits until it is within
-\file{BRD\_HEAT\_LOWMGN}. \file{R76}--\file{R79} sit 9--14\,mm from the IMUs, so expect a slow,
-board-wide warm-up rather than a held 45\,\degC{} in prop wash \\
 3.15 & Remote ID, once fitted & module on \file{J6}; \file{CAN\_P1\_DRIVER 1},
 \file{CAN\_D1\_PROTOCOL 1}, \file{DID\_ENABLE 1}, \file{DID\_CANDRIVER 1}, then the CAA operator
 ID & a phone's Remote ID app sees the beacon. Shipped off: a configured but absent module
@@ -1328,11 +1325,10 @@ either.
 Free, and it attacks the dominant error term: inertial drift is quadratic and dominated by
 attitude error leaking gravity into the horizontal channel, and gyro and accelerometer bias
 are strongly temperature-dependent in a stack with almost no airflow. A Pixhawk FMUv6X holds
-its IMUs warm with heaters; this board has one too (\file{R76}--\file{R79} on \file{PE15}),
-but it sits away from the IMUs and cannot hold them in prop wash, so ArduPilot's software
-correction, \file{INS\_TCAL*}, still matters. Set \file{BRD\_HEAT\_TARG -1} for the sweep so
-the heater does not fight it, and back to 45 after. It is deliberately \emph{not} in
-\file{defaults.parm}: it is a learning mode, not a flight setting.
+its IMUs warm with heaters; this board has none (the respin's heater could not sit near the
+IMUs, so it was removed), so ArduPilot's software correction, \file{INS\_TCAL*}, is the
+whole of the temperature story. It is deliberately \emph{not} in \file{defaults.parm}: it is a
+learning mode, not a flight setting.
 
 \begin{enumerate}
 \item Run a full six-axis accelerometer calibration first --- it sets the
