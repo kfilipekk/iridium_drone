@@ -1266,8 +1266,8 @@ on \file{J12}; \emph{open} or \emph{short} is the coax or the antenna, not the s
 feeds its LNA.
 \file{SOS.Bps} (bursts per second) should be comparable to step 1. If the board hears nothing
 the bench kit hears, try \file{swap\_iq 1} (swapped I and Q mirror the spectrum); if
-\file{SOS.Ovr} counts up, the capture or the DSP is not keeping up with 2\,MSPS on these
-ADC channels --- a measurement the datasheet could not settle.
+\file{SOS.Ovr} counts up, the DSP is not keeping up with the 500\,kSPS it is fed. The
+ADCs run at 1\,MSPS, the most \file{PA4}'s slow channel allows, averaged in pairs.
 \item \textbf{Static with GPS, 30 minutes at a known spot.} \file{SOF.HAcc} settles to tens of
 metres (anchored on GPS) and \file{SOF.NIS} near 1. \file{SOS.Clk} is the TCXO: how fast it
 drifts over those 30 minutes sets \file{clkd\_q} (the default, 0.08\,Hz/s/$\sqrt{\rm s}$,

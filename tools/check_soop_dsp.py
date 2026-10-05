@@ -193,6 +193,16 @@ def main():
         checks.append(good)
         print(f"  {'ok  ' if good else 'FAIL'}  {text}")
 
+    #Iridium's duplex channels about 1 MHz below the LO fold onto Ring Alert at the 1 MSPS raw
+    dup = soop_scenario.make_duplex(os.path.join(tmp, "duplex"), max(20, slots // 3), seed=22,
+                                    cn0_lo=42.0, cn0_hi=70.0, noise_counts=600.0)
+    out = subprocess.run([exe, os.path.join(tmp, "duplex", "iq.bin")], capture_output=True, text=True)
+    n_false = len(list(csv.DictReader(out.stdout.splitlines())))
+    good = n_false <= g["false_max"] * dup["bursts"]
+    checks.append(good)
+    print(f"  {'ok  ' if good else 'FAIL'}  {n_false} detections from {dup['bursts']} duplex bursts "
+          f"folded onto Ring Alert from {dup['channels']} channels (limit {g['false_max']:.0%})")
+
     good, text = check_import(tmp, exe)
     checks.append(good)
     print(f"  {'ok  ' if good else 'FAIL'}  {text}")

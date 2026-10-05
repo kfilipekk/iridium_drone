@@ -4,9 +4,9 @@
 #include <AP_HAL/AP_HAL.h>
 
 #ifndef SOOP_CAPTURE_RAW_HZ
-#define SOOP_CAPTURE_RAW_HZ 2000000U
+#define SOOP_CAPTURE_RAW_HZ 1000000U
 #endif
-#define SOOP_CAPTURE_OVS    4U
+#define SOOP_CAPTURE_OVS    2U
 #define SOOP_CAPTURE_BLOCK  4096U        //samples per half-buffer: 8.2 ms at 500 kSPS
 
 class AP_SoOP_Capture
