@@ -40,8 +40,8 @@ board = pcbnew.LoadBoard('NAVCORE-SoOP.kicad_pcb')
 present = missing = 0
 for fp in board.GetFootprints():
     fid = fp.GetFPIDAsString()
-    if 'TestPoint' in fid or 'Fiducial' in fid:
-        continue
+    if 'TestPoint' in fid or 'Fiducial' in fid or fp.IsExcludedFromPosFiles():
+        continue                   #bare copper: nothing is placed there to draw
     if any(os.path.exists(os.path.expandvars(m.m_Filename.replace('${JLC_LIB}', JLC)))
            for m in fp.Models()):
         present += 1
