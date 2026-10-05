@@ -39,9 +39,13 @@ def resolve(pins, spec):
 
 def load(path=LIB):
     s = open(path).read()
-    syms = {}
+    syms, parent = {}, {}
     for name, body in _blocks(s, 0):
         if re.match(r'.*_\d+_\d+$', name):   #sub-unit graphic blocks
+            continue
+        ext = re.search(r'\(extends "([^"]+)"\)', body[:400])
+        if ext:                             #a derived symbol draws its parent's pins
+            parent[name] = ext.group(1)
             continue
         pins = []
         #sub-blocks are named NAME_<unit>_<style>; track
@@ -64,6 +68,9 @@ def load(path=LIB):
                          'unit': unit_of.get(pm.start(), 1)})
         if pins:
             syms[name] = sorted(pins, key=lambda p: (len(p['num']), p['num']))
+    for name, base in parent.items():
+        if base in syms:
+            syms[name] = syms[base]
     return syms
 
 if __name__ == '__main__':

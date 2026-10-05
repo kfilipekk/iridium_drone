@@ -47,7 +47,12 @@ PB4 SPI3_MISO SPI3
 PB5 SPI3_MOSI SPI3
 
 # external CS pins
-PD4 EXT_CS1 CS
+# [was: PD4 EXT_CS1 CS]
+# The flow port's chip select leaves PD4, on U1's north-west corner, for PC13
+# on the east side facing J14 and its clamp U29: the long run across the board
+# would not route. PC13 is a low-drive RTC-domain pin (3 mA, 2 MHz), which a
+# chip select that toggles once per transaction does not notice.
+PC13 EXT_CS1 CS
 PE2 EXT_CS2 CS
 
 # SPI4 for IMU2 (ICM20602)
@@ -57,7 +62,7 @@ PE13 SPI4_MISO SPI4
 PE14 SPI4_MOSI SPI4
 
 # add ICM42605 on SPI4 as a backup to replace ICM20602
-PC13 IMU3_CS CS
+# [removed: no third IMU fitted; PC13 is the flow port's chip select] PC13 IMU3_CS CS
 
 # two I2C bus
 I2C_ORDER I2C2 I2C1
@@ -123,7 +128,10 @@ define HAL_GPIO_A_LED_PIN 91
 define HAL_GPIO_B_LED_PIN 90
 
 # order of UARTs (and USB)
-SERIAL_ORDER OTG1 UART7 USART1 USART2 USART3 UART8 UART4 USART6 OTG2
+# [was: SERIAL_ORDER OTG1 UART7 USART1 USART2 USART3 UART8 UART4 USART6 OTG2]
+# UART4 gave PB8 to PWM7. EMPTY keeps every other SERIALn where MatekH743 has
+# it.
+SERIAL_ORDER OTG1 UART7 USART1 USART2 USART3 UART8 EMPTY USART6 OTG2
 
 # USART1 (telem2)
 PA10 USART1_RX USART1
@@ -138,8 +146,8 @@ PD9 USART3_RX USART3
 PD8 USART3_TX USART3
 
 # UART4 (spare)
-PB9 UART4_TX UART4
-PB8 UART4_RX UART4
+# [removed: UART4 was never brought out; PB8 now carries servo PWM7] PB9 UART4_TX UART4
+# [removed: UART4 was never brought out; PB8 now carries servo PWM7] PB8 UART4_RX UART4
 
 # USART6 (RC input), SERIAL7
 # [removed: RC is CRSF over USART6 (SERIAL7_PROTOCOL 23), so the timer input on the same pin goes, and TIM3 drives M1/M2 instead (PPM/SBUS-by-timer receivers lose their input)] PC7 TIM3_CH2 TIM3 RCININT PULLDOWN LOW
@@ -181,12 +189,20 @@ PB1  TIM3_CH4 TIM3  PWM(2)  GPIO(51)
 # passive buzzer's tone on PA15).
 PA0  TIM5_CH1  TIM5  PWM(3)  GPIO(52) BIDIR
 PA1  TIM5_CH2  TIM5  PWM(4)  GPIO(53)
-PA2  TIM5_CH3  TIM5  PWM(5)  GPIO(54)
+# [was: PA2  TIM5_CH3  TIM5  PWM(5)  GPIO(54)]
+# The spare servo output on test pad TP3 moves from PA2, whose escape faces
+# the RF corner, to PB9 on U1's south edge beside TP3. It joins the servos'
+# TIM4 rate group, and leaves TIM5 to the motors.
+PB9 TIM4_CH4 TIM4 PWM(5) GPIO(54)
 PA3  TIM5_CH4  TIM5  PWM(6)  GPIO(55)
-PD12 TIM4_CH1 TIM4 PWM(7) GPIO(56)
+# [was: PD12 TIM4_CH1 TIM4 PWM(7) GPIO(56)]
+# Servo 1 (J17) moves from PD12 on U1's west side to PB8 on the south edge,
+# nearer J17: the run round U1 would not route. Same timer (TIM4) as PWM8, so
+# the two servos keep one rate group.
+PB8 TIM4_CH3 TIM4 PWM(7) GPIO(56)
 PD13 TIM4_CH2 TIM4 PWM(8) GPIO(57)
-PD14 TIM4_CH3 TIM4 PWM(9) GPIO(58)
-PD15 TIM4_CH4 TIM4 PWM(10) GPIO(59)
+# [removed: PWM9 had no connector; TIM4_CH3 is PWM7's on PB8] PD14 TIM4_CH3 TIM4 PWM(9) GPIO(58)
+# [removed: PWM10 had no connector; TIM4_CH4 is PWM5's on PB9] PD15 TIM4_CH4 TIM4 PWM(10) GPIO(59)
 PE5  TIM15_CH1 TIM15 PWM(11) GPIO(60)
 PE6  TIM15_CH2 TIM15 PWM(12) GPIO(61)
 PA8 TIM1_CH1 TIM1 PWM(13) GPIO(62) # for WS2812 LED
@@ -268,6 +284,11 @@ define HAL_OS_FATFS_IO 1
 # build ABIN for flash-from-bootloader support:
 env BUILD_ABIN True
 
+
+
+# Remote ID over DroneCAN (the Holybro module on J6): the UK requires direct broadcast ID
+# from 2028 for home-built aircraft over 100 g with a camera.
+define AP_OPENDRONEID_ENABLED 1
 
 # W25Q128 on SPI3 EXT_CS2 - holds the Iridium TLE catalogue, not firmware.
 SPIDEV tle_flash  SPI3 DEVID2 EXT_CS2 MODE3 8*MHZ 32*MHZ

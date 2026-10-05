@@ -11,13 +11,14 @@ NAV_HOST     = nav_host
 DSP_HOST     = dsp_host
 IMPORT       = iq_import
 ANT_HOST     = ant_host
-ARM_SRC      = soop_solve.c sgp4.c soop_ephem.c soop_nav.c soop_guard.c soop_dsp.c soop_ant.c
+MAX_HOST     = max2112_host
+ARM_SRC      = soop_solve.c sgp4.c soop_ephem.c soop_nav.c soop_guard.c soop_dsp.c soop_ant.c soop_max2112.c
 ARMFLAGS     = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-d16 -mfloat-abi=hard
 
 .PHONY: all host arm clean
 all: host
 
-host: $(HOST) $(SGP4_TEST) $(NAV_HOST) $(DSP_HOST) $(IMPORT) $(ANT_HOST)
+host: $(HOST) $(SGP4_TEST) $(NAV_HOST) $(DSP_HOST) $(IMPORT) $(ANT_HOST) $(MAX_HOST)
 
 $(HOST): main_host.c soop_solve.c soop_solve.h sgp4.c sgp4.h
 	$(CC) $(CFLAGS) -o $@ main_host.c soop_solve.c sgp4.c -lm
@@ -34,6 +35,9 @@ $(DSP_HOST): dsp_host.c soop_dsp.c soop_dsp.h soop_signal.h
 $(ANT_HOST): ant_host.c soop_ant.c soop_ant.h
 	$(CC) $(CFLAGS) -o $@ ant_host.c soop_ant.c
 
+$(MAX_HOST): max2112_host.c soop_max2112.c soop_max2112.h
+	$(CC) $(CFLAGS) -Wshadow -o $@ max2112_host.c soop_max2112.c -lm
+
 $(IMPORT): iq_import.c soop_signal.h
 	$(CC) $(CFLAGS) -o $@ iq_import.c -lm
 
@@ -44,4 +48,4 @@ arm: $(ARM_SRC)
 	done
 
 clean:
-	rm -f $(HOST) $(SGP4_TEST) $(NAV_HOST) $(DSP_HOST) $(IMPORT) $(ANT_HOST) *.o
+	rm -f $(HOST) $(SGP4_TEST) $(NAV_HOST) $(DSP_HOST) $(IMPORT) $(ANT_HOST) $(MAX_HOST) *.o

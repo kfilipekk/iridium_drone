@@ -29,12 +29,12 @@ The board fits a standard 30.5 × 30.5 mm mounting pattern, runs ArduPilot (`NAV
 | Subsystem | Components & Specification |
 |:---|:---|
 | **MCU** | STM32H743VIT6 (ARM Cortex-M7 @ 480 MHz, 2 MB Flash, 1 MB RAM, LQFP-100) |
-| **IMU** | Dual independent IMUs: TDK InvenSense ICM-42688-P (SPI1) + ICM-42605 (SPI4) on filtered 3.3 V analog LDO |
+| **IMU** | Dual independent IMUs: TDK InvenSense ICM-42688-P (SPI1) + ICM-42605 (SPI4) on filtered 3.3 V analog LDO, warmed to 45 °C by a 0.67 W resistor heater on PE15 |
 | **Barometer** | TE Connectivity MS5611-01BA03 (I2C2, on the 3.3 V analogue rail) |
 | **Flash & Storage** | Winbond W25Q128 128 Mb SPI Flash (SPI3, WSON-8; holds the Iridium orbit catalogue) + MicroSD card socket (SDIO 4-bit) |
 | **RF / SoOP Front-End** | Maxim Integrated MAX2112 direct-conversion L-band tuner (1616–1626.5 MHz, I2C2) + TI OPA2374 dual baseband filter/amplifiers into ADC1/ADC2 quadrature inputs; MMCX 50 Ω RF port (`J12`) carrying +5 V to the antenna's LNA from `U24` (AP22653 load switch, 95–155 mA limit) through a 2.2 Ω sense resistor read by `U25` (INA180A2) on ADC3, so the firmware reports the antenna as open, ok or short |
 | **Power Architecture** | 3S–5S LiPo input (up to 21.0 V), SMBJ22A TVS clamping at 35.5 V under the bucks' 38 V absolute maximum; reverse-polarity P-FET<br>• Buck 1 (U8, system +5V): TI LMR33630 VQFN, 1.6 A continuous (set by the 4 × 4 mm inductor, not the 3 A IC)<br>• Buck 2 (U20, +5V_PAYLOAD for servos, CAN, LED, camera/VTX): LMR33630, 2.1 A continuous (set by its 5 × 5 mm inductor), budgeted per mission<br>• LDO 1: 3.3 V system (TLV75733P, exposed-pad SOT-23-5 into the ground plane)<br>• LDO 2: 3.3 V clean analogue for IMUs, baro and tuner (TLV75533)<br>• LDO 3: 3.3 V DroneCAN (XC6206) |
-| **Interconnects** | Latching JST-GH 1.25 mm on every cable port: GPS 6P, companion 6P (UART7, Pixhawk TELEM order), optical flow 6P, RC 4P, I2C 4P, DroneCAN 4P, lidar 4P, ESC 8P and payload 5 V 3P (both side entry). Two 1×3 2.54 mm servo headers (SMD right angle), MMCX antenna, USB-C, microSD, Tag-Connect TC2030 SWD pads, and soldered pads for the LED strip and buzzer. ESD clamps at the GPS, RC and CAN connectors |
+| **Interconnects** | Latching JST-GH 1.25 mm on every cable port: GPS 6P, companion 6P (UART7, Pixhawk TELEM order), optical flow 6P, RC 4P, I2C 4P, DroneCAN 4P, lidar 4P, ESC 8P and payload 5 V 3P (both side entry). Two 1×3 2.54 mm servo headers (SMD right angle), MMCX antenna, USB-C, microSD, Tag-Connect TC2030 SWD pads, and soldered pads for the LED strip and buzzer. Every cable-facing signal is clamped at its connector (TPD4E05U06 arrays or single-line TVS), and the motor, companion, optical-flow, telemetry, current and servo lines also pass through a series resistor before the MCU |
 | **PCB Stackup** | 6-layer, no impedance control ordered (46.5 × 47.2 mm outline, 0.5 mm corner radius, 1 oz outer / 0.5 oz inner copper) |
 
 ---
@@ -68,6 +68,24 @@ Layer 6 (B.Cu):    Sensors, RF receiver circuitry, DroneCAN, buck converters
 ### 2. TVC Rocket Lander Platform (`lander-2`)
 - Two thrust-vector control servo outputs, `J17` (PWM7) and `J23` (PWM8): 1×3 2.54 mm male headers in the standard servo order (1 signal, 2 +5V_PAYLOAD, 3 GND), so a servo plugs straight in; powered by the independent payload buck
 - High-rate 6-DoF inertial logging to MicroSD via SDIO
+
+---
+
+## How it compares
+
+| | NAVCORE-SoOP Rev D | SpeedyBee F405 V4 | Matek H743-SLIM V3 | ARK FPV | Pixhawk 6C | DJI Air 3 |
+|:---|:---|:---|:---|:---|:---|:---|
+| MCU | STM32H743 | STM32F405 | STM32H743 | STM32H743 | STM32H743 + F103 IO | closed |
+| IMUs | ICM-42688-P + ICM-42605 | ICM-42688-P | ICM-42688-P + ICM-42605 | IIM-42653 | ICM-42688-P + BMI088 | closed |
+| IMU heater | yes, 45 °C | no | no | yes | no (6X: yes, isolated) | - |
+| Input | 3–5S | 3–6S | 2–8S | 2–12S | 6 V via power module | own battery |
+| Rails | 5 V 1.6 A + 5 V 2.1 A payload | 5 V 3 A, 9 V 3 A | 5 V 2 A | 5 V 2 A, 12 V 2 A | - | - |
+| Logging | microSD | microSD | microSD | microSD | microSD | internal |
+| OSD | none | AT7456E | AT7456E | MSP DisplayPort | none | built in |
+| Port ESD | every cable signal | none stated | none stated | none stated | none stated | - |
+| Position without GNSS | Iridium Doppler, bounded at 100–200 m | none | none | none | none | vision near the ground; ATTI otherwise |
+
+Rev D shares the Matek H743 pinout, so stock ArduPilot builds for the MatekH743 still fly it. Its two distinguishing features are the on-board L-band receiver, which gives a drift-bounded fix no FPV or Pixhawk-class board offers, and protection on every cable-facing signal. It falls behind on video: there is no OSD and no 9–12 V rail, and it takes 5S at most. It also has two IMUs where the Pixhawk 6X has three, and nothing is isolated or certified.
 
 ---
 

@@ -38,6 +38,11 @@ DROP = [
     (r'^PB13 SPI2_SCK',          "SPI2 served only the analogue OSD, which is not fitted"),
     (r'^PB14 SPI2_MISO',         "SPI2 served only the analogue OSD, which is not fitted"),
     (r'^PB15 SPI2_MOSI',         "SPI2 served only the analogue OSD, which is not fitted"),
+    (r'^PC13 IMU3_CS',           "no third IMU fitted; PC13 is the flow port's chip select"),
+    (r'^PB9 UART4_TX',           "UART4 was never brought out; PB8 now carries servo PWM7"),
+    (r'^PB8 UART4_RX',           "UART4 was never brought out; PB8 now carries servo PWM7"),
+    (r'^PD14 TIM4_CH3',          "PWM9 had no connector; TIM4_CH3 is PWM7's on PB8"),
+    (r'^PD15 TIM4_CH4',          "PWM10 had no connector; TIM4_CH4 is PWM5's on PB9"),
     (r'^PE1 UART8_TX',
      "ESC telemetry is receive-only, so UART8 needs only PE0/RX. PE1 is left "
      "unwired rather than declared and unconnected"),
@@ -69,6 +74,25 @@ REPLACE = [
      "RSSI arrives over CRSF, so PC5 enables U24, the antenna's bias feed. HIGH, and R59 "
      "pulls it up, so the feed is on from power-up; AP_SoOP switches it off on a lasting "
      "short or when soop.cfg says ant_feed 0."),
+    (r'^PD4 EXT_CS1 CS',
+     "PC13 EXT_CS1 CS",
+     "The flow port's chip select leaves PD4, on U1's north-west corner, for PC13 on the east "
+     "side facing J14 and its clamp U29: the long run across the board would not route. "
+     "PC13 is a low-drive RTC-domain pin (3 mA, 2 MHz), which a chip select that toggles once "
+     "per transaction does not notice."),
+    (r'^PD12 TIM4_CH1 TIM4 PWM\(7\) GPIO\(56\)',
+     "PB8 TIM4_CH3 TIM4 PWM(7) GPIO(56)",
+     "Servo 1 (J17) moves from PD12 on U1's west side to PB8 on the south edge, nearer J17: "
+     "the run round U1 would not route. Same timer (TIM4) as PWM8, so the two servos keep "
+     "one rate group."),
+    (r'^PA2\s+TIM5_CH3\s+TIM5\s+PWM\(5\)\s+GPIO\(54\)',
+     "PB9 TIM4_CH4 TIM4 PWM(5) GPIO(54)",
+     "The spare servo output on test pad TP3 moves from PA2, whose escape faces the RF corner, "
+     "to PB9 on U1's south edge beside TP3. It joins the servos' TIM4 rate group, and leaves "
+     "TIM5 to the motors."),
+    (r'^SERIAL_ORDER .*',
+     "SERIAL_ORDER OTG1 UART7 USART1 USART2 USART3 UART8 EMPTY USART6 OTG2",
+     "UART4 gave PB8 to PWM7. EMPTY keeps every other SERIALn where MatekH743 has it."),
     (r'^PD10\s+PINIO1.*',
      "PD10 BIAS_FAULT INPUT GPIO(85)",
      "U24's FAULT#, open drain, pulled up by R60: low on overcurrent, overtemperature or "
@@ -95,6 +119,11 @@ REPLACE += [
 ]
 
 EXTRA = """
+
+
+# Remote ID over DroneCAN (the Holybro module on J6): the UK requires direct broadcast ID
+# from 2028 for home-built aircraft over 100 g with a camera.
+define AP_OPENDRONEID_ENABLED 1
 
 # W25Q128 on SPI3 EXT_CS2 - holds the Iridium TLE catalogue, not firmware.
 SPIDEV tle_flash  SPI3 DEVID2 EXT_CS2 MODE3 8*MHZ 32*MHZ

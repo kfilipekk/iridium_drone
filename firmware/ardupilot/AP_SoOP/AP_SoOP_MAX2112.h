@@ -4,6 +4,8 @@
 #include <AP_HAL/AP_HAL.h>
 #include <AP_HAL/I2CDevice.h>
 
+#include "soop_max2112.h"
+
 class AP_SoOP_MAX2112
 {
 public:

@@ -1,47 +1,28 @@
 {
-  "_comment": "NAVCORE-SoOP deviations from MatekH743. Rev A = none (bit-identical, stock firmware runs). Rev B reassigns only pins MatekH743 spends on sensors this board does not have.",
-  "revB_reassign": {
-    "PC4": {
-      "to": "SOOP_I_ADC",
-      "was": "PRESSURE_SENS",
-      "why": "no airspeed sensor on a quad. ADC1 ch4 - I channel"
-    },
-    "PA4": {
-      "to": "SOOP_Q_ADC",
-      "was": "BATT2_VOLTAGE_SENS",
-      "why": "single battery. ADC2 ch18 - Q channel, sampled simultaneously with ADC1"
-    },
-    "PC5": {
-      "to": "SPARE",
-      "was": "RSSI_ADC",
-      "why": "RSSI comes over CRSF telemetry. Once carried a 10k tap from the tuner's QOUT+ that was called RSSI and was not one; removed when the baseband stage was finished. Free."
-    },
-    "PA7": {
-      "to": "SPARE_ADC",
-      "was": "BATT2_CURRENT_SENS",
-      "why": "single battery. Left as a test point / spare ADC1 ch7"
-    },
-    "PE10": {
-      "to": "PPS_SYNC_IN",
-      "was": "UART7_CTS",
-      "why": "hardware time sync from a companion, if one is ever fitted; the companion UART is SERIAL6 (UART4) on P71-P74 since J4/UART7 was cut 2026-09-09"
-    }
-  },
+  "_comment": "Why NAVCORE-SoOP's pins differ from MatekH743's. The differences themselves are computed by tools/gen_pinmap.py from firmware/reference/MatekH743-hwdef.dat and the generated firmware/NAVCORE_SoOP/hwdef.dat; this file only says why.",
   "board_notes": {
-    "PB10/PB11": "I2C2 - MS5611 baro @0x77 (NOT DPS310 @0x76 - DPS310 unstocked at LCSC)",
-    "PB6/PB7": "I2C1 - external compass on the GPS port J3, plus the off-board rangefinders on J9 (TFS20-L @0x10 down, GY-53-L1X @0x29 up); the on-board VL53L1X U7 was deleted 2026-09-09",
-    "PD4": "EXT_CS1 - free since the on-board PMW3901 (U6) was deleted 2026-09-09; SPI3 carries only the W25Q128",
-    "PE2": "EXT_CS2 - W25Q128 for TLE catalogue",
-    "PB12": "MAX7456_CS - NOT POPULATED (no analogue OSD). Keep pin reserved + pulled up.",
-    "PB13-PB15": "SPI2 - unused without OSD; broken out to test pads for future use",
-    "PE1": "UART8_TX repurposed as ESC TEL input for future BLHeli_32/AM32 RPM",
-    "PB8/PB9": "UART4 (SERIAL6) - the expansion/companion UART on pads P72/P73 with 5 V and GND on P71/P74; PPS on P44",
-    "PC4": "ADC1 ch4  - I channel from OPA2374 difference amp",
-    "PA4": "ADC2 ch18 - Q channel, dual-simultaneous with PC4",
-    "PC5": "spare - the MAX2112 has no analogue RSSI pin; signal level is read over I2C",
-    "PB0/PB1/PA0": "motor timers, same pins: M1/M2 on TIM3_CH3/CH4 (not MatekH743's TIM8_CH2N/CH3N, which cannot capture) and BIDIR on PB0 and PA0, so all four motors can run bidirectional DShot once the ESC runs Bluejay. A stock MatekH743 or MatekH743-bdshot binary still drives the motors on these pins.",
-    "PC7": "USART6_RX only: the RC timer input (RCININT on TIM3_CH2) is dropped, since RC is CRSF on SERIAL7 and TIM3 now drives M1/M2. PPM receivers are not supported.",
-    "PB13/PB14/PB15": "SPI2 not declared: it served only the analogue OSD, which is not fitted."
+    "PA2": "PWM5 moved to PB9: PA2 faced the RF corner and its trace could not reach TP3",
+    "PA4": "Q channel of the SoOP receiver (ADC2 ch18), sampled by AP_SoOP, not declared in the hwdef; single battery, so no BATT2",
+    "PA7": "payload 5 V rail switch, GPIO 83 = RELAY1_PIN; single battery, so no BATT2 current",
+    "PB0/PB1": "M1/M2 on TIM3_CH3/CH4, not MatekH743's TIM8_CH2N/CH3N, which cannot run bidirectional DShot; same pins, so stock binaries still drive the motors",
+    "PB8": "PWM7 (TIM4_CH3) to the servo header J17; UART4 is not used, so SERIAL6 is EMPTY",
+    "PB9": "PWM5 (TIM4_CH4) to TP3",
+    "PB10/PB11": "I2C2 - MS5611 baro @0x77 and the MAX2112 tuner",
+    "PB6/PB7": "I2C1 - external compass on the GPS port J3, plus the off-board rangefinders on J9",
+    "PB12": "MAX7456_CS in MatekH743; no analogue OSD here",
+    "PB13/PB14/PB15": "SPI2 not declared: it served only the analogue OSD, which is not fitted",
+    "PC2": "antenna feed current, from U25 (INA180A2) across the bias tee's sense resistor",
+    "PC4": "I channel of the SoOP receiver (ADC1 ch4), from the OPA2374 difference amp; no airspeed sensor",
+    "PC5": "antenna 5 V feed enable (U24), high from boot",
+    "PC7": "USART6_RX only: the RC timer input (RCININT on TIM3_CH2) is dropped, since RC is CRSF on SERIAL7 and TIM3 drives M1/M2",
+    "PC13": "EXT_CS1, the optical flow chip select on J14; no third IMU",
+    "PD4": "EXT_CS1 moved to PC13, which reaches J14's corner",
+    "PD10": "antenna feed fault flag from U24",
+    "PD11": "FLOW_MOTION, pulled down and not wired: J14 has no pin for it, and ArduPilot's PixArt driver polls over SPI",
+    "PD12": "PWM7 moved to PB8",
+    "PD14/PD15": "PWM9/PWM10 dropped: no connector, and TIM4_CH3/CH4 serve PWM7/PWM5",
+    "PE1": "UART8_TX not declared: UART8 only receives ESC telemetry on J2 pin 8",
+    "PE2": "EXT_CS2 - W25Q128 for the Iridium TLE catalogue"
   },
   "unpopulated_matek_features": [
     "MAX7456 OSD",

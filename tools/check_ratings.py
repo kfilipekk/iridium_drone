@@ -8,6 +8,8 @@ import pcbnew, design
 DERATE = 2.0          #warn below this multiple of the working voltage
 #package power ratings, W
 R_POWER = {"0402": 0.0625, "0603": 0.10, "0805": 0.125, "1206": 0.25}
+#parts rated above their package's generic figure, by LCSC code
+R_POWER_PART = {}
 #capacitors that must not be a Class II dielectric, and why
 CLASS1_REQUIRED = {
     "C15": "crystal load cap - a Class II part pulls the oscillator with temperature",
@@ -109,7 +111,7 @@ def main():
         ohms = ohms_of(val)
         if ohms is None or ohms <= 0: continue
         p = v * v / ohms                      #conservative: full rail across the part
-        pk = pkg_of(fp); lim = R_POWER.get(pk)
+        pk = pkg_of(fp); lim = R_POWER_PART.get(lcsc, (R_POWER.get(pk),))[0]
         r_checked += 1
         if lim and (r_worst is None or p/lim > r_worst[1]):
             r_worst = (ref, p/lim, p, lim, val, v)

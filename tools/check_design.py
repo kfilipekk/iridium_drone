@@ -9,7 +9,9 @@ STOCK = "/usr/share/kicad/symbols"
 
 def load_all_symbols():
     syms = symlib.load()
-    for libfile in ("Device","Switch","Connector","Connector_Generic","power"):
+    #every stock library a component names
+    used = {c[0].split(":", 1)[0] for c in design.COMPONENTS.values() if ":" in c[0]}
+    for libfile in sorted(used - {"jlc_parts"}):
         p = f"{STOCK}/{libfile}.kicad_sym"
         if os.path.exists(p):
             for k, v in symlib.load(p).items():
