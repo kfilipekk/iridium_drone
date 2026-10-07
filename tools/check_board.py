@@ -1337,8 +1337,53 @@ def run_traces():
         else:
             print(f"  {n:8} (not routed)")
 
+    print("\n=== reference plane under the tuner's clock ===")
+    for n, need in REFERENCED.items():
+        frac = over_ground(board, n)
+        bad = frac is not None and frac < need
+        if bad:
+            warn += 1
+        print(f"  {n:12} " + ("(not routed)" if frac is None else
+              f"{frac*100:5.1f}% over ground on the adjacent layer (need {need*100:.0f}%)")
+              + ("  <-- RETURNS THROUGH ANOTHER NET" if bad else ""))
+
     print(f"\n{warn} item(s) over their stated limit")
     return 1 if warn else 0
+
+
+#a clock whose return path runs in a supply plane carries that plane's noise
+REFERENCED = {"TUNER_REF": 0.9, "TUNER_XTAL": 0.9}
+
+
+def over_ground(board, net, step=0.05):
+    """Share of a net's track length lying over GND fill on the layer next to it."""
+    cu = list(board.GetEnabledLayers().CuStack())
+    fills = {}
+    for z in board.Zones():
+        if z.GetNetname() != "GND":
+            continue
+        for lid in z.GetLayerSet().Seq():
+            if z.HasFilledPolysForLayer(lid):
+                fills.setdefault(lid, []).append(z.GetFilledPolysList(lid))
+    #the planes are cleared round the net's own vias: a layer change is not a return path
+    own = [v.GetPosition() for v in board.GetTracks()
+           if v.Type() == pcbnew.PCB_VIA_T and v.GetNetname() == net]
+    tot = hit = 0.0
+    for t in board.GetTracks():
+        if t.GetNetname() != net or t.Type() == pcbnew.PCB_VIA_T:
+            continue
+        i = cu.index(t.GetLayer())
+        near = [cu[j] for j in (i - 1, i + 1) if 0 <= j < len(cu)]
+        a, e = t.GetStart(), t.GetEnd()
+        n = max(1, int(traces_TOMM((e - a).EuclideanNorm()) / step))
+        for k in range(n):
+            q = pcbnew.VECTOR2I(int(a.x + (e.x - a.x) * (k + .5) / n), int(a.y + (e.y - a.y) * (k + .5) / n))
+            if any(traces_TOMM((q - v).EuclideanNorm()) < 0.6 for v in own):
+                continue
+            tot += 1
+            if any(f.Contains(q) for lid in near for f in fills.get(lid, [])):
+                hit += 1
+    return hit / tot if tot else None
 
 
 #model_alignment
