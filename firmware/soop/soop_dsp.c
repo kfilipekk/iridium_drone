@@ -63,6 +63,17 @@ void soop_dsp_init(soop_dsp_t *d)
         d->sinw[k] = sinf(2.0f * PI_F * k / N);
     }
     d->m_next_frame = N;
+    soop_dsp_set_lo(d, SOOP_LO_OFFSET_HZ);
+}
+
+void soop_dsp_set_lo(soop_dsp_t *d, double lo_offset_hz)
+{
+    const double w = 2.0 * 3.14159265358979323846 * lo_offset_hz / SOOP_FS;
+    d->lo_off = (float)lo_offset_hz;
+    d->nco_c = (float)cos(w);
+    d->nco_s = (float)sin(w);
+    d->ph_c = 1.0f;
+    d->ph_s = 0.0f;
 }
 
 static void fft(float *re, float *im, const float *cw, const float *sw)
@@ -285,7 +296,7 @@ static int estimate(soop_dsp_t *d, const soop_pending_t *p, soop_burst_t *o)
     o->t_sample = (uint64_t)(t_in > 0 ? t_in + 0.5f : 0);
     float t_st = (float)best_m0 * SOOP_DSP_DEC - SOOP_DSP_DELAY;
     o->t_start = (uint64_t)(t_st > 0 ? t_st + 0.5f : 0);
-    o->f_hz = f - (float)SOOP_LO_OFFSET_HZ;
+    o->f_hz = f - d->lo_off;
     o->f_sigma_hz = s_f;
     o->cn0_dbhz = cn0;
     o->len_s = (best_len + len) / FSD;
@@ -422,17 +433,22 @@ static size_t emit(soop_dsp_t *d, float yi, float yq, soop_burst_t *out, size_t 
 
 size_t soop_dsp_push(soop_dsp_t *d, const int16_t *iq, size_t n, soop_burst_t *out, size_t max_out)
 {
-    static const float mix_c[8] = {1, 0.70710678f, 0, -0.70710678f, -1, -0.70710678f, 0, 0.70710678f};
-    static const float mix_s[8] = {0, 0.70710678f, 1, 0.70710678f, 0, -0.70710678f, -1, -0.70710678f};
     const int n2 = SOOP_DSP_H2TAPS, c2 = (SOOP_DSP_H2TAPS - 1) / 2;
     size_t n_out = 0;
     for (size_t s = 0; s < n; s++) {
         float i = iq[2 * s], q = iq[2 * s + 1];
-        int ph = (int)(d->n_in & 7);
         d->n_in++;
-        //mix +FS/8: Ring Alert to 0 Hz
-        float mi = i * mix_c[ph] - q * mix_s[ph];
-        float mq = i * mix_s[ph] + q * mix_c[ph];
+        //mix up by the LO offset: Ring Alert to 0 Hz
+        float mi = i * d->ph_c - q * d->ph_s;
+        float mq = i * d->ph_s + q * d->ph_c;
+        float pc = d->ph_c * d->nco_c - d->ph_s * d->nco_s;
+        d->ph_s = d->ph_c * d->nco_s + d->ph_s * d->nco_c;
+        d->ph_c = pc;
+        if (!(d->n_in & 255)) {                 //keep the phasor on the unit circle
+            float r = 1.0f / sqrtf(d->ph_c * d->ph_c + d->ph_s * d->ph_s);
+            d->ph_c *= r;
+            d->ph_s *= r;
+        }
         d->h1i[d->p1] = d->h1i[d->p1 + 7] = mi;
         d->h1q[d->p1] = d->h1q[d->p1 + 7] = mq;
         d->p1 = (d->p1 + 1) % 7;

@@ -7,13 +7,15 @@
 int main(int argc, char **argv)
 {
     if (argc < 2) {
-        fprintf(stderr, "usage: %s iq.bin\n", argv[0]);
+        fprintf(stderr, "usage: %s iq.bin [lo_offset_hz]\n", argv[0]);
         return 2;
     }
     FILE *f = fopen(argv[1], "rb");
     if (!f) { perror(argv[1]); return 1; }
     static soop_dsp_t d;
     soop_dsp_init(&d);
+    if (argc > 2)
+        soop_dsp_set_lo(&d, atof(argv[2]));
     static int16_t buf[2 * 4096];
     soop_burst_t out[32];
     size_t got;

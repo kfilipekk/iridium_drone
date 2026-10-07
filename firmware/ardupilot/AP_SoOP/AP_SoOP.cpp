@@ -219,6 +219,14 @@ void AP_SoOP::load_config()
             _ant_feed_off = val == 0;
         } else if (!strcmp(key, "bbg")) {
             _bbg = uint8_t(constrain_int16(int16_t(val), 0, 15));
+        } else if (!strcmp(key, "lo_offset_hz")) {
+            //clear of the dc notch, and Ring Alert's band inside the +-250 kHz capture
+            if (fabs(val) >= 20000.0 && fabs(val) <= 150000.0) {
+                _lo_off = val;
+                c.f_lo = SOOP_F_RING_ALERT + val;
+            } else {
+                GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "SoOP: lo_offset_hz %.0f outside 20-150 kHz", val);
+            }
         } else {
             known = false;
             for (auto &d : dbl) {
@@ -283,7 +291,9 @@ bool AP_SoOP::setup()
     soop_nav_default_cfg(&cfg);
     _nav->cfg = cfg;
     soop_guard_default_cfg(&_gcfg);
+    _lo_off = SOOP_LO_OFFSET_HZ;
     load_config();
+    soop_dsp_set_lo(_dsp, _lo_off);
     cfg = _nav->cfg;
 
     _n_cat = load_catalogue();
@@ -372,6 +382,7 @@ void AP_SoOP::run_block(const int16_t *iq, uint64_t first_sample)
     if (!_have_first || first_sample != _next_first) {
         if (_have_first) {
             soop_dsp_init(_dsp);          //a gap: the filters and history would straddle it
+            soop_dsp_set_lo(_dsp, _lo_off);
         }
         _dsp_base = first_sample;         //the dsp counts from here
         _have_first = true;

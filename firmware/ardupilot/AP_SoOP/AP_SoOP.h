@@ -69,6 +69,7 @@ private:
     int        _n_cat;
     bool       _replay, _swap_iq, _capturing;
     uint8_t    _bbg;
+    float      _lo_off;          //Hz, the LO above Ring Alert
     double     _t0;              //board s of capture sample 0
     uint64_t   _dsp_base;        //capture sample where the dsp last started counting
     uint64_t   _next_first;      //the block that follows without a gap

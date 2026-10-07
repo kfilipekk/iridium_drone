@@ -42,6 +42,9 @@ typedef struct {
 } soop_pending_t;
 
 typedef struct {
+    //the mix that brings Ring Alert to 0 Hz: a phasor stepped once per capture sample
+    float    lo_off;                 //Hz, the LO above Ring Alert
+    float    nco_c, nco_s, ph_c, ph_s;
     //decimators; histories are doubled so every window is contiguous
     uint64_t n_in;                   //capture samples consumed
     float    h1i[14], h1q[14];       //stage 1: 7 taps
@@ -67,6 +70,8 @@ typedef struct {
 } soop_dsp_t;
 
 void   soop_dsp_init(soop_dsp_t *d);
+//the LO's offset above Ring Alert; init sets SOOP_LO_OFFSET_HZ
+void   soop_dsp_set_lo(soop_dsp_t *d, double lo_offset_hz);
 
 //push n interleaved I,Q pairs
 size_t soop_dsp_push(soop_dsp_t *d, const int16_t *iq, size_t n,
