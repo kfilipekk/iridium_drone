@@ -1072,9 +1072,9 @@ def ohms_of(val):
 
 
 def pkg_of(footprint):
-    for p in ("0402", "0603", "0805", "1206", "1210"):
-        if p in footprint: return p
-    return None
+    #the imperial code, not the metric one (C_0201_0603Metric is an 0201)
+    m = re.search(r"(?<!\d)(0201|0402|0603|0805|1206|1210)(?!\d|Metric)", footprint)
+    return m.group(1) if m else None
 
 
 def _is_dnp(ref):

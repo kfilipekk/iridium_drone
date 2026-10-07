@@ -7,6 +7,7 @@ LED = "Device:LED"; SW = "Switch:SW_Push"; XTAL = "Device:Crystal_GND24"
 F_R0402  = "Resistor_SMD:R_0402_1005Metric"
 F_R0603  = "Resistor_SMD:R_0603_1608Metric"
 F_C0402  = "Capacitor_SMD:C_0402_1005Metric"
+F_C0201  = "Capacitor_SMD:C_0201_0603Metric"
 F_C0805  = "Capacitor_SMD:C_0805_2012Metric"
 F_C1206  = "Capacitor_SMD:C_1206_3216Metric"
 F_L1210  = "Inductor_SMD:L_1210_3225Metric"
@@ -226,7 +227,7 @@ for r,v in [("R28","0R"),("R29","0R"),("R31","4k7"),
             ("R34","330R"),("R35","1k"),("R36","4k7"),("R37","4k7")]:
     RES(r, v, F_R0402)
 CAP("C58","10n", F_C0402)     #series DC-cut, Y2 output -> U13 XTAL [D] TCXO: 0.01 uF min
-CAP("C59", "100n", F_C0402)
+CAP("C59", "100n", F_C0201)     #0201 so it fits beside Y2.4
 
 #the bias tee's two critical parts
 RF_PARTS = dict(
@@ -1543,6 +1544,7 @@ ADJACENCY = {
     "C31": ("U2", "5", 1.5), "C32": ("U2", "8", 1.5),
     "C33": ("U3", "5", 1.5), "C34": ("U3", "8", 1.5),
     "C35": ("U4", "1", 1.5),
+    "C59": ("Y2", "4", 2.5),                                    #TCXO supply
     "C36": ("U5", "8", 1.5),
     #ESD clamps: at the connector, before the trace runs into the board
     "D6": ("J6", "2", 4.0), "U22": ("J3", "2", 6.0), "U23": ("J5", "2", 5.0),
@@ -1685,6 +1687,7 @@ PASSIVE_LCSC = {
     ("1u",   F_C0805): "C91185",  ("22u",  F_C1206): "C5177178",
     ("0R",   F_R0402): "C17168",  ("100p", F_C0402): "C1546",
     ("1n",   F_C0402): "C1523",
+    ("100n", F_C0201): "C76939",   #Murata GRM033R61E104KE14D 100nF 25V X5R
     ("100R", F_R0402): "C25076",  ("120R", F_R0402): "C25862",
     ("2k2",  F_R0402): "C25879",
     ("1k",   F_R0402): "C11702",  ("4k7",  F_R0402): "C25900",
@@ -1754,6 +1757,7 @@ RATINGS = {
  "C60137":   ("47p",   50,  "NP0",     "5%",   "0402",  None, None, "[D] LCSC product page, 2026-08-29"),
  "C1546":    ("100p",  50,  "NP0",     "5%",   "0402",  None, None, "[D] LCSC product page (0402CG101J500NT), 2026-09-11"),
  "C1523":    ("1n",    50,  "X7R",     "10%",  "0402",  None, None, "[D] LCSC product page (0402B102K500NT), 2026-09-11"),
+ "C76939":   ("100n",  25,  "X5R",     "10%",  "0201",  -55,  85, "[L] JLCPCB part API: GRM033R61E104KE14D 100nF 25V X5R 0201, 2026-10-07"),
 }
 #parts whose ratings have not been read off a datasheet yet
 RATINGS_UNVERIFIED = set()
