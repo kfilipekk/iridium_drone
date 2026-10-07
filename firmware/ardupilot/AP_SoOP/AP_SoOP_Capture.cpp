@@ -23,7 +23,7 @@ extern const AP_HAL::HAL& hal;
 static adcsample_t *buf;                    //2 x SOOP_CAPTURE_BLOCK 32-bit words, DMA-safe
 static volatile uint32_t halves_done;       //half-buffers completed since start
 static volatile uint64_t first_half_us;
-static volatile uint32_t adc_errors;
+static volatile uint32_t adc_errors_n;
 static binary_semaphore_t ready;
 static ADCConversionGroup grp;
 
@@ -43,7 +43,7 @@ static void error_cb(ADCDriver *adcp, adcerror_t err)
 {
     (void)adcp;
     (void)err;
-    adc_errors++;                           //overrun: the ADC outran the DMA
+    adc_errors_n++;                         //overrun: the ADC outran the DMA
 }
 
 bool AP_SoOP_Capture::supported()
@@ -75,9 +75,11 @@ bool AP_SoOP_Capture::start(bool swap_iq)
               | (uint32_t(__builtin_ctz(SOOP_CAPTURE_OVS)) << ADC_CFGR2_OVSS_Pos);
     grp.ccr = ADC_CCR_DUAL_REG_SIMULT;
     grp.pcsel = (1U << 4) | (1U << 18);
-    grp.smpr[0] = ADC_SMPR1_SMP_AN4(ADC_SMPR_SMP_2P5);
+    //16.5 + 8.5 cycles at the 32 MHz ADC clock is 0.78 us of the 1 us raw period: the op-amp
+    //has no reservoir cap at the pin, so it gets all the settling time there is
+    grp.smpr[0] = ADC_SMPR1_SMP_AN4(ADC_SMPR_SMP_16P5);
     grp.sqr[0] = ADC_SQR1_SQ1_N(ADC_CHANNEL_IN4);            //ADC1: PC4, I
-    grp.ssmpr[1] = ADC_SMPR2_SMP_AN18(ADC_SMPR_SMP_2P5);
+    grp.ssmpr[1] = ADC_SMPR2_SMP_AN18(ADC_SMPR_SMP_16P5);
     grp.ssqr[0] = ADC_SQR1_SQ1_N(ADC_CHANNEL_IN18);          //ADC2: PA4, Q
 
     adcStart(&ADCD1, nullptr);
@@ -114,6 +116,11 @@ void AP_SoOP_Capture::stop()
     adcStopConversion(&ADCD1);
 }
 
+uint32_t AP_SoOP_Capture::adc_errors() const
+{
+    return adc_errors_n;
+}
+
 bool AP_SoOP_Capture::next_block(int16_t *iq, uint64_t &first_sample, uint32_t timeout_ms)
 {
     if (halves_done <= _next_block
@@ -147,5 +154,6 @@ bool AP_SoOP_Capture::supported() { return false; }
 bool AP_SoOP_Capture::start(bool) { return false; }
 void AP_SoOP_Capture::stop() {}
 bool AP_SoOP_Capture::next_block(int16_t *, uint64_t &, uint32_t) { return false; }
+uint32_t AP_SoOP_Capture::adc_errors() const { return 0; }
 
 #endif

@@ -160,14 +160,26 @@ void AP_SoOP::load_config()
     //"key value" per line; unknown keys are reported, not ignored silently
     char path[40];
     snprintf(path, sizeof(path), "%s/soop.cfg", DIR);
-    const int fd = AP::FS().open(path, O_RDONLY);
-    if (fd < 0) {
+    struct stat st;
+    if (AP::FS().stat(path, &st) != 0 || st.st_size <= 0) {
         return;
     }
-    char buf[512];
-    const int32_t n = AP::FS().read(fd, buf, sizeof(buf) - 1);
-    AP::FS().close(fd);
+    if (st.st_size > 4096) {
+        GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "SoOP: soop.cfg over 4 KB, not read");
+        return;
+    }
+    //read it whole; comments may fill the first few hundred bytes
+    char *buf = (char *)malloc(st.st_size + 1);
+    if (buf == nullptr) {
+        return;
+    }
+    const int fd = AP::FS().open(path, O_RDONLY);
+    const int32_t n = fd >= 0 ? AP::FS().read(fd, buf, st.st_size) : -1;
+    if (fd >= 0) {
+        AP::FS().close(fd);
+    }
     if (n <= 0) {
+        free(buf);
         return;
     }
     buf[n] = 0;
@@ -220,6 +232,7 @@ void AP_SoOP::load_config()
             GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "SoOP: unknown soop.cfg key %s", key);
         }
     }
+    free(buf);
 }
 
 int AP_SoOP::load_catalogue()
@@ -356,6 +369,14 @@ void AP_SoOP::thread_main()
 void AP_SoOP::run_block(const int16_t *iq, uint64_t first_sample)
 {
     soop_burst_t out[8];
+    if (!_have_first || first_sample != _next_first) {
+        if (_have_first) {
+            soop_dsp_init(_dsp);          //a gap: the filters and history would straddle it
+        }
+        _dsp_base = first_sample;         //the dsp counts from here
+        _have_first = true;
+    }
+    _next_first = first_sample + SOOP_CAPTURE_BLOCK;
     const uint32_t t_start = AP_HAL::micros();
     const size_t n = soop_dsp_push(_dsp, iq, SOOP_CAPTURE_BLOCK, out, 8);
     _cpu_us += AP_HAL::micros() - t_start;
@@ -365,7 +386,7 @@ void AP_SoOP::run_block(const int16_t *iq, uint64_t first_sample)
             break;
         }
         burst_t &b = _bq[_bq_n++];
-        b.t = _t0 + out[i].t_sample / _fs;
+        b.t = _t0 + (_dsp_base + out[i].t_sample) / _fs;
         b.f = out[i].f_hz;
         b.sigma = out[i].f_sigma_hz;
         b.cn0 = out[i].cn0_dbhz;
@@ -477,6 +498,7 @@ void AP_SoOP::publish(double t)
     const uint64_t gps_ms = uint64_t((utc + 946728000.0L - GPS_UNIX_S + LEAP_S) * 1000);
     out.time_week = gps_ms / AP_MSEC_PER_WEEK;
     out.time_week_ms = gps_ms % AP_MSEC_PER_WEEK;
+    out.epoch_ms = uint32_t(t * 1000);    //board time of the capture epoch the fix is for
     AP_SoOPFix::get_singleton()->set(out);
 }
 
@@ -486,9 +508,9 @@ void AP_SoOP::log_status(double t)
     if (_capturing) {
         tuner.check_lock();
     }
-    AP::logger().WriteStreaming("SOS", "TimeUS,CPU,Bps,Ovr,Lock,VT,NT,Clk,Fused,Amb,Unm,G,GD,GL",
-                                "QfHIBBBfIIIBff", AP_HAL::micros64(), cpu, uint16_t(_bursts_s),
-                                capture.overruns(), uint8_t(tuner.locked()), tuner.vtune_adc(),
+    AP::logger().WriteStreaming("SOS", "TimeUS,CPU,Bps,Ovr,AErr,Lock,VT,NT,Clk,Fused,Amb,Unm,G,GD,GL",
+                                "QfHIIBBBfIIIBff", AP_HAL::micros64(), cpu, uint16_t(_bursts_s),
+                                capture.overruns(), capture.adc_errors(), uint8_t(tuner.locked()), tuner.vtune_adc(),
                                 uint8_t(_nav->n_track), float(_nav->x[6]),
                                 _nav->count[SOOP_B_FUSED], _nav->count[SOOP_B_AMBIGUOUS],
                                 _nav->count[SOOP_B_UNMATCHED], uint8_t(_guard->state),

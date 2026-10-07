@@ -70,6 +70,9 @@ private:
     bool       _replay, _swap_iq, _capturing;
     uint8_t    _bbg;
     double     _t0;              //board s of capture sample 0
+    uint64_t   _dsp_base;        //capture sample where the dsp last started counting
+    uint64_t   _next_first;      //the block that follows without a gap
+    bool       _have_first;
     double     _fs;
     double     _undulation;      //m, geoid above ellipsoid, from the GPS when it says
     float      _baro_offset;     //ellipsoidal height minus baro altitude, learnt on GPS
