@@ -89,8 +89,44 @@ def fetch(lines):
             "least_patch": row.get("leastPatchNumber"),
             "price_usd": row.get("initialPrice"),
             "lcsc_url": row.get("lcscGoodsUrl"),
+            "describe": row.get("describe"),
         }
     return out
+
+
+#a passive's value, from the BOM ("4k7", "100n", "2R2", "600R@100MHz") or from JLCPCB's
+#own description ("4.7kΩ", "100nF", "60Ω@100MHz"), in SI units
+_SI = {"p": 1e-12, "n": 1e-9, "u": 1e-6, "µ": 1e-6, "m": 1e-3, "k": 1e3, "K": 1e3, "M": 1e6,
+       "R": 1.0, "Ω": 1.0}
+
+
+def bom_value(text):
+    m = re.fullmatch(r"(\d+)([pnuµkKMR])(\d*)(?:H|F)?(?:@100MHz)?(?: x\d+)?", text.strip())
+    if not m:
+        return None
+    return float(m.group(1) + "." + (m.group(3) or "0")) * _SI[m.group(2)]
+
+
+def jlc_value(describe, kind):
+    """kind 'R', 'C' or 'L'; a bead's impedance is read as ohms."""
+    pat = {"R": r"([\d.]+)\s*([kKMm]?)Ω(?!@)", "C": r"([\d.]+)\s*([pnuµ])F",
+           "L": r"([\d.]+)\s*([pnuµ])H", "B": r"([\d.]+)\s*([kK]?)Ω@100MHz"}[kind]
+    m = re.search(pat, describe or "")
+    if not m:
+        return None
+    return float(m.group(1)) * (_SI.get(m.group(2), 1.0) if m.group(2) else 1.0)
+
+
+def kind_of(footprint, comment):
+    if "@100MHz" in comment:
+        return "B"
+    if footprint.startswith(("R_", "RES")) or "x4" in comment:
+        return "R"
+    if footprint.startswith("C_"):
+        return "C"
+    if footprint.startswith("L_") or footprint == "L0402":
+        return "L"
+    return None
 
 
 def run_stock():
@@ -102,11 +138,12 @@ def run_stock():
 
     rows = list(csv.DictReader(open(bom)))
     #DNP lines are not placed, so they are reported but never block
-    lines, dnp = {}, set()
+    lines, dnp, said = {}, set(), {}
     for r in rows:
         code = (r.get("LCSC") or "").strip()
         if not code:
             continue
+        said[code] = (r.get("Comment") or "", r.get("Footprint") or "")
         qty = int((r.get("Qty") or "0").strip() or 0)
         if (r.get("DNP") or "").strip():
             dnp.add(code)
@@ -161,6 +198,21 @@ def run_stock():
                 fails.append(f"{code:11} ({tag:5}) NOT FOUND at JLCPCB - check "
                              f"jlcpcb.com/partdetail/{code} by hand")
             continue
+        #the part's own value, not the line's label: a code can carry the wrong one
+        comment, fp = said.get(code, ("", ""))
+        kind = kind_of(fp, comment)
+        if kind and rec.get("describe") is None:
+            fails.append(f"{code:11} ({tag:5}) the snapshot has no description to check "
+                         f"{comment} against - run tools/check_order.py stock --fetch")
+        elif kind:
+            want, got = bom_value(comment.split("@")[0] if kind != "B" else comment.split("@")[0]), \
+                jlc_value(rec.get("describe"), kind)
+            if want is None or got is None:
+                notes.append(f"{code:11} ({tag:5}) value not compared: BOM {comment!r}, "
+                             f"JLCPCB {str(rec.get('describe'))[:40]!r}")
+            elif abs(got - want) > 0.005 * max(want, 1e-15) and not (want == 0 and got == 0):
+                fails.append(f"{code:11} ({tag:5}) {rec.get('mpn')} is {got:g}, the BOM says "
+                             f"{comment} ({want:g})")
         stock = rec.get("stock") or 0
         lib = (rec.get("library") or "?").lower()
         tier = {"base": "Basic", "expand": "Extended"}.get(lib, lib)
