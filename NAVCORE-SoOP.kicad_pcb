@@ -34393,7 +34393,7 @@
 			(uuid "df6932a5-0e2c-4b2d-8c60-a8c37d10b499")
 		)
 		(embedded_fonts no)
-		(model "${KICAD9_3DMODEL_DIR}/Capacitor_SMD.3dshapes/C_0201_0603Metric.step"
+		(model "${JLC_LIB}/packages3d/C_0201_0603Metric.step"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -34879,7 +34879,7 @@
 			(uuid "98805bec-f7a1-4391-a8c1-91ab211e7131")
 		)
 		(embedded_fonts no)
-		(model "${KICAD9_3DMODEL_DIR}/Capacitor_SMD.3dshapes/C_0201_0603Metric.step"
+		(model "${JLC_LIB}/packages3d/C_0201_0603Metric.step"
 			(offset
 				(xyz 0 0 0)
 			)

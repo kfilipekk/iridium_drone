@@ -1800,6 +1800,7 @@ PART_HEIGHT = {
     "L_APV_ANR5040": 4.0,            #L5; [D] 5.0 x 5.0 x 4.0 mm
     "L0402": 0.5,                    #L6 LQW15AN; [D] Murata 0.5 mm max
     "DSN0603-2": 0.3,                #D7 PESD5V0C1BSF; [D] Nexperia DSN0603-2, 0.3 mm
+    "C_0201": 0.33,                  #C59/C97 GRM033; [D] Murata 0.3 +-0.03 mm
     "USON-10_2.5x1.0mm": 0.55,       #TPD4E05U06 DQA; [D] TI: 0.55 mm max
     "R_Array_Convex_4x0402": 0.35,   #4D02 33R x4; [D] UniOhm 0402x4 array 0.35 mm
     "Tag-Connect_TC2030-IDC-NL": 0.0,  #J19: bare pads, the cable clips on from above
