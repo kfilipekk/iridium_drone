@@ -58,6 +58,14 @@ def amp_gain(f):
     return abs(h) / (rf / rin)
 
 
+def amp_args():
+    """iq_import's board model of the same amp: its pole's time constant and its floor."""
+    rin, rf = _ohms(_design.COMPONENTS["R36"][2]), _ohms(_design.COMPONENTS["R50"][2])
+    k, a = rf / (rin + rf), rf / rin
+    return ["--amp-tau", f"{rf * _ohms(_design.COMPONENTS['C76'][2]):.4g}",
+            "--amp-floor", f"{k / (k + a * (k + 1)):.4f}"]
+
+
 def fold(f_bb):
     """Where a baseband frequency lands after the ADC's raw sampling and the oversampler's."""
     def wrap(f, fs):

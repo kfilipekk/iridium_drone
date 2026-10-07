@@ -370,22 +370,23 @@ def check_import(tmp, dsp_exe):
     truth = soop_scenario.make_rtl(d)
     board = os.path.join(d, "board.iq")
     r = subprocess.run([exe, os.path.join(d, "rec.cu8"), board, "--format", "cu8",
-                        "--fs", str(truth["fs"]), "--fc", str(truth["fc"])],
+                        "--fs", str(truth["fs"]), "--fc", str(truth["fc"])] + sig.amp_args(),
                        capture_output=True, text=True)
     if r.returncode:
         return False, "iq_import: " + r.stderr.strip()[:300]
+    lag = int(re.search(r"delays by (\d+)", r.stderr).group(1))   #the import's own filter delay
     out = subprocess.run([dsp_exe, board], capture_output=True, text=True)
     rows = list(csv.DictReader(out.stdout.splitlines()))
     lo = sig.F_RING_ALERT + sig.LO_OFFSET_HZ
     worst_f = worst_t = 0.0
     found = 0
     for b in truth["bursts"]:
-        m = [x for x in rows if abs((int(x["t_start"]) - 12) / sig.FS_CAPTURE - b["start"]) < 0.003]
+        m = [x for x in rows if abs((int(x["t_start"]) - lag) / sig.FS_CAPTURE - b["start"]) < 0.003]
         if len(m) != 1:
             continue
         found += 1
         worst_f = max(worst_f, abs(float(m[0]["f_hz"]) - (b["f_rf"] - lo)))
-        worst_t = max(worst_t, abs((int(m[0]["t_start"]) - 12) / sig.FS_CAPTURE - b["start"]))
+        worst_t = max(worst_t, abs((int(m[0]["t_start"]) - lag) / sig.FS_CAPTURE - b["start"]))
     n = len(truth["bursts"])
     ok = found == n and len(rows) == n and worst_f < 5.0 and worst_t < 100e-6
     return ok, (f"a bench recording (cu8, 2 MSPS, centred {truth['fc'] / 1e6:.1f} MHz) converts to "

@@ -9,13 +9,18 @@
 #define PI    3.14159265358979323846
 #define NTAPS_PER 24                     //FIR taps per unit of decimation
 #define MAXDEC 12
+#define SOOP_ADC_OVS 2                   //the capture oversampler: pairs averaged
 
 int main(int argc, char **argv)
 {
-    const char *fmt = "cu8";
-    double fs = 0.0, fc = 0.0, gain = 1.0;
+    const char *fmt = "cu8", *model = "board";
+    double fs = 0.0, fc = 0.0, gain = 1.0, lo_off = SOOP_LO_OFFSET_HZ;
+    double tau = 1e-6, floor_ = 0.16;    //the difference amp: Rf*Cf, and its unfiltered-leg floor
     if (argc < 3) {
-        fprintf(stderr, "usage: %s in out --format cu8|cs16|cf32 --fs HZ --fc HZ [--gain G]\n",
+        fprintf(stderr, "usage: %s in out --format cu8|cs16|cf32 --fs HZ --fc HZ [--gain G]\n"
+                "       [--lo HZ] [--model board|ideal] [--amp-tau S] [--amp-floor A]\n"
+                "board: the amp, then 1 MSPS with no filter (aliases as the ADC does), then\n"
+                "pairs averaged; record at a whole multiple of 1 MSPS. ideal: a 220 kHz FIR\n",
                 argv[0]);
         return 2;
     }
@@ -24,7 +29,17 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[i], "--fs")) fs = atof(argv[i + 1]);
         else if (!strcmp(argv[i], "--fc")) fc = atof(argv[i + 1]);
         else if (!strcmp(argv[i], "--gain")) gain = atof(argv[i + 1]);
+        else if (!strcmp(argv[i], "--lo")) lo_off = atof(argv[i + 1]);
+        else if (!strcmp(argv[i], "--model")) model = argv[i + 1];
+        else if (!strcmp(argv[i], "--amp-tau")) tau = atof(argv[i + 1]);
+        else if (!strcmp(argv[i], "--amp-floor")) floor_ = atof(argv[i + 1]);
         else { fprintf(stderr, "unknown option %s\n", argv[i]); return 2; }
+    }
+    const int board = !strcmp(model, "board");
+    const int raw_dec = (int)lround(fs / 1e6);   //recording samples per 1 MSPS ADC sample
+    if (board && (raw_dec < 1 || fabs(raw_dec * 1e6 - fs) > 1.0)) {
+        fprintf(stderr, "fs %.0f is not a whole multiple of the ADC's 1 MSPS\n", fs);
+        return 2;
     }
     const int dec = (int)lround(fs / SOOP_FS);
     if (dec < 1 || dec > MAXDEC || fabs(dec * SOOP_FS - fs) > 1.0) {
@@ -60,7 +75,10 @@ int main(int argc, char **argv)
         return 2;
     }
     //RF f sits at f - fc in the recording and must land at f - LO
-    const double w = 2.0 * PI * (fc - (SOOP_F_RING_ALERT + SOOP_LO_OFFSET_HZ)) / fs;
+    const double w = 2.0 * PI * (fc - (SOOP_F_RING_ALERT + lo_off)) / fs;
+    const double beta = 1.0 - exp(-1.0 / (tau * fs));    //the amp's pole at the recording rate
+    double lpi = 0.0, lpq = 0.0, acc_i = 0.0, acc_q = 0.0;
+    int n_adc = 0;
     double pr = 1.0, pi_ = 0.0;
     const double cr = cos(w), ci = sin(w);
     double *bi = calloc((size_t)nt, sizeof *bi), *bq = calloc((size_t)nt, sizeof *bq);
@@ -94,16 +112,30 @@ int main(int argc, char **argv)
                 pr /= m;
                 pi_ /= m;
             }
-            bi[pos] = yr;
-            bq[pos] = yq;
-            pos = (pos + 1) % nt;
-            if (n_in % dec)
-                continue;
             double oi = 0.0, oq = 0.0;
-            for (int k = 0; k < nt; k++) {
-                const int j = (pos + k) % nt;
-                oi += h[k] * bi[j];
-                oq += h[k] * bq[j];
+            if (board) {
+                lpi += beta * (yr - lpi);
+                lpq += beta * (yq - lpq);
+                if (n_in % raw_dec)
+                    continue;                    //the ADC takes one sample in raw_dec, unfiltered
+                acc_i += floor_ * yr + (1.0 - floor_) * lpi;
+                acc_q += floor_ * yq + (1.0 - floor_) * lpq;
+                if (++n_adc % SOOP_ADC_OVS)
+                    continue;
+                oi = acc_i / SOOP_ADC_OVS;       //the oversampler's average of the pair
+                oq = acc_q / SOOP_ADC_OVS;
+                acc_i = acc_q = 0.0;
+            } else {
+                bi[pos] = yr;
+                bq[pos] = yq;
+                pos = (pos + 1) % nt;
+                if (n_in % dec)
+                    continue;
+                for (int k = 0; k < nt; k++) {
+                    const int j = (pos + k) % nt;
+                    oi += h[k] * bi[j];
+                    oq += h[k] * bq[j];
+                }
             }
             long ri = lround(oi * scale), rq = lround(oq * scale);
             if (labs(ri) > 32767 || labs(rq) > 32767)
@@ -120,6 +152,6 @@ int main(int argc, char **argv)
     free(bi);
     free(bq);
     fprintf(stderr, "%lld samples at %.0f -> %lld at %.0f, %lld clipped; the filter delays "
-            "by %d output samples\n", n_in, fs, n_out, SOOP_FS, clipped, (nt - 1) / 2 / dec);
+            "by %d output samples\n", n_in, fs, n_out, SOOP_FS, clipped, board ? 0 : (nt - 1) / 2 / dec);
     return 0;
 }

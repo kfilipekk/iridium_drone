@@ -120,7 +120,7 @@ def main():
     exe = build(tmp)
     board = os.path.join(tmp, "board.iq")
     r = subprocess.run([exe["iq_import"], a.rec, board, "--format", a.format,
-                        "--fs", str(a.fs), "--fc", str(a.fc), "--gain", str(a.gain)],
+                        "--fs", str(a.fs), "--fc", str(a.fc), "--gain", str(a.gain)] + sig.amp_args(),
                        capture_output=True, text=True)
     if r.returncode:
         sys.exit(r.stderr)
