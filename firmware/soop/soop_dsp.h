@@ -59,6 +59,7 @@ typedef struct {
     float    cosw[SOOP_DSP_NFFT / 2], sinw[SOOP_DSP_NFFT / 2];
     float    noise;                  //long-term noise power per bin
     int      noise_init;
+    float    nbin[SOOP_DSP_NFFT];    //per-bin floor: learns a steady spur, barely sees a burst
     soop_tone_t    tones[SOOP_DSP_MAX_TONES];
     soop_pending_t pend[SOOP_DSP_MAX_PEND];
     //statistics

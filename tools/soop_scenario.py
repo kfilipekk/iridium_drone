@@ -114,7 +114,8 @@ class FrontEnd:
 
 
 #iq mode
-def make_iq(outdir, slots, seed, cn0_lo, cn0_hi, noise_counts, max_bursts=3):
+def make_iq(outdir, slots, seed, cn0_lo, cn0_hi, noise_counts, max_bursts=3, spurs=()):
+    """spurs: (f_hz, drift_hz_s, cn0_dbhz) continuous tones, e.g. a buck's harmonic"""
     rng = random.Random(seed)
     os.makedirs(outdir, exist_ok=True)
     fe = FrontEnd(rng, noise_counts)
@@ -150,6 +151,11 @@ def make_iq(outdir, slots, seed, cn0_lo, cn0_hi, noise_counts, max_bursts=3):
                     centre=s * slot_len + sym0 + n_sym * SPS // 2,
                     channel=ch, f_hz=f_meas + fdot * (n_sym / sig.SYMBOL_RATE) / 2,
                     fdot=fdot, cn0_dbhz=cn0, doppler_hz=doppler, symbols=n_sym))
+            for f0, drift, cn0 in spurs:
+                amp = math.sqrt(10 ** (cn0 / 10) / FS)
+                for i in range(slot_len):
+                    t = (s * slot_len + i) / FS
+                    buf[i] += amp * cmath.exp(2j * math.pi * (f0 * t + 0.5 * drift * t * t))
             for i, q in fe.run(buf):
                 f.write(struct.pack("<hh", i, q))
     truth = dict(fs=FS, slot_len=slot_len, slots=slots, seed=seed, tcxo_hz=tcxo_hz,

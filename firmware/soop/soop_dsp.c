@@ -17,6 +17,10 @@
 #define PRE_COH_MIN    0.15f           //coherent share of the preamble window's energy
 #define BAND_HZ        52000.0f        //Ring Alert band after the mix
 #define SETTLE_FRAMES  64              //filters and noise estimate settling at start
+#define NBIN_ALPHA     0.0005f         //per-bin floor: ~2000 frames, about 1 s
+#define NBIN_CLIP      2.0f            //one frame can lift a bin's floor by at most this ratio
+//no simplex burst outlasts its slot: a tone that does is a spur, and is dropped
+#define MAX_TONE_FRAMES ((int)(2.0f * SOOP_MAX_BURST_S * FSD / SOOP_DSP_HOP))
 
 static float bessel_i0(float x)
 {
@@ -191,10 +195,15 @@ static int estimate(soop_dsp_t *d, const soop_pending_t *p, soop_burst_t *o)
     grab(d, best_m0, best_len, f_pre, zi, zq);
     float lb = FSD / best_len;
     f_pre += peak_freq(zi, zq, best_len, -0.6f * lb, 0.6f * lb, &pk);
-    float tot = 0;
-    for (int n = 0; n < best_len; n++)
+    float tot = 0, tot_f = 0, fi = 0, fq = 0;
+    for (int n = 0; n < best_len; n++) {
         tot += zi[n] * zi[n] + zq[n] * zq[n];
-    float coh_pre = pk / ((float)best_len * tot);
+        //one-symbol boxcar: energy in the channel, not a spur's beside it
+        fi += zi[n] - (n >= 5 ? zi[n - 5] : 0.0f);
+        fq += zq[n] - (n >= 5 ? zq[n - 5] : 0.0f);
+        tot_f += 0.04f * (fi * fi + fq * fq);
+    }
+    float coh_pre = pk / ((float)best_len * tot_f);
     if (!(coh_pre > PRE_COH_MIN))
         return 0;                                   //not a carrier: burst data, or noise
     float amp2 = pk / ((float)best_len * best_len);
@@ -231,6 +240,13 @@ static int estimate(soop_dsp_t *d, const soop_pending_t *p, soop_burst_t *o)
         if (e < floor_b + 0.25f * amp2 * 64.0f)
             break;
         len = b + 64;
+    }
+    //a carrier still there, coherent, a whole slot after the preamble is a spur, not a burst
+    {
+        float ti[256], tq[256];
+        grab(d, d0 + maxlen - 256, 256, f_pre, ti, tq);
+        if (dft_power(ti, tq, 256, 0.0f) / (256.0f * 256.0f) > 0.25f * amp2)
+            return 0;
     }
 
     //3. the data: 4th power strips DQPSK/BPSK to a tone at 4x the residual offset
@@ -291,8 +307,16 @@ static void frame(soop_dsp_t *d, uint64_t m0)
     }
     //noise: 30th percentile of an exponential is 0.357 x its mean
     float q = select_k(tmp, N, (int)(0.3f * N)) / 0.3567f;
-    if (!d->noise_init) { d->noise = q; d->noise_init = 1; }
-    else if (q < 4.0f * d->noise) d->noise += 0.02f * (q - d->noise);
+    if (!d->noise_init) {
+        d->noise = q;
+        d->noise_init = 1;
+        for (int k = 0; k < N; k++)
+            d->nbin[k] = q;
+    } else {
+        if (q < 4.0f * d->noise) d->noise += 0.02f * (q - d->noise);
+        for (int k = 0; k < N; k++)
+            d->nbin[k] += NBIN_ALPHA * (fminf(p[k], NBIN_CLIP * d->nbin[k]) - d->nbin[k]);
+    }
     d->n_frames++;
 
     int seen[SOOP_DSP_MAX_TONES] = {0};
@@ -303,14 +327,17 @@ static void frame(soop_dsp_t *d, uint64_t m0)
             if (!(p[k] >= p[kl] && p[k] > p[kr]))
                 continue;
             float pk = p[kl] + p[k] + p[kr];
-            if (pk < TONE_SNR_MIN * 3.0f * d->noise)
+            float nb = fmaxf(d->nbin[kl] + d->nbin[k] + d->nbin[kr], 3.0f * d->noise) / 3.0f;
+            if (pk < TONE_SNR_MIN * 3.0f * nb)
                 continue;
+            //neighbours count by what stands above their own floor: a known spur is not data
             float sh = 0;
             for (int s = 3; s <= 8; s++) {
-                sh = fmaxf(sh, p[(kk + s + N) % N]);
-                sh = fmaxf(sh, p[(kk - s + N) % N]);
+                int a = (kk + s + N) % N, b = (kk - s + N) % N;
+                sh = fmaxf(sh, p[a] - d->nbin[a] + d->noise);
+                sh = fmaxf(sh, p[b] - d->nbin[b] + d->noise);
             }
-            if (p[k] < TONE_NARROW * fmaxf(sh, d->noise))
+            if (p[k] < TONE_NARROW * fmaxf(sh, nb))
                 continue;
             float den = p[kl] - 2 * p[k] + p[kr];
             float kf = kk + ((den != 0.0f) ? 0.5f * (p[kl] - p[kr]) / den : 0.0f);
@@ -333,6 +360,14 @@ static void frame(soop_dsp_t *d, uint64_t m0)
             t->last_m = m0;
             t->frames++;
             t->missed = 0;
+            if (t->frames > MAX_TONE_FRAMES) {
+                t->live = 0;                //a spur: free the slot, emit nothing
+                for (int j = -1; j <= 1; j++) {     //and floor its bins at its power at once
+                    int b = (kk + j + N) % N;
+                    d->nbin[b] = fmaxf(d->nbin[b], p[b]);
+                }
+                continue;
+            }
             if (pk > t->best_p) { t->best_p = pk; t->best_m = m0; t->best_bin_f = kf; }
             seen[slot] = 1;
         }
@@ -353,7 +388,8 @@ static void frame(soop_dsp_t *d, uint64_t m0)
             d->pend[j].pre_m = t->best_m;
             d->pend[j].f_coarse = t->best_bin_f * FSD / N;
             d->pend[j].tone_snr = t->best_p / (3.0f * d->noise);
-            d->pend[j].ready_m = t->best_m + N + (uint64_t)(SOOP_MAX_BURST_S * FSD) + 8;
+            //the window can start 128 late and run 320 + a slot: wait until all of it is in
+            d->pend[j].ready_m = t->best_m + 2 * N + (uint64_t)(SOOP_MAX_BURST_S * FSD) + 8;
             break;
         }
     }

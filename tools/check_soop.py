@@ -493,6 +493,27 @@ def run_dsp():
         checks.append(good)
         print(f"  {'ok  ' if good else 'FAIL'}  {text}")
 
+    #the same sky plus a steady spur and one drifting through the band, as a buck's harmonic would
+    ra = sig.baseband_hz(sig.F_RING_ALERT)
+    spurs = ((ra - 30_000.0, 0.0, 60.0), (ra + 20_000.0, -300.0, 60.0))
+    sp = soop_scenario.make_iq(os.path.join(tmp, "spur"), slots, seed=21, cn0_lo=42.0, cn0_hi=70.0,
+                               noise_counts=600.0, spurs=spurs)
+    out = subprocess.run([exe, os.path.join(tmp, "spur", "iq.bin")], capture_output=True, text=True)
+    rows_s = list(csv.DictReader(out.stdout.splitlines()))
+    rs = score(sp, rows_s)
+
+    def clear(b):         #a burst whose own spectrum the spur does not sit on
+        t = b["centre"] / sp["fs"]
+        return all(abs(b["f_hz"] - (f0 + drift * t)) > 5000 for f0, drift, _ in spurs)
+    rc = score(dict(sp, bursts=[b for b in sp["bursts"] if clear(b)]), rows_s)
+    rate_s = rc["det_strong"] / max(1, rc["n_strong"])
+    good = rs["false"] <= g["false_max"] * max(1, rs["n_det"]) and rate_s >= g["detect_min"]
+    checks.append(good)
+    print(f"  {'ok  ' if good else 'FAIL'}  with two 60 dB-Hz spurs in the band, one drifting "
+          f"300 Hz/s: {rs['false']} false of {rs['n_det']}; {rate_s:.0%} of bursts over 5 kHz "
+          f"from a spur detected at >= {g['strong_dbhz']:.0f} dB-Hz "
+          f"({rs['det_strong'] / max(1, rs['n_strong']):.0%} counting those on it)")
+
     #Iridium's duplex channels about 1 MHz below the LO fold onto Ring Alert at the 1 MSPS raw
     dup = soop_scenario.make_duplex(os.path.join(tmp, "duplex"), max(20, slots // 3), seed=22,
                                     cn0_lo=42.0, cn0_hi=70.0, noise_counts=600.0)
