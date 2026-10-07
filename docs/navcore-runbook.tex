@@ -1250,7 +1250,11 @@ then the control link.
 On the SD card: \file{APM/SOOP/iridium.tle}, a copy of \file{sitl/tle/iridium-next.tle}
 fetched that day, and optionally \file{APM/SOOP/soop.cfg} (\file{key value} lines:
 \file{beta\_sigma}, \file{clkd\_q}, \file{bbg}, \file{swap\_iq}, \file{replay},
-\file{dut1}, \dots). Set \file{GPS2\_TYPE 27}; the task starts with the SoOP GPS backend.
+\file{dut1}, \file{lo\_offset\_hz}, \dots). Set \file{GPS2\_TYPE 27}; the task starts with the SoOP GPS backend.
+The board writes \file{APM/SOOP/clock.dat} itself: the TCXO's offset per degree of IMU
+temperature, learnt while GPS is good. With it, the next boot skips the clock search (the GCS
+says \emph{SoOP: clock N Hz from T C}); a stale or wrong table is noticed and dropped on its
+own. Delete it after changing \file{Y2}.
 
 \begin{enumerate}
 \item \textbf{Tuner lock.} At boot the GCS shows \emph{SoOP: tuner locked, VCO n}, or an
@@ -1269,6 +1273,20 @@ feeds its LNA.
 the bench kit hears, try \file{swap\_iq 1} (swapped I and Q mirror the spectrum); if
 \file{SOS.Ovr} counts up, the DSP is not keeping up with the 500\,kSPS it is fed. The
 ADCs run at 1\,MSPS, the most \file{PA4}'s slow channel allows, averaged in pairs.
+\item \textbf{Spurs at the ADC.} Antenna off, \file{J12} terminated in 50\,$\Omega$,
+battery in: look at \file{TP9} and \file{TP10} on a scope or a spectrum analyser. The two
+LMR33630As run at 340--460\,kHz; a harmonic that reaches tens of millivolts there is in the
+DSP's band. The DSP learns a steady tone and ignores it within seconds, but if one is that
+large, move Ring Alert away from it with \file{lo\_offset\_hz} (20--150\,kHz, either sign).
+\file{SOS.AErr} counts ADC overruns; it should stay at 0.
+\item \textbf{The board against the bench kit, on one antenna.} A 2-way splitter after the
+HC610, one leg to \file{J12} (it feeds the LNA; the RTL-SDR's bias tee off), the other to the
+RTL-SDR. Record step 1's \file{rtl\_sdr} line while the board logs, then run
+\file{soop\_bench.py} on the recording: per satellite, compare its burst count, C/N0 and
+carrier sigma with the board's \file{SOB}, and gr-iridium's Ring Alert count with
+\file{SOR}, the headers the board decoded itself. The board should hear at least what
+gr-iridium does in the Ring Alert band: it searches where each tracked satellite is predicted
+to be with a lower threshold than a blind search can afford.
 \item \textbf{Static with GPS, 30 minutes at a known spot.} \file{SOF.HAcc} settles to tens of
 metres (anchored on GPS) and \file{SOF.NIS} near 1. \file{SOS.Clk} is the TCXO: how fast it
 drifts over those 30 minutes sets \file{clkd\_q} (the default, 0.08\,Hz/s/$\sqrt{\rm s}$,
