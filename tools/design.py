@@ -228,6 +228,7 @@ for r,v in [("R28","0R"),("R29","0R"),("R31","4k7"),
     RES(r, v, F_R0402)
 CAP("C58","10n", F_C0402)     #series DC-cut, Y2 output -> U13 XTAL [D] TCXO: 0.01 uF min
 CAP("C59", "100n", F_C0201)     #0201 so it fits beside Y2.4
+CAP("C97", "100n", F_C0201)     #U14 supply
 
 #the bias tee's two critical parts
 RF_PARTS = dict(
@@ -1123,7 +1124,7 @@ NETS["SOOP_Q_ADC"] += ["R48.2", "C77.2"]             #feedback, out B -> -IN B
 NETS["OPA_IN2N"] += ["C77.1"]                        #C77 across R48: anti-alias
 #the mid-rail reference both channels share
 net("BB_VREF","R52.2","R53.1","C75.1","R51.2","R49.2")
-NETS["+3V3A"] += ["R52.1", "U14.8"]; NETS["GND"] += ["R53.2", "C75.2", "U14.4"]
+NETS["+3V3A"] += ["R52.1", "U14.8", "C97.1"]; NETS["GND"] += ["R53.2", "C75.2", "U14.4", "C97.2"]
 #DC-offset servo capacitors
 net("IDC_P","U13.21","C61.1"); net("IDC_N","U13.22","C61.2")
 net("QDC_P","U13.23","C63.1"); net("QDC_N","U13.24","C63.2")
@@ -1545,6 +1546,7 @@ ADJACENCY = {
     "C33": ("U3", "5", 1.5), "C34": ("U3", "8", 1.5),
     "C35": ("U4", "1", 1.5),
     "C59": ("Y2", "4", 2.5),                                    #TCXO supply
+    "C97": ("U14", "8", 3.0),                                   #op-amp supply, on its feed via
     "C36": ("U5", "8", 1.5),
     #ESD clamps: at the connector, before the trace runs into the board
     "D6": ("J6", "2", 4.0), "U22": ("J3", "2", 6.0), "U23": ("J5", "2", 5.0),
