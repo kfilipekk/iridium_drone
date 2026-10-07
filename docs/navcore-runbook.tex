@@ -260,8 +260,9 @@ Two substitutions are \textbf{not optional}:
 visually identical \file{C2901556} is an \textbf{active oscillator}: same SMD3225-4P land
 pattern, but pin 4 is VDD, which this board grounds. Substituting it gives a board that
 never starts.
-\item \flag{\file{Y2} must be \file{C5563878}.} Its predecessor \file{C22381771} was down
-to \textbf{1 unit} with no published restock date when \file{check\_order.py stock} was written.
+\item \flag{\file{Y2} must be \file{C19674258}} --- the $\pm$0.5\,ppm grade of the same HCI
+TCXO family. The $\pm$2\,ppm \file{C5563878} it replaces has the same pins and land, so a
+substitute fits, but it lets the tuner's reference wander four times as far.
 \end{itemize}
 
 \subsection{The DNP list --- derived, never typed}
@@ -1684,7 +1685,7 @@ BOM/CPL pair
 0.45/0.20, vias \textbf{epoxy filled and capped}, Mark on PCB \textbf{Remove Mark}
 \item 5 bare boards, 2 assembled. Standard panelised 2 $\times$ 2 unless you want to
 hand-fit \file{U3}
-\item Confirm \file{Y1} = \file{C2682774} and \file{Y2} = \file{C5563878}; refresh the stock
+\item Confirm \file{Y1} = \file{C2682774} and \file{Y2} = \file{C19674258}; refresh the stock
 snapshot if it is over 7 days old
 \item Order the aircraft parts from \file{docs/PARTS.csv}, \textbf{including the M3
 assortment}, the GH 8P to SH 8P ESC lead, the GH pigtails, the HC610 with its MMCX to

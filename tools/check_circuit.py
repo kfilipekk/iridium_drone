@@ -1320,13 +1320,11 @@ DATASHEET_VERIFIED = {
     "X32258MSB4SI": ("docs/datasheets/YSX321SL-YXC.pdf 'Top View Crystal Connection'",
                      "#1/#3 crystal, #2/#4 GND; the SMD3225 series this part belongs to",
                      "2026-09-18"),
-    "T132S4-25000ML33DTL": (
-        "JLCPCB part record for C5563878 (MPN, spec, 'Clipped sine wave', +/-2ppm, "
-        "3.3V, -40..+85C) + the JLCPCB/EasyEDA symbol's pin names; HCI's own sheet NOT "
-        "obtained",
-        "all 4 pins used. pin 1 'GND or N.C.' grounded on purpose - safe by class "
-        "(neither Disable nor Vcon; Epson TG2016SMN permits N.C. to GND)",
-        "2026-09-18"),
+    "8132S-25.000MQ33DTL": (
+        "docs/datasheets/HCI-8132S-TCXO.pdf (HCI T132S4/8132S sheet) PAD/FUNCTION table "
+        "+ JLCPCB part record for C19674258 (25 MHz, clipped sine, +/-0.5 ppm, 3.3 V)",
+        "all 4 pins: 1 'GROUND GND or N.C.' (grounded), 2 GND, 3 output, 4 Vcc",
+        "2026-10-07"),
     #fetched for the Rev C connector/protection pass (Stage 1) and verified before the parts
     "INA180A2IDBVR": (
         "TI INAx180 datasheet, 'Pin Configuration and Functions', DBV (SOT-23-5) "

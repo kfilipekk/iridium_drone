@@ -52,7 +52,7 @@ COMPONENTS = {
  "U15": ("jlc_parts:PSA4-5043+",            "jlc:SOT-343-4_L2.0-W1.3-P1.30-LS2.1-BR",           "PSA4-5043+",    "C5240848", True),
  "U16": ("jlc_parts:PSA4-5043+",            "jlc:SOT-343-4_L2.0-W1.3-P1.30-LS2.1-BR",           "PSA4-5043+",    "C5240848", True),
  #Y2 is an active 4-pad clipped-sine TCXO feeding U13's reference through C58
- "Y2" : ("jlc_parts:T132S4-25000ML33DTL",     "jlc:OSC-SMD_4P-L3.2-W2.5-BL",              "25MHz TCXO",    "C5563878", False),
+ "Y2" : ("jlc_parts:8132S-25.000MQ33DTL",     "jlc:OSC-SMD_4P-L3.2-W2.5-BL",              "25MHz TCXO",    "C19674258", False),
  "FL1": ("jlc_parts:TA1575IG",                   "jlc:FILTER-SMD_6P-L3.0-W3.0-P1.19-TR",                       "SAW 1620MHz",   "",         True),
 }
 
