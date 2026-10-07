@@ -25,10 +25,22 @@ ADC_RAW_RATE = 1_000_000.0        #per ADC: PA4 is a slow channel, 1 MSPS at mos
 ADC_OVS = 2                       #hardware oversampler: pairs averaged down to FS_CAPTURE
 TUNER_LPF_HZ = 4_000_000.0        #MAX2112 baseband filter at its minimum
 LO_OFFSET_HZ = 62_500.0           #LO above Ring Alert: RA lands at -62.5 kHz baseband
-TCXO_PPM = 2.5                    #Y2, at the carrier: +-4 kHz
+TCXO_PPM = 0.5                    #Y2, at the carrier: +-0.8 kHz
 MCU_PPM = 20.0                    #Y1, the sample clock
 DC_NOTCH_HZ = 400.0               #MAX2112 DC-offset loop corner with 47 nF (datasheet)
-OPA_POLE_HZ = 1.0 / (2 * 3.141592653589793 * 10e3 * 100e-12)   #R50/C76, ~159 kHz
+def _ohms(v):
+    """'4k7' -> 4700, '220p' -> 2.2e-10."""
+    mult = {"p": 1e-12, "n": 1e-9, "u": 1e-6, "k": 1e3, "M": 1e6, "R": 1.0}
+    for k, m in mult.items():
+        if k in v:
+            a, _, b = v.partition(k)
+            return float((a or "0") + "." + (b or "0")) * m
+    return float(v)
+
+
+import design as _design
+OPA_POLE_HZ = 1.0 / (2 * 3.141592653589793 * _ohms(_design.COMPONENTS["R50"][2])
+                     * _ohms(_design.COMPONENTS["C76"][2]))   #R50/C76
 ADC_FULL_SCALE = 32767            #16-bit, centred
 
 
@@ -37,12 +49,21 @@ DUPLEX_CHANNELS = tuple(1_616_020_833.0 + k * CHANNEL_SPACING for k in range(240
 DUPLEX_PREAMBLE_SYMBOLS = 16
 
 
+def amp_gain(f):
+    """The difference amp's response re dc: Cf filters only the -IN leg, so it floors."""
+    rin, rf = _ohms(_design.COMPONENTS["R36"][2]), _ohms(_design.COMPONENTS["R50"][2])
+    w = 2j * math.pi * abs(f)
+    zf = rf / (1 + w * rf * _ohms(_design.COMPONENTS["C76"][2]))
+    h = 0.5 * rf / (rin + rf) * (1 + zf / rin) + 0.5 * zf / rin
+    return abs(h) / (rf / rin)
+
+
 def fold(f_bb):
     """Where a baseband frequency lands after the ADC's raw sampling and the oversampler's."""
     def wrap(f, fs):
         return (f + fs / 2) % fs - fs / 2
     f_raw = wrap(f_bb, ADC_RAW_RATE)
-    pole = 1.0 / math.sqrt(1.0 + (f_bb / OPA_POLE_HZ) ** 2)
+    pole = amp_gain(f_bb)
     box = abs(math.cos(math.pi * f_raw / ADC_RAW_RATE)) if ADC_OVS == 2 else 1.0
     return wrap(f_raw, FS_CAPTURE), pole * box
 
