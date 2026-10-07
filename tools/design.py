@@ -1101,8 +1101,8 @@ net("VCOBYP","U13.8"); net("REFOUT","U13.15")
 #GC1 needs 0.5-2.7 V (0.5 V = maximum gain)
 RES("R58", "4k7", F_R0402)
 net("GC1","U13.5","R35.2","R58.2"); NETS["GND"] += ["R35.1"]; NETS["VCC_RF"] += ["R58.1"]
-#1 nF beside the LO/VCO (pins 6-7) and synthesizer (pin 13) supplies
-for _c, _pin in (("C84", 6), ("C86", 13)):
+#1 nF beside the LO/VCO (pins 6-7) and LNA (pins 1-2) supplies
+for _c, _pin in (("C84", 6), ("C86", 2)):
     CAP(_c, "1n", F_C0402)
     NETS["GND"] += [f"{_c}.2"]; NETS["VCC_RF"] += [f"{_c}.1"]
 #MAX2112 baseband -> OPA2374 difference amplifiers -> ADC the comment here read "resistor
