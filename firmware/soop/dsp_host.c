@@ -11,8 +11,10 @@ typedef struct { double a, b; float f, sd; } aid_t;
 static void print(const soop_burst_t *out, size_t n)
 {
     for (size_t i = 0; i < n; i++)
-        printf("%" PRIu64 ",%" PRIu64 ",%.3f,%.3f,%.2f,%.5f,%u\n", out[i].t_sample, out[i].t_start,
-               out[i].f_hz, out[i].f_sigma_hz, out[i].cn0_dbhz, out[i].len_s, out[i].used_data);
+        printf("%" PRIu64 ",%" PRIu64 ",%.3f,%.3f,%.2f,%.5f,%u,%u,%u,%u,%u,%d,%d,%d\n", out[i].t_sample,
+               out[i].t_start, out[i].f_hz, out[i].f_sigma_hz, out[i].cn0_dbhz, out[i].len_s,
+               out[i].used_data, out[i].ira, out[i].ra_sv, out[i].ra_beam, out[i].ra_fixed,
+               out[i].ra_pos[0], out[i].ra_pos[1], out[i].ra_pos[2]);
 }
 
 int main(int argc, char **argv)
@@ -45,7 +47,8 @@ int main(int argc, char **argv)
     soop_burst_t out[32];
     size_t got;
     uint64_t n0 = 0;
-    printf("t_sample,t_start,f_hz,f_sigma_hz,cn0_dbhz,len_s,used_data\n");
+    printf("t_sample,t_start,f_hz,f_sigma_hz,cn0_dbhz,len_s,used_data,ira,ra_sv,ra_beam,ra_fixed,"
+           "ra_x,ra_y,ra_z\n");
     while ((got = fread(buf, 4, 4096, f)) > 0) {
         if (n_aid) {                        //the windows live during this block, as the nav would hand them
             float fs[SOOP_DSP_MAX_AID], sd[SOOP_DSP_MAX_AID];

@@ -13,7 +13,8 @@ RING_ALERT_INDEX = 4              #SIMPLEX_CHANNELS[4] is the Ring Alert channel
 FRAME_S = 0.090                   #TDMA frame
 SIMPLEX_SLOT_S = 0.02032          #the simplex slot at the start of every frame
 PREAMBLE_SYMBOLS = 64             #downlink: unmodulated carrier before the unique word
-UNIQUE_WORD_DL = "022220002002"   #downlink unique word, as DQPSK phase steps (x 90 deg)
+UNIQUE_WORD_DL = "022220002002"   #downlink unique word, absolute phases (x 90 deg) after the preamble
+RA_BCH_POLY = 1207                #BCH(31,21) generator of the Ring Alert blocks (iridium-toolkit)
 MAX_BURST_S = SIMPLEX_SLOT_S      #a simplex burst never outlasts its slot
 
 C_LIGHT = 299_792_458.0
@@ -88,3 +89,36 @@ def lo_plan_ok():
     lo_edge, hi_edge = ra - worst, ra + worst
     return (hi_edge < -10 * DC_NOTCH_HZ and lo_edge > -FS_CAPTURE / 2,
             (lo_edge, hi_edge))
+
+
+#Ring Alert frames, laid out as iridium-toolkit's bitsparser reads them
+def bch_word(data21):
+    """21 data bits -> the 32-bit block: data, 10 check bits, even parity."""
+    r = int(data21, 2) << 10
+    for b in range(30, 9, -1):
+        if r >> b & 1:
+            r ^= RA_BCH_POLY << (b - 10)
+    w = data21 + format(r, "010b")
+    return w + str(w.count("1") % 2)
+
+
+def ra_header(sv, beam, xyz, interval=0, ts=0, eip=0, sb=0):
+    """The 63-bit Ring Alert header: SV and beam, the position in 4 km units, the rest."""
+    def s12(v):
+        return ("1" if v < 0 else "0") + format(v + (1 << 11) if v < 0 else v, "011b")
+    return (format(sv, "07b") + format(beam, "06b") + "".join(s12(v) for v in xyz)
+            + format(interval, "07b") + str(ts) + str(eip) + format(sb, "05b"))
+
+
+def ra_bits(header63):
+    """The 96 bits after the unique word: three BCH blocks interleaved three ways."""
+    blocks = [bch_word(header63[21 * i:21 * i + 21]) for i in range(3)]
+    sym = [None] * 48
+    for i in range(16):
+        for b, blk in enumerate(blocks):
+            sym[47 - b - 3 * i] = blk[2 * i:2 * i + 2]
+    return "".join(x[1] + x[0] for x in sym)
+
+
+#bit pair -> phase change in quarter turns (Gray), and back
+DQPSK_STEP = {"00": 0, "01": 1, "11": 2, "10": 3}

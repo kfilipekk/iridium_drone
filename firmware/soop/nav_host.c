@@ -165,15 +165,16 @@ int main(int argc, char **argv)
         case 'R':
             soop_guard_arm(&guard, t);
             break;
-        case 'D':
-            if (sscanf(line + 1, "%lf %lf %lf %lf", &t, &a, &b, &d) == 4) {
+        case 'D': {
+            int sv = -1;
+            if (sscanf(line + 1, "%lf %lf %lf %lf %d", &t, &a, &b, &d, &sv) >= 4) {
                 //would the windows handed to the dsp just before have held this burst?
                 float pf[48], ps[48];
                 const int np = soop_nav_predict(nav_, t, pf, ps, 48);
                 int inside = 0;
                 for (int i = 0; i < np; i++)
                     inside |= fabs(a - pf[i]) <= 3.0 * ps[i] + 488.0;
-                const int res = soop_guard_burst(&guard, t, a, b);
+                const int res = soop_guard_burst_sv(&guard, t, a, b, sv);
                 if (res == SOOP_B_FUSED && np) {
                     aid_fused++;
                     aid_in += inside;
@@ -186,6 +187,7 @@ int main(int argc, char **argv)
                        res == SOOP_B_FUSED ? nav_->last_sd : 0.0);
             }
             break;
+        }
         }
     }
     fclose(f);

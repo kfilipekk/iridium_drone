@@ -45,16 +45,19 @@ def rrc_taps(sps=SPS, span=4, alpha=sig.RRC_ALPHA):
 RRC = rrc_taps()
 
 
-def burst_symbols(n_data, rng, modulation="dqpsk", preamble=sig.PREAMBLE_SYMBOLS):
-    """Preamble (unmodulated carrier), the downlink unique word."""
+def burst_symbols(n_data, rng, modulation="dqpsk", preamble=sig.PREAMBLE_SYMBOLS, bits=""):
+    """Preamble (unmodulated carrier), the downlink unique word; `bits` lead the data."""
     phase, out = 0.0, []
     for _ in range(preamble):
         out.append(cmath.exp(1j * phase))
     for d in sig.UNIQUE_WORD_DL:
-        phase += int(d) * math.pi / 2
+        phase = int(d) * math.pi / 2
         out.append(cmath.exp(1j * phase))
-    for _ in range(n_data):
-        if modulation == "bpsk":
+    for k in range(n_data):
+        if 2 * k + 1 < len(bits):
+            phase += sig.DQPSK_STEP[bits[2 * k:2 * k + 2]] * math.pi / 2
+            out.append(cmath.exp(1j * phase))
+        elif modulation == "bpsk":
             out.append(cmath.exp(1j * (phase + math.pi * rng.randrange(2))))
         else:
             phase += rng.randrange(4) * math.pi / 2
@@ -124,6 +127,7 @@ def make_iq(outdir, slots, seed, cn0_lo, cn0_hi, noise_counts, max_bursts=3, spu
     margin = int(0.001 * FS)
     slot_len = int(sig.SIMPLEX_SLOT_S * FS) + 2 * margin
     bursts = []
+    ra_rng = random.Random(seed + 1000)       #header fields apart, so the sky itself is unchanged
     with open(os.path.join(outdir, "iq.bin"), "wb") as f:
         for s in range(slots):
             buf = [complex(rng.gauss(0, math.sqrt(0.5)), rng.gauss(0, math.sqrt(0.5)))
@@ -131,7 +135,13 @@ def make_iq(outdir, slots, seed, cn0_lo, cn0_hi, noise_counts, max_bursts=3, spu
             for _ in range(rng.randrange(max_bursts + 1)):
                 ch = sig.RING_ALERT_INDEX if rng.random() < 0.7 else rng.randrange(4)
                 n_data = rng.randrange(120, 200)
-                syms = burst_symbols(n_data, rng, rng.choice(("dqpsk", "bpsk")))
+                mod = rng.choice(("dqpsk", "bpsk"))
+                ira = None
+                if ch == sig.RING_ALERT_INDEX and mod == "dqpsk":
+                    ira = [ra_rng.randrange(128), ra_rng.randrange(64)] + \
+                          [ra_rng.randrange(-2047, 2048) for _ in range(3)]
+                bits = sig.ra_bits(sig.ra_header(ira[0], ira[1], ira[2:])) if ira else ""
+                syms = burst_symbols(n_data, rng, mod, bits=bits)
                 doppler = rng.uniform(-sig.MAX_DOPPLER_HZ, sig.MAX_DOPPLER_HZ)
                 fdot = rng.uniform(-400.0, 0.0)          #Doppler only ever falls during a pass
                 #what the capture sees: RF offset from the LO, the TCXO
@@ -150,7 +160,7 @@ def make_iq(outdir, slots, seed, cn0_lo, cn0_hi, noise_counts, max_bursts=3, spu
                     slot=s, start=s * slot_len + sym0, n_samples=n_sym * SPS,
                     centre=s * slot_len + sym0 + n_sym * SPS // 2,
                     channel=ch, f_hz=f_meas + fdot * (n_sym / sig.SYMBOL_RATE) / 2,
-                    fdot=fdot, cn0_dbhz=cn0, doppler_hz=doppler, symbols=n_sym))
+                    fdot=fdot, cn0_dbhz=cn0, doppler_hz=doppler, symbols=n_sym, ira=ira))
             for f0, drift, cn0 in spurs:
                 amp = math.sqrt(10 ** (cn0 / 10) / FS)
                 for i in range(slot_len):
@@ -344,8 +354,9 @@ ORBIT_ERR = {
 def make_obs(outdir, seed=1, gps_min=5.0, denial_min=15.0, speed=15.0, tle_age_d=1.0,
              lat=52.2053, lon=0.1218, h=160.0, rate=1.0, vel_sigma=1.0, beta_sigma=50.0,
              orbits="tle", false_rate=0.05, outlier_frac=0.01, static=False, arm_s=60.0,
-             spoof=None, back_min=0.0):
+             spoof=None, back_min=0.0, ira=False):
     """A flight under the real constellation."""
+    ira_rng, sv_of = random.Random(seed + 2000), {}
     import soop_solver as sol
     rng = random.Random(seed)
     os.makedirs(outdir, exist_ok=True)
@@ -467,8 +478,13 @@ def make_obs(outdir, seed=1, gps_min=5.0, denial_min=15.0, speed=15.0, tle_age_d
                 outlier = rng.random() < outlier_frac
                 if outlier:
                     err = rng.uniform(-300, 300)
+                #a decoded Ring Alert names its satellite (Iridium's own number, not NORAD's)
+                sv = -1
+                if ira and ch == sig.RING_ALERT_INDEX and \
+                        ira_rng.random() < min(0.93, max(0.0, (cn0 - 50.0) / 15.0 * 0.93)):
+                    sv = sv_of.setdefault(num, len(sv_of))
                 bursts.append((board(t) + rng.gauss(0, 20e-6), f_meas + err,
-                               sigma * math.exp(rng.gauss(0, 0.25)), cn0))
+                               sigma * math.exp(rng.gauss(0, 0.25)), cn0, sv))
                 truth_bursts.append(dict(t=t, sat=num, ch=ch, false=False, outlier=outlier,
                                          df=f_rx - f_ch - f_lo * eps_t, el=el))
             dt_f = sig.FRAME_S
@@ -479,7 +495,7 @@ def make_obs(outdir, seed=1, gps_min=5.0, denial_min=15.0, speed=15.0, tle_age_d
                 cn0 = rng.uniform(46, 54)
                 bursts.append((board(t), sig.baseband_hz(sig.F_RING_ALERT)
                                + rng.uniform(-DSP_BAND_HZ, DSP_BAND_HZ),
-                               dsp_response(cn0)[1], cn0))
+                               dsp_response(cn0)[1], cn0, -1))
                 truth_bursts.append(dict(t=t, sat=0, ch=-1, false=True, outlier=False,
                                          df=0.0, el=0.0))
         t_blk += 10.0
@@ -519,8 +535,8 @@ def make_obs(outdir, seed=1, gps_min=5.0, denial_min=15.0, speed=15.0, tle_age_d
                          + " ".join(f"{r[k] + rng.gauss(0, 1.5):.3f}" for k in range(3)))
     order = sorted(range(len(bursts)), key=lambda i: bursts[i][0])
     for i in order:
-        tb, f, s, c = bursts[i]
-        lines.append(f"D {tb:.6f} {f:.3f} {s:.3f} {c:.2f}")
+        tb, f, s, c, sv = bursts[i]
+        lines.append(f"D {tb:.6f} {f:.3f} {s:.3f} {c:.2f}" + (f" {sv}" if sv >= 0 else ""))
     #the log is time-ordered, as the board would write it
     body = sorted(lines[2:], key=lambda ln: float(ln.split()[1]))
     open(os.path.join(outdir, "obs.txt"), "w").write("\n".join(lines[:2] + body) + "\n")

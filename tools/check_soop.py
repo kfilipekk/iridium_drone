@@ -468,6 +468,7 @@ def run_dsp():
                                   noise_counts=600.0)
     out = subprocess.run([exe, os.path.join(tmp, "iq.bin")], capture_output=True, text=True)
     rows = list(csv.DictReader(out.stdout.splitlines()))
+    rows_main = rows
     r = score(truth, rows)
     secs = truth["slots"] * truth["slot_len"] / truth["fs"]
     print(f"    {slots} simplex slots ({secs:.1f} s), {r['n_truth']} bursts, {r['n_eligible']} in "
@@ -493,6 +494,31 @@ def run_dsp():
              f"{r['dt_median']:+d} samples (limit one symbol, {g['timing_samples']})")):
         checks.append(good)
         print(f"  {'ok  ' if good else 'FAIL'}  {text}")
+
+    #the Ring Alert header (satellite, beam, position) decoded on board, as iridium-toolkit lays it out
+    ok_ra = bad_ra = 0
+    strong_ra = [b for b in truth["bursts"] if b.get("ira") and b["cn0_dbhz"] >= 60
+                 and b["start"] > 20000]
+    seen = set()
+    for x in rows_main:
+        if not int(x.get("ira", 0)):
+            continue
+        ts, f = int(x["t_sample"]), float(x["f_hz"])
+        got = [int(x[k]) for k in ("ra_sv", "ra_beam", "ra_x", "ra_y", "ra_z")]
+        near = [i for i, b in enumerate(truth["bursts"]) if b.get("ira")
+                and b["start"] - 800 <= ts <= b["start"] + b["n_samples"] + 800
+                and abs(f - b["f_hz"]) < 1000 and b["ira"] == got]
+        if near:
+            ok_ra += 1
+            seen.update(near)
+        else:
+            bad_ra += 1
+    dec_strong = sum(1 for i, b in enumerate(truth["bursts"]) if i in seen and b in strong_ra)
+    rate_ra = dec_strong / max(1, len(strong_ra))
+    good = bad_ra == 0 and rate_ra >= 0.75
+    checks.append(good)
+    print(f"  {'ok  ' if good else 'FAIL'}  Ring Alert headers decoded on board: {ok_ra} right, "
+          f"{bad_ra} wrong; {rate_ra:.0%} of those at >= 60 dB-Hz (need 75%, and none wrong)")
 
     #the same sky plus a steady spur and one drifting through the band, as a buck's harmonic would
     ra = sig.baseband_hz(sig.F_RING_ALERT)
@@ -1116,6 +1142,16 @@ def check_aid(exe, tmp):
                 f"({wins:.0f} windows live at a time, need 95%)")
 
 
+def check_ira(exe, tmp):
+    """Decoded Ring Alerts name their satellite: never a wrong pairing, never fewer fused."""
+    name, seeds, kw = FLIGHTS[0]
+    a = fly(exe, tmp, name, seeds[0], kw)
+    b = fly(exe, tmp, name, seeds[0], dict(kw, ira=True))
+    ok = b["wrong"] == 0 and b["fused"] >= a["fused"]
+    return ok, (f"with decoded satellite numbers {b['fused']} bursts fused ({a['fused']} without), "
+                f"{b['wrong']} paired with the wrong satellite")
+
+
 def run_nav():
     keep = sys.argv[sys.argv.index("--keep") + 1] if "--keep" in sys.argv else None
     flights = QUICK if "--quick" in sys.argv else FLIGHTS
@@ -1146,6 +1182,10 @@ def run_nav():
     print(f"  {'ok  ' if good else 'FAIL'}  {msg}")
 
     good, msg = check_aid(exe, tmp)
+    checks.append(good)
+    print(f"  {'ok  ' if good else 'FAIL'}  {msg}")
+
+    good, msg = check_ira(exe, tmp)
     checks.append(good)
     print(f"  {'ok  ' if good else 'FAIL'}  {msg}")
 

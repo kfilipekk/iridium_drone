@@ -210,6 +210,7 @@ void soop_nav_init(soop_nav_t *nav, const soop_nav_cfg_t *cfg, const soop_sat_t 
                    int n_cat, double t_now_utc)
 {
     memset(nav, 0, sizeof *nav);
+    nav->burst_sv = -1;
     nav->cfg = *cfg;
     nav->cat = cat;
     nav->n_cat = n_cat < (int)sizeof nav->cat_ok ? n_cat : (int)sizeof nav->cat_ok;
@@ -699,6 +700,7 @@ static void fuse(soop_nav_t *nav, double tb, double f_hz, double sigma, int sat,
         return;
     kalman(nav, &p.h, p.y, p.r2);
     nav->last_sat = (int)nav->cat[sat].norad;
+    nav->last_cat = sat;
     nav->last_ch = ch;
     nav->last_y = p.y;
     nav->last_sd = sqrt(p.S);
@@ -828,9 +830,18 @@ static int acquire(soop_nav_t *nav)
     return 0;
 }
 
+int soop_nav_burst_sv(soop_nav_t *nav, double t_board, double f_hz, double sigma_hz, int sv)
+{
+    nav->burst_sv = sv;
+    const int res = soop_nav_burst(nav, t_board, f_hz, sigma_hz);
+    nav->burst_sv = -1;
+    return res;
+}
+
 int soop_nav_burst(soop_nav_t *nav, double t_board, double f_hz, double sigma_hz)
 {
     const soop_nav_cfg_t *c = &nav->cfg;
+    const int sv = nav->burst_sv;
     int res;
     if (!nav->have_time || !nav->have_pos) {
         res = SOOP_B_NO_TIME;
@@ -857,7 +868,19 @@ int soop_nav_burst(soop_nav_t *nav, double t_board, double f_hz, double sigma_hz
     }
 
     cand_t cd[8];
-    const int nc = candidates(nav, t_board, f_hz, sigma_hz, 0, cd, 8);
+    int nc = candidates(nav, t_board, f_hz, sigma_hz, 0, cd, 8);
+    if (sv >= 0 && sv < 128 && nav->sv_votes[sv] >= 3) {
+        //the burst names its satellite: keep only that one, on the Ring Alert channel
+        int m = 0;
+        for (int i = 0; i < nc; i++)
+            if (cd[i].sat == nav->sv_sat[sv] - 1 && cd[i].ch == SOOP_N_SIMPLEX - 1)
+                cd[m++] = cd[i];
+        if (m == 0) {
+            res = SOOP_B_REJECTED;                //the one it names does not fit: trust neither
+            goto done;
+        }
+        nc = 1;
+    }
     if (nc >= 1 && (nc == 1 || cd[1].q > c->amb_ratio * fmax(cd[0].q, 1.0))) {
         if (slot_of(nav, cd[0].sat) >= 0) {
             fuse(nav, t_board, f_hz, sigma_hz, cd[0].sat, cd[0].ch);
@@ -888,6 +911,15 @@ int soop_nav_burst(soop_nav_t *nav, double t_board, double f_hz, double sigma_hz
             drop_slot(nav, k);
 done:
     nav->count[res]++;
+    if (res == SOOP_B_FUSED && sv >= 0 && sv < 128 && nav->sv_votes[sv] < 3) {
+        //learn the number: votes for the satellite it fused to, against a disagreement
+        if (nav->sv_votes[sv] == 0 || nav->sv_sat[sv] == nav->last_cat + 1) {
+            nav->sv_sat[sv] = (int16_t)(nav->last_cat + 1);
+            nav->sv_votes[sv]++;
+        } else {
+            nav->sv_votes[sv]--;
+        }
+    }
     if (nav->clk_from_prior && res != SOOP_B_NO_TIME) {
         nav->prior_bursts++;
         if (res == SOOP_B_FUSED && ++nav->prior_fused >= 3) {

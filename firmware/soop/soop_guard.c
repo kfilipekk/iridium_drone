@@ -79,6 +79,13 @@ int soop_guard_burst(soop_guard_t *g, double t, double f_hz, double sigma_hz)
     return soop_nav_burst(&g->main, t, f_hz, sigma_hz);
 }
 
+int soop_guard_burst_sv(soop_guard_t *g, double t, double f_hz, double sigma_hz, int sv)
+{
+    if (FREE_RUNS(g))
+        soop_nav_burst_sv(&g->free, t, f_hz, sigma_hz, sv);
+    return soop_nav_burst_sv(&g->main, t, f_hz, sigma_hz, sv);
+}
+
 //horizontal distance between two ECEF points, at a
 static double horiz(const double a[3], const double b[3])
 {

@@ -36,6 +36,7 @@ private:
     struct burst_t {
         double t;
         float  f, sigma, cn0;
+        int16_t sv;              //the satellite a decoded Ring Alert names (-1: not decoded)
     };
 
     void thread_main();

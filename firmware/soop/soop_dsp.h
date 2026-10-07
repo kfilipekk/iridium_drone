@@ -23,6 +23,11 @@ typedef struct {
     float    cn0_dbhz;     //estimated C/N0 from the preamble tone
     float    len_s;        //burst length found after the preamble
     uint8_t  used_data;    //1 if the 4th-power data fit contributed
+    //the Ring Alert header, when its three BCH blocks check (iridium-toolkit's layout)
+    uint8_t  ira;          //1 if decoded
+    uint8_t  ra_sv, ra_beam;
+    uint8_t  ra_fixed;     //bits the BCH corrected
+    int16_t  ra_pos[3];    //x, y, z in 4 km units
 } soop_burst_t;
 
 typedef struct {

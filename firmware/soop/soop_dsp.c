@@ -24,6 +24,9 @@
 //no simplex burst outlasts its slot: a tone that does is a spur, and is dropped
 #define MAX_TONE_FRAMES ((int)(2.0f * SOOP_MAX_BURST_S * FSD / SOOP_DSP_HOP))
 
+static int ra_syn_ready;
+static void ra_syn_init(void);
+
 static float bessel_i0(float x)
 {
     float s = 1.0f, t = 1.0f;
@@ -66,6 +69,8 @@ void soop_dsp_init(soop_dsp_t *d)
     }
     d->m_next_frame = N;
     soop_dsp_set_lo(d, SOOP_LO_OFFSET_HZ);
+    if (!ra_syn_ready)
+        ra_syn_init();
 }
 
 void soop_dsp_aid(soop_dsp_t *d, const float *f_hz, const float *sd_hz, int n)
@@ -199,6 +204,8 @@ static void grab(const soop_dsp_t *d, uint64_t m0, int len, float f, float *zi, 
 
 #define MAX_SEG 2600    //the slot at 125 kSPS, rounded up
 
+static void decode_ira(const soop_dsp_t *d, uint64_t pre_m, float f, soop_burst_t *o);
+
 static int estimate(soop_dsp_t *d, const soop_pending_t *p, soop_burst_t *o)
 {
     static float zi[MAX_SEG], zq[MAX_SEG];
@@ -318,10 +325,149 @@ static int estimate(soop_dsp_t *d, const soop_pending_t *p, soop_burst_t *o)
     float t_st = (float)best_m0 * SOOP_DSP_DEC - SOOP_DSP_DELAY;
     o->t_start = (uint64_t)(t_st > 0 ? t_st + 0.5f : 0);
     o->f_hz = f - d->lo_off;
+    o->ira = 0;
+    decode_ira(d, best_m0, f, o);
     o->f_sigma_hz = s_f;
     o->cn0_dbhz = cn0;
     o->len_s = (best_len + len) / FSD;
     return 1;
+}
+
+//Ring Alert decoding: BCH(31,21), generator 1207, up to two errors from a syndrome table
+#define RA_POLY 1207u
+static uint32_t ra_syn[1024];           //syndrome -> error pattern (0: none known)
+
+static uint32_t ra_rem(uint32_t w)
+{
+    for (int b = 30; b >= 10; b--)
+        if (w >> b & 1u)
+            w ^= RA_POLY << (b - 10);
+    return w;
+}
+
+static void ra_syn_init(void)
+{
+    for (int i = 0; i < 31; i++) {
+        ra_syn[ra_rem(1u << i)] = 1u << i;
+        for (int j = i + 1; j < 31; j++) {
+            uint32_t e = (1u << i) | (1u << j), r = ra_rem(e);
+            if (!ra_syn[r])
+                ra_syn[r] = e;
+        }
+    }
+    ra_syn_ready = 1;
+}
+
+//one 32-bit block (bit 31 first): 21 data bits out, or -1 if it does not check
+static int ra_block(const char *bits, uint32_t *data, int *fixed)
+{
+    uint32_t w = 0;
+    int ones = 0;
+    for (int i = 0; i < 31; i++)
+        w = w << 1 | (uint32_t)(bits[i] - '0');
+    const uint32_t r = ra_rem(w);
+    if (r) {
+        if (!ra_syn[r])
+            return -1;
+        w ^= ra_syn[r];
+        *fixed += __builtin_popcount(ra_syn[r]);
+    }
+    ones = __builtin_popcount(w) + (bits[31] - '0');
+    if (ones & 1)
+        return -1;
+    *data = w >> 10;
+    return 0;
+}
+
+static int sbits(uint32_t v, int n)       //n-bit sign + magnitude field, as the toolkit reads it
+{
+    const int mag = (int)(v & ((1u << (n - 1)) - 1u));
+    return (v >> (n - 1) & 1u) ? mag - (1 << (n - 1)) : mag;
+}
+
+//find the unique word after the preamble and decode the header that follows it
+static void decode_ira(const soop_dsp_t *d, uint64_t pre_m, float f, soop_burst_t *o)
+{
+    static const int8_t uw[12] = { 0, 2, 2, 2, 2, 0, 0, 0, 2, 0, 0, 2 };   //absolute, x 90 deg
+    enum { SPS = 5, SPAN = 48, NSYM = 61 };
+    float zi[NSYM * SPS + 2 * SPAN + 8], zq[NSYM * SPS + 2 * SPAN + 8];
+    const int len = NSYM * SPS + 2 * SPAN + 8;
+    if (pre_m + 320 < (uint64_t)SPAN + SPS)
+        return;
+    const uint64_t m0 = pre_m + 320 - SPAN - SPS;     //one symbol before the earliest UW start
+    grab(d, m0, len, f, zi, zq);
+    //one-symbol boxcar, as the burst-length search uses
+    float ai = 0, aq = 0, hi[SPS] = {0}, hq[SPS] = {0};
+    for (int n = 0; n < len; n++) {
+        ai += zi[n] - hi[n % SPS];
+        aq += zq[n] - hq[n % SPS];
+        hi[n % SPS] = zi[n];
+        hq[n % SPS] = zq[n];
+        zi[n] = ai;
+        zq[n] = aq;
+    }
+    //the UW's phase changes are 0 or 180 deg: correlate them at every sample offset
+    int best = -1;
+    float best_m = 0.0f;
+    for (int off = 0; off <= 2 * SPAN; off++) {
+        float num = 0.0f, den = 0.0f;
+        int prev = 0;
+        for (int k = 0; k < 12; k++) {
+            const int a = off + SPS * k, b = a + SPS;      //b is UW symbol k, a the one before
+            const float dr = zi[b] * zi[a] + zq[b] * zq[a];
+            const float dm = sqrtf((zi[b] * zi[b] + zq[b] * zq[b]) * (zi[a] * zi[a] + zq[a] * zq[a]));
+            num += (((uw[k] - prev) & 3) == 2 ? -dr : dr);
+            den += dm;
+            prev = uw[k];
+        }
+        if (den > 0.0f && num / den > best_m) {
+            best_m = num / den;
+            best = off;
+        }
+    }
+    if (best < 0 || best_m < 0.7f)
+        return;
+    //48 data symbols -> 96 bits, for each sense of rotation
+    for (int sense = 1; sense >= -1; sense -= 2) {
+        char bits[96];
+        for (int k = 0; k < 48; k++) {
+            const int a = best + SPS * (12 + k), b = a + SPS;
+            const float re = zi[b] * zi[a] + zq[b] * zq[a], im = zq[b] * zi[a] - zi[b] * zq[a];
+            int q = (int)lrintf(atan2f(im, re) / (PI_F / 2.0f));
+            q = ((q * sense) % 4 + 4) % 4;
+            static const char *pair[4] = { "00", "01", "11", "10" };
+            bits[2 * k] = pair[q][0];
+            bits[2 * k + 1] = pair[q][1];
+        }
+        //undo the three-way interleave: symbols are bit pairs swapped, taken in threes from the end
+        char blk[3][32];
+        for (int i = 0; i < 16; i++)
+            for (int b = 0; b < 3; b++) {
+                const int sym = 47 - b - 3 * i;
+                blk[b][2 * i] = bits[2 * sym + 1];
+                blk[b][2 * i + 1] = bits[2 * sym];
+            }
+        uint32_t data[3];
+        int fixed = 0, ok = 1;
+        for (int b = 0; b < 3 && ok; b++)
+            ok = ra_block(blk[b], &data[b], &fixed) == 0;
+        //each block corrects two, but random data "corrects" to a valid word that way too:
+        //more than two bits across the header is noise
+        if (!ok || fixed > 2)
+            continue;
+        //63 header bits, the three 21-bit fields in order
+        uint64_t h = ((uint64_t)data[0] << 42) | ((uint64_t)data[1] << 21) | data[2];
+        #define FIELD(at, n) ((uint32_t)(h >> (63 - (at) - (n)) & ((1u << (n)) - 1u)))
+        o->ira = 1;
+        o->ra_sv = (uint8_t)FIELD(0, 7);
+        o->ra_beam = (uint8_t)FIELD(7, 6);
+        o->ra_pos[0] = (int16_t)sbits(FIELD(13, 12), 12);
+        o->ra_pos[1] = (int16_t)sbits(FIELD(25, 12), 12);
+        o->ra_pos[2] = (int16_t)sbits(FIELD(37, 12), 12);
+        o->ra_fixed = (uint8_t)fixed;
+        #undef FIELD
+        return;
+    }
 }
 
 static void frame(soop_dsp_t *d, uint64_t m0)

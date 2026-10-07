@@ -117,6 +117,13 @@ typedef struct {
     int    gps_valid;
     uint32_t count[SOOP_B_N], n_resets, n_acq_tries;
 
+    //Iridium's own satellite numbers, as decoded Ring Alerts carry them, learnt against the
+    //catalogue from bursts that associate without them
+    int16_t sv_sat[128];             //catalogue index + 1 (0: not yet)
+    uint8_t sv_votes[128];
+    int     burst_sv;                //the burst being handed in carries this (-1: none)
+    int     last_cat;                //catalogue index of the last fused burst
+
     //a clock remembered from an earlier flight: skips acquisition until it proves wrong
     double clk_prior, clk_prior_sd;
     int    clk_prior_set, clk_from_prior;
@@ -155,6 +162,9 @@ void soop_nav_set_time(soop_nav_t *nav, double t_board, double t_utc);
 
 //one burst from the DSP: carrier in the capture (Hz) and its sigma
 int  soop_nav_burst(soop_nav_t *nav, double t_board, double f_hz, double sigma_hz);
+
+//as soop_nav_burst, for a decoded Ring Alert: sv is the satellite number it carries
+int  soop_nav_burst_sv(soop_nav_t *nav, double t_board, double f_hz, double sigma_hz, int sv);
 
 //where each tracked satellite's bursts should land now: Hz in the capture, and 1-sigma.
 //returns how many (0 until the clock is known); windows wider than +-2 kHz are left out

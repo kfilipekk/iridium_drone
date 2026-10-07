@@ -43,6 +43,7 @@ void soop_guard_set_position(soop_guard_t *g, double t_board, const double ecef[
                              double sigma_m);
 void soop_guard_set_time(soop_guard_t *g, double t_board, double t_utc);
 int  soop_guard_burst(soop_guard_t *g, double t_board, double f_hz, double sigma_hz);
+int  soop_guard_burst_sv(soop_guard_t *g, double t_board, double f_hz, double sigma_hz, int sv);
 
 //a GPS fix the autopilot trusts
 int  soop_guard_gps(soop_guard_t *g, double t_board, double t_utc, const double ecef[3]);

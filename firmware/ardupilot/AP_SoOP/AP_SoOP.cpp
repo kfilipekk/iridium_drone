@@ -411,6 +411,12 @@ void AP_SoOP::run_block(const int16_t *iq, uint64_t first_sample)
         b.f = out[i].f_hz;
         b.sigma = out[i].f_sigma_hz;
         b.cn0 = out[i].cn0_dbhz;
+        b.sv = out[i].ira ? out[i].ra_sv : -1;
+        if (out[i].ira) {
+            AP::logger().WriteStreaming("SOR", "TimeUS,SV,Beam,X,Y,Z,Fix", "QBBhhhB", AP_HAL::micros64(),
+                                        out[i].ra_sv, out[i].ra_beam, out[i].ra_pos[0],
+                                        out[i].ra_pos[1], out[i].ra_pos[2], out[i].ra_fixed);
+        }
         _bursts_s++;
     }
     //bursts come out up to one simplex slot after their preamble
@@ -448,7 +454,7 @@ void AP_SoOP::feed_until(double horizon)
         if (bi >= 0 && (!have_v || _bq[bi].t < v.t)) {
             const burst_t b = _bq[bi];
             _bq[bi] = _bq[--_bq_n];
-            const int res = soop_guard_burst(_guard, b.t, b.f, b.sigma);
+            const int res = soop_guard_burst_sv(_guard, b.t, b.f, b.sigma, b.sv);
             AP::logger().WriteStreaming("SOB", "TimeUS,T,F,Sig,CN0,Res,Sat,Ch,Inn",
                                         "QdfffBIbf", AP_HAL::micros64(), b.t, b.f, b.sigma, b.cn0,
                                         uint8_t(res), uint32_t(res == SOOP_B_FUSED ? _nav->last_sat : 0),
