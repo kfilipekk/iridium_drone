@@ -7,6 +7,7 @@ LED = "Device:LED"; SW = "Switch:SW_Push"; XTAL = "Device:Crystal_GND24"
 F_R0402  = "Resistor_SMD:R_0402_1005Metric"
 F_R0603  = "Resistor_SMD:R_0603_1608Metric"
 F_C0402  = "Capacitor_SMD:C_0402_1005Metric"
+F_C0201  = "Capacitor_SMD:C_0201_0603Metric"
 F_C0805  = "Capacitor_SMD:C_0805_2012Metric"
 F_C1206  = "Capacitor_SMD:C_1206_3216Metric"
 F_L1210  = "Inductor_SMD:L_1210_3225Metric"
@@ -51,7 +52,7 @@ COMPONENTS = {
  "U15": ("jlc_parts:PSA4-5043+",            "jlc:SOT-343-4_L2.0-W1.3-P1.30-LS2.1-BR",           "PSA4-5043+",    "C5240848", True),
  "U16": ("jlc_parts:PSA4-5043+",            "jlc:SOT-343-4_L2.0-W1.3-P1.30-LS2.1-BR",           "PSA4-5043+",    "C5240848", True),
  #Y2 is an active 4-pad clipped-sine TCXO feeding U13's reference through C58
- "Y2" : ("jlc_parts:T132S4-25000ML33DTL",     "jlc:OSC-SMD_4P-L3.2-W2.5-BL",              "25MHz TCXO",    "C5563878", False),
+ "Y2" : ("jlc_parts:8132S-25.000MQ33DTL",     "jlc:OSC-SMD_4P-L3.2-W2.5-BL",              "25MHz TCXO",    "C19674258", False),
  "FL1": ("jlc_parts:TA1575IG",                   "jlc:FILTER-SMD_6P-L3.0-W3.0-P1.19-TR",                       "SAW 1620MHz",   "",         True),
 }
 
@@ -226,7 +227,8 @@ for r,v in [("R28","0R"),("R29","0R"),("R31","4k7"),
             ("R34","330R"),("R35","1k"),("R36","4k7"),("R37","4k7")]:
     RES(r, v, F_R0402)
 CAP("C58","10n", F_C0402)     #series DC-cut, Y2 output -> U13 XTAL [D] TCXO: 0.01 uF min
-CAP("C59", "100n", F_C0402)
+CAP("C59", "100n", F_C0201)     #0201 so it fits beside Y2.4
+CAP("C97", "100n", F_C0201)     #U14 supply
 
 #the bias tee's two critical parts
 RF_PARTS = dict(
@@ -345,7 +347,7 @@ BELLY_SENSOR = dict(
     mount="printed bracket under the bottom plate; needs a clear cone to the ground and "
           "must stay above the skid contact line so a landing does not crush it",
     src="[M] depth computed from design.SKID; [M] the 12 mm module envelope at this "
-        "position passes check_cad_fit's ground clearance with 31.50 mm of margin")
+        "position passes check_mech.py cad_fit's ground clearance with 31.50 mm of margin")
 
 PAYLOAD_BREAKOUT = dict(
     harness="2 wires: P41 (+5V) and P46 (GND) to the XIAO's 5V and GND pins",
@@ -689,8 +691,8 @@ PAYLOAD = dict(
     power_note="signal is 3.3 V logic, which every hobby servo and ESC accepts as a valid "
                "PWM high. Take a high-current servo's 5 V from its own BEC, not from this "
                "board - the rail has only 0.65 A of headroom and a stalled servo eats it",
-    mass_budget_g=885.0,   #payload at 40% hover throttle, from check_build
-    src="[D] hwdef.dat PWM/SERIAL_ORDER + [M] defaults.parm claims + [M] check_build "
+    mass_budget_g=885.0,   #payload at 40% hover throttle, from check_mech.py build
+    src="[D] hwdef.dat PWM/SERIAL_ORDER + [M] defaults.parm claims + [M] check_mech.py build "
         "power and payload figures")
 
 #the airframe, one source of truth
@@ -1099,8 +1101,8 @@ net("VCOBYP","U13.8"); net("REFOUT","U13.15")
 #GC1 needs 0.5-2.7 V (0.5 V = maximum gain)
 RES("R58", "4k7", F_R0402)
 net("GC1","U13.5","R35.2","R58.2"); NETS["GND"] += ["R35.1"]; NETS["VCC_RF"] += ["R58.1"]
-#1 nF beside the LO/VCO (pins 6-7) and synthesizer (pin 13) supplies
-for _c, _pin in (("C84", 6), ("C86", 13)):
+#1 nF beside the LO/VCO (pins 6-7) and LNA (pins 1-2) supplies
+for _c, _pin in (("C84", 6), ("C86", 2)):
     CAP(_c, "1n", F_C0402)
     NETS["GND"] += [f"{_c}.2"]; NETS["VCC_RF"] += [f"{_c}.1"]
 #MAX2112 baseband -> OPA2374 difference amplifiers -> ADC the comment here read "resistor
@@ -1122,7 +1124,7 @@ NETS["SOOP_Q_ADC"] += ["R48.2", "C77.2"]             #feedback, out B -> -IN B
 NETS["OPA_IN2N"] += ["C77.1"]                        #C77 across R48: anti-alias
 #the mid-rail reference both channels share
 net("BB_VREF","R52.2","R53.1","C75.1","R51.2","R49.2")
-NETS["+3V3A"] += ["R52.1", "U14.8"]; NETS["GND"] += ["R53.2", "C75.2", "U14.4"]
+NETS["+3V3A"] += ["R52.1", "U14.8", "C97.1"]; NETS["GND"] += ["R53.2", "C75.2", "U14.4", "C97.2"]
 #DC-offset servo capacitors
 net("IDC_P","U13.21","C61.1"); net("IDC_N","U13.22","C61.2")
 net("QDC_P","U13.23","C63.1"); net("QDC_N","U13.24","C63.2")
@@ -1543,6 +1545,8 @@ ADJACENCY = {
     "C31": ("U2", "5", 1.5), "C32": ("U2", "8", 1.5),
     "C33": ("U3", "5", 1.5), "C34": ("U3", "8", 1.5),
     "C35": ("U4", "1", 1.5),
+    "C59": ("Y2", "4", 2.5),                                    #TCXO supply
+    "C97": ("U14", "8", 3.0),                                   #op-amp supply, on its feed via
     "C36": ("U5", "8", 1.5),
     #ESD clamps: at the connector, before the trace runs into the board
     "D6": ("J6", "2", 4.0), "U22": ("J3", "2", 6.0), "U23": ("J5", "2", 5.0),
@@ -1685,6 +1689,7 @@ PASSIVE_LCSC = {
     ("1u",   F_C0805): "C91185",  ("22u",  F_C1206): "C5177178",
     ("0R",   F_R0402): "C17168",  ("100p", F_C0402): "C1546",
     ("1n",   F_C0402): "C1523",
+    ("100n", F_C0201): "C76939",   #Murata GRM033R61E104KE14D 100nF 25V X5R
     ("100R", F_R0402): "C25076",  ("120R", F_R0402): "C25862",
     ("2k2",  F_R0402): "C25879",
     ("1k",   F_R0402): "C11702",  ("4k7",  F_R0402): "C25900",
@@ -1754,6 +1759,7 @@ RATINGS = {
  "C60137":   ("47p",   50,  "NP0",     "5%",   "0402",  None, None, "[D] LCSC product page, 2026-08-29"),
  "C1546":    ("100p",  50,  "NP0",     "5%",   "0402",  None, None, "[D] LCSC product page (0402CG101J500NT), 2026-09-11"),
  "C1523":    ("1n",    50,  "X7R",     "10%",  "0402",  None, None, "[D] LCSC product page (0402B102K500NT), 2026-09-11"),
+ "C76939":   ("100n",  25,  "X5R",     "10%",  "0201",  -55,  85, "[L] JLCPCB part API: GRM033R61E104KE14D 100nF 25V X5R 0201, 2026-10-07"),
 }
 #parts whose ratings have not been read off a datasheet yet
 RATINGS_UNVERIFIED = set()
@@ -1793,6 +1799,7 @@ PART_HEIGHT = {
     "L_APV_ANR5040": 4.0,            #L5; [D] 5.0 x 5.0 x 4.0 mm
     "L0402": 0.5,                    #L6 LQW15AN; [D] Murata 0.5 mm max
     "DSN0603-2": 0.3,                #D7 PESD5V0C1BSF; [D] Nexperia DSN0603-2, 0.3 mm
+    "C_0201": 0.33,                  #C59/C97 GRM033; [D] Murata 0.3 +-0.03 mm
     "USON-10_2.5x1.0mm": 0.55,       #TPD4E05U06 DQA; [D] TI: 0.55 mm max
     "R_Array_Convex_4x0402": 0.35,   #4D02 33R x4; [D] UniOhm 0402x4 array 0.35 mm
     "Tag-Connect_TC2030-IDC-NL": 0.0,  #J19: bare pads, the cable clips on from above
@@ -1941,7 +1948,7 @@ NET_CURRENT = {
     "VBUS": 0.5,
 }
 
-#per-load continuous currents for check_power_cut.py
+#per-load continuous currents for check_board.py power_cut
 LOAD_CURRENT = {
     "+5V_PAYLOAD": {
         #[M] Payload 5V port J22: VTX 0.30 + XIAO camera 0.25
@@ -2163,7 +2170,7 @@ MODULES = {
         note="[D] 180 mA running, but 300 mA at START-UP - which is why it is on the payload "
              "BEC and not this board's buck. 33.30 mm tall against 28.5 mm of belly at the "
              "old 25 mm skid drop - SKID['drop'] is now 45 mm, giving 10.20 mm of ground "
-             "clearance (check_cad_fit)"),
+             "clearance (check_mech.py cad_fit)"),
     "rc_link": dict(
         what="ELRS 2.4 GHz, ESP-based", lands_on=["J5"], conn="JST-GH 4P on J5 (USART6)",
         needs_board_change=None, gbp=12, status="fitted",
@@ -2225,7 +2232,7 @@ MODULES = {
         needs_board_change=None, gbp=35, status="later", ma_5v=150, counted=False, bec=True,
         note="ArduRemoteID over DroneCAN; confirm the CAA's broadcast standard before buying. "
              "On the rear-port arm (MOUNTS['rid_tray']), away from the GPS and the ELRS receiver"),
-    "src": "[M] every lands_on asserted against real footprints by tools/check_modules.py",
+    "src": "[M] every lands_on asserted against real footprints by tools/check_order.py modules",
 }
 
 
@@ -2264,7 +2271,7 @@ RAIL_5V = dict(
     headroom_a=1.6 - LOADS_5V_CONT_A,
     note="Neither fitted inductor sits on a land too small for it any more: L2 is a "
          "4.0x4.0x3.0 mm FNR4030 on L_APV_ANR4030, and L5 a 5x5 CKCS5040 on L_APV_ANR5040 "
-         "(RAIL_5V_PAYLOAD). L5 was on a 1210 land until 2026-09-21, where check_ratings measured its terminal overhanging by 0.18 mm in "
+         "(RAIL_5V_PAYLOAD). L5 was on a 1210 land until 2026-09-21, where check_circuit.py ratings measured its terminal overhanging by 0.18 mm in "
          "Y - solderable, but the wrong land for the part, and now moot. If a future "
          "inductor is put on a 1210 land, do not 'fix' it by swapping in a part that "
          "land takes but the current does not.",

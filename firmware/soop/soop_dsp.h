@@ -13,6 +13,7 @@
 #define SOOP_DSP_RING       4096          //decimated samples: 32.8 ms of history
 #define SOOP_DSP_MAX_TONES  12
 #define SOOP_DSP_MAX_PEND   12
+#define SOOP_DSP_MAX_AID    48            //predicted windows the navigation can hand over
 
 typedef struct {
     uint64_t t_sample;     //capture sample index of the measurement epoch
@@ -22,6 +23,11 @@ typedef struct {
     float    cn0_dbhz;     //estimated C/N0 from the preamble tone
     float    len_s;        //burst length found after the preamble
     uint8_t  used_data;    //1 if the 4th-power data fit contributed
+    //the Ring Alert header
+    uint8_t  ira;          //1 if decoded
+    uint8_t  ra_sv, ra_beam;
+    uint8_t  ra_fixed;     //bits the BCH corrected
+    int16_t  ra_pos[3];    //x, y, z in 4 km units
 } soop_burst_t;
 
 typedef struct {
@@ -42,6 +48,9 @@ typedef struct {
 } soop_pending_t;
 
 typedef struct {
+    //the mix that brings Ring Alert to 0 Hz
+    float    lo_off;                 //Hz, the LO above Ring Alert
+    float    nco_c, nco_s, ph_c, ph_s;
     //decimators; histories are doubled so every window is contiguous
     uint64_t n_in;                   //capture samples consumed
     float    h1i[14], h1q[14];       //stage 1: 7 taps
@@ -59,6 +68,10 @@ typedef struct {
     float    cosw[SOOP_DSP_NFFT / 2], sinw[SOOP_DSP_NFFT / 2];
     float    noise;                  //long-term noise power per bin
     int      noise_init;
+    float    nbin[SOOP_DSP_NFFT];    //per-bin floor: learns a steady spur, barely sees a burst
+    //where the navigation expects a satellite: Hz in the capture
+    float    aid_f[SOOP_DSP_MAX_AID], aid_sd[SOOP_DSP_MAX_AID];
+    int      n_aid;
     soop_tone_t    tones[SOOP_DSP_MAX_TONES];
     soop_pending_t pend[SOOP_DSP_MAX_PEND];
     //statistics
@@ -66,6 +79,11 @@ typedef struct {
 } soop_dsp_t;
 
 void   soop_dsp_init(soop_dsp_t *d);
+//the LO's offset above Ring Alert; init sets SOOP_LO_OFFSET_HZ
+void   soop_dsp_set_lo(soop_dsp_t *d, double lo_offset_hz);
+
+//predicted carriers (Hz in the capture) and their 1-sigma
+void   soop_dsp_aid(soop_dsp_t *d, const float *f_hz, const float *sd_hz, int n);
 
 //push n interleaved I,Q pairs
 size_t soop_dsp_push(soop_dsp_t *d, const int16_t *iq, size_t n,

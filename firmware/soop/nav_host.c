@@ -82,6 +82,8 @@ int main(int argc, char **argv)
         return 2;
     }
     int sats = 0;
+    double prior = 0.0, prior_sd = 0.0;
+    unsigned aid_fused = 0, aid_in = 0, aid_windows = 0;
     soop_nav_cfg_t cfg;
     soop_nav_default_cfg(&cfg);
     for (int k = 3; k < argc; k++) {
@@ -91,11 +93,19 @@ int main(int argc, char **argv)
             sats = 1;
         } else if (!strcmp(argv[k], "--vel-sigma") && k + 1 < argc) {
             cfg.vel_sigma = atof(argv[++k]);
+        } else if (!strcmp(argv[k], "--clock-prior") && k + 2 < argc) {
+            prior = atof(argv[k + 1]);
+            prior_sd = atof(argv[k + 2]);
+            k += 2;
         }
     }
     soop_guard_cfg_t gcfg;
     soop_guard_default_cfg(&gcfg);
     soop_guard_init(&guard, &cfg, &gcfg, cat, n_cat, 0.0);
+    if (prior_sd > 0.0) {
+        soop_nav_clock_prior(&guard.main, prior, prior_sd);
+        soop_nav_clock_prior(&guard.free, prior, prior_sd);
+    }
 
     printf("kind,t,a,b,c,d,e,f,g,h,i,j,k\n");
     char line[256];
@@ -155,9 +165,21 @@ int main(int argc, char **argv)
         case 'R':
             soop_guard_arm(&guard, t);
             break;
-        case 'D':
-            if (sscanf(line + 1, "%lf %lf %lf %lf", &t, &a, &b, &d) == 4) {
-                const int res = soop_guard_burst(&guard, t, a, b);
+        case 'D': {
+            int sv = -1;
+            if (sscanf(line + 1, "%lf %lf %lf %lf %d", &t, &a, &b, &d, &sv) >= 4) {
+                //would the windows handed to the dsp just before have held this burst?
+                float pf[48], ps[48];
+                const int np = soop_nav_predict(nav_, t, pf, ps, 48);
+                int inside = 0;
+                for (int i = 0; i < np; i++)
+                    inside |= fabs(a - pf[i]) <= 3.0 * ps[i] + 488.0;
+                const int res = soop_guard_burst_sv(&guard, t, a, b, sv);
+                if (res == SOOP_B_FUSED && np) {
+                    aid_fused++;
+                    aid_in += inside;
+                    aid_windows += np;
+                }
                 printf("B,%.6f,%d,%d,%d,%.2f,%.2f\n", t, res,
                        res == SOOP_B_FUSED ? nav_->last_sat : 0,
                        res == SOOP_B_FUSED ? nav_->last_ch : -1,
@@ -165,6 +187,7 @@ int main(int argc, char **argv)
                        res == SOOP_B_FUSED ? nav_->last_sd : 0.0);
             }
             break;
+        }
         }
     }
     fclose(f);
@@ -174,5 +197,9 @@ int main(int argc, char **argv)
             nav_->count[SOOP_B_FUSED], nav_->count[SOOP_B_AMBIGUOUS], nav_->count[SOOP_B_UNMATCHED],
             nav_->count[SOOP_B_PENDING], nav_->count[SOOP_B_ACQUIRING], nav_->count[SOOP_B_NO_TIME],
             nav_->n_resets, nav_->n_acq_tries, guard.n_jumps, guard.state, guard.t_spoofed);
+    fprintf(stderr, "aid: %u of %u fused bursts inside a predicted window, %.1f windows each\n",
+            aid_in, aid_fused, aid_fused ? (double)aid_windows / aid_fused : 0.0);
+    fprintf(stderr, "clock %.1f Hz (sd %.1f), from a prior %d, prior kept %d\n", nav_->x[6],
+            sqrt(nav_->P[6][6]), nav_->clk_from_prior, nav_->clk_prior_set);
     return 0;
 }

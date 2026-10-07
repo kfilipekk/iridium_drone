@@ -27,6 +27,12 @@ bool AP_GPS_SoOP::read(void)
         return false;
     }
 
+    if (f.produced_ms == _last_produced_ms) {
+        return false;                     //nothing new: the EKF must not fuse it twice
+    }
+    _last_produced_ms = f.produced_ms;
+    _lag = constrain_float((now - f.epoch_ms) * 0.001f, 0.0f, 1.0f);
+
     state.status = (f.fix_type >= 3) ? AP_GPS::GPS_OK_FIX_3D : AP_GPS::NO_FIX;
     state.num_sats = f.num_sats;
     state.time_week = f.time_week;

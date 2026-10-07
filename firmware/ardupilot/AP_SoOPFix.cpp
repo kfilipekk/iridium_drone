@@ -122,6 +122,7 @@ void AP_SoOPFix::update_from_sitl(uint32_t now_ms)
     f.num_sats = 10;                      //Iridium sats in the arc
     f.fix_type = 3;
     get_gps_time(&f.time_week, &f.time_week_ms);
+    f.epoch_ms = now_ms;                  //truth sampled now
     set(f);
 }
 #endif

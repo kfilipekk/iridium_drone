@@ -21,6 +21,7 @@ public:
         uint16_t time_week;
         uint32_t time_week_ms;
         uint32_t produced_ms;    //AP_HAL::millis() when the solve produced it
+        uint32_t epoch_ms;       //AP_HAL::millis() of the moment the fix describes
     };
 
     //called by the solve task each time it produces a fix

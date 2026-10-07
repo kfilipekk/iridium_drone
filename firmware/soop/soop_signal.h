@@ -9,6 +9,6 @@
 #define SOOP_MAX_BURST_S     0.02032      //the simplex slot
 
 #define SOOP_FS              500000.0     //complex samples/s from the ADC pair
-#define SOOP_LO_OFFSET_HZ    62500.0      //LO above Ring Alert; exactly FS/8
+#define SOOP_LO_OFFSET_HZ    62500.0      //LO above Ring Alert by default
 
 #endif //SOOP_SIGNAL_H

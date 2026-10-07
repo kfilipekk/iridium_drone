@@ -9,6 +9,7 @@ D = design()
 RIN = value(D.COMPONENTS["R36"][2])    #4k7
 RF = value(D.COMPONENTS["R50"][2])     #10k
 C76 = value(D.COMPONENTS["C76"][2])    #100p
+C77 = value(D.COMPONENTS["C77"][2])    #the q channel's twin
 VREF = 3.3 * value(D.COMPONENTS["R53"][2]) / (
     value(D.COMPONENTS["R52"][2]) + value(D.COMPONENTS["R53"][2]))
 VCM = 1.65                             #tuner output common mode (assumed ~VCC/2)
@@ -51,7 +52,13 @@ def ac_analysis():
     r2, log2 = ngspice.run(_netlist(0, 0, 1) + "\n.ac dec 200 10 100Meg\n.end")
     if ngspice.errors(log2):
         raise RuntimeError("\n".join(ngspice.errors(log2)))
-    return gain, f[k], abs(r2["adc"][0])
+    return gain, f[k], abs(r2["adc"][0]), f, mag
+
+
+#gain at hz relative to dc, in dB
+def at(f, mag, hz):
+    i = min(range(len(f)), key=lambda j: abs(f[j] - hz))
+    return 20 * math.log10(mag[i] / mag[0])
 
 
 def main(chk=None):
@@ -71,7 +78,7 @@ def main(chk=None):
           f"ADC is {VADC_MIN:.0f}-{VADC_MAX:.0f} V")
     print(f"  usable differential input before the ADC clips: "
           f"+/-{span/gain:.3f} V")
-    g, corner, cm_gain = ac_analysis()
+    g, corner, cm_gain, f, mag = ac_analysis()
     print(f"  AC differential gain {g:.3f}, -3 dB corner {corner/1e3:.1f} kHz")
     cMRR = 20 * math.log10(gain / max(cm_gain, 1e-12))
     print(f"  common-mode gain {cm_gain*1e3:.4f} mV/V -> CMRR {cMRR:.0f} dB")
@@ -93,9 +100,16 @@ def main(chk=None):
            f"+/-{span/gain:.3f} V vs +/-0.5 V")
     chk.ok(cMRR >= 80.0, "baseband common-mode rejection above 80 dB",
            f"{cMRR:.0f} dB")
-    chk.ok(100e3 <= corner <= 250e3,
-           "baseband anti-alias corner between 100 and 250 kHz",
-           f"{corner/1e3:.1f} kHz")
+    #the dsp searches Ring Alert +-52 kHz around the 62.5 kHz lo offset
+    edge, alias = at(f, mag, 114.5e3), at(f, mag, 1.0625e6)
+    print(f"  {edge:.1f} dB at the 114.5 kHz search edge, {alias:.1f} dB at the 1.06 MHz alias")
+    chk.ok(edge >= -6.0, "baseband droop at the search-band edge within 6 dB", f"{edge:.1f} dB")
+    #the dsp's duplex test folds channels through iridium_sig.amp_gain
+    import iridium_sig
+    model = 20 * math.log10(iridium_sig.amp_gain(1.0625e6))
+    chk.ok(abs(model - alias) < 0.5, "the dsp's front-end model matches the circuit at 1 MHz",
+           f"spice {alias:.1f} dB, model {model:.1f} dB")
+    chk.ok(C76 == C77, "i and q anti-alias caps match", f"C76 {C76:.3g} F, C77 {C77:.3g} F")
     return chk
 
 

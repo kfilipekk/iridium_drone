@@ -28,7 +28,7 @@ batt_y = -6.0;   // forward of centre, so the rear posts stay free
 // ---- PLATE OUTLINES, PARSED FROM THE MANUFACTURER DXF ---------------------
 // drone.scad drew ALL THREE plates as one 50 mm square, from a variable whose own
 // comment called it a placeholder ("must be >= fc_w = 46.10"). Every frame-vs-anything
-// clearance check_cad_fit.py reported was therefore measured against an airframe that
+// clearance check_mech.py cad_fit reported was therefore measured against an airframe that
 // does not exist - and the error was not small or in the safe direction: the real top
 // plate is 160.26 mm long, more than three times the placeholder, reaching 80 mm out
 // under a prop disc of 89.2 mm radius.

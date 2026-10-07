@@ -26,6 +26,10 @@ public:
     //a Doppler solve is a 3D position fix; it does not do DGPS/RTK
     AP_GPS::GPS_Status highest_supported_status(void) override { return AP_GPS::GPS_OK_FIX_3D; }
 
-    //the solve is periodic and late by design (an arc must be observed first)
-    bool get_lag(float &lag) const override { lag = 1.0f; return true; }
+    //how old the newest fix was when it was read: its capture epoch to now
+    bool get_lag(float &lag) const override { lag = _lag; return true; }
+
+private:
+    float    _lag = 0.2f;
+    uint32_t _last_produced_ms = 0;
 };

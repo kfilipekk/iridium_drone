@@ -17,6 +17,15 @@
 #define PRE_COH_MIN    0.15f           //coherent share of the preamble window's energy
 #define BAND_HZ        52000.0f        //Ring Alert band after the mix
 #define SETTLE_FRAMES  64              //filters and noise estimate settling at start
+#define TONE_SNR_AID   6.0f            //where the navigation predicts a carrier: a few bins,
+#define TONE_NARROW_AID 4.0f           //not 213, so a weaker tone is no likelier to be noise
+#define NBIN_ALPHA     0.0005f         //per-bin floor: ~2000 frames, about 1 s
+#define NBIN_CLIP      2.0f            //one frame can lift a bin's floor by at most this ratio
+//no simplex burst outlasts its slot: a tone that does is a spur
+#define MAX_TONE_FRAMES ((int)(2.0f * SOOP_MAX_BURST_S * FSD / SOOP_DSP_HOP))
+
+static int ra_syn_ready;
+static void ra_syn_init(void);
 
 static float bessel_i0(float x)
 {
@@ -59,6 +68,38 @@ void soop_dsp_init(soop_dsp_t *d)
         d->sinw[k] = sinf(2.0f * PI_F * k / N);
     }
     d->m_next_frame = N;
+    soop_dsp_set_lo(d, SOOP_LO_OFFSET_HZ);
+    if (!ra_syn_ready)
+        ra_syn_init();
+}
+
+void soop_dsp_aid(soop_dsp_t *d, const float *f_hz, const float *sd_hz, int n)
+{
+    if (n > SOOP_DSP_MAX_AID)
+        n = SOOP_DSP_MAX_AID;
+    for (int i = 0; i < n; i++) {
+        d->aid_f[i] = f_hz[i] + d->lo_off;          //into the mixed frame, Ring Alert at 0
+        d->aid_sd[i] = sd_hz[i];
+    }
+    d->n_aid = n;
+}
+
+static int aided(const soop_dsp_t *d, float f)
+{
+    for (int i = 0; i < d->n_aid; i++)
+        if (fabsf(f - d->aid_f[i]) <= 3.0f * d->aid_sd[i] + FSD / N)
+            return 1;
+    return 0;
+}
+
+void soop_dsp_set_lo(soop_dsp_t *d, double lo_offset_hz)
+{
+    const double w = 2.0 * 3.14159265358979323846 * lo_offset_hz / SOOP_FS;
+    d->lo_off = (float)lo_offset_hz;
+    d->nco_c = (float)cos(w);
+    d->nco_s = (float)sin(w);
+    d->ph_c = 1.0f;
+    d->ph_s = 0.0f;
 }
 
 static void fft(float *re, float *im, const float *cw, const float *sw)
@@ -163,6 +204,8 @@ static void grab(const soop_dsp_t *d, uint64_t m0, int len, float f, float *zi, 
 
 #define MAX_SEG 2600    //the slot at 125 kSPS, rounded up
 
+static void decode_ira(const soop_dsp_t *d, uint64_t pre_m, float f, soop_burst_t *o);
+
 static int estimate(soop_dsp_t *d, const soop_pending_t *p, soop_burst_t *o)
 {
     static float zi[MAX_SEG], zq[MAX_SEG];
@@ -191,10 +234,15 @@ static int estimate(soop_dsp_t *d, const soop_pending_t *p, soop_burst_t *o)
     grab(d, best_m0, best_len, f_pre, zi, zq);
     float lb = FSD / best_len;
     f_pre += peak_freq(zi, zq, best_len, -0.6f * lb, 0.6f * lb, &pk);
-    float tot = 0;
-    for (int n = 0; n < best_len; n++)
+    float tot = 0, tot_f = 0, fi = 0, fq = 0;
+    for (int n = 0; n < best_len; n++) {
         tot += zi[n] * zi[n] + zq[n] * zq[n];
-    float coh_pre = pk / ((float)best_len * tot);
+        //one-symbol boxcar: energy in the channel, not a spur's beside it
+        fi += zi[n] - (n >= 5 ? zi[n - 5] : 0.0f);
+        fq += zq[n] - (n >= 5 ? zq[n - 5] : 0.0f);
+        tot_f += 0.04f * (fi * fi + fq * fq);
+    }
+    float coh_pre = pk / ((float)best_len * tot_f);
     if (!(coh_pre > PRE_COH_MIN))
         return 0;                                   //not a carrier: burst data, or noise
     float amp2 = pk / ((float)best_len * best_len);
@@ -231,6 +279,13 @@ static int estimate(soop_dsp_t *d, const soop_pending_t *p, soop_burst_t *o)
         if (e < floor_b + 0.25f * amp2 * 64.0f)
             break;
         len = b + 64;
+    }
+    //a carrier still there, coherent
+    {
+        float ti[256], tq[256];
+        grab(d, d0 + maxlen - 256, 256, f_pre, ti, tq);
+        if (dft_power(ti, tq, 256, 0.0f) / (256.0f * 256.0f) > 0.25f * amp2)
+            return 0;
     }
 
     //3. the data: 4th power strips DQPSK/BPSK to a tone at 4x the residual offset
@@ -269,11 +324,149 @@ static int estimate(soop_dsp_t *d, const soop_pending_t *p, soop_burst_t *o)
     o->t_sample = (uint64_t)(t_in > 0 ? t_in + 0.5f : 0);
     float t_st = (float)best_m0 * SOOP_DSP_DEC - SOOP_DSP_DELAY;
     o->t_start = (uint64_t)(t_st > 0 ? t_st + 0.5f : 0);
-    o->f_hz = f - (float)SOOP_LO_OFFSET_HZ;
+    o->f_hz = f - d->lo_off;
+    o->ira = 0;
+    decode_ira(d, best_m0, f, o);
     o->f_sigma_hz = s_f;
     o->cn0_dbhz = cn0;
     o->len_s = (best_len + len) / FSD;
     return 1;
+}
+
+//Ring Alert decoding: BCH(31,21), generator 1207
+#define RA_POLY 1207u
+static uint32_t ra_syn[1024];           //syndrome -> error pattern (0: none known)
+
+static uint32_t ra_rem(uint32_t w)
+{
+    for (int b = 30; b >= 10; b--)
+        if (w >> b & 1u)
+            w ^= RA_POLY << (b - 10);
+    return w;
+}
+
+static void ra_syn_init(void)
+{
+    for (int i = 0; i < 31; i++) {
+        ra_syn[ra_rem(1u << i)] = 1u << i;
+        for (int j = i + 1; j < 31; j++) {
+            uint32_t e = (1u << i) | (1u << j), r = ra_rem(e);
+            if (!ra_syn[r])
+                ra_syn[r] = e;
+        }
+    }
+    ra_syn_ready = 1;
+}
+
+//one 32-bit block (bit 31 first): 21 data bits out
+static int ra_block(const char *bits, uint32_t *data, int *fixed)
+{
+    uint32_t w = 0;
+    int ones = 0;
+    for (int i = 0; i < 31; i++)
+        w = w << 1 | (uint32_t)(bits[i] - '0');
+    const uint32_t r = ra_rem(w);
+    if (r) {
+        if (!ra_syn[r])
+            return -1;
+        w ^= ra_syn[r];
+        *fixed += __builtin_popcount(ra_syn[r]);
+    }
+    ones = __builtin_popcount(w) + (bits[31] - '0');
+    if (ones & 1)
+        return -1;
+    *data = w >> 10;
+    return 0;
+}
+
+static int sbits(uint32_t v, int n)       //n-bit sign + magnitude field, as the toolkit reads it
+{
+    const int mag = (int)(v & ((1u << (n - 1)) - 1u));
+    return (v >> (n - 1) & 1u) ? mag - (1 << (n - 1)) : mag;
+}
+
+//find the unique word after the preamble and decode the header that follows it
+static void decode_ira(const soop_dsp_t *d, uint64_t pre_m, float f, soop_burst_t *o)
+{
+    static const int8_t uw[12] = { 0, 2, 2, 2, 2, 0, 0, 0, 2, 0, 0, 2 };   //absolute, x 90 deg
+    enum { SPS = 5, SPAN = 48, NSYM = 61 };
+    float zi[NSYM * SPS + 2 * SPAN + 8], zq[NSYM * SPS + 2 * SPAN + 8];
+    const int len = NSYM * SPS + 2 * SPAN + 8;
+    if (pre_m + 320 < (uint64_t)SPAN + SPS)
+        return;
+    const uint64_t m0 = pre_m + 320 - SPAN - SPS;     //one symbol before the earliest UW start
+    grab(d, m0, len, f, zi, zq);
+    //one-symbol boxcar, as the burst-length search uses
+    float ai = 0, aq = 0, hi[SPS] = {0}, hq[SPS] = {0};
+    for (int n = 0; n < len; n++) {
+        ai += zi[n] - hi[n % SPS];
+        aq += zq[n] - hq[n % SPS];
+        hi[n % SPS] = zi[n];
+        hq[n % SPS] = zq[n];
+        zi[n] = ai;
+        zq[n] = aq;
+    }
+    //the UW's phase changes are 0 or 180 deg
+    int best = -1;
+    float best_m = 0.0f;
+    for (int off = 0; off <= 2 * SPAN; off++) {
+        float num = 0.0f, den = 0.0f;
+        int prev = 0;
+        for (int k = 0; k < 12; k++) {
+            const int a = off + SPS * k, b = a + SPS;      //b is UW symbol k, a the one before
+            const float dr = zi[b] * zi[a] + zq[b] * zq[a];
+            const float dm = sqrtf((zi[b] * zi[b] + zq[b] * zq[b]) * (zi[a] * zi[a] + zq[a] * zq[a]));
+            num += (((uw[k] - prev) & 3) == 2 ? -dr : dr);
+            den += dm;
+            prev = uw[k];
+        }
+        if (den > 0.0f && num / den > best_m) {
+            best_m = num / den;
+            best = off;
+        }
+    }
+    if (best < 0 || best_m < 0.7f)
+        return;
+    //48 data symbols -> 96 bits, for each sense of rotation
+    for (int sense = 1; sense >= -1; sense -= 2) {
+        char bits[96];
+        for (int k = 0; k < 48; k++) {
+            const int a = best + SPS * (12 + k), b = a + SPS;
+            const float re = zi[b] * zi[a] + zq[b] * zq[a], im = zq[b] * zi[a] - zi[b] * zq[a];
+            int q = (int)lrintf(atan2f(im, re) / (PI_F / 2.0f));
+            q = ((q * sense) % 4 + 4) % 4;
+            static const char *pair[4] = { "00", "01", "11", "10" };
+            bits[2 * k] = pair[q][0];
+            bits[2 * k + 1] = pair[q][1];
+        }
+        //undo the three-way interleave: symbols are bit pairs swapped
+        char blk[3][32];
+        for (int i = 0; i < 16; i++)
+            for (int b = 0; b < 3; b++) {
+                const int sym = 47 - b - 3 * i;
+                blk[b][2 * i] = bits[2 * sym + 1];
+                blk[b][2 * i + 1] = bits[2 * sym];
+            }
+        uint32_t data[3];
+        int fixed = 0, ok = 1;
+        for (int b = 0; b < 3 && ok; b++)
+            ok = ra_block(blk[b], &data[b], &fixed) == 0;
+        //each block corrects two
+        if (!ok || fixed > 2)
+            continue;
+        //63 header bits, the three 21-bit fields in order
+        uint64_t h = ((uint64_t)data[0] << 42) | ((uint64_t)data[1] << 21) | data[2];
+        #define FIELD(at, n) ((uint32_t)(h >> (63 - (at) - (n)) & ((1u << (n)) - 1u)))
+        o->ira = 1;
+        o->ra_sv = (uint8_t)FIELD(0, 7);
+        o->ra_beam = (uint8_t)FIELD(7, 6);
+        o->ra_pos[0] = (int16_t)sbits(FIELD(13, 12), 12);
+        o->ra_pos[1] = (int16_t)sbits(FIELD(25, 12), 12);
+        o->ra_pos[2] = (int16_t)sbits(FIELD(37, 12), 12);
+        o->ra_fixed = (uint8_t)fixed;
+        #undef FIELD
+        return;
+    }
 }
 
 static void frame(soop_dsp_t *d, uint64_t m0)
@@ -291,8 +484,16 @@ static void frame(soop_dsp_t *d, uint64_t m0)
     }
     //noise: 30th percentile of an exponential is 0.357 x its mean
     float q = select_k(tmp, N, (int)(0.3f * N)) / 0.3567f;
-    if (!d->noise_init) { d->noise = q; d->noise_init = 1; }
-    else if (q < 4.0f * d->noise) d->noise += 0.02f * (q - d->noise);
+    if (!d->noise_init) {
+        d->noise = q;
+        d->noise_init = 1;
+        for (int k = 0; k < N; k++)
+            d->nbin[k] = q;
+    } else {
+        if (q < 4.0f * d->noise) d->noise += 0.02f * (q - d->noise);
+        for (int k = 0; k < N; k++)
+            d->nbin[k] += NBIN_ALPHA * (fminf(p[k], NBIN_CLIP * d->nbin[k]) - d->nbin[k]);
+    }
     d->n_frames++;
 
     int seen[SOOP_DSP_MAX_TONES] = {0};
@@ -303,14 +504,18 @@ static void frame(soop_dsp_t *d, uint64_t m0)
             if (!(p[k] >= p[kl] && p[k] > p[kr]))
                 continue;
             float pk = p[kl] + p[k] + p[kr];
-            if (pk < TONE_SNR_MIN * 3.0f * d->noise)
+            float nb = fmaxf(d->nbin[kl] + d->nbin[k] + d->nbin[kr], 3.0f * d->noise) / 3.0f;
+            const int aid = d->n_aid && aided(d, kk * FSD / N);
+            if (pk < (aid ? TONE_SNR_AID : TONE_SNR_MIN) * 3.0f * nb)
                 continue;
+            //neighbours count by what stands above their own floor
             float sh = 0;
             for (int s = 3; s <= 8; s++) {
-                sh = fmaxf(sh, p[(kk + s + N) % N]);
-                sh = fmaxf(sh, p[(kk - s + N) % N]);
+                int a = (kk + s + N) % N, b = (kk - s + N) % N;
+                sh = fmaxf(sh, p[a] - d->nbin[a] + d->noise);
+                sh = fmaxf(sh, p[b] - d->nbin[b] + d->noise);
             }
-            if (p[k] < TONE_NARROW * fmaxf(sh, d->noise))
+            if (p[k] < (aid ? TONE_NARROW_AID : TONE_NARROW) * fmaxf(sh, nb))
                 continue;
             float den = p[kl] - 2 * p[k] + p[kr];
             float kf = kk + ((den != 0.0f) ? 0.5f * (p[kl] - p[kr]) / den : 0.0f);
@@ -333,6 +538,14 @@ static void frame(soop_dsp_t *d, uint64_t m0)
             t->last_m = m0;
             t->frames++;
             t->missed = 0;
+            if (t->frames > MAX_TONE_FRAMES) {
+                t->live = 0;                //a spur: free the slot, emit nothing
+                for (int j = -1; j <= 1; j++) {     //and floor its bins at its power at once
+                    int b = (kk + j + N) % N;
+                    d->nbin[b] = fmaxf(d->nbin[b], p[b]);
+                }
+                continue;
+            }
             if (pk > t->best_p) { t->best_p = pk; t->best_m = m0; t->best_bin_f = kf; }
             seen[slot] = 1;
         }
@@ -353,7 +566,8 @@ static void frame(soop_dsp_t *d, uint64_t m0)
             d->pend[j].pre_m = t->best_m;
             d->pend[j].f_coarse = t->best_bin_f * FSD / N;
             d->pend[j].tone_snr = t->best_p / (3.0f * d->noise);
-            d->pend[j].ready_m = t->best_m + N + (uint64_t)(SOOP_MAX_BURST_S * FSD) + 8;
+            //the window can start 128 late and run 320 + a slot
+            d->pend[j].ready_m = t->best_m + 2 * N + (uint64_t)(SOOP_MAX_BURST_S * FSD) + 8;
             break;
         }
     }
@@ -386,17 +600,22 @@ static size_t emit(soop_dsp_t *d, float yi, float yq, soop_burst_t *out, size_t 
 
 size_t soop_dsp_push(soop_dsp_t *d, const int16_t *iq, size_t n, soop_burst_t *out, size_t max_out)
 {
-    static const float mix_c[8] = {1, 0.70710678f, 0, -0.70710678f, -1, -0.70710678f, 0, 0.70710678f};
-    static const float mix_s[8] = {0, 0.70710678f, 1, 0.70710678f, 0, -0.70710678f, -1, -0.70710678f};
     const int n2 = SOOP_DSP_H2TAPS, c2 = (SOOP_DSP_H2TAPS - 1) / 2;
     size_t n_out = 0;
     for (size_t s = 0; s < n; s++) {
         float i = iq[2 * s], q = iq[2 * s + 1];
-        int ph = (int)(d->n_in & 7);
         d->n_in++;
-        //mix +FS/8: Ring Alert to 0 Hz
-        float mi = i * mix_c[ph] - q * mix_s[ph];
-        float mq = i * mix_s[ph] + q * mix_c[ph];
+        //mix up by the LO offset: Ring Alert to 0 Hz
+        float mi = i * d->ph_c - q * d->ph_s;
+        float mq = i * d->ph_s + q * d->ph_c;
+        float pc = d->ph_c * d->nco_c - d->ph_s * d->nco_s;
+        d->ph_s = d->ph_c * d->nco_s + d->ph_s * d->nco_c;
+        d->ph_c = pc;
+        if (!(d->n_in & 255)) {                 //keep the phasor on the unit circle
+            float r = 1.0f / sqrtf(d->ph_c * d->ph_c + d->ph_s * d->ph_s);
+            d->ph_c *= r;
+            d->ph_s *= r;
+        }
         d->h1i[d->p1] = d->h1i[d->p1 + 7] = mi;
         d->h1q[d->p1] = d->h1q[d->p1 + 7] = mq;
         d->p1 = (d->p1 + 1) % 7;

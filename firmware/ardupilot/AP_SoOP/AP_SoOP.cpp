@@ -11,6 +11,7 @@ extern "C" {
 #include <AP_Filesystem/AP_Filesystem.h>
 #include <AP_GPS/AP_GPS.h>
 #include <AP_GPS/AP_SoOPFix.h>
+#include <AP_InertialSensor/AP_InertialSensor.h>
 #include <AP_Logger/AP_Logger.h>
 #include <GCS_MAVLink/GCS.h>
 
@@ -96,6 +97,7 @@ void AP_SoOP::update()
         _baro_offset = _have_baro_offset ? 0.98f * _baro_offset + 0.02f * off : off;
         _have_baro_offset = true;
     }
+    v.temp_c = AP::ins().get_temperature(0);
     if (_have_baro_offset && AP::baro().healthy()) {
         v.baro_h = AP::baro().get_altitude() + _baro_offset;
         v.baro_ok = true;
@@ -160,14 +162,26 @@ void AP_SoOP::load_config()
     //"key value" per line; unknown keys are reported, not ignored silently
     char path[40];
     snprintf(path, sizeof(path), "%s/soop.cfg", DIR);
-    const int fd = AP::FS().open(path, O_RDONLY);
-    if (fd < 0) {
+    struct stat st;
+    if (AP::FS().stat(path, &st) != 0 || st.st_size <= 0) {
         return;
     }
-    char buf[512];
-    const int32_t n = AP::FS().read(fd, buf, sizeof(buf) - 1);
-    AP::FS().close(fd);
+    if (st.st_size > 4096) {
+        GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "SoOP: soop.cfg over 4 KB, not read");
+        return;
+    }
+    //read it whole; comments may fill the first few hundred bytes
+    char *buf = (char *)malloc(st.st_size + 1);
+    if (buf == nullptr) {
+        return;
+    }
+    const int fd = AP::FS().open(path, O_RDONLY);
+    const int32_t n = fd >= 0 ? AP::FS().read(fd, buf, st.st_size) : -1;
+    if (fd >= 0) {
+        AP::FS().close(fd);
+    }
     if (n <= 0) {
+        free(buf);
         return;
     }
     buf[n] = 0;
@@ -207,6 +221,14 @@ void AP_SoOP::load_config()
             _ant_feed_off = val == 0;
         } else if (!strcmp(key, "bbg")) {
             _bbg = uint8_t(constrain_int16(int16_t(val), 0, 15));
+        } else if (!strcmp(key, "lo_offset_hz")) {
+            //clear of the dc notch
+            if (fabs(val) >= 20000.0 && fabs(val) <= 150000.0) {
+                _lo_off = val;
+                c.f_lo = SOOP_F_RING_ALERT + val;
+            } else {
+                GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "SoOP: lo_offset_hz %.0f outside 20-150 kHz", val);
+            }
         } else {
             known = false;
             for (auto &d : dbl) {
@@ -220,6 +242,7 @@ void AP_SoOP::load_config()
             GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "SoOP: unknown soop.cfg key %s", key);
         }
     }
+    free(buf);
 }
 
 int AP_SoOP::load_catalogue()
@@ -270,7 +293,9 @@ bool AP_SoOP::setup()
     soop_nav_default_cfg(&cfg);
     _nav->cfg = cfg;
     soop_guard_default_cfg(&_gcfg);
+    _lo_off = SOOP_LO_OFFSET_HZ;
     load_config();
+    soop_dsp_set_lo(_dsp, _lo_off);
     cfg = _nav->cfg;
 
     _n_cat = load_catalogue();
@@ -300,6 +325,7 @@ bool AP_SoOP::setup()
                       tuner.vco(), _n_cat);
     }
     soop_guard_init(_guard, &cfg, &_gcfg, _cat, _n_cat, 0.0);
+    clock_load(AP::ins().get_temperature(0));
     _fs = SOOP_FS;
     _warned_stale = false;
     return true;
@@ -356,6 +382,21 @@ void AP_SoOP::thread_main()
 void AP_SoOP::run_block(const int16_t *iq, uint64_t first_sample)
 {
     soop_burst_t out[8];
+    if (!_have_first || first_sample != _next_first) {
+        if (_have_first) {
+            soop_dsp_init(_dsp);          //a gap: the filters and history would straddle it
+            soop_dsp_set_lo(_dsp, _lo_off);
+        }
+        _dsp_base = first_sample;         //the dsp counts from here
+        _have_first = true;
+    }
+    _next_first = first_sample + SOOP_CAPTURE_BLOCK;
+    //where the tracked satellites should
+    if ((first_sample / SOOP_CAPTURE_BLOCK) % 4 == 0) {
+        float pf[SOOP_DSP_MAX_AID], ps[SOOP_DSP_MAX_AID];
+        soop_dsp_aid(_dsp, pf, ps, soop_nav_predict(_nav, _t0 + first_sample / _fs, pf, ps,
+                                                    SOOP_DSP_MAX_AID));
+    }
     const uint32_t t_start = AP_HAL::micros();
     const size_t n = soop_dsp_push(_dsp, iq, SOOP_CAPTURE_BLOCK, out, 8);
     _cpu_us += AP_HAL::micros() - t_start;
@@ -365,10 +406,16 @@ void AP_SoOP::run_block(const int16_t *iq, uint64_t first_sample)
             break;
         }
         burst_t &b = _bq[_bq_n++];
-        b.t = _t0 + out[i].t_sample / _fs;
+        b.t = _t0 + (_dsp_base + out[i].t_sample) / _fs;
         b.f = out[i].f_hz;
         b.sigma = out[i].f_sigma_hz;
         b.cn0 = out[i].cn0_dbhz;
+        b.sv = out[i].ira ? out[i].ra_sv : -1;
+        if (out[i].ira) {
+            AP::logger().WriteStreaming("SOR", "TimeUS,SV,Beam,X,Y,Z,Fix", "QBBhhhB", AP_HAL::micros64(),
+                                        out[i].ra_sv, out[i].ra_beam, out[i].ra_pos[0],
+                                        out[i].ra_pos[1], out[i].ra_pos[2], out[i].ra_fixed);
+        }
         _bursts_s++;
     }
     //bursts come out up to one simplex slot after their preamble
@@ -406,7 +453,7 @@ void AP_SoOP::feed_until(double horizon)
         if (bi >= 0 && (!have_v || _bq[bi].t < v.t)) {
             const burst_t b = _bq[bi];
             _bq[bi] = _bq[--_bq_n];
-            const int res = soop_guard_burst(_guard, b.t, b.f, b.sigma);
+            const int res = soop_guard_burst_sv(_guard, b.t, b.f, b.sigma, b.sv);
             AP::logger().WriteStreaming("SOB", "TimeUS,T,F,Sig,CN0,Res,Sat,Ch,Inn",
                                         "QdfffBIbf", AP_HAL::micros64(), b.t, b.f, b.sigma, b.cn0,
                                         uint8_t(res), uint32_t(res == SOOP_B_FUSED ? _nav->last_sat : 0),
@@ -432,7 +479,9 @@ void AP_SoOP::feed_until(double horizon)
             soop_guard_gps(_guard, v.t, v.gps_utc, v.gps_ecef);
             _guard_dist = float(_guard->dist_m);
             _guard_state = uint8_t(_guard->state);
+            clock_learn(v.temp_c);
         }
+        _temp_c = v.temp_c;
         if (v.baro_ok) {
             soop_guard_baro(_guard, v.t, v.baro_h);
         }
@@ -477,18 +526,97 @@ void AP_SoOP::publish(double t)
     const uint64_t gps_ms = uint64_t((utc + 946728000.0L - GPS_UNIX_S + LEAP_S) * 1000);
     out.time_week = gps_ms / AP_MSEC_PER_WEEK;
     out.time_week_ms = gps_ms % AP_MSEC_PER_WEEK;
+    out.epoch_ms = uint32_t(t * 1000);    //board time of the capture epoch the fix is for
     AP_SoOPFix::get_singleton()->set(out);
+}
+
+//the clock table: "temp_c offset_hz" per line
+void AP_SoOP::clock_load(float temp_c)
+{
+    char path[40];
+    snprintf(path, sizeof(path), "%s/clock.dat", DIR);
+    const int fd = AP::FS().open(path, O_RDONLY);
+    if (fd < 0) {
+        return;
+    }
+    char buf[2048];
+    const int32_t n = AP::FS().read(fd, buf, sizeof(buf) - 1);
+    AP::FS().close(fd);
+    buf[n > 0 ? n : 0] = 0;
+    char *save = nullptr;
+    for (char *line = strtok_r(buf, "\n", &save); line; line = strtok_r(nullptr, "\n", &save)) {
+        char *end = nullptr;
+        const long k = strtol(line, &end, 10) - CLK_T0;
+        const double hz = strtod(end, nullptr);
+        if (end != line && k >= 0 && k < CLK_N) {
+            _clk_tab[k] = hz;
+            _clk_have[k] = 1;
+        }
+    }
+    //the nearest learnt degree within 10, trusted less the further it is
+    const int k0 = int(lroundf(temp_c)) - CLK_T0;
+    for (int d = 0; d <= 10; d++) {
+        for (int k : { k0 - d, k0 + d }) {
+            if (k >= 0 && k < CLK_N && _clk_have[k]) {
+                const double sd = 200.0 + 20.0 * d;
+                soop_nav_clock_prior(&_guard->main, _clk_tab[k], sd);
+                soop_nav_clock_prior(&_guard->free, _clk_tab[k], sd);
+                GCS_SEND_TEXT(MAV_SEVERITY_INFO, "SoOP: clock %.0f Hz from %d C", double(_clk_tab[k]), k + CLK_T0);
+                return;
+            }
+        }
+    }
+}
+
+void AP_SoOP::clock_learn(float temp_c)
+{
+    //only a clock the sky has settled, not one this table seeded
+    if (!_nav->have_clock || _nav->clk_from_prior || _nav->P[6][6] > 30.0 * 30.0) {
+        return;
+    }
+    const int k = int(lroundf(temp_c)) - CLK_T0;
+    if (k < 0 || k >= CLK_N) {
+        return;
+    }
+    const float x = float(_nav->x[6]);
+    _clk_tab[k] = _clk_have[k] ? 0.99f * _clk_tab[k] + 0.01f * x : x;
+    _clk_have[k] = 1;
+    _clk_dirty = true;
+}
+
+void AP_SoOP::clock_save(double t)
+{
+    if (!_clk_dirty || t - _clk_save_t < 60.0) {
+        return;
+    }
+    char path[40];
+    snprintf(path, sizeof(path), "%s/clock.dat", DIR);
+    const int fd = AP::FS().open(path, O_WRONLY | O_CREAT | O_TRUNC);
+    if (fd < 0) {
+        return;
+    }
+    char line[32];
+    for (int k = 0; k < CLK_N; k++) {
+        if (_clk_have[k]) {
+            const int n = snprintf(line, sizeof(line), "%d %.1f\n", k + CLK_T0, double(_clk_tab[k]));
+            AP::FS().write(fd, line, n);
+        }
+    }
+    AP::FS().close(fd);
+    _clk_dirty = false;
+    _clk_save_t = t;
 }
 
 void AP_SoOP::log_status(double t)
 {
+    clock_save(t);
     const float cpu = _samples_s ? 100.0f * _cpu_us / (1e6f * _samples_s / float(SOOP_FS)) : 0;
     if (_capturing) {
         tuner.check_lock();
     }
-    AP::logger().WriteStreaming("SOS", "TimeUS,CPU,Bps,Ovr,Lock,VT,NT,Clk,Fused,Amb,Unm,G,GD,GL",
-                                "QfHIBBBfIIIBff", AP_HAL::micros64(), cpu, uint16_t(_bursts_s),
-                                capture.overruns(), uint8_t(tuner.locked()), tuner.vtune_adc(),
+    AP::logger().WriteStreaming("SOS", "TimeUS,CPU,Bps,Ovr,AErr,Lock,VT,NT,Clk,Fused,Amb,Unm,G,GD,GL",
+                                "QfHIIBBBfIIIBff", AP_HAL::micros64(), cpu, uint16_t(_bursts_s),
+                                capture.overruns(), capture.adc_errors(), uint8_t(tuner.locked()), tuner.vtune_adc(),
                                 uint8_t(_nav->n_track), float(_nav->x[6]),
                                 _nav->count[SOOP_B_FUSED], _nav->count[SOOP_B_AMBIGUOUS],
                                 _nav->count[SOOP_B_UNMATCHED], uint8_t(_guard->state),

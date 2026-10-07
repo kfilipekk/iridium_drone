@@ -31,10 +31,12 @@ private:
         bool   armed;
         double gps_utc;          //UTC s since J2000
         double gps_ecef[3];
+        float  temp_c;           //IMU die temperature, the TCXO's nearest thermometer
     };
     struct burst_t {
         double t;
         float  f, sigma, cn0;
+        int16_t sv;              //the satellite a decoded Ring Alert names (-1: not decoded)
     };
 
     void thread_main();
@@ -46,6 +48,9 @@ private:
     void publish(double t);
     void log_status(double t);
     void ant_update(double t);
+    void clock_load(float temp_c);
+    void clock_learn(float temp_c);
+    void clock_save(double t);
 
     bool     _started;
     HAL_Semaphore _sem;
@@ -69,7 +74,11 @@ private:
     int        _n_cat;
     bool       _replay, _swap_iq, _capturing;
     uint8_t    _bbg;
+    float      _lo_off;          //Hz, the LO above Ring Alert
     double     _t0;              //board s of capture sample 0
+    uint64_t   _dsp_base;        //capture sample where the dsp last started counting
+    uint64_t   _next_first;      //the block that follows without a gap
+    bool       _have_first;
     double     _fs;
     double     _undulation;      //m, geoid above ellipsoid, from the GPS when it says
     float      _baro_offset;     //ellipsoidal height minus baro altitude, learnt on GPS
@@ -85,6 +94,13 @@ private:
     AP_HAL::AnalogSource *_ant_adc;
     volatile bool _ant_feed_off;
     uint64_t   _samples_s;
+    //the TCXO's offset per degree, remembered across flights in clock.dat
+    static const int CLK_T0 = -20, CLK_N = 100;
+    float      _clk_tab[CLK_N];
+    uint8_t    _clk_have[CLK_N];
+    bool       _clk_dirty;
+    double     _clk_save_t;
+    float      _temp_c;
 };
 
 namespace AP {
