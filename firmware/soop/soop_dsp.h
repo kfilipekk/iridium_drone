@@ -13,6 +13,7 @@
 #define SOOP_DSP_RING       4096          //decimated samples: 32.8 ms of history
 #define SOOP_DSP_MAX_TONES  12
 #define SOOP_DSP_MAX_PEND   12
+#define SOOP_DSP_MAX_AID    48            //predicted windows the navigation can hand over
 
 typedef struct {
     uint64_t t_sample;     //capture sample index of the measurement epoch
@@ -63,6 +64,9 @@ typedef struct {
     float    noise;                  //long-term noise power per bin
     int      noise_init;
     float    nbin[SOOP_DSP_NFFT];    //per-bin floor: learns a steady spur, barely sees a burst
+    //where the navigation expects a satellite: Hz in the capture, and its 1-sigma
+    float    aid_f[SOOP_DSP_MAX_AID], aid_sd[SOOP_DSP_MAX_AID];
+    int      n_aid;
     soop_tone_t    tones[SOOP_DSP_MAX_TONES];
     soop_pending_t pend[SOOP_DSP_MAX_PEND];
     //statistics
@@ -72,6 +76,10 @@ typedef struct {
 void   soop_dsp_init(soop_dsp_t *d);
 //the LO's offset above Ring Alert; init sets SOOP_LO_OFFSET_HZ
 void   soop_dsp_set_lo(soop_dsp_t *d, double lo_offset_hz);
+
+//predicted carriers (Hz in the capture) and their 1-sigma; inside +-3 sigma the detector
+//accepts a weaker tone. n = 0 clears them
+void   soop_dsp_aid(soop_dsp_t *d, const float *f_hz, const float *sd_hz, int n);
 
 //push n interleaved I,Q pairs
 size_t soop_dsp_push(soop_dsp_t *d, const int16_t *iq, size_t n,

@@ -14,7 +14,7 @@ Checks:
   nav                Gate the on-board navigation (firmware/soop/soop_nav.c) against simulated flights.
   spice              Gate wrapper around the SPICE suite in sim/ (see sim/run_suite.py).
 """
-import csv, json, math, os, re, shutil, subprocess, sys, tempfile
+import csv, json, math, os, random, re, shutil, subprocess, sys, tempfile
 import design, soop_burst, soop_scenario, soop_solver
 import iridium_sig as sig
 import soop_solver as sol
@@ -514,6 +514,31 @@ def run_dsp():
           f"300 Hz/s: {rs['false']} false of {rs['n_det']}; {rate_s:.0%} of bursts over 5 kHz "
           f"from a spur detected at >= {g['strong_dbhz']:.0f} dB-Hz "
           f"({rs['det_strong'] / max(1, rs['n_strong']):.0%} counting those on it)")
+
+    #aided: windows where the navigation would predict each burst, 20 Hz off, plus ten decoys a
+    #slot with nothing under them
+    rng = random.Random(5)
+    ra = sig.baseband_hz(sig.F_RING_ALERT)
+    aid = os.path.join(tmp, "aid.txt")
+    with open(aid, "w") as f:
+        for b in truth["bursts"]:
+            f.write(f"{b['start'] - 500} {b['start'] + b['n_samples'] + 500} "
+                    f"{b['f_hz'] + rng.gauss(0, 20):.1f} 30\n")
+        for k in range(truth["slots"]):
+            for _ in range(10):
+                f.write(f"{k * truth['slot_len']} {(k + 1) * truth['slot_len']} "
+                        f"{ra + rng.uniform(-50000, 50000):.1f} 30\n")
+    out = subprocess.run([exe, os.path.join(tmp, "iq.bin"), "--aid", aid], capture_output=True, text=True)
+    ra_ = score(truth, list(csv.DictReader(out.stdout.splitlines())))
+    mid = [(dd, n) for lo, hi, dd, n, _ in ra_["bands"] if lo >= 50]
+    rate_a = sum(dd for dd, _ in mid) / max(1, sum(n for _, n in mid))
+    weak = [(dd, n) for lo, hi, dd, n, _ in ra_["bands"] if hi <= 50]
+    good = (rate_a >= g["detect_min"] and ra_["false"] <= g["false_max"] * max(1, ra_["n_det"])
+            and ra_["p90_strong"] <= g["p90_hz"] and ra_["within3"] >= g["within3_min"])
+    checks.append(good)
+    print(f"  {'ok  ' if good else 'FAIL'}  aided by predicted windows: {rate_a:.0%} detected at "
+          f">= 50 dB-Hz, {sum(dd for dd, _ in weak)}/{sum(n for _, n in weak)} at 45-50; "
+          f"{ra_['false']} false of {ra_['n_det']} with ten decoy windows a slot")
 
     #Iridium's duplex channels about 1 MHz below the LO fold onto Ring Alert at the 1 MSPS raw
     dup = soop_scenario.make_duplex(os.path.join(tmp, "duplex"), max(20, slots // 3), seed=22,
@@ -1050,6 +1075,47 @@ def pct(v, q):
     return v[min(len(v) - 1, int(q * len(v)))] if v else float("inf")
 
 
+def check_clock_prior(exe, tmp):
+    """A clock remembered from an earlier flight: sooner when right, harmless when wrong."""
+    name, seeds, kw = FLIGHTS[0]
+    d = os.path.join(tmp, "prior")
+    truth = soop_scenario.make_obs(d, seed=seeds[0], **kw)
+    args = [exe, os.path.join(d, "iridium.tle"), os.path.join(d, "obs.txt")]
+
+    def run(extra):
+        r = subprocess.run(args + extra, capture_output=True, text=True)
+        b = [row for row in csv.reader(r.stdout.splitlines()[1:]) if row[0] == "B"]
+        first = next((float(row[1]) for row in b if int(row[2]) == 0), None)
+        t0 = float(b[0][1]) if b else 0.0
+        return (None if first is None else first - t0), sum(int(row[2]) == 0 for row in b), r.stderr
+
+    cold, n_cold, _ = run([])
+    warm, n_warm, _ = run(["--clock-prior", f"{truth['tcxo0_hz']:.1f}", "200"])
+    bad, n_bad, err = run(["--clock-prior", f"{truth['tcxo0_hz'] + 3000:.1f}", "200"])
+    dropped = "prior kept 0" in err
+    ok = (cold is not None and warm is not None and warm <= cold - 5.0
+          and bad is not None and dropped and n_bad >= 0.9 * n_cold)
+    return ok, (f"a remembered clock fuses its first burst {cold - warm if ok else float('nan'):.0f} s "
+                f"sooner (cold {cold:.0f} s, warm {warm:.0f} s); one 3 kHz wrong is dropped "
+                f"({'yes' if dropped else 'NO'}) and still fuses {n_bad}/{n_cold}")
+
+
+def check_aid(exe, tmp):
+    """The windows the navigation hands the dsp: do the bursts it then fuses fall in them?"""
+    name, seeds, kw = FLIGHTS[0]
+    d = os.path.join(tmp, "aid")
+    soop_scenario.make_obs(d, seed=seeds[0], **kw)
+    r = subprocess.run([exe, os.path.join(d, "iridium.tle"), os.path.join(d, "obs.txt")],
+                       capture_output=True, text=True)
+    m = re.search(r"aid: (\d+) of (\d+) fused bursts inside a predicted window, ([\d.]+) windows", r.stderr)
+    if not m:
+        return False, "nav_host printed no aid line"
+    inside, fused, wins = int(m.group(1)), int(m.group(2)), float(m.group(3))
+    ok = fused > 0 and inside >= 0.95 * fused
+    return ok, (f"{inside}/{fused} fused bursts fell inside a window predicted before them "
+                f"({wins:.0f} windows live at a time, need 95%)")
+
+
 def run_nav():
     keep = sys.argv[sys.argv.index("--keep") + 1] if "--keep" in sys.argv else None
     flights = QUICK if "--quick" in sys.argv else FLIGHTS
@@ -1072,6 +1138,14 @@ def run_nav():
     print(f"  {'ok  ' if good else 'FAIL'}  {msg}")
 
     good, msg = check_catalogue_age(exe)
+    checks.append(good)
+    print(f"  {'ok  ' if good else 'FAIL'}  {msg}")
+
+    good, msg = check_clock_prior(exe, tmp)
+    checks.append(good)
+    print(f"  {'ok  ' if good else 'FAIL'}  {msg}")
+
+    good, msg = check_aid(exe, tmp)
     checks.append(good)
     print(f"  {'ok  ' if good else 'FAIL'}  {msg}")
 

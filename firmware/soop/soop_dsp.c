@@ -17,6 +17,8 @@
 #define PRE_COH_MIN    0.15f           //coherent share of the preamble window's energy
 #define BAND_HZ        52000.0f        //Ring Alert band after the mix
 #define SETTLE_FRAMES  64              //filters and noise estimate settling at start
+#define TONE_SNR_AID   6.0f            //where the navigation predicts a carrier: a few bins,
+#define TONE_NARROW_AID 4.0f           //not 213, so a weaker tone is no likelier to be noise
 #define NBIN_ALPHA     0.0005f         //per-bin floor: ~2000 frames, about 1 s
 #define NBIN_CLIP      2.0f            //one frame can lift a bin's floor by at most this ratio
 //no simplex burst outlasts its slot: a tone that does is a spur, and is dropped
@@ -64,6 +66,25 @@ void soop_dsp_init(soop_dsp_t *d)
     }
     d->m_next_frame = N;
     soop_dsp_set_lo(d, SOOP_LO_OFFSET_HZ);
+}
+
+void soop_dsp_aid(soop_dsp_t *d, const float *f_hz, const float *sd_hz, int n)
+{
+    if (n > SOOP_DSP_MAX_AID)
+        n = SOOP_DSP_MAX_AID;
+    for (int i = 0; i < n; i++) {
+        d->aid_f[i] = f_hz[i] + d->lo_off;          //into the mixed frame, Ring Alert at 0
+        d->aid_sd[i] = sd_hz[i];
+    }
+    d->n_aid = n;
+}
+
+static int aided(const soop_dsp_t *d, float f)
+{
+    for (int i = 0; i < d->n_aid; i++)
+        if (fabsf(f - d->aid_f[i]) <= 3.0f * d->aid_sd[i] + FSD / N)
+            return 1;
+    return 0;
 }
 
 void soop_dsp_set_lo(soop_dsp_t *d, double lo_offset_hz)
@@ -339,7 +360,8 @@ static void frame(soop_dsp_t *d, uint64_t m0)
                 continue;
             float pk = p[kl] + p[k] + p[kr];
             float nb = fmaxf(d->nbin[kl] + d->nbin[k] + d->nbin[kr], 3.0f * d->noise) / 3.0f;
-            if (pk < TONE_SNR_MIN * 3.0f * nb)
+            const int aid = d->n_aid && aided(d, kk * FSD / N);
+            if (pk < (aid ? TONE_SNR_AID : TONE_SNR_MIN) * 3.0f * nb)
                 continue;
             //neighbours count by what stands above their own floor: a known spur is not data
             float sh = 0;
@@ -348,7 +370,7 @@ static void frame(soop_dsp_t *d, uint64_t m0)
                 sh = fmaxf(sh, p[a] - d->nbin[a] + d->noise);
                 sh = fmaxf(sh, p[b] - d->nbin[b] + d->noise);
             }
-            if (p[k] < TONE_NARROW * fmaxf(sh, nb))
+            if (p[k] < (aid ? TONE_NARROW_AID : TONE_NARROW) * fmaxf(sh, nb))
                 continue;
             float den = p[kl] - 2 * p[k] + p[kr];
             float kf = kk + ((den != 0.0f) ? 0.5f * (p[kl] - p[kr]) / den : 0.0f);

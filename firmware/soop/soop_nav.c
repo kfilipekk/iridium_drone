@@ -183,6 +183,27 @@ static void base_init(soop_nav_t *nav, const double pos[3], double sigma, double
     nav->have_clock = 0;
     nav->n_acq = 0;
     nav->vis_t = -1e9;
+    if (nav->clk_prior_set) {
+        nav->x[IC] = nav->clk_prior;
+        nav->P[IC][IC] = nav->clk_prior_sd * nav->clk_prior_sd;
+        nav->have_clock = 1;
+        nav->clk_from_prior = 1;
+        nav->prior_bursts = nav->prior_fused = 0;
+    }
+}
+
+void soop_nav_clock_prior(soop_nav_t *nav, double ic_hz, double sigma_hz)
+{
+    nav->clk_prior = ic_hz;
+    nav->clk_prior_sd = sigma_hz;
+    nav->clk_prior_set = 1;
+    if (nav->have_pos && !nav->have_clock) {
+        nav->x[IC] = ic_hz;
+        nav->P[IC][IC] = sigma_hz * sigma_hz;
+        nav->have_clock = 1;
+        nav->clk_from_prior = 1;
+        nav->prior_bursts = nav->prior_fused = 0;
+    }
 }
 
 void soop_nav_init(soop_nav_t *nav, const soop_nav_cfg_t *cfg, const soop_sat_t *cat,
@@ -628,6 +649,36 @@ static int candidates(soop_nav_t *nav, double tb, double f_hz, double sigma, int
     return n;
 }
 
+int soop_nav_predict(soop_nav_t *nav, double t_board, float *f_hz, float *sd_hz, int max)
+{
+    if (!nav->have_clock || !nav->have_time || !nav->have_pos)
+        return 0;
+    const double tu = utc_of(nav, t_board);
+    double R[3][3], v_ned[3];
+    ned_matrix(nav->x, R);
+    vel_at(nav, t_board, v_ned);
+    int n = 0;
+    for (int k = 0; k < nav->n_track && n < max; k++) {
+        const int sat = nav->track[k];
+        const double tau = nav->x[IDT] + nav->x[SOOP_NAV_NBASE + SOOP_NAV_NS * k + 1];
+        satgeo_t g;
+        if (sat_geometry(nav, sat, tu, tau, &g) != 0)
+            continue;
+        for (int ch = 0; ch < SOOP_N_SIMPLEX && n < max; ch++) {
+            pred_t p;
+            //with f = 0 the innovation is minus the predicted carrier
+            predict(nav, &g, k, 0, sat, t_board, tu, 0.0, 0.0, ch, R, v_ned, &p);
+            const double sd = sqrt(fmax(p.S - p.r2, 0.0) + p.r2);
+            if (3.0 * sd > 2000.0)
+                continue;
+            f_hz[n] = (float)(-p.y / (1.0 + nav->eps_mcu));
+            sd_hz[n] = (float)sd;
+            n++;
+        }
+    }
+    return n;
+}
+
 static void fuse(soop_nav_t *nav, double tb, double f_hz, double sigma, int sat, int ch)
 {
     const double tu = utc_of(nav, tb);
@@ -837,6 +888,18 @@ int soop_nav_burst(soop_nav_t *nav, double t_board, double f_hz, double sigma_hz
             drop_slot(nav, k);
 done:
     nav->count[res]++;
+    if (nav->clk_from_prior && res != SOOP_B_NO_TIME) {
+        nav->prior_bursts++;
+        if (res == SOOP_B_FUSED && ++nav->prior_fused >= 3) {
+            nav->clk_from_prior = 0;              //the remembered clock fits the sky
+        } else if (nav->prior_fused == 0 && nav->prior_bursts >= 2 * (uint32_t)c->acq_min) {
+            nav->have_clock = 0;                  //nothing fits: acquire as if cold, and forget it
+            nav->clk_from_prior = 0;
+            nav->clk_prior_set = 0;
+            nav->P[IC][IC] = c->acq_span * c->acq_span;
+            nav->n_acq = 0;
+        }
+    }
     return res;
 }
 

@@ -116,6 +116,11 @@ typedef struct {
     double nis_avg;
     int    gps_valid;
     uint32_t count[SOOP_B_N], n_resets, n_acq_tries;
+
+    //a clock remembered from an earlier flight: skips acquisition until it proves wrong
+    double clk_prior, clk_prior_sd;
+    int    clk_prior_set, clk_from_prior;
+    uint32_t prior_bursts, prior_fused;
 } soop_nav_t;
 
 typedef struct {
@@ -150,6 +155,13 @@ void soop_nav_set_time(soop_nav_t *nav, double t_board, double t_utc);
 
 //one burst from the DSP: carrier in the capture (Hz) and its sigma
 int  soop_nav_burst(soop_nav_t *nav, double t_board, double f_hz, double sigma_hz);
+
+//where each tracked satellite's bursts should land now: Hz in the capture, and 1-sigma.
+//returns how many (0 until the clock is known); windows wider than +-2 kHz are left out
+int  soop_nav_predict(soop_nav_t *nav, double t_board, float *f_hz, float *sd_hz, int max);
+
+//the TCXO's offset at the carrier from an earlier flight, Hz, and how far to trust it
+void soop_nav_clock_prior(soop_nav_t *nav, double ic_hz, double sigma_hz);
 
 //the current estimate, propagated to t_board
 int  soop_nav_fix(soop_nav_t *nav, double t_board, soop_fix_t *fix);
