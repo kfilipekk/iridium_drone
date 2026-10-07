@@ -1213,7 +1213,7 @@ def build_rows():
         bound=("AP_SoOP builds and links into the NAVCORE_SoOP firmware; the pins it uses "
                "(PC4/PA4 capture, I2C2 tuner, PC0/PC1 moved to ADC3) are gated against the "
                "netlist by the hwdef check"),
-        evidence=("tuner lock, the 2 MSPS capture rate and the CPU share are properties of "
+        evidence=("tuner lock, the 1 MSPS capture rate and the CPU share are properties of "
                   "the code on this silicon. ST's pin data confirms every ADC channel used, "
                   "so what the bench finds is fixed in firmware, not copper"),
         residual="runbook T3b step 2"))

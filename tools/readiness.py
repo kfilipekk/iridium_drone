@@ -323,7 +323,7 @@ PREREQUISITES = [
          bound="AP_SoOP builds and links into the NAVCORE_SoOP firmware",
          claim="the flight firmware: MAX2112 control, I/Q capture and the EKF hand-off on the H743",
          why="BUILT. The gated C (solver.dsp, solver.nav) runs in AP_SoOP with the tuner "
-             "driver and simultaneous ADC1/ADC2 capture. Tuner lock, the 2 MSPS capture and "
+             "driver and simultaneous ADC1/ADC2 capture. Tuner lock, the 1 MSPS capture and "
              "the CPU share are only known on the board: runbook T3b step 2."),
     dict(id="solver.c", cls=GATED,
          check="the C solver agrees with the Python reference and builds for the target",
