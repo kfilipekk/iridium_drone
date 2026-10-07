@@ -2739,7 +2739,7 @@
 				)
 			)
 		)
-		(property "LCSC" "C18305"
+		(property "LCSC" "C1017"
 			(at 0 0 90)
 			(layer "F.SilkS")
 			(hide yes)
@@ -2888,7 +2888,7 @@
 				)
 			)
 		)
-		(property "LCSC" "C5177178"
+		(property "LCSC" "C12891"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -16464,7 +16464,7 @@
 				)
 			)
 		)
-		(property "LCSC" "C25862"
+		(property "LCSC" "C25079"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -18186,7 +18186,7 @@
 				)
 			)
 		)
-		(property "LCSC" "C131394"
+		(property "LCSC" "C307331"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -25504,7 +25504,7 @@
 				(justify mirror)
 			)
 		)
-		(property "LCSC" "C25767"
+		(property "LCSC" "C25768"
 			(at 0 0 90)
 			(layer "B.SilkS")
 			(hide yes)
@@ -26865,7 +26865,7 @@
 				(justify mirror)
 			)
 		)
-		(property "LCSC" "C25767"
+		(property "LCSC" "C25768"
 			(at 0 0 180)
 			(layer "B.SilkS")
 			(hide yes)
@@ -28812,7 +28812,7 @@
 				(justify mirror)
 			)
 		)
-		(property "LCSC" "C1713"
+		(property "LCSC" "C15850"
 			(at 0 0 270)
 			(layer "B.SilkS")
 			(hide yes)
@@ -31748,7 +31748,7 @@
 				(justify mirror)
 			)
 		)
-		(property "LCSC" "C5177178"
+		(property "LCSC" "C12891"
 			(at 0 0 0)
 			(layer "B.SilkS")
 			(hide yes)
@@ -31901,7 +31901,7 @@
 				(justify mirror)
 			)
 		)
-		(property "LCSC" "C131394"
+		(property "LCSC" "C307331"
 			(at 0 0 90)
 			(layer "B.SilkS")
 			(hide yes)
@@ -38664,7 +38664,7 @@
 				(justify mirror)
 			)
 		)
-		(property "LCSC" "C5177178"
+		(property "LCSC" "C12891"
 			(at 0 0 270)
 			(layer "B.SilkS")
 			(hide yes)
@@ -43526,7 +43526,7 @@
 				(justify mirror)
 			)
 		)
-		(property "LCSC" "C5177178"
+		(property "LCSC" "C12891"
 			(at 0 0 90)
 			(layer "B.SilkS")
 			(hide yes)
@@ -46150,34 +46150,34 @@
 		)
 	)
 	(gr_line
-		(start 141.45 126.35)
-		(end 141.45 128.85)
+		(start 144.2 134.35)
+		(end 144.2 138.35)
 		(stroke
-			(width 0.15)
+			(width 0.25)
 			(type default)
 		)
 		(layer "F.SilkS")
-		(uuid "f04034c4-21e5-4fd4-9810-e397d5ebe8c1")
+		(uuid "18e352c8-cfc1-4005-94c9-ee95d7a40f04")
 	)
 	(gr_line
-		(start 141.45 128.85)
-		(end 140.65 128.05)
+		(start 144.2 138.35)
+		(end 143.2 137.35)
 		(stroke
-			(width 0.15)
+			(width 0.25)
 			(type default)
 		)
 		(layer "F.SilkS")
-		(uuid "adff0f70-988b-481b-bb52-f32bd246646b")
+		(uuid "740bc149-c3aa-4cb3-9031-dbe5957fa466")
 	)
 	(gr_line
-		(start 141.45 128.85)
-		(end 142.25 128.05)
+		(start 144.2 138.35)
+		(end 145.2 137.35)
 		(stroke
-			(width 0.15)
+			(width 0.25)
 			(type default)
 		)
 		(layer "F.SilkS")
-		(uuid "c1532527-e377-4b33-b578-322bfe4b8f24")
+		(uuid "3dca7695-2c21-4a7a-8a2d-39087cc66b37")
 	)
 	(gr_arc
 		(start 99.25 99.9)
@@ -275091,9 +275091,9 @@
 		)
 	)
 	(group "silk_forward_arrow"
-		(uuid "e4ee9099-925f-4355-9e8a-a1848e4c119e")
-		(members "adff0f70-988b-481b-bb52-f32bd246646b" "c1532527-e377-4b33-b578-322bfe4b8f24"
-			"f04034c4-21e5-4fd4-9810-e397d5ebe8c1"
+		(uuid "958f46a7-45a2-4058-bd22-c8b3f72615f8")
+		(members "18e352c8-cfc1-4005-94c9-ee95d7a40f04" "3dca7695-2c21-4a7a-8a2d-39087cc66b37"
+			"740bc149-c3aa-4cb3-9031-dbe5957fa466"
 		)
 	)
 	(embedded_fonts no)

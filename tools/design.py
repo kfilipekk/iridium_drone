@@ -1685,17 +1685,17 @@ PASSIVE_LCSC = {
     ("10n",  F_C0402): "C15195",  ("30p",  F_C0402): "C107004",
     ("47p",  F_C0402): "C60137",  ("3n3",  F_C0402): "C26404",
     #C17/C18, the VBAT bulk caps
-    ("10u",  F_C0805): "C1713",   ("10u",  F_C1206): "C13585",
-    ("1u",   F_C0805): "C91185",  ("22u",  F_C1206): "C5177178",
+    ("10u",  F_C0805): "C15850",  ("10u",  F_C1206): "C13585",
+    ("1u",   F_C0805): "C28323",  ("22u",  F_C1206): "C12891",
     ("0R",   F_R0402): "C17168",  ("100p", F_C0402): "C1546",
     ("1n",   F_C0402): "C1523",
     ("100n", F_C0201): "C76939",   #Murata GRM033R61E104KE14D 100nF 25V X5R
-    ("100R", F_R0402): "C25076",  ("120R", F_R0402): "C25862",
+    ("100R", F_R0402): "C25076",  ("120R", F_R0402): "C25079",
     ("2k2",  F_R0402): "C25879",
     ("1k",   F_R0402): "C11702",  ("4k7",  F_R0402): "C25900",
     ("330R", F_R0402): "C25104",  ("470R", F_R0402): "C25117",
     ("5k1",  F_R0402): "C25905",  ("6k8",  F_R0402): "C25917",
-    ("10k",  F_R0402): "C25744",  ("22k",  F_R0402): "C25767",
+    ("10k",  F_R0402): "C25744",  ("22k",  F_R0402): "C25768",
     ("10k",  F_R0603): "C25804",
     ("27k",  F_R0402): "C25771",  ("47k",  F_R0402): "C25792",
     ("100k", F_R0402): "C25741",
@@ -1707,15 +1707,15 @@ PASSIVE_LCSC = {
     ("10uH", F_L1210): "C167879",     #FNR4030 on a 1210 land - does not fit
     ("10uH", F_ANR4030): "C167879",   #FNR4030S100MT, Isat 2.4 A, Irms 1.6 A
     ("10uH", F_ANR5040): "C354610",   #CKCS5040-10uH/M, Isat 2.5 A, Irms 2.1 A
-    ("600R@100MHz", F_L0805): "C18305",
+    ("600R@100MHz", F_L0805): "C1017",   #GZ2012D601TF; BLM21PG600 is 60 ohm
     ("BLUE", F_LED):   "C965807", ("GREEN", F_LED): "C965804",
     ("BOOT", F_SW):    "C231329", ("RESET", F_SW): "C231329",
 }
 
 PART_LCSC = {
     #VBAT high-frequency bypass
-    "C19": "C131394",
-    "C66": "C131394",
+    "C19": "C307331",
+    "C66": "C307331",
 }
 
 for _r, _lcsc in PART_LCSC.items():
@@ -1743,13 +1743,13 @@ RATINGS = {
  "C1525":    ("100n",  16,  "X7R",     "10%",  "0402",  -55, 125, "[D] LCSC product page, 2026-08-29"),
  "C32949":   ("10p",   50,  "C0G",     "5%",   "0402",  -55, 125, "[L] jlcpcb.com/partdetail/C32949: CL05C100JB5NNNC 10pF 50V C0G, 2026-10-01"),
  "C82219":   ("47n",   50,  "X7R",     "10%",  "0402",  -55, 125, "[L] JLCPCB part API: FH 0402B473K500NT 47nF 50V X7R 0402, 2026-09-26"),
- "C131394":  ("100n",  50,  "X7R",     "10%",  "0402",  None, None, "[D] LCSC product page, 2026-08-29"),
+ "C307331":  ("100n",  50,  "X7R",     "10%",  "0402",  -55, 125, "[L] JLCPCB part API: CL05B104KB54PNC 100nF 50V X7R, 2026-10-07"),
  "C52923":   ("1u",    25,  "X5R",     "10%",  "0402",  -55,  85, "[D] LCSC product page, 2026-08-29"),
- "C91185":   ("1u",    50,  "X7R",     "10%",   "0805",  None, None, "[D] LCSC product page, 2026-08-29"),
- "C1713":    ("10u",   16,  "X5R",     "10%",  "0805",  -55,  85, "[D] LCSC product page, 2026-08-29"),
+ "C28323":   ("1u",    50,  "X7R",     "10%",  "0805",  -55, 125, "[L] JLCPCB part API: CL21B105KBFNNNE 1uF 50V X7R, 2026-10-07"),
+ "C15850":   ("10u",   25,  "X5R",     "10%",  "0805",  -55,  85, "[L] JLCPCB part API: CL21A106KAYNNNE 10uF 25V X5R, 2026-10-07"),
  "C16195875":("10u",   35,  "X7R",     "10%",  "1206",  None, None, "[D] LCSC + jlcparts, 2026-09-03"),
  "C13585":   ("10u",   50,  "X5R",     "10%",  "1206",  -55,  85, "[D] Samsung CL31A106KBHNNNE (A = X5R) 10uF 50V 1206, LCSC C13585"),
- "C5177178": ("22u",   16,  "X5R",     None,   "1206",  None, None, "[D] LCSC product page, 2026-08-29"),
+ "C12891":   ("22u",   25,  "X5R",     "10%",  "1206",  -55,  85, "[L] JLCPCB part API: CL31A226KAHNNNE 22uF 25V X5R, 2026-10-07"),
  "C107004":  ("30p",   50,  "NP0",     "5%",   "0402",  None, None, "[D] LCSC product page, 2026-08-29"),
  "C19666":   ("4u7",   16,  "X5R",     "10%",  "0603",  -55,  85, "[D] LCSC product page, 2026-08-29"),
  "C354262":  ("4u7",   25,  "X7R",     "10%",  "0805",  None, None, "[D] LCSC product page, 2026-08-29"),
@@ -1768,7 +1768,7 @@ RATINGS_UNVERIFIED = set()
 INDUCTORS = {
  "C167879":  ("10uH", 2.4, 1.6, 0.130, (4.0, 4.0, 3.0), "[D] LCSC page 2026-08-29, FNR4030S100MT"),
  "C354610":  ("10uH", 2.5, 2.1, 0.064, (5.0, 5.0, 4.0), "[D] LCSC page 2026-08-29, CKCS5040-10uH/M"),
- "C18305":   ("600R@100MHz", None, None, None, (2.0, 1.25, 0.85), "[A] 0805 ferrite bead, package typical"),
+ "C1017":    ("600R@100MHz", None, 0.5, 0.3, (2.0, 1.25, 0.85), "[L] JLCPCB part API: GZ2012D601TF 600R@100MHz 500mA 300mohm, 2026-10-07"),
 }
 #continuous current each inductor actually carries
 #what the +5 V buck (U8) actually carries
@@ -2345,4 +2345,6 @@ IMU_AXES = {
     "U2": ("icm42688", ("1", "2", "3", "4"), ("8", "9", "10", "11"), ("5", "6", "7"), ("12", "13", "14")),
     "U3": ("icm42605", ("1", "2", "3", "4"), ("8", "9", "10", "11"), ("5", "6", "7"), ("12", "13", "14")),
 }
-SILK_ARROW = {"side": "top", "direction": BOARD_FORWARD, "length": 2.5, "label": None}
+#the frame IMU_AXES and the hwdef rotations use; 4 mm and no label is the most the top silk fits
+SILK_ARROW = {"side": "top", "direction": BOARD_FORWARD, "length": 4.0, "width": 0.25,
+              "head": 1.0, "label": None}
