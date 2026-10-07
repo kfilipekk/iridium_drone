@@ -501,6 +501,9 @@ Usage:  python3 tools/check_circuit.py electrical [-v]
 electrical_RAILS = {"+3V3", "+3V3A", "+3V3_CAN", "+5V", "+5V_PAYLOAD", "+9V", "VBAT", "VDDA", "VBUS"}
 DECOUPLE_NEAR = 3.0        #mm; beyond this a 100n is not doing its job at 100 MHz
 DECOUPLE_FAR  = 6.0        #mm; beyond this it is decoration
+#supply pins the symbol rule misses: a TCXO, a passive-typed op-amp pin, the tuner's rail
+SUPPLY_PINS = ["Y2.4", "U14.8", "U13.1", "U13.2", "U13.6", "U13.7", "U13.13", "U13.16", "U13.25"]
+DECOUPLE_RAILS = electrical_RAILS | {"VCC_RF"}
 
 #datasheet-mandated externals and strapping, beyond plain decoupling
 REQUIRED = [
@@ -589,10 +592,10 @@ def run_electrical():
             continue
         legs = [(npad.get(f"{ref}.1"), npad.get(f"{ref}.2"))]
         (a, b), = legs
-        if a in electrical_RAILS and b == "GND":
-            caps.setdefault(a, []).append(ref)
-        elif b in electrical_RAILS and a == "GND":
-            caps.setdefault(b, []).append(ref)
+        if a in DECOUPLE_RAILS and b == "GND":
+            caps.setdefault(a, []).append((ref, "1"))
+        elif b in DECOUPLE_RAILS and a == "GND":
+            caps.setdefault(b, []).append((ref, "2"))
 
     syms = symlib.load()
     ptype = {}
@@ -604,19 +607,18 @@ def run_electrical():
     ics = sorted({r for r in design.COMPONENTS
                   if r.startswith("U") and not design.COMPONENTS[r][4]})
     worst = []
-    for ic in ics:
-        for pad in pads_of.get(ic, []):
+    supplies = [(ic, pad) for ic in ics for pad in pads_of.get(ic, [])
+                if npad.get(f"{ic}.{pad}") in electrical_RAILS
+                and ptype.get(f"{ic}.{pad}") == "power_in"]       #else a strapped logic pin
+    supplies += [tuple(sp.split(".", 1)) for sp in SUPPLY_PINS if tuple(sp.split(".", 1)) not in supplies]
+    for ic, pad in supplies:
             rail = npad.get(f"{ic}.{pad}")
-            if rail not in electrical_RAILS:
-                continue
-            if ptype.get(f"{ic}.{pad}") != "power_in":
-                continue                      #strapped logic pin, not a supply
             here = pos.get(f"{ic}.{pad}") if pos else None
             best, bref = None, None
-            for cref in caps.get(rail, []):
+            for cref, leg in caps.get(rail, []):
                 if to_farads(value_of(cref)) is None:
                     continue
-                cp = pos.get(f"{cref}.1") if pos else None
+                cp = pos.get(f"{cref}.{leg}") if pos else None
                 if here and cp:
                     d = math.hypot(here[0]-cp[0], here[1]-cp[1])
                     if best is None or d < best:
