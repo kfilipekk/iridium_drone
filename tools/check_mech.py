@@ -247,6 +247,11 @@ def run_mechanical():
     line("ok", "motor screw length",
          f"arm {mechanical_FRAME['arm_t']:.0f} mm is published, so tools/fasteners.py derives the screw - "
          f"buy an M3 assortment rather than pinning it in advance")
+    line("ok", "microSD withdrawal",
+         f"the card leaves the port edge underneath and needs "
+         f"{design.MATING_CLEARANCE['J8']:.0f} mm; check_mech.py cad_fit sweeps that path "
+         f"against the airframe and cables keeps every lead out of it, so the card comes out "
+         f"with the board in the stack")
 
     #3D printing
     P = design.PRINTER
@@ -270,9 +275,6 @@ def run_mechanical():
 
     print("\n=== STILL PHYSICAL - no drawing can answer these ===")
     for name, detail in [
-        ("microSD withdrawal", f"{CONN['J8']['protrude']:.0f} mm of clear space below the bottom "
-                               f"edge, on the BOTTOM side, or the board must come out to swap "
-                               f"cards - depends on how YOU mount it, not on the frame"),
         ("grommet compression", f"the grommets must hold {GAP['mm']:.1f} mm between the ESC's "
                                 f"parts and this board's bottom parts UNDER LOAD - a property of "
                                 f"the rubber, not of any dimension"),
@@ -490,9 +492,8 @@ def run_fit():
             fails.append(f"the kit's standoff posts sit {c:.2f} mm from the {name}'s edge "
                          f"(need >= 1.0)")
 
-    #microSD withdrawal, bounded the same way
-    #the card slides out of J8 on the board's bottom side, i.e
-    j8 = b.FindFootprintByReference("J8")
+    #microSD withdrawal
+    j8 =b.FindFootprintByReference("J8")
     if j8 is None:
         fails.append("J8 (microSD) not found on the board")
     elif not j8.IsFlipped():
@@ -500,16 +501,24 @@ def run_fit():
                      "not apply; re-check if the connector moves")
         print(f"  note microSD        J8 is top-side; no bottom clearance constraint")
     else:
+        #the card leaves past the board edge, so the grommets can only pinch it where the ESC
+        #reaches out under the slot; the path beyond the edge is cad_fit's and cables'
+        _, _, ux, uy, _, _, _ = gen_scad_plugs.plug_of(b, "J8")
+        eb = b.GetBoardEdgesBoundingBox()
+        across = (eb.GetWidth() if abs(ux) > abs(uy) else eb.GetHeight()) / 1e6
+        E = design.ESC
+        overhang = (across - max(E["L"], E["W"])) / 2      #either way round
         card_t = 1.0   #[D] SD specification
         worst = min(results)          #most-compressed grommet in the sweep
-        margin = worst - card_t
-        if margin >= 0.5:
-            print(f"  ok   microSD        slides into the {worst:.1f} mm worst-case gap "
-                  f"vs a {card_t:.1f} mm card - {margin:.1f} mm margin even at full "
-                  f"compression; withdraws without removing anything from the frame")
+        if overhang > 0.0:
+            print(f"  ok   microSD        the board overhangs the ESC by {overhang:.2f} mm on "
+                  f"the slot's edge, so no grommet compression can pinch the card")
+        elif worst - card_t >= 0.5:
+            print(f"  ok   microSD        the ESC reaches under the slot, but the {worst:.1f} mm "
+                  f"worst-case gap still passes a {card_t:.1f} mm card")
         else:
-            fails.append(f"microSD withdrawal: {worst:.1f} mm gap vs a {card_t:.1f} mm "
-                         f"card at worst-case grommet compression")
+            fails.append(f"microSD withdrawal: the ESC reaches under the slot and leaves "
+                         f"{worst:.1f} mm for a {card_t:.1f} mm card at worst-case compression")
 
     print()
     for n in notes:
@@ -1586,7 +1595,7 @@ def hazards(fc_z, rs, plugs):
     #the mated plugs of the cables this airframe fits
     for ref, pl in plugs.items():
         if ref == "J8":
-            depth = 2.0                     #[A] a seated card stands ~2 mm proud
+            depth = design.MATING_CLEARANCE["J8"]   #the card's whole way out, so no lead hangs in it
         elif cables.CABLES.get(ref, {}).get("end") is None:
             continue                        #nothing plugged in on this airframe
         else:

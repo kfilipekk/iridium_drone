@@ -110,8 +110,8 @@ CABLES = {
         end=_sh_esc(), end_dir=(1.0, 0.0, 0.0),
         end_src="[A] the ESC turned so its socket is on the port edge, under J2; "
                 "[D] JST-SH 2.9 mm tall; [D] ESC 45.6 mm (design.ESC)",
-        #out to port, down past the board edge, back in to the ESC
-        via=[(-36.7, 5.4, 29.5), (-36.7, 5.4, 13.55)],
+        #out to port past the microSD card's path, down, back in to the ESC
+        via=[(-44.5, 5.4, 29.5), (-44.5, 5.4, 13.55)],
         touches={},
         buy=100),
     "J3": dict(
@@ -183,8 +183,8 @@ CABLES = {
         end=_xiao_pins(), end_dir=(0.0, -1.0, 0.0),
         end_src="[M] cradle from design.MOUNTS['nose_mount']; [A] J22 feeds the XIAO "
                 "(MODULES rec_camera: +5V_PAYLOAD, which J22 now carries)",
-        #out to port, down the gap between the two port arms
-        via=[(-36.0, -7.3, 29.5), (-36.0, -4.0, 20.0), (-36.0, -4.0, -6.0),
+        #out to port past the microSD card's path, down the gap between the two port arms
+        via=[(-44.5, -7.3, 29.5), (-44.5, -7.3, 16.0), (-38.0, -4.0, -6.0),
              (-20.0, -40.0, -8.0), (-6.0, -66.0, -8.0)],
         touches={"cam cradle": "ends at the XIAO's pins, through its aft wall"},
         buy=200),

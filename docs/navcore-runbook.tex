@@ -594,10 +594,9 @@ which plate is top & \textbf{inferred} from length (160.26 mm). The one genuinel
 \end{tabular}
 \end{center}
 
-\subsection{The three things no drawing can answer}
+\subsection{The two things no drawing can answer}
 
 \begin{itemize}
-\item \textbf{microSD withdrawal clearance} --- depends how \emph{you} mount it
 \item \textbf{grommet compression under load} --- a property of the rubber
 \item \textbf{the real TPU gear's shape, hole pattern and strength} --- the assembly is
 modelled as four legs at the motor pattern on assumed dimensions
@@ -630,8 +629,10 @@ edge and need about \textbf{17 mm} clear for the plug and the lead's bend
 \file{J2} (ESC) and \file{J22} (payload) are side entry on the west edge, so their plugs go
 in horizontally.
 \item \textbf{microSD} is on the underside of the west edge and needs about 14 mm to withdraw
-the card. Assume you will pull the board to change the card, and decide now whether that is
-acceptable.
+the card. Nothing on the frame stands in that path, so the card comes out with the board in
+the stack, provided the \file{J2} and \file{J22} leads loop about 20 mm out from the edge
+before they drop, as \file{tools/cables.py} routes them. Dressed tight to the edge, they hang
+across the card's way out.
 \item \textbf{Grommets} must hold 3.0 mm between the ESC's parts and this board's under
 compression; the four 15 mm nylon female-female spacers set the ESC-to-FC separation. The
 compressed height of the rubber is the one \emph{assumed} figure in the stack.
@@ -1572,7 +1573,6 @@ Flow quality over real grass & simulated flow is perfect flow & a field test \\
 Radxa Zero 3W hole pattern & the companion tray, if the companion is ever fitted & \textbf{not
 published} --- measure the board, then 3D-print a tray \\
 Frame top-plate standoff spacing & nothing to buy: the kit supplies them & the kit \\
-MicroSD withdrawal clearance & how you mount it & your mount \\
 Grommet compression under load & a property of the rubber & the assembled stack \\
 \bottomrule
 \end{longtable}
