@@ -981,6 +981,7 @@ The placing tools import owner_margin() so they cannot place what this check rej
 """
 
 TEXT_GAP = pcbnew.FromMM(0.40)   #two labels closer than this read as one word
+TITLE_GAP = pcbnew.FromMM(3.0)   #a title this near another text reads as one phrase with it
 MARGIN = pcbnew.FromMM(0.50)     #nearer its own part than any other, by at least this
 HIDE = pcbnew.FromMM(0.10)       #overlap with a body that hides a label, beyond rounding
 MIN_H, MIN_W = pcbnew.FromMM(1.0), pcbnew.FromMM(0.15)   #JLCPCB: legible from 1.0 / 0.15
@@ -1068,6 +1069,20 @@ def run_silk_owner():
             if la == lb and grow(ba, TEXT_GAP).Intersects(bb):
                 bad.append(f"{na} and {nb} are closer than "
                            f"{T(TEXT_GAP):.2f} mm - they read as one word")
+    #a title beside another text reads as one phrase with it ("I2C IRIDIUM NAV")
+    shown = [t for t in b.GetDrawings() if t.Type() == pcbnew.PCB_TEXT_T]
+    for fp in b.GetFootprints():
+        shown += [fp.Reference()] + [g for g in fp.GraphicalItems() if g.Type() == pcbnew.PCB_TEXT_T]
+    shown = [t for t in shown if t.IsVisible() and t.GetLayer() in (pcbnew.F_SilkS, pcbnew.B_SilkS)]
+    titles = set(getattr(design, "SILK_TITLE", ()))
+    for i, ta in enumerate(shown):
+        if ta.GetShownText(False) not in titles:
+            continue
+        for j, tb in enumerate(shown):
+            if j != i and tb.GetLayer() == ta.GetLayer() \
+                    and grow(text_box(ta), TITLE_GAP).Intersects(text_box(tb)):
+                bad.append(f"title {ta.GetShownText(False)} is within {T(TITLE_GAP):.1f} mm of "
+                           f"{tb.GetShownText(False)} - they read as one phrase")
     #every printed text, labels or not, has to be printable
     small = []
     texts = [d for d in b.GetDrawings() if d.Type() == pcbnew.PCB_TEXT_T]

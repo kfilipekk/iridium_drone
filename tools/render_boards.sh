@@ -24,6 +24,38 @@ render docs/img/render-bottom-flat.png bottom "${PRES[@]}"
 render docs/img/render-iso.png         top    "${PRES[@]}" --rotate -45,0,45 --perspective
 render docs/img/render-iso-bottom.png  bottom "${PRES[@]}" --rotate -45,0,45 --perspective
 
+#the layout as the pcb editor shows it: every copper layer, the top silk and the outline
+LAY=$(mktemp -d)
+kicad-cli pcb export pdf --mode-separate --theme _builtin_default --drill-shape-opt 2 \
+  --layers B.Cu,In4.Cu,In3.Cu,In2.Cu,In1.Cu,F.Cu,F.Silkscreen,Edge.Cuts -o "$LAY/" "$BOARD" \
+  >/dev/null 2>&1
+python3 - "$LAY" <<'PY'
+import os, subprocess, sys
+import pcbnew
+from PIL import Image
+lay = sys.argv[1]
+bb = pcbnew.LoadBoard('NAVCORE-SoOP.kicad_pcb').GetBoardEdgesBoundingBox()
+dpi = 760
+px = lambda mm: round(mm * dpi / 25.4)
+x0, y0 = bb.GetLeft() / 1e6 - 1.5, bb.GetTop() / 1e6 - 1.5
+w, h = bb.GetWidth() / 1e6 + 3.0, bb.GetHeight() / 1e6 + 3.0
+out = Image.new("RGBA", (px(w), px(h)), (0, 16, 35, 255))     #the editor's background
+#bottom up, each layer see-through as the editor draws it
+for name, a in (("B_Cu", .55), ("In4_Cu", .35), ("In3_Cu", .35), ("In2_Cu", .35),
+                ("In1_Cu", .35), ("F_Cu", .7), ("F_Silkscreen", 1), ("Edge_Cuts", 1)):
+    png = os.path.join(lay, name)
+    subprocess.run(["pdftocairo", "-png", "-transp", "-singlefile", "-r", str(dpi),
+                    "-x", str(px(x0)), "-y", str(px(y0)), "-W", str(px(w)), "-H", str(px(h)),
+                    os.path.join(lay, f"NAVCORE-SoOP-{name}.pdf"), png], check=True)
+    im = Image.open(png + ".png").convert("RGBA")
+    im.putalpha(im.getchannel("A").point(lambda v: int(v * a)))
+    out = Image.alpha_composite(out, im)
+out = out.convert("RGB")
+out.resize((1400, round(1400 * out.height / out.width)), Image.LANCZOS).save("docs/img/layout.png")
+PY
+rm -rf "$LAY"
+echo "  docs/img/layout.png"
+
 python3 tools/gen_padmap.py
 
 echo; echo "=== 2. does every body sit on its own footprint? ==="

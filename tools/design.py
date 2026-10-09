@@ -2292,11 +2292,13 @@ NOT_A_PART = {ref for ref, spec in COMPONENTS.items()
                              "Connector:Tag-Connect_TC2030-IDC-NL_2x03_P1.27mm_Vertical")}
 
 
-#silkscreen: the function name printed beside each connector
+#silkscreen: the function name printed beside each connector and button; part references
+#stay on the fab layer, so these are the only names on the board
 SILK_NAMES = {
     "J1": "USB", "J2": "ESC", "J3": "GPS", "J5": "RC", "J6": "CAN",
     "J9": "I2C", "J11": "UART2", "J12": "ANT", "J14": "FLOW",
     "J17": "SRV1", "J23": "SRV2", "J19": "SWD", "J21": "TELEM", "J22": "P5V",
+    "SW1": "BOOT", "SW2": "RST",
 }
 #what each solder pad and test point
 PAD_LABELS = {
@@ -2313,10 +2315,11 @@ SILK_NAMES_UNPRINTED = {
           "name there would read as TP4's",
     "J12": "the only coax jack on the board, inside the RF fence",
     "J14": "GH-6P under J21 on the bottom; its pads face a column of passives",
-    "J19": "Tag-Connect footprint, bench-only, used with its own cable",
     "J21": "GH-6P on the east edge; its pads face U13's passives, its body covers the rest",
     "J23": "0.5 mm from J17 and boxed in by U17 and P151: SRV1 is printed beside J17, "
            "J23 is the other servo header",
+    "SW1": "B3U button on the bottom, no clear silk within 4 mm of it",
+    "SW2": "B3U button on the top, no clear silk within 4 mm of it",
 }
 
 SILK_TITLE = ["IRIDIUM NAV", "KRYSTIAN FILIPEK"]

@@ -5273,7 +5273,7 @@
 		(tags "SOD-123F_L2.7-W1.6-LS3.8-RD footprint C81598")
 		(property "Reference" "D4"
 			(at -2.71505 -1.25 90)
-			(layer "F.SilkS")
+			(layer "F.Fab")
 			(uuid "db15f0aa-8d70-4de2-8015-6dd243ca00da")
 			(effects
 				(font
@@ -7314,7 +7314,7 @@
 		(tags "SOT-23-5_L3.0-W1.7-P0.95-LS2.8-BR footprint C404027")
 		(property "Reference" "U17"
 			(at -2.649898 -1.5841 90)
-			(layer "F.SilkS")
+			(layer "F.Fab")
 			(uuid "c2ca7576-fab4-46a8-b1e3-1485127517b6")
 			(effects
 				(font
@@ -7740,7 +7740,7 @@
 		(tags "SOT-23-3_L2.9-W1.3-P1.90-LS2.4-BR footprint C20917")
 		(property "Reference" "Q4"
 			(at -2.25 -1.449848 0)
-			(layer "F.SilkS")
+			(layer "F.Fab")
 			(uuid "7239af0e-786d-4f4e-bb51-e948d6ff5dcc")
 			(effects
 				(font
@@ -8988,7 +8988,7 @@
 		(tags "WSON NoLead")
 		(property "Reference" "U5"
 			(at 3.825 -1.05 0)
-			(layer "F.SilkS")
+			(layer "F.Fab")
 			(uuid "fb900e14-709c-47a5-a9d1-0f3b81ebb99d")
 			(effects
 				(font
@@ -9796,7 +9796,7 @@
 		(tags "LQFP-100_L14.0-W14.0-P0.50-LS16.0-BL footprint C114409")
 		(property "Reference" "U1"
 			(at 7.099911 -9.099911 90)
-			(layer "F.SilkS")
+			(layer "F.Fab")
 			(uuid "5f57f6a8-b7c1-47a7-b68d-467a96b45f6e")
 			(effects
 				(font
@@ -13739,7 +13739,7 @@
 		(tags "CONN-SMD_XY-SM06B-GHS-TB footprint C51940119")
 		(property "Reference" "J21"
 			(at 7.027 -1.7 90)
-			(layer "F.SilkS")
+			(layer "F.Fab")
 			(uuid "d3e28ca3-7f17-4236-ae8e-d19fe266b17d")
 			(effects
 				(font
@@ -15336,7 +15336,7 @@
 		(tags "wirewound power shielded")
 		(property "Reference" "L2"
 			(at 2.8 -0.2 90)
-			(layer "F.SilkS")
+			(layer "F.Fab")
 			(uuid "77c68f32-78e4-4561-ac6b-14925f58f437")
 			(effects
 				(font
@@ -16715,7 +16715,7 @@
 		(tags "SOT-23-3_L2.9-W1.3-P1.90-LS2.4-BR footprint C20917")
 		(property "Reference" "Q1"
 			(at -0.089929 2.475032 90)
-			(layer "F.SilkS")
+			(layer "F.Fab")
 			(uuid "9c60d250-952b-462d-8311-cf2c913d36f7")
 			(effects
 				(font
@@ -17491,7 +17491,7 @@
 		(tags "resistor")
 		(property "Reference" "R35"
 			(at 0.28 1.82 0)
-			(layer "F.SilkS")
+			(layer "F.Fab")
 			(uuid "fb139573-faf1-4dad-ba7c-dbee91f4a0b4")
 			(effects
 				(font
@@ -21840,7 +21840,7 @@
 		(tags "capacitor")
 		(property "Reference" "C3"
 			(at 1.51 0.06 90)
-			(layer "B.SilkS")
+			(layer "B.Fab")
 			(uuid "e0522570-92dc-487d-ac00-397db882785f")
 			(effects
 				(font
@@ -24128,7 +24128,7 @@
 		(tags "resistor")
 		(property "Reference" "R71"
 			(at 1.97 -1.07 180)
-			(layer "B.SilkS")
+			(layer "B.Fab")
 			(uuid "2f2720b8-097c-4c1c-b664-839f431d4f0b")
 			(effects
 				(font
@@ -28916,7 +28916,7 @@
 		(tags "SOT-23-3_L2.9-W1.6-P1.90-LS2.8-BR footprint C5446")
 		(property "Reference" "U21"
 			(at -0.770078 2.499962 90)
-			(layer "B.SilkS")
+			(layer "B.Fab")
 			(uuid "7108c770-95fa-437b-ae5a-9ae991096c1b")
 			(effects
 				(font
@@ -29631,7 +29631,7 @@
 		(tags "SOT-23-3_L2.9-W1.6-P1.90-LS2.8-BR footprint C5446")
 		(property "Reference" "D6"
 			(at -1.898793 2.000038 90)
-			(layer "B.SilkS")
+			(layer "B.Fab")
 			(uuid "c55e6f81-bddc-4311-b227-51b7ac1ca052")
 			(effects
 				(font
@@ -30392,7 +30392,7 @@
 		(tags "USON-10 2.5x1.0mm Pitch 0.5mm")
 		(property "Reference" "U28"
 			(at 2.09 0.3 180)
-			(layer "B.SilkS")
+			(layer "B.Fab")
 			(uuid "b51e2c08-4487-4b2b-b352-9d9a2b87b29c")
 			(effects
 				(font
@@ -33527,7 +33527,7 @@
 		(tags "SOD-123_L2.7-W1.6-LS3.7-RD footprint C173427")
 		(property "Reference" "DZ1"
 			(at 2.090107 1.73001 0)
-			(layer "B.SilkS")
+			(layer "B.Fab")
 			(uuid "c74be3c1-3d36-4471-9501-6e0586b5b0b1")
 			(effects
 				(font
@@ -37706,7 +37706,7 @@
 		(tags "TF-SMD_TF-01A footprint C91145")
 		(property "Reference" "J8"
 			(at -9.14003 -4.216015 0)
-			(layer "B.SilkS")
+			(layer "B.Fab")
 			(uuid "25d9afac-6d0a-420c-83b8-192bdfbff9b7")
 			(effects
 				(font
@@ -38615,7 +38615,7 @@
 		(tags "capacitor")
 		(property "Reference" "C69"
 			(at -0.45 1.85 90)
-			(layer "B.SilkS")
+			(layer "B.Fab")
 			(uuid "7f9f8159-11e3-42cf-89c9-6a8b381e0d3e")
 			(effects
 				(font
@@ -40378,7 +40378,7 @@
 		(tags "resistor")
 		(property "Reference" "R22"
 			(at 0.22 1.43 0)
-			(layer "B.SilkS")
+			(layer "B.Fab")
 			(uuid "b46f115d-3dfb-4ae7-b901-b6f40a196fae")
 			(effects
 				(font
@@ -41238,7 +41238,7 @@
 		(tags "capacitor")
 		(property "Reference" "C92"
 			(at -2.8 -0.9 90)
-			(layer "B.SilkS")
+			(layer "B.Fab")
 			(uuid "5e102716-b957-4bf8-9ab2-4afd1520bc25")
 			(effects
 				(font
@@ -43106,7 +43106,7 @@
 		(tags "SOT-23-6_L2.9-W1.6-P0.95-LS2.8-BR footprint C6454456")
 		(property "Reference" "U23"
 			(at -1.900013 2.749962 0)
-			(layer "B.SilkS")
+			(layer "B.Fab")
 			(uuid "161de7b7-f3a1-4739-8bdd-00b085004d26")
 			(effects
 				(font
@@ -43924,7 +43924,7 @@
 		(tags "resistor")
 		(property "Reference" "R6"
 			(at -1.53 -0.07 90)
-			(layer "B.SilkS")
+			(layer "B.Fab")
 			(uuid "23804548-04ab-4681-a86e-75c727343c1d")
 			(effects
 				(font
@@ -44676,7 +44676,7 @@
 		(tags "wirewound power shielded")
 		(property "Reference" "L5"
 			(at 3.45 2.55 0)
-			(layer "B.SilkS")
+			(layer "B.Fab")
 			(uuid "1aff07f1-241e-4330-8a7b-f1e2e5e49a97")
 			(effects
 				(font
@@ -46157,7 +46157,7 @@
 			(type default)
 		)
 		(layer "F.SilkS")
-		(uuid "18e352c8-cfc1-4005-94c9-ee95d7a40f04")
+		(uuid "71ad5f50-caee-4a4c-ba7f-c63f34ebf7c0")
 	)
 	(gr_line
 		(start 144.2 138.35)
@@ -46167,7 +46167,7 @@
 			(type default)
 		)
 		(layer "F.SilkS")
-		(uuid "740bc149-c3aa-4cb3-9031-dbe5957fa466")
+		(uuid "cf29bbb0-378e-48df-be69-222c2b339d2e")
 	)
 	(gr_line
 		(start 144.2 138.35)
@@ -46177,7 +46177,7 @@
 			(type default)
 		)
 		(layer "F.SilkS")
-		(uuid "3dca7695-2c21-4a7a-8a2d-39087cc66b37")
+		(uuid "b351422a-724b-4a55-924e-ed2f2b845020")
 	)
 	(gr_arc
 		(start 99.25 99.9)
@@ -46310,7 +46310,7 @@
 	(gr_text "P5V"
 		(at 106.265 134.595 0)
 		(layer "F.SilkS")
-		(uuid "5f33def2-effd-44a6-b60d-c654fe1b9347")
+		(uuid "cb4789d9-8b9d-4f87-8d47-1feab7d46329")
 		(effects
 			(font
 				(size 1 1)
@@ -46321,7 +46321,7 @@
 	(gr_text "USB"
 		(at 139.605 134.635 0)
 		(layer "F.SilkS")
-		(uuid "d20ca415-2b3b-4ff3-a2ed-f2b317cca9a8")
+		(uuid "c2439493-fa88-4ae8-9cba-9b6d4c153aa1")
 		(effects
 			(font
 				(size 1 1)
@@ -46332,7 +46332,18 @@
 	(gr_text "ESC"
 		(at 102.325 109.305 90)
 		(layer "F.SilkS")
-		(uuid "b22ead9c-1e90-4ebb-bb29-122b3450f1d8")
+		(uuid "78e227d6-f222-4566-b855-01fae4e3cc2d")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(gr_text "SWD"
+		(at 111.255 110.555 90)
+		(layer "F.SilkS")
+		(uuid "f606d7de-8df8-4d67-a603-8caba7a5873d")
 		(effects
 			(font
 				(size 1 1)
@@ -46343,7 +46354,7 @@
 	(gr_text "SRV1"
 		(at 113.235 139.725 90)
 		(layer "F.SilkS")
-		(uuid "5d7612f8-c903-4639-a88e-bdf476698759")
+		(uuid "942345e5-b364-435d-96b7-995ff9137012")
 		(effects
 			(font
 				(size 1 1)
@@ -46354,30 +46365,18 @@
 	(gr_text "GPS"
 		(at 116.395 105.335 90)
 		(layer "F.SilkS")
-		(uuid "493fde0c-beb3-48d8-b949-7bde667a387a")
+		(uuid "2bee7152-d956-42e1-9e01-3c6884626cb1")
 		(effects
 			(font
 				(size 1 1)
 				(thickness 0.15)
 			)
-		)
-	)
-	(gr_text "IRIDIUM NAV"
-		(at 104.7 100.35 0)
-		(layer "B.SilkS")
-		(uuid "68a38592-9792-449f-900c-d77b56316ea0")
-		(effects
-			(font
-				(size 1 1)
-				(thickness 0.15)
-			)
-			(justify mirror)
 		)
 	)
 	(gr_text "I2C"
 		(at 111.395 100.325 0)
 		(layer "B.SilkS")
-		(uuid "69d20cb9-cd84-4058-b7dc-c7f554f2d6f0")
+		(uuid "a7f38bf5-a8b3-4a89-8132-2de467b87e8f")
 		(effects
 			(font
 				(size 1 1)
@@ -46389,7 +46388,7 @@
 	(gr_text "UART2"
 		(at 136.395 144.545 0)
 		(layer "B.SilkS")
-		(uuid "e70ffe99-8dd9-4a57-81d4-f8776ead411a")
+		(uuid "a18267a1-f750-472e-9c1f-ea165c9f93f1")
 		(effects
 			(font
 				(size 1 1)
@@ -46401,7 +46400,7 @@
 	(gr_text "KRYSTIAN FILIPEK"
 		(at 100.2 138.35 90)
 		(layer "B.SilkS")
-		(uuid "26ca1021-68d7-4305-bce9-c80bf1daf600")
+		(uuid "ffe09af8-dc91-4531-ba9f-dfc245ba5111")
 		(effects
 			(font
 				(size 1 1)
@@ -46413,7 +46412,19 @@
 	(gr_text "RC"
 		(at 111.895 140.745 90)
 		(layer "B.SilkS")
-		(uuid "4430d897-9be5-441c-9b5a-52991728e295")
+		(uuid "4d7dcef1-8011-4bfe-ad8d-c1357bc3b95f")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+			(justify mirror)
+		)
+	)
+	(gr_text "IRIDIUM NAV"
+		(at 143.7 138.6 90)
+		(layer "B.SilkS")
+		(uuid "6c765223-39f4-4821-a82e-914aecdab1a2")
 		(effects
 			(font
 				(size 1 1)
@@ -275091,9 +275102,9 @@
 		)
 	)
 	(group "silk_forward_arrow"
-		(uuid "958f46a7-45a2-4058-bd22-c8b3f72615f8")
-		(members "18e352c8-cfc1-4005-94c9-ee95d7a40f04" "3dca7695-2c21-4a7a-8a2d-39087cc66b37"
-			"740bc149-c3aa-4cb3-9031-dbe5957fa466"
+		(uuid "7f5a5bb7-f604-43d0-bd19-3e062dee00dc")
+		(members "71ad5f50-caee-4a4c-ba7f-c63f34ebf7c0" "b351422a-724b-4a55-924e-ed2f2b845020"
+			"cf29bbb0-378e-48df-be69-222c2b339d2e"
 		)
 	)
 	(embedded_fonts no)
