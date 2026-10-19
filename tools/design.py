@@ -5,6 +5,7 @@ R  = "Device:R";  C  = "Device:C";  L = "Device:L"; FB = "Device:FerriteBead"
 LED = "Device:LED"; SW = "Switch:SW_Push"; XTAL = "Device:Crystal_GND24"
 
 F_R0402  = "Resistor_SMD:R_0402_1005Metric"
+F_R0201  = "Resistor_SMD:R_0201_0603Metric"
 F_R0603  = "Resistor_SMD:R_0603_1608Metric"
 F_C0402  = "Capacitor_SMD:C_0402_1005Metric"
 F_C0201  = "Capacitor_SMD:C_0201_0603Metric"
@@ -195,7 +196,7 @@ CAP("C33","100n"); CAP("C34","100n")                       #IMU2
 CAP("C35","100n")                                          #baro
 CAP("C36","100n")                                          #flash
 RES("R9","4k7"); RES("R10","4k7")                          #I2C1 pullups
-RES("R11","4k7"); RES("R12","4k7")                         #I2C2 pullups
+RES("R11","4k7", F_R0201); RES("R12","4k7")                 #I2C2 pullups
 
 CAP("C41","100n")                                          #HVD230 VCC, on +3V3_CAN below
 RES("R14","10k")                                           #HVD230 Rs slope
@@ -989,10 +990,11 @@ net("+3V3", "U9.5","C27.1","U1.11","U1.27","U1.50","U1.75","U1.100",
             "C1.1","C2.1","C3.1","C4.1","C5.1","C6.1","C7.1",
             "U5.8","C36.1",
             "J8.4","C45.1","C46.1","L1.1",
-            "R9.1","R10.1","R11.1","R12.1","R20.1","R21.1",
+            "R9.1","R10.1","R12.1","R20.1","R21.1",
             "R22.1","R23.1","R24.1","R25.1","R26.1","R27.1","SW1.1")
 net("+3V3A","U10.5","C29.1","C30.1","U2.5","U2.8","C31.1","C32.1",
-            "U3.5","U3.8","C33.1","C34.1","U4.1","U4.2","C35.1")   #U4.2=PS high -> I2C
+            "U3.5","U3.8","C33.1","C34.1","U4.1","U4.2","C35.1",
+            "R11.1")   #SCL pull-up to the sensors' 3.3 V, beside U4.8
 net("VDDA", "L1.2","U1.21","U1.20","C10.1","C11.1","C12.1","C13.1")
 
 #MCU housekeeping
@@ -1599,7 +1601,7 @@ ADJACENCY = {
     "D_USB": ("J1", "A4B9", 6.0),  #USB desk power diode near USB-C
     #I2C pull-ups belong near the master, not scattered
     "R9": ("U1", "92", 4.0), "R10": ("U1", "93", 4.0),
-    "R11": ("U1", "46", 4.0), "R12": ("U1", "47", 4.0),
+    "R11": ("U4", "8", 1.5), "R12": ("U1", "47", 4.0),
     #buzzer / level shifter local parts
     "R38": ("Q1", "1", 2.0), "R39": ("Q1", "1", 2.0), "D4": ("Q1", "3", 3.0),
     #battery sense divider next to the MCU ADC pins
@@ -1685,17 +1687,18 @@ PASSIVE_LCSC = {
     ("10n",  F_C0402): "C15195",  ("30p",  F_C0402): "C107004",
     ("47p",  F_C0402): "C60137",  ("3n3",  F_C0402): "C26404",
     #C17/C18, the VBAT bulk caps
-    ("10u",  F_C0805): "C1713",   ("10u",  F_C1206): "C13585",
-    ("1u",   F_C0805): "C91185",  ("22u",  F_C1206): "C5177178",
+    ("10u",  F_C0805): "C15850",  ("10u",  F_C1206): "C13585",
+    ("1u",   F_C0805): "C28323",  ("22u",  F_C1206): "C12891",
     ("0R",   F_R0402): "C17168",  ("100p", F_C0402): "C1546",
     ("1n",   F_C0402): "C1523",
     ("100n", F_C0201): "C76939",   #Murata GRM033R61E104KE14D 100nF 25V X5R
-    ("100R", F_R0402): "C25076",  ("120R", F_R0402): "C25862",
+    ("100R", F_R0402): "C25076",  ("120R", F_R0402): "C25079",
     ("2k2",  F_R0402): "C25879",
     ("1k",   F_R0402): "C11702",  ("4k7",  F_R0402): "C25900",
+    ("4k7",  F_R0201): "C270346",   #UNI-ROYAL 0201WMF4701TEE, 4.7k 1%
     ("330R", F_R0402): "C25104",  ("470R", F_R0402): "C25117",
     ("5k1",  F_R0402): "C25905",  ("6k8",  F_R0402): "C25917",
-    ("10k",  F_R0402): "C25744",  ("22k",  F_R0402): "C25767",
+    ("10k",  F_R0402): "C25744",  ("22k",  F_R0402): "C25768",
     ("10k",  F_R0603): "C25804",
     ("27k",  F_R0402): "C25771",  ("47k",  F_R0402): "C25792",
     ("100k", F_R0402): "C25741",
@@ -1707,15 +1710,15 @@ PASSIVE_LCSC = {
     ("10uH", F_L1210): "C167879",     #FNR4030 on a 1210 land - does not fit
     ("10uH", F_ANR4030): "C167879",   #FNR4030S100MT, Isat 2.4 A, Irms 1.6 A
     ("10uH", F_ANR5040): "C354610",   #CKCS5040-10uH/M, Isat 2.5 A, Irms 2.1 A
-    ("600R@100MHz", F_L0805): "C18305",
+    ("600R@100MHz", F_L0805): "C1017",   #GZ2012D601TF; BLM21PG600 is 60 ohm
     ("BLUE", F_LED):   "C965807", ("GREEN", F_LED): "C965804",
     ("BOOT", F_SW):    "C231329", ("RESET", F_SW): "C231329",
 }
 
 PART_LCSC = {
     #VBAT high-frequency bypass
-    "C19": "C131394",
-    "C66": "C131394",
+    "C19": "C307331",
+    "C66": "C307331",
 }
 
 for _r, _lcsc in PART_LCSC.items():
@@ -1743,13 +1746,13 @@ RATINGS = {
  "C1525":    ("100n",  16,  "X7R",     "10%",  "0402",  -55, 125, "[D] LCSC product page, 2026-08-29"),
  "C32949":   ("10p",   50,  "C0G",     "5%",   "0402",  -55, 125, "[L] jlcpcb.com/partdetail/C32949: CL05C100JB5NNNC 10pF 50V C0G, 2026-10-01"),
  "C82219":   ("47n",   50,  "X7R",     "10%",  "0402",  -55, 125, "[L] JLCPCB part API: FH 0402B473K500NT 47nF 50V X7R 0402, 2026-09-26"),
- "C131394":  ("100n",  50,  "X7R",     "10%",  "0402",  None, None, "[D] LCSC product page, 2026-08-29"),
+ "C307331":  ("100n",  50,  "X7R",     "10%",  "0402",  -55, 125, "[L] JLCPCB part API: CL05B104KB54PNC 100nF 50V X7R, 2026-10-07"),
  "C52923":   ("1u",    25,  "X5R",     "10%",  "0402",  -55,  85, "[D] LCSC product page, 2026-08-29"),
- "C91185":   ("1u",    50,  "X7R",     "10%",   "0805",  None, None, "[D] LCSC product page, 2026-08-29"),
- "C1713":    ("10u",   16,  "X5R",     "10%",  "0805",  -55,  85, "[D] LCSC product page, 2026-08-29"),
+ "C28323":   ("1u",    50,  "X7R",     "10%",  "0805",  -55, 125, "[L] JLCPCB part API: CL21B105KBFNNNE 1uF 50V X7R, 2026-10-07"),
+ "C15850":   ("10u",   25,  "X5R",     "10%",  "0805",  -55,  85, "[L] JLCPCB part API: CL21A106KAYNNNE 10uF 25V X5R, 2026-10-07"),
  "C16195875":("10u",   35,  "X7R",     "10%",  "1206",  None, None, "[D] LCSC + jlcparts, 2026-09-03"),
  "C13585":   ("10u",   50,  "X5R",     "10%",  "1206",  -55,  85, "[D] Samsung CL31A106KBHNNNE (A = X5R) 10uF 50V 1206, LCSC C13585"),
- "C5177178": ("22u",   16,  "X5R",     None,   "1206",  None, None, "[D] LCSC product page, 2026-08-29"),
+ "C12891":   ("22u",   25,  "X5R",     "10%",  "1206",  -55,  85, "[L] JLCPCB part API: CL31A226KAHNNNE 22uF 25V X5R, 2026-10-07"),
  "C107004":  ("30p",   50,  "NP0",     "5%",   "0402",  None, None, "[D] LCSC product page, 2026-08-29"),
  "C19666":   ("4u7",   16,  "X5R",     "10%",  "0603",  -55,  85, "[D] LCSC product page, 2026-08-29"),
  "C354262":  ("4u7",   25,  "X7R",     "10%",  "0805",  None, None, "[D] LCSC product page, 2026-08-29"),
@@ -1768,9 +1771,10 @@ RATINGS_UNVERIFIED = set()
 INDUCTORS = {
  "C167879":  ("10uH", 2.4, 1.6, 0.130, (4.0, 4.0, 3.0), "[D] LCSC page 2026-08-29, FNR4030S100MT"),
  "C354610":  ("10uH", 2.5, 2.1, 0.064, (5.0, 5.0, 4.0), "[D] LCSC page 2026-08-29, CKCS5040-10uH/M"),
- "C18305":   ("600R@100MHz", None, None, None, (2.0, 1.25, 0.85), "[A] 0805 ferrite bead, package typical"),
+ "C1017":    ("600R@100MHz", None, 0.5, 0.3, (2.0, 1.25, 0.85), "[L] JLCPCB part API: GZ2012D601TF 600R@100MHz 500mA 300mohm, 2026-10-07"),
 }
-#continuous current each inductor actually carries what the +5 V buck (U8) actually carries
+#continuous current each inductor actually carries
+#what the +5 V buck (U8) actually carries
 #one list, two derived numbers
 LOADS_5V = [
     ("U9 (+3V3) input, = LOADS_3V3",   sum(r[1] for r in LOADS_3V3),  sum(r[2] for r in LOADS_3V3),
@@ -1800,6 +1804,7 @@ PART_HEIGHT = {
     "L0402": 0.5,                    #L6 LQW15AN; [D] Murata 0.5 mm max
     "DSN0603-2": 0.3,                #D7 PESD5V0C1BSF; [D] Nexperia DSN0603-2, 0.3 mm
     "C_0201": 0.33,                  #C59/C97 GRM033; [D] Murata 0.3 +-0.03 mm
+    "R_0201": 0.26,                  #R11 UNI-ROYAL 0201WMF4701TEE; [D] 0.26 mm
     "USON-10_2.5x1.0mm": 0.55,       #TPD4E05U06 DQA; [D] TI: 0.55 mm max
     "R_Array_Convex_4x0402": 0.35,   #4D02 33R x4; [D] UniOhm 0402x4 array 0.35 mm
     "Tag-Connect_TC2030-IDC-NL": 0.0,  #J19: bare pads, the cable clips on from above
@@ -1948,7 +1953,65 @@ NET_CURRENT = {
     "VBUS": 0.5,
 }
 
-#per-load continuous currents for check_board.py power_cut
+NET_CLASSES = {
+    "Default": {
+        "width": 0.15,
+        "clearance": 0.1016,
+        "via_dia": 0.45,
+        "via_drill": 0.20,
+    },
+    "Tight": {
+        "width": 0.1016,
+        "clearance": 0.1016,
+        "via_dia": 0.45,
+        "via_drill": 0.20,
+        "nets": [
+            "OSC_IN", "OSC_OUT", "SPI1_MISO", "SPI1_MOSI", "SPI1_SCK",
+            "SPI4_SCK", "IMU1_CS", "IMU2_CS", "SWCLK", "SWDIO",
+        ],
+    },
+    "USB": {
+        "width": 0.20,
+        "clearance": 0.1016,
+        "diff_pair_gap": 0.25,
+        "diff_pair_width": 0.20,
+        "via_dia": 0.45,
+        "via_drill": 0.20,
+        "nets": ["USB_DP", "USB_DM"],
+    },
+    "Power": {
+        "width": 0.40,
+        "clearance": 0.1016,
+        "via_dia": 0.60,
+        "via_drill": 0.30,
+        "nets": [
+            "+3V3", "+3V3A", "+3V3_CAN", "VDDA", "+5V_BIAS", "+5V_BIAS_SW",
+        ],
+    },
+    "High": {
+        "width": 0.80,
+        "clearance": 0.1016,
+        "via_dia": 0.60,
+        "via_drill": 0.30,
+        "nets": ["VBAT", "VBAT_IN", "+5V", "+5V_PAYLOAD", "VBUS"],
+    },
+    "RF": {
+        "width": 0.21,
+        "clearance": 0.20,
+        "via_dia": 0.60,
+        "via_drill": 0.30,
+        "nets": ["ANT_IN", "RFIN"],
+    },
+    "SW": {
+        "width": 0.80,
+        "clearance": 0.1016,
+        "via_dia": 0.45,
+        "via_drill": 0.20,
+        "nets": ["BUCK_PH", "BUCK_PAYLOAD_PH"],
+    },
+}
+
+#per-load continuous currents for kicad-tools irdrop.py check
 LOAD_CURRENT = {
     "+5V_PAYLOAD": {
         #[M] Payload 5V port J22: VTX 0.30 + XIAO camera 0.25
@@ -1977,12 +2040,23 @@ LOAD_CURRENT = {
         "U4.1": 0.002, "U4.2": 0.002,
     },
     "+3V3": {
+        "U1": 0.240,                    #MCU core + IO, over its six VDD pads (LOADS_3V3 row)
+        "U5": 0.025,                    #W25Q128 program/erase peak (LOADS_3V3 row)
+        "J8.4": 0.100,                  #microSD write peak (LOADS_3V3 row)
+        "D2.2": 0.005, "D3.2": 0.005,   #status LEDs (LOADS_3V3 row)
         "J14.1": 0.030,                 #flow breakout (LOADS_3V3 row)
         "U25.5": 0.0003,                #INA180 (LOADS_3V3 row)
     },
     "VBUS": {
         "U12.5": 0.0,                   #USBLC6 ESD clamp: no DC load
+        "D_USB.2": 0.5,                 #[D] USB 2.0 port limit, into +5V through D_USB
     },
+    #[A] the whole VBAT budget enters through Q4, the reverse-polarity FET
+    "VBAT_IN": {"Q4.3": 1.2},
+    #[A] the 1.2 A budget split by output power
+    "VBAT": {"U8": 0.46, "U20": 0.74},
+    "+3V3_CAN": {"U11.3": 0.017},       #[D] SN65HVD230 17 mA driving dominant
+    "+5V_BIAS_SW": {"R62.1": 0.015},    #[D] HC610 LNA 15 mA, through the sense resistor
     #the +5V rows of LOADS_5V, per pad
     "+5V": {
         "U9.1": 0.294,                  #U9 (+3V3 LDO) input
@@ -2282,18 +2356,20 @@ RAIL_5V = dict(
 #the payload breakout quotes the +5 V headroom
 PAYLOAD_BREAKOUT["headroom_a"] = RAIL_5V["headroom_a"]
 
-#bare copper pads are board features
+#bare copper pads are board features, not parts
+#every test point and every solder pad added above is copper,
 NOT_A_PART = {ref for ref, spec in COMPONENTS.items()
               if spec[1] in ("TestPoint:TestPoint_Pad_1.5x1.5mm",
                              "Fiducial:Fiducial_1mm_Mask2mm",
                              "Connector:Tag-Connect_TC2030-IDC-NL_2x03_P1.27mm_Vertical")}
 
 
-#silkscreen: the function name printed beside each connector
+#silkscreen: the function name printed beside each connector and button
 SILK_NAMES = {
     "J1": "USB", "J2": "ESC", "J3": "GPS", "J5": "RC", "J6": "CAN",
     "J9": "I2C", "J11": "UART2", "J12": "ANT", "J14": "FLOW",
     "J17": "SRV1", "J23": "SRV2", "J19": "SWD", "J21": "TELEM", "J22": "P5V",
+    "SW1": "BOOT", "SW2": "RST",
 }
 #what each solder pad and test point
 PAD_LABELS = {
@@ -2310,10 +2386,11 @@ SILK_NAMES_UNPRINTED = {
           "name there would read as TP4's",
     "J12": "the only coax jack on the board, inside the RF fence",
     "J14": "GH-6P under J21 on the bottom; its pads face a column of passives",
-    "J19": "Tag-Connect footprint, bench-only, used with its own cable",
     "J21": "GH-6P on the east edge; its pads face U13's passives, its body covers the rest",
     "J23": "0.5 mm from J17 and boxed in by U17 and P151: SRV1 is printed beside J17, "
            "J23 is the other servo header",
+    "SW1": "B3U button on the bottom, no clear silk within 4 mm of it",
+    "SW2": "B3U button on the top, no clear silk within 4 mm of it",
 }
 
 SILK_TITLE = ["IRIDIUM NAV", "KRYSTIAN FILIPEK"]
@@ -2342,4 +2419,67 @@ IMU_AXES = {
     "U2": ("icm42688", ("1", "2", "3", "4"), ("8", "9", "10", "11"), ("5", "6", "7"), ("12", "13", "14")),
     "U3": ("icm42605", ("1", "2", "3", "4"), ("8", "9", "10", "11"), ("5", "6", "7"), ("12", "13", "14")),
 }
-SILK_ARROW = {"side": "top", "direction": BOARD_FORWARD, "length": 2.5, "label": None}
+#the frame IMU_AXES and the hwdef rotations use
+SILK_ARROW = {"side": "top", "direction": BOARD_FORWARD, "length": 4.0, "width": 0.25,
+              "head": 1.0, "label": None}
+
+
+#what the shared kicad-tools scripts read
+#net -> the inner layer it is poured
+PLANES = {"GND": "In1.Cu", "+3V3": "In4.Cu", "+3V3A": "In4.Cu", "VDDA": "In4.Cu",
+          "+5V": "In4.Cu", "+9V": "In4.Cu", "VBAT": "In4.Cu", "VBUS": "In4.Cu"}
+FLOORPLAN = FLOORPLAN_REV_D
+#parts that must not get a bare via in a pad
+NO_BARE_VIA = {"U2", "U3", "U4", "U6", "U7", "U5", "U1", "U11", "U12", "U17"}
+THERMAL_VIAS = {
+    "U9": ["2", "5", "1", "3"],     #GND, VOUT(+3V3), VIN(+5V), EN(+5V)
+    #the HotRod bucks shed their heat through the GND and VIN pins
+    "U8": ["1", "6", "11", "2", "10"],
+    "U20": ["1", "6", "11", "2", "10"],
+}
+#hand-routing order: the nets where geometry affects function first
+ROUTING_PRIORITY = [
+    ("crystal",        ("OSC_IN", "OSC_OUT")),
+    ("buck switch",    ("BUCK_PH", "BUCK9_PH", "BUCK_COMP", "BUCK9_COMP")),
+    ("MCU core power", ("VCAP1", "VCAP2", "VDDA", "VREF")),
+    ("IMU SPI",        ("SPI1_", "SPI4_", "IMU1_CS", "IMU2_CS")),
+    ("microSD",        ("SD_",)),
+    ("USB",            ("USB_", "VBUS", "CC1", "CC2")),
+    ("DShot motors",   ("M1", "M2", "M3", "M4")),
+    ("analogue SoOP",  ("SOOP_",)),
+    ("I2C",            ("I2C1_", "I2C2_")),
+    ("UART / RC / CAN",("UART", "USART", "RC_IN", "CAN")),
+    ("flash / flow",   ("SPI3_", "EXT_CS")),
+    ("power rails",    ("+3V3", "+5V", "+9V", "VBAT", "GND")),
+]
+#dielectric between successive copper layers, mm, for the IR-drop solver
+LAYER_GAPS_MM = [0.1, 0.55, 0.2, 0.55, 0.1]
+
+#ordering
+#parts held back from an economic assembly order
+STANDARD_ONLY = {
+    "U3": "ICM-42605 (C2655099) - second IMU, optional; ArduPilot flies on IMU1 alone",
+}
+#sole-source parts whose stock the order sheet quotes
+SOLE_SOURCE = {"C5271084": "STM32H743VIT6", "C15639": "MS5611", "C596391": "MAX2112"}
+#parts JLCPCB assembles but the community mirror does not carry
+MIRROR_GAPS = {
+    "C51940119": "J3's JST-GH 6P - jlcpcb.com/partdetail/C51940119 confirms the part; "
+                 "the mirror simply lacks the row",
+}
+
+#packages the mirror describes not at all, or too loosely to key on
+DATASHEET_PACKAGE = {
+    "C5271084": ("LQFP-100", 14.0, 14.0, 0.50,
+                 "[D] ST DS12110 STM32H743xI: LQFP100 14x14x1.4 mm, 0.50 mm pitch"),
+    "C2682774": ("SMD3225-4P", 3.2, 2.5, None,
+                 "[D] YXC X322508MSB4SI: 3.2 x 2.5 mm 4-pad SMD crystal"),
+    "C51940119": ("XY-SM06B-GHS-TB", None, None, 1.25,
+                  "[L] jlcpcb.com/partdetail/C51940119, verified 2026-09-03"),
+}
+
+#parts whose package has an exposed thermal pad that JLCPCB's package string leaves out
+THERMAL_PAD = {
+    "C22399950": "[D] TI TLV757P SBVS320: 'DYD Package, 5-Pin SOT-23 With Exposed Thermal "
+                 "Pad' (fig. 4-2); the pad goes to a large ground plane",
+}
