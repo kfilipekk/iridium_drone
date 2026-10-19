@@ -393,7 +393,8 @@ IMU_SPI_PADS = {"cs": "12", "sck": "13", "miso": "1", "mosi": "14"}
 
 def imu_spi_ports(board, ref):
     """The MCU port wired to each SPI pad of IMU `ref`, read from the board."""
-    import symlib
+    import kt   #puts kicad-tools on the path
+    from kicadtools import symlib
     h7 = {p["num"]: p["name"].split("-")[0] for p in symlib.load()["STM32H743VIT6_C114409"]}
     ports = {}
     for pad in board.FindFootprintByReference("U1").Pads():

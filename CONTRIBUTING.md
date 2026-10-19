@@ -32,7 +32,7 @@ Edit the source and regenerate rather than editing these by hand:
 - `NAVCORE-SoOP.kicad_pcb` – edited in KiCad. The pcbnew scripts used to place, route and
   tidy it live in a separate toolkit (`kicad-tools`); this repo keeps the checks.
 - `firmware/NAVCORE_SoOP/hwdef.dat` and `defaults.parm` – `tools/gen_hwdef.py`.
-- `fab/` – `tools/make_order_bundle.sh`.
+- `fab/` – `make bundle` (kicad-tools' `fab.py bundle`, from `fab/HOW-TO-ORDER.in`).
 - `docs/navcore-runbook.pdf` – `tectonic docs/navcore-runbook.tex`.
 
 ## Before committing

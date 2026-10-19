@@ -3,36 +3,18 @@
 
 Usage:  python3 tools/preflight.py [board.kicad_pcb]
 """
-import os, sys, re, csv, math, glob, hashlib, subprocess
+import os, sys, re, csv, math, glob, hashlib
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import pcbnew, design, readiness
+import pcbnew, design, readiness   #readiness puts kicad-tools on the path
+from kicadtools import gate
+from kicadtools.gate import check, cli
 
-BOARD = sys.argv[1] if len(sys.argv) > 1 else "NAVCORE-SoOP.kicad_pcb"
+BOARD = os.environ.get("KICAD_BOARD") or (sys.argv[1] if len(sys.argv) > 1 else "NAVCORE-SoOP.kicad_pcb")
 SCH   = "NAVCORE-SoOP.kicad_sch"
 FAB   = "fab"
 HWDEF = "firmware/NAVCORE_SoOP/hwdef.dat"
 
 PLANE_LAYERS = ("In1.Cu", "In4.Cu")
-
-results = []
-
-TOOL_RESULTS = {}
-CHECK_SOURCE = {}       #check name -> the tool run last before it (readiness ownership)
-_LAST_TOOL = [None]
-
-
-def check(group, name, ok, detail, hard=True):
-    results.append((group, name, "PASS" if ok else ("FAIL" if hard else "WARN"), detail))
-    CHECK_SOURCE[name] = _LAST_TOOL[0]
-
-
-def cli(args, out):
-    """The report kicad-cli writes, or None if it did not run."""
-    if os.path.exists(out):
-        os.remove(out)
-    r = subprocess.run(args, capture_output=True, timeout=900)
-    return open(out).read() if r.returncode == 0 and os.path.exists(out) else None
-
 
 def fabrication(board):
     rpt = cli(["kicad-cli", "pcb", "drc", "--output", "/tmp/nav/pf_drc.rpt",
@@ -90,7 +72,7 @@ def fabrication(board):
                  if os.path.getmtime(f) < b_mtime]
         check("fabrication", "gerbers match the board", not stale,
               (f"{len(stale)} file(s) older than {BOARD} - REGENERATE before ordering "
-               f"(bash tools/make_order_bundle.sh): {', '.join(sorted(stale)[:4])}"
+               f"(fab.py bundle): {', '.join(sorted(stale)[:4])}"
                + ("..." if len(stale) > 4 else "")) if stale else
               f"all {len(fab_files)} fab files newer than the board file")
 
@@ -448,46 +430,37 @@ def project(board):
 
 def firmware(board):
     """The half of "ready" that has nothing to do with copper."""
-    import subprocess as sp
-
-    def run(tool):
-        name, *extra = tool.split()
-        r = sp.run([sys.executable, f"tools/{name}", *extra], capture_output=True,
-                   text=True, timeout=1800)
-        key = readiness.tool_id([name, *extra])
-        TOOL_RESULTS[key] = r.returncode
-        _LAST_TOOL[0] = key
-        return r.returncode, (r.stdout or "") + (r.stderr or "")
+    run = gate.run
 
     rc, out = run("check_circuit.py topology")
     check("fabrication", "datasheet-required externals present", rc == 0,
           "every IC has the external components its datasheet requires" if rc == 0 else
           "a required component is ABSENT - see tools/check_circuit.py topology")
 
-    rc, out = run("check_board.py backside")
+    rc, out = run("check.py backside")
     m = re.search(r'(\d+) through-holes checked', out)
     check("fabrication", "no pin lands under a part on the other side", rc == 0,
           (f"{m.group(1) if m else '?'} through-holes clear of every opposite-side body"
            if rc == 0 else
-           "a through-hole pin or post lands under a part - see tools/check_board.py backside"))
+           "a through-hole pin or post lands under a part - see check.py backside"))
 
     #a label nearer a neighbour than its own part is read as the neighbour's
-    rc, out = run("check_board.py silk_owner")
+    rc, out = run("check.py silk_owner")
     m = re.search(r'(\d+) printed labels checked', out)
     check("fabrication", "every label reads as its own part's", rc == 0,
           (f"{m.group(1) if m else '?'} printed labels, each nearest the part it names"
            if rc == 0 else
-           "a label sits nearer another part - see tools/check_board.py silk_owner"))
+           "a label sits nearer another part - see check.py silk_owner"))
 
     #the 3D bodies the renders and any enclosure CAD are drawn
-    rc, out = run("check_board.py model_alignment")
+    rc, out = run("check.py model_alignment")
     m = re.search(r'(\d+) bodies tested against each other', out)
     check("fabrication", "3D bodies sit on their footprints and overlap nothing", rc == 0,
           (f"{m.group(1) if m else '?'} bodies, each on its footprint, none overlapping another "
            "or the stack hardware"
            if rc == 0 else
            "a 3D body is misplaced, overlaps another or sits under the stack hardware - see "
-           "tools/check_board.py model_alignment"))
+           "check.py model_alignment"))
 
     rc, out = run("check_mech.py build")
     m = re.search(r'BUILD CHECKS PASS - (\d+) checks across (\d+)', out)
@@ -497,15 +470,15 @@ def firmware(board):
           "the aircraft does not add up - see tools/check_mech.py build")
 
     #stock and part resolution against JLCPCB itself, from a dated snapshot
-    rc, out = run("check_order.py stock")
+    rc, out = run("fab.py stock")
     m = re.search(r'(\d+)/(\d+) line\(s\) resolved with stock', out)
     age = re.search(r'snapshot\s+:\s+\S+ \((\d+) day', out)
     check("assembly", "every BOM line is buyable", rc == 0,
           (f"{m.group(1)}/{m.group(2)} lines in stock for the order, snapshot "
            f"{age.group(1)} day(s) old" if m else
-           "stock/part check failed - see tools/check_order.py stock") if rc == 0 else
+           "stock/part check failed - see fab.py stock") if rc == 0 else
           "a BOM line is unavailable, unreachable or resolves to the wrong part - "
-          "see tools/check_order.py stock")
+          "see fab.py stock")
 
     rc, out = run("check_order.py rf")
     check("fly", "link budget has bench data", rc == 0,
@@ -699,34 +672,33 @@ def firmware(board):
            "a parameter selects a driver this build does not contain - see "
            "tools/check_firmware.py features"))
 
-    rc, out = run("check_board.py power_cut")
-    tight = re.findall(r'^\s+(\S+): tightest cut is \S+ mm carrying ~([\d.]+) A',
-                       out, re.M)
+    rc, out = run("irdrop.py check")
+    rails = re.findall(r'^  (?:ok  |FAIL) (\S+)\s+[\d.]+ A over', out, re.M)
+    first = re.search(r'^FAIL - \d+ problem\(s\):\n\s+- (.+)$', out, re.M)
     check("firmware", "power copper reaches the loads", rc == 0,
-          ("tightest cut " + min(tight, key=lambda t: float(t[1]))[0] + " at "
-           + min(tight, key=lambda t: float(t[1]))[1] + " A") if tight
-          else "could not measure")
+          f"{len(rails)} rails solved at their budget: drop, current density and vias in limit"
+          if rc == 0 else (first.group(1) if first else "irdrop.py check did not run"))
 
-    rc, out = run("check_board.py cpl")
+    rc, out = run("check.py cpl")
     m = re.search(r'cross-checked\s+:\s+(\d+) parts across (\d+)', out)
     check("assembly", "CPL rotations self-consistent", rc == 0,
           (f"{m.group(1)} parts across {m.group(2)} shared footprints agree on pin 1"
-           if m else "geometry check failed - see tools/check_board.py cpl"))
+           if m else "geometry check failed - see check.py cpl"))
 
     #the order bundle is the artefact that actually gets uploaded
-    rc, out = run("check_order.py bundle")
+    rc, out = run("fab.py check_bundle")
     m = re.search(r'gerbers\s+:\s+(\d+) identical, (\d+) diverged, (\d+) absent', out)
     check("assembly", "order bundle matches the tree", rc == 0,
           (f"{m.group(1) if m else '?'} gerber(s) and every BOM/CPL copy identical to "
            f"fab/; placement counts re-derived from the bundled CPL") if rc == 0 else
-          "the order bundle is stale or incomplete - re-run tools/make_order_bundle.sh")
+          "the order bundle is stale or incomplete - re-run fab.py bundle")
 
-    rc, out = run("check_order.py variants")
+    rc, out = run("fab.py variants")
     m = re.search(r'^(\d+) variant pair\(s\) checked', out, re.M)
     check("assembly", "every BOM/CPL variant matches the board", rc == 0,
           (f"{m.group(1)} variant pair(s) agree with the board and the design" if m else
            "checked, but the count was not reported") if rc == 0 else
-          "a variant BOM/CPL describes a different board - see tools/check_order.py variants")
+          "a variant BOM/CPL describes a different board - see fab.py variants")
 
     rc, out = run("check_circuit.py symbol_pinout")
     m = re.search(r'(\d+) symbol\(s\) have NO outside authority', out)
@@ -737,7 +709,7 @@ def firmware(board):
                 "a symbol DISAGREES with its authority - see tools/check_circuit.py symbol_pinout"))
 
     #"The library is in git" and "the project still builds" are different properties
-    rc, out = run("check_board.py libraries")
+    rc, out = run("check.py libraries")
     m = re.search(r'compared\s+:\s+(\d+) ref', out)
     o = re.search(r'vendored\s+:\s+(\d+) file\(s\), (\d+) unreferenced', out)
     check("fabrication", "vendored part library is load-bearing", rc == 0,
@@ -745,7 +717,7 @@ def firmware(board):
            f"{o.group(1) if o else '?'} footprint(s), "
            f"{o.group(2) if o else '?'} orphaned") if rc == 0 else
           "the vendored library is incomplete, diverged from the board, or has orphaned "
-          "files - see tools/check_board.py libraries")
+          "files - see check.py libraries")
 
     rc, out = run("check_circuit.py design")
     w = re.search(r'^WARNINGS \((\d+)\)', out, re.M)
@@ -754,15 +726,15 @@ def firmware(board):
           + (f"; {w.group(1)} unconnected-pin note(s)" if w else ""))
 
     #the artwork's own LCSC fields
-    rc, out = run("sync_lcsc_props.py")
+    rc, out = run("fab.py lcsc")
     n = re.search(r'^(\S+): (\d+) LCSC field\(s\) disagree', out, re.M)
     check("fabrication", "artwork LCSC fields match design.py", rc == 0,
           ("every symbol and footprint carries the code design.py assigns"
            if rc == 0 else
            (f"{n.group(2)} LCSC field(s) in {n.group(1)} disagree with design.py - "
-            f"run python3 tools/sync_lcsc_props.py --write" if n else
+            f"run fab.py lcsc --write" if n else
             "artwork part numbers disagree with design.py - run "
-            "python3 tools/sync_lcsc_props.py --write")))
+            "fab.py lcsc --write")))
 
     rc, out = run("gen_doc_tables.py --check")
     check("firmware", "generated doc tables match the code", rc == 0,
@@ -878,18 +850,18 @@ def firmware(board):
            ("all regulators within their junction limits" if rc == 0
             else "see tools/check_circuit.py thermal")), hard=False)
 
-    rc, out = run("check_board.py footprints")
+    rc, out = run("check.py footprints")
     m_fp = re.search(r'(\d+) footprint\(s\) agree', out)
     check("assembly", "footprints match JLCPCB's pad count", rc == 0 and bool(m_fp),
           f"{m_fp.group(1)} footprint(s) agree with JLCPCB's joint count"
-          if rc == 0 and m_fp else "MISMATCH or no authority - see tools/check_board.py footprints")
+          if rc == 0 and m_fp else "MISMATCH or no authority - see check.py footprints")
 
-    rc, out = run("windowpane_paste.py --scan")
+    rc, out = run("fab.py paste --scan")
     m_wp = re.search(r'(\d+) pad\(s\) need windowpaning', out)
     check("assembly", "exposed pads windowpaned", rc == 0,
           "every thermal slug has a vented paste array" if rc == 0
           else (f"{m_wp.group(1) if m_wp else '?'} exposed pad(s) still carry a solid "
-                f"100% aperture - run tools/windowpane_paste.py <REF> <PAD> --apply"))
+                f"100% aperture - run fab.py paste <REF> <PAD> --apply"))
 
     rc, out = run("check_order.py links")
     m_frag = re.search(r'(\d+) AliExpress item link', out)
@@ -936,6 +908,13 @@ def firmware(board):
     check("signal integrity", "trace lengths and pair matching", rc == 0 and over == 0,
           f"{over} net(s) over their stated limit" if over > 0
           else "lengths, skew and crystal stray capacitance within limits")
+
+    rc, out = run("check.py geometry")
+    m = re.search(r'FAIL - (\d+) acute corner\(s\), (\d+) dangling item\(s\), (\d+) dead', out)
+    check("signal integrity", "no acute corners or dead copper", rc == 0,
+          "every track corner is 90 degrees or wider and all copper leads somewhere" if rc == 0 else
+          f"{m.group(1)} acute corner(s), {m.group(2)} dangling, {m.group(3)} dead copper item(s)"
+          " - see check.py geometry" if m else "check.py geometry did not run")
 
     rc, out = run("check_board.py placement")
     far = len(re.findall(r'^\s+\S+\s+-> \S+\s+[\d.]+ mm\s+\(max', out, re.M))
@@ -984,32 +963,10 @@ def main():
     project(board)
     firmware(board)
 
-    order = ["fabrication", "assembly", "signal integrity", "project", "firmware",
-             "mechanical", "thermal", "fly"]
-    results.sort(key=lambda r: order.index(r[0]) if r[0] in order else len(order))
-
-    group = None
-    nf = nw = 0
-    for g, name, verdict, detail in results:
-        if g != group:
-            group = g
-            print(f"\n=== {g} ===")
-        mark = {"PASS": "  ok  ", "WARN": " warn ", "FAIL": " FAIL "}[verdict]
-        print(f"{mark} {name:32} {detail}")
-        nf += verdict == "FAIL"
-        nw += verdict == "WARN"
-
-    #the verdict is derived, not restated
-    print(f"\n({nf} hard failure(s), {nw} warning(s) among the individual checks above)")
-    rep = readiness.evaluate(results, TOOL_RESULTS, sources=CHECK_SOURCE)
-    print(readiness.render(rep))
-    if rep["blocking"]:
-        return 1
-    if nf:
-        #readiness.gate.hardchecks exists so this cannot happen; if it does
-        print(f"INTERNAL: {nf} hard failure(s) and nothing blocked - the gate is broken")
-        return 2
-    return 0
+    return gate.report(readiness.PREREQUISITES,
+                       ["fabrication", "assembly", "signal integrity", "project", "firmware",
+                        "mechanical", "thermal", "fly"],
+                       "tools/readiness.py", "tools/check_order.py bench_bounds")
 
 
 if __name__ == "__main__":

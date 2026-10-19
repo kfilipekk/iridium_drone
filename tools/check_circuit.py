@@ -14,13 +14,14 @@ Checks:
   thermal            Thermal check for the switching regulators and the 3V3 rail.
 """
 import collections, math, os, re, subprocess, sys
-import design, jlcpaths, pcbnew, symlib
+import design, kt, pcbnew   #kt puts kicad-tools on the path
+from kicadtools import project, symlib
 from hwdef_pinmap import parse
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
 BOARD = (sys.argv[sys.argv.index("--board") + 1] if "--board" in sys.argv
-         else os.path.join(REPO, "NAVCORE-SoOP.kicad_pcb"))
+         else os.environ.get("KICAD_BOARD") or os.path.join(REPO, "NAVCORE-SoOP.kicad_pcb"))
 
 
 
@@ -118,9 +119,7 @@ def run_design():
 
     #board value fields vs design.py
     try:
-        import pcbnew
-        _b = pcbnew.LoadBoard(os.path.join(os.path.dirname(os.path.dirname(
-            os.path.abspath(__file__))), "NAVCORE-SoOP.kicad_pcb"))
+        _b = pcbnew.LoadBoard(BOARD)
         #the set comparison
         board_refs = {fp.GetReference() for fp in _b.GetFootprints()}
         fitted = {r for r, c in design.COMPONENTS.items() if not c[4] and c[1]}
@@ -875,7 +874,7 @@ def run_electrical():
                          "Wrong load is the one fault that can stop a board booting - "
                          "confirm it and set Y1_CL_CONFIRMED = True in design.py")
 
-    notes.append("current capacity is checked by tools/check_board.py power_cut")
+    notes.append("current capacity is checked by kicad-tools irdrop.py check")
 
     #8
     #the ANT_IN feed rides the 1616-1626.5 MHz carrier
@@ -1047,7 +1046,7 @@ Usage: python3 tools/check_circuit.py ratings
 
 DERATE = 2.0          #warn below this multiple of the working voltage
 #package power ratings, W
-R_POWER = {"0402": 0.0625, "0603": 0.10, "0805": 0.125, "1206": 0.25}
+R_POWER = {"0201": 0.05, "0402": 0.0625, "0603": 0.10, "0805": 0.125, "1206": 0.25}
 #parts rated above their package's generic figure, by LCSC code
 R_POWER_PART = {}
 #capacitors that must not be a Class II dielectric, and why
@@ -1260,7 +1259,7 @@ def run_ratings():
 Usage:  python3 tools/check_circuit.py symbol_pinout [-v]
 """
 
-JLC_SYM = jlcpaths.SYMBOLS
+JLC_SYM = project.SYMBOLS
 KICAD_SYM_DIRS = ["/usr/share/kicad/symbols", "/usr/local/share/kicad/symbols"]
 
 #our symbol name -> (kicad library file, kicad symbol name)
@@ -1413,7 +1412,7 @@ def our_symbol_path(spec):
     """Resolve a design symbol spec ('lib:name') to its symbol-library file."""
     lib, _, name = spec.partition(":")
     if lib == "jlc_parts":
-        return jlcpaths.SYMBOLS, name
+        return project.SYMBOLS, name
     for d in KICAD_SYM_DIRS:
         p = os.path.join(d, lib + ".kicad_sym")
         if os.path.exists(p):

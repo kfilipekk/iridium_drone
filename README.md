@@ -63,6 +63,7 @@ It has no OSD and no 9-12 V video rail, and it takes 5S at most.
 ### Prerequisites
 - **KiCad 9** with the `pcbnew` Python module
 - **Python 3** with `pip install -r requirements.txt`
+- **[kicad-tools](https://github.com/kfilipekk/kicad-tools)** cloned to `~/Code/kicad-tools`, or set `KICAD_TOOLS` - the checks any board needs live there
 - **ArduPilot toolchain** for the firmware (`tools/build_firmware.sh` pins Copter-4.7.0)
 
 ### Checking the Board
@@ -80,7 +81,7 @@ It has no OSD and no 9-12 V video rail, and it takes 5S at most.
 3. Or run one check on its own:
    ```bash
    python3 tools/check_board.py connectors
-   python3 tools/check_order.py stock
+   python3 ~/Code/kicad-tools/fab.py stock
    ```
 
 4. Build the firmware:

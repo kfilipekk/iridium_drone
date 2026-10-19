@@ -1,0 +1,59 @@
+NAVCORE-SoOP - JLCPCB order, from a phone
+=========================================
+Upload gerbers.zip as the PCB. Do NOT unzip it first.
+
+FABRICATION
+  Layers            6          <- if the preview shows 4, STOP. The power planes
+                                  are missing and the board will not work.
+  Dimensions        45.0 x 47.2 mm
+  Thickness         1.6 mm
+  Outer copper      1 oz       <- 0.5 oz halves every trace's current rating and
+                                  invalidates kicad-tools irdrop.py check
+  Surface finish    ENIG       <- 0402s and LGA parts want a flat finish
+  Min track/space   4 mil (0.1016 mm)   should be free tier; an upcharge means
+                                        the design rules drifted
+  Min via / drill   0.45 / 0.20 mm
+  Impedance control No
+  Via covering      Epoxy Filled & Capped   <- 31 vias sit inside SMD pads (four on
+                                               U1's pins); left open they drain the
+                                               solder out of the joint
+  Mark on PCB       "Remove Mark" (no order number). The silkscreen carries no
+                    JLCJLCJLCJLC marker, so any other choice prints JLC's number
+                    wherever it fits - possibly across a label. JLC may charge a
+                    small fee for this; it is shown in the quote.
+
+ASSEMBLY
+  Quantity          5 bare PCBs, 2 assembled  (5 is the multilayer minimum,
+                    2 the SMT minimum; the 3 spare bare boards are the practice
+                    pieces and cost almost nothing)
+  Side              BOTH sides are populated - @@SIDES@@. Two stencils.
+  BOM               BOM-NAVCORE-SoOP.csv
+  CPL               CPL-NAVCORE-SoOP.csv
+  Placement preview Nothing should need turning. Every rotation and centre in the
+                    CPL is fitted to JLCPCB's own footprint for that LCSC part
+                    (kicad-tools fab.py orientation). A part that still shows turned
+                    is a real finding - report it rather than just rotating it.
+
+  Variants, if you want them instead of the default:
+    *-economic.csv  U3 (second IMU) left off for hand-fitting. That is the ONLY
+                    difference from the default pair.
+
+BEFORE YOU PAY - the things no offline check can confirm
+  - Accept JLCPCB's free DFM review. It is the only thing that checks pad LAND
+    SIZE and paste apertures; kicad-tools check.py footprints verifies pad count,
+    package family and pitch, but not those.
+  - Confirm the quote says 1 oz outer copper.
+  - ABSENT BY DESIGN, read straight out of the BOM in this bundle (ref + value):
+@@DNP@@
+    The placement preview must agree with that list exactly: a part on it that is
+    placed, or a part that is placed and is not on it, means the wrong BOM went up.
+  - SOLE SOURCE, from the dated stock snapshot in this repo. Confirm them in the
+    quote tool and buy spares if the count looks tight:
+      @@STOCK@@
+    (MAX2112 is the tuner - nothing else in JLC's library covers 1616-1626.5 MHz
+    with quadrature baseband output.)
+
+WHAT THIS BOARD IS NOT, YET
+  Ready to order is not ready to fly. tools/check_order.py rf fails until the T3b
+  bench measurements exist, and U8/U9 junction temperatures are computed, not
+  measured. See docs/navcore-runbook.pdf, Parts 7-10 (T1-T3a), before powering anything.

@@ -13,7 +13,8 @@ Checks:
   soop_sitl          Gate the SoOP backend's fix reaching the EKF in SITL.
 """
 import ast, glob, hashlib, json, os, re, shutil, subprocess, sys, tempfile
-import design, symlib
+import design, kt   #kt puts kicad-tools on the path
+from kicadtools import symlib
 import xml.etree.ElementTree as ET
 import install_soop_backend as inst
 from hwdef_pinmap import parse

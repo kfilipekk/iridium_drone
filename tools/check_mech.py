@@ -671,7 +671,7 @@ def power(loads):
           total <= cap["+5V"],
           f"{total:.2f} A drawn of {cap['+5V']:.1f} A copper capacity "
           f"({', '.join(f'{n} {a*1000:.0f}mA' for n, a, _s in loads)})",
-          "[M] check_board.py power_cut + [D] part datasheets")
+          "[M] irdrop.py check + [D] part datasheets")
     ir = design.RAIL_5V["irms_a"]
     build_check("power", "L2 inductor RMS rating (the binding +5 V limit)", total <= ir,
           f"{total:.2f} A of L2's {ir} A Irms - {total / ir:.0%}, "
@@ -692,7 +692,7 @@ def power(loads):
         if rail in cap:
             build_check("power", f"{rail} copper vs its own budget", cap[rail] >= need,
                   f"{cap[rail]:.1f} A capacity against {need:.1f} A budgeted",
-                  "[M] check_board.py power_cut")
+                  "[M] irdrop.py check")
 
 
 MOTOR_PEAK_A = 30.0    #[A] 2806.5 on 4S with a 7040, at full throttle

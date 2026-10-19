@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Every prerequisite for ordering this board, what proves it, and what cannot be proven"""
-import os
-
-GATED, ADVISORY, ORDER_CHECK, ORDER_ACTION, BENCH, FLY, BUILD = (
-    "GATED", "ADVISORY", "ORDER_CHECK", "ORDER_ACTION", "BENCH", "FLY", "BUILD")
+import kt   #puts kicad-tools on the path
+from kicadtools import gate
+from kicadtools.gate import GATED, ADVISORY, ORDER_ACTION, BENCH, FLY
 
 PREREQUISITES = [
     #the board is the design it claims to be
@@ -25,9 +24,9 @@ PREREQUISITES = [
          claim="ArduPilot's hwdef agrees with the netlist pin for pin"),
     dict(id="design.symbols", cls=GATED, tool="check_circuit.py symbol_pinout",
          claim="every active part's symbol pinout matches KiCad's library or its datasheet"),
-    dict(id="design.library", cls=GATED, tool="check_board.py libraries",
+    dict(id="design.library", cls=GATED, tool="check.py libraries",
          claim="the vendored library is complete and its footprints equal the board's"),
-    dict(id="design.lcscprops", cls=GATED, tool="sync_lcsc_props.py",
+    dict(id="design.lcscprops", cls=GATED, tool="fab.py lcsc",
          claim="every symbol and footprint carries the LCSC code design.py assigns "
                "that reference - the artwork agrees with the BOM, not just the order"),
 
@@ -46,17 +45,17 @@ PREREQUISITES = [
          claim="no signal copper sits on the In1/In4 plane layers"),
     dict(id="fab.limits", cls=GATED, check="JLCPCB 6-layer limits",
          claim="track, via and drill sizes are inside JLCPCB's free-tier capability"),
-    dict(id="fab.backside", cls=GATED, tool="check_board.py backside",
+    dict(id="fab.backside", cls=GATED, tool="check.py backside",
          claim="no through-hole pin or post lands under a part on the other side"),
     dict(id="fab.pegdepth", cls=GATED, check="locating peg sink depth within board core",
          claim="locating pegs sink within board core and clear opposite-side copper"),
-    dict(id="fab.silkowner", cls=GATED, tool="check_board.py silk_owner",
+    dict(id="fab.silkowner", cls=GATED, tool="check.py silk_owner",
          claim="every printed label sits nearer the part it names than any other part"),
-    dict(id="fab.models", cls=GATED, tool="check_board.py model_alignment",
+    dict(id="fab.models", cls=GATED, tool="check.py model_alignment",
          claim="every part's 3D body sits on its footprint - pegged parts with their pegs "
                "in the holes - no two bodies occupy the same space, and none sits under the "
                "washer or spacer bolted through a stack hole"),
-    dict(id="fab.bundle", cls=GATED, tool="check_order.py bundle",
+    dict(id="fab.bundle", cls=GATED, tool="fab.py check_bundle",
          claim="the bundle you upload matches the verified BOM, CPL and gerbers"),
 
     #absence detection: the class that hid the catch diode
@@ -73,10 +72,14 @@ PREREQUISITES = [
          claim="dividers, decoupling and pull-ups are the right values"),
     dict(id="elec.ratings", cls=GATED, tool="check_circuit.py ratings",
          claim="every part is rated for the net it sits on"),
-    dict(id="elec.current", cls=GATED, tool="check_board.py power_cut",
-         claim="copper carries each rail's current at every axis-aligned cut"),
+    dict(id="elec.current", cls=GATED, tool="irdrop.py check",
+         claim="every rail carries its budget to its loads through the copper the current "
+               "actually takes: drop, current density and via current in limit"),
     dict(id="elec.traces", cls=GATED, tool="check_board.py traces",
          claim="trace lengths, differential skew and crystal stray capacitance are in limit"),
+    dict(id="fab.geometry", cls=GATED, tool="check.py geometry",
+         claim="no track corner is sharper than 90 degrees, and no track or via dangles or "
+               "leads to no pad or pour"),
     dict(id="elec.sim", cls=GATED, tool="check_soop.py spice",
          claim="the analogue blocks - the buck output filters, the payload buck under a "
                "double servo stall, the battery hot-plug transient, the MAX2112 PLL loop "
@@ -112,7 +115,7 @@ PREREQUISITES = [
          claim="the 30.5 mm 4-hole mounting pattern is present"),
 
     #assemblable by the fab
-    dict(id="assy.cpl", cls=GATED, tool="check_board.py cpl",
+    dict(id="assy.cpl", cls=GATED, tool="check.py cpl",
          claim="CPL rotations derived from board geometry agree with the CPL"),
     dict(id="assy.bom", cls=GATED, check="BOM matches the board",
          claim="every BOM line matches what is on the board"),
@@ -122,11 +125,11 @@ PREREQUISITES = [
          claim="every thermal slug has a vented paste array"),
     dict(id="assy.twosided", cls=GATED, check="two-sided assembly",
          claim="the bottom-side placement is stated, so you order the right stencil"),
-    dict(id="assy.variants", cls=GATED, tool="check_order.py variants",
+    dict(id="assy.variants", cls=GATED, tool="fab.py variants",
          claim="every BOM/CPL variant - including the Economic pair the ordering "
                "document recommends at the checkout - matches the board, and no variant "
                "moves a part rather than omitting it"),
-    dict(id="assy.padcount", cls=GATED, tool="check_board.py footprints",
+    dict(id="assy.padcount", cls=GATED, tool="check.py footprints",
          claim="each footprint's pad count, package family and pitch match JLCPCB's own "
                "package string for that part, from the live parts API"),
 
@@ -162,14 +165,14 @@ PREREQUISITES = [
     dict(id="adv.decoupling", cls=ADVISORY, tool="check_board.py placement",
          why="a PRE-routing placement guide whose limits relax once routing forces a part "
              "further from its pin. It measures distance to a pin, not electrical "
-             "behaviour, so it cannot fail a board that passes check_board.py power_cut."),
+             "behaviour, so it cannot fail a board that passes irdrop.py check."),
     dict(id="adv.thermal", cls=ADVISORY, tool="check_circuit.py thermal",
          why="the junction figures are BRACKETS between the datasheet's JEDEC and EVM "
              "copper, and this board is between them. No desk calculation narrows it; "
              "T3a measures it. U19 logs the board beside U9 every flight in the meantime."),
     dict(id="fab.padlabels", cls=GATED, check="pad silkscreen labels",
          claim="every solder pad and test point carries its function (design.PAD_LABELS) on "
-               "the silkscreen, where check_board.py silk_owner reads it as that pad's - or is named "
+               "the silkscreen, where check.py silk_owner reads it as that pad's - or is named "
                "in design.PAD_LABELS_UNPRINTED with the reason, and on padmap.svg"),
     #checks that live in preflight itself, owned by name
     dict(id="fab.gerberlayers", cls=GATED, check=("gerber layers", "drill file"),
@@ -205,7 +208,7 @@ PREREQUISITES = [
          why="separate pours around separate pad groups, each tied to its rail - a note "
              "about shape, not a defect in connectivity."),
 
-    dict(id="order.stock", cls=GATED, tool="check_order.py stock",
+    dict(id="order.stock", cls=GATED, tool="fab.py stock",
          claim="every BOM line is in stock at JLCPCB in the quantity ordered, the code "
                "resolves to the manufacturer part number the design intends, and the "
                "snapshot is no older than 7 days"),
@@ -219,11 +222,11 @@ PREREQUISITES = [
     dict(id="act.copper", cls=ORDER_ACTION,
          claim="select 1 oz outer copper",
          why="half-ounce halves every trace's current rating and invalidates "
-             "check_board.py power_cut. It is a checkout setting, not a design property."),
+             "irdrop.py check. It is a checkout setting, not a design property."),
     dict(id="act.dfm", cls=ORDER_ACTION,
          claim="accept JLCPCB's free DFM review",
          why="it is the only thing that checks pad LAND SIZE and paste apertures; "
-             "check_board.py footprints verifies pad count, package and pitch but not those."),
+             "check.py footprints verifies pad count, package and pitch but not those."),
     dict(id="act.impedance", cls=ORDER_ACTION,
          claim="leave impedance control OFF",
          why="none is needed. USB is a plain differential pair. The 1.62 GHz J12 -> U13 "
@@ -343,193 +346,13 @@ PREREQUISITES = [
 ]
 
 
-GROUPED = {"check_board.py", "check_circuit.py", "check_mech.py", "check_firmware.py",
-           "check_soop.py", "check_order.py"}
-
-
-def tool_id(argv):
-    """The tool a command runs: its script."""
-    for i, a in enumerate(argv):
-        if a.endswith(".py"):
-            name = os.path.basename(a)
-            if name in GROUPED and i + 1 < len(argv):
-                return f"{name} {argv[i + 1]}"
-            return name
-    return None
-
-
-def _names(p):
-    """The check names a prerequisite owns."""
-    c = p.get("check")
-    return () if c is None else (tuple(c) if isinstance(c, (tuple, list)) else (c,))
-
-
-def _tool_failed(p, tool_results):
-    t = p["tool"]
-    if t not in tool_results:
-        return f"{t} was never run"
-    if tool_results[t] != 0:
-        return f"{t} exited {tool_results[t]}"
-    return None
-
-
-def unowned_failures(results, tool_results, sources=None):
-    """Hard FAILs no prerequisite answers for."""
-    sources = sources or {}
-    names = {n for p in PREREQUISITES for n in _names(p)}
-    groups = {p["group"] for p in PREREQUISITES if p.get("group")}
-    red_tools = {p["tool"] for p in PREREQUISITES
-                 if "tool" in p and _tool_failed(p, tool_results)}
-    out = []
-    for g, name, verdict, _ in results:
-        if verdict != "FAIL" or name in names or g in groups:
-            continue
-        if sources.get(name) in red_tools:
-            continue
-        if name not in out:
-            out.append(name)
-    return out
-
 
 def evaluate(results, tool_results, today=None, sources=None):
     """Walk the manifest against what actually ran."""
-    import datetime
-    today = today or datetime.date.today()
-
-    by_name, by_group = {}, {}
-    for g, name, verdict, _ in results:
-        by_name.setdefault(name, []).append(verdict)
-        by_group.setdefault(g, []).append((name, verdict))
-
-    blocking, advisory, order_actions, bench, fly, build = [], [], [], [], [], []
-    for p in PREREQUISITES:
-        cls = p["cls"]
-        if cls == GATED:
-            bad = None
-            if p.get("rule") == "no_unowned_fail":
-                if not results:
-                    bad = "no checks ran"
-                else:
-                    loose = unowned_failures(results, tool_results, sources)
-                    if loose:
-                        bad = (f"{len(loose)} hard failure(s) no other prerequisite owns: "
-                               + ", ".join(repr(n) for n in loose[:5])
-                               + (" ..." if len(loose) > 5 else ""))
-            elif "tool" in p:
-                bad = _tool_failed(p, tool_results)
-            elif p.get("group"):
-                rows = by_group.get(p["group"])
-                if not rows:
-                    bad = f"no check in group {p['group']!r} ran"
-                else:
-                    red = [n for n, v in rows if v == "FAIL"]
-                    if red:
-                        bad = f"{p['group']!r} failed: " + ", ".join(repr(n) for n in red[:5])
-            else:
-                for n in _names(p):
-                    marks = by_name.get(n)
-                    if marks is None:
-                        bad = f"check {n!r} is not in the run"
-                        break
-                    if "FAIL" in marks:
-                        bad = f"check {n!r} failed"
-                        break
-            if bad is None and p.get("max_age_days") is not None:
-                st = p.get("state")
-                if not st:
-                    bad = "no dated result recorded"
-                else:
-                    held = datetime.date.fromisoformat(st["date"])
-                    age = (today - held).days
-                    if age > p["max_age_days"]:
-                        bad = (f"recorded {held.isoformat()}, {age} days old "
-                               f"(max {p['max_age_days']})")
-            if bad:
-                blocking.append((p, bad))
-        elif cls == ORDER_CHECK:
-            if not p.get("state"):
-                blocking.append((p, "not confirmed yet"))
-        elif cls == ADVISORY:
-            advisory.append(p)
-        elif cls == ORDER_ACTION:
-            order_actions.append(p)
-        elif cls == BENCH:
-            bench.append(p)
-        elif cls == BUILD:
-            build.append(p)
-        elif cls == FLY:
-            bad = None
-            if "tool" in p:
-                t = p["tool"]
-                if t not in tool_results:
-                    bad = f"{t} was never run"
-                elif tool_results[t] != 0:
-                    bad = f"{t} exited {tool_results[t]}"
-            else:
-                marks = by_name.get(p.get("check"))
-                if marks is None or "FAIL" in marks or "WARN" in marks:
-                    bad = "not passing"
-            fly.append((p, bad))
-        else:
-            blocking.append((p, f"unclassified class {cls!r} - every prerequisite must "
-                                f"be classified"))
-
-    return dict(blocking=blocking, advisory=advisory, order_actions=order_actions,
-                bench=bench, fly=fly, build=build,
-                n_gated=sum(1 for p in PREREQUISITES if p["cls"] == GATED),
-                n_total=len(PREREQUISITES))
-
-
-def bound_fmt(p):
-    """The design-side bound beside a bench item."""
-    b = p.get("bound")
-    return f"\n         bound: {b}" if b else ""
+    return gate.evaluate(PREREQUISITES, results, tool_results, today, sources)
 
 
 def render(rep, width=72):
     """The verdict, derived."""
-    out = ["\n" + "=" * width]
-    nb = len(rep["blocking"])
-    if nb:
-        out.append(f"NOT READY TO ORDER - {nb} of {rep['n_total']} prerequisite(s) "
-                   f"unresolved:")
-        for p, why in rep["blocking"]:
-            out.append(f"   x {p['id']:22} {why}")
-    else:
-        out.append(f"READY TO ORDER - all {rep['n_gated']} gated prerequisite(s) proven, "
-                   f"0 order-checks outstanding")
-
-    out.append(f"\n   {rep['n_total']} prerequisites: "
-               f"{rep['n_gated']} gated, {len(rep['order_actions'])} order-time actions, "
-               f"{len(rep['bench'])} bench-only, {len(rep['advisory'])} advisory, "
-               f"{len(rep['build'])} to build")
-
-    if rep["order_actions"]:
-        out.append("\n  Do these AT THE CHECKOUT - they cannot be done before it:")
-        for p in rep["order_actions"]:
-            out.append(f"     - {p['claim']}")
-
-    failed_fly = [p for p, bad in rep["fly"] if bad]
-    out.append("")
-    if failed_fly or rep["bench"]:
-        out.append(f"NOT READY TO FLY - {len(failed_fly) + len(rep['bench'])} "
-                   f"item(s) need hardware.")
-        out.append("     None can change what is ORDERED - each confirms a bound, sets a")
-        out.append("     parameter, or records a bought part (tools/check_order.py bench_bounds).")
-        for p, bad in rep["fly"]:
-            if bad:
-                out.append(f"     - {p['claim']}  [{bad}]" + bound_fmt(p))
-        for p in rep["bench"]:
-            out.append(f"     - {p['claim']}" + bound_fmt(p))
-    else:
-        out.append("READY TO FLY - every bench item is recorded")
-
-    if rep["build"]:
-        out.append(f"\n  NOT BUILT YET - {len(rep['build'])} item(s) are code, not "
-                   f"measurements (gates the project, not ordering):")
-        for p in rep["build"]:
-            out.append(f"     - {p['claim']}")
-
-    out.append(f"\n  Advisory (report-only, reasons in tools/readiness.py): "
-               f"{', '.join(p['id'].split('.', 1)[1] for p in rep['advisory'])}")
-    return "\n".join(out)
+    return gate.render(rep, width, manifest="tools/readiness.py",
+                       bench="tools/check_order.py bench_bounds")

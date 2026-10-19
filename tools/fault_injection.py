@@ -21,6 +21,8 @@ sys.path.insert(0, HERE)
 import readiness  # noqa: E402
 import preflight  # noqa: E402  (imported here so run_gate can reach it)
 import design     # noqa: E402
+import kt         # noqa: E402
+from kicadtools import gate  # noqa: E402
 
 #keep the real subprocess.run
 _REAL_RUN = subprocess.run
@@ -38,7 +40,7 @@ def capture_tools(outdir):
     def patched(args, *a, **k):
         r = _REAL_RUN(args, *a, **k)
         argv = [str(x) for x in (args if isinstance(args, (list, tuple)) else [args])]
-        label = (readiness.tool_id(argv) or os.path.basename(argv[0])).replace(".py", "")
+        label = (gate.tool_id(argv) or os.path.basename(argv[0])).replace(".py", "")
         text = lambda x: x.decode("utf-8", "replace") if isinstance(x, bytes) else (x or "")
         with open(os.path.join(outdir, f"{label}.txt"), "a", encoding="utf-8") as fh:
             fh.write(f"\n##### argv={' '.join(argv)} rc={r.returncode}\n{text(r.stdout)}")
@@ -71,7 +73,7 @@ def parse_capture(directory):
             if not head.startswith("argv="):
                 continue                       #the "stderr" marker, already folded in
             argv_str, _, rc = head[len("argv="):].rpartition(" rc=")
-            tool = readiness.tool_id(argv_str.split())
+            tool = gate.tool_id(argv_str.split())
             if tool is None:
                 continue                       #kicad-cli writes a report FILE, not stdout
             out.setdefault(tool, bodies[i + 1] if i + 1 < len(bodies) else "")
@@ -97,7 +99,8 @@ SELF_TESTS = [
     ("mech.balance", ["tools/check_mech.py", "balance", "--self-test"]),
     ("elec.esd", ["tools/check_circuit.py", "esd", "--self-test"]),
     ("elec.traces", ["tools/check_board.py", "traces", "--self-test"]),
-    ("assy.cpl", ["tools/check_board.py", "cpl", "--self-test"]),
+    ("assy.cpl", [os.path.join(kt.ROOT, "check.py"), "cpl", "--self-test"]),
+    ("elec.current", [os.path.join(kt.ROOT, "irdrop.py"), "check", "--self-test"]),
     ("fw.max2112", ["tools/check_soop.py", "max2112", "--self-test"]),
 ]
 
@@ -107,26 +110,26 @@ def make_gate_runner(capture, real_run):
     def run_gate(fail_tool):
         def patched(args, *a, **k):
             argv = [str(x) for x in (args if isinstance(args, (list, tuple)) else [args])]
-            tool = readiness.tool_id(argv)
+            tool = gate.tool_id(argv)
             if tool is None:
                 return _Synth(0)               #kicad-cli: the report file is what matters
             return _Synth(1 if tool == fail_tool else 0, capture.get(tool, ""))
 
         subprocess.run = patched
         try:
-            preflight.results.clear()
-            preflight.TOOL_RESULTS.clear()
-            preflight.CHECK_SOURCE.clear()
-            preflight._LAST_TOOL[0] = None
+            gate.results.clear()
+            gate.TOOL_RESULTS.clear()
+            gate.CHECK_SOURCE.clear()
+            gate._LAST_TOOL[0] = None
             with contextlib.redirect_stdout(io.StringIO()):
                 preflight.main()
         finally:
             subprocess.run = real_run
-        rep = readiness.evaluate(preflight.results, dict(preflight.TOOL_RESULTS),
-                                 sources=dict(preflight.CHECK_SOURCE))
-        LAST_RUN.update(rows=list(preflight.results), tools=dict(preflight.TOOL_RESULTS),
-                        sources=dict(preflight.CHECK_SOURCE))
-        verdicts = {name: v for _, name, v, _ in preflight.results}
+        rep = readiness.evaluate(gate.results, dict(gate.TOOL_RESULTS),
+                                 sources=dict(gate.CHECK_SOURCE))
+        LAST_RUN.update(rows=list(gate.results), tools=dict(gate.TOOL_RESULTS),
+                        sources=dict(gate.CHECK_SOURCE))
+        verdicts = {name: v for _, name, v, _ in gate.results}
         return {p["id"] for p, _ in rep["blocking"]}, verdicts
 
     return run_gate
@@ -568,11 +571,11 @@ def run_inline_fault(capture, group_name, fault):
 
     def patched(args, *a, **k):
         argv = [str(x) for x in (args if isinstance(args, (list, tuple)) else [args])]
-        tool = readiness.tool_id(argv)
+        tool = gate.tool_id(argv)
         return _Synth(0, _ACTIVE_CAPTURE.get(tool, "") if tool else "")
 
     subprocess.run = patched
-    preflight.results.clear()
+    gate.results.clear()
     try:
         with fault():
             board = preflight.pcbnew.LoadBoard(preflight.BOARD)
@@ -580,7 +583,7 @@ def run_inline_fault(capture, group_name, fault):
                 getattr(preflight, group_name)(board)
     finally:
         subprocess.run = _REAL_RUN
-    return {name: v for _, name, v, _ in preflight.results}
+    return {name: v for _, name, v, _ in gate.results}
 
 
 def main():

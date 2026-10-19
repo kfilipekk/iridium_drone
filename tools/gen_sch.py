@@ -2,9 +2,10 @@
 """Generate NAVCORE-SoOP.kicad_sch from tools/design.py."""
 import os, sys, re, uuid, math
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import symlib, design, jlcpaths
+import design, kt   #kt puts kicad-tools on the path
+from kicadtools import project, symlib
 
-JLC   = jlcpaths.SYMBOLS
+JLC   = project.SYMBOLS
 STOCK = "/usr/share/kicad/symbols"
 U = lambda: str(uuid.uuid4())
 #the printed sheet's identity - the PDF is what a reviewer opens first

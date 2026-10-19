@@ -3,8 +3,10 @@
 SHELL     := /bin/bash
 PY        ?= python3
 APVENV_PY := $(HOME)/.cache/navcore/apvenv/bin/python3
+export KICAD_TOOLS ?= $(HOME)/Code/kicad-tools
+KT        := $(PY) $(KICAD_TOOLS)
 
-.PHONY: all help check preflight test-soop arm-soop sitl-check doc-check sitl-run clean
+.PHONY: all help check preflight test-soop arm-soop sitl-check doc-check sitl-run bundle renders step clean
 
 all: help
 
@@ -16,6 +18,9 @@ help:
 	@echo "  make sitl-check     - Validate SITL scenario results against shipped parameters"
 	@echo "  make doc-check      - Verify doc figures, links, and generated tables"
 	@echo "  make sitl-run       - Execute full 21-scenario SITL suite in ArduCopter (~50 min)"
+	@echo "  make bundle         - Rebuild gerbers, BOM/CPL and the JLCPCB order bundle"
+	@echo "  make renders        - Re-render the tracked board pictures and the pad map"
+	@echo "  make step           - Export the board to STEP and GLB with every model"
 	@echo "  make clean          - Clean compiled build artifacts"
 
 check: preflight
@@ -44,6 +49,16 @@ doc-check:
 sitl-run:
 	nice -n 10 bash sitl/run_scenarios.sh
 	$(PY) tools/check_firmware.py sitl --record
+
+bundle:
+	$(KT)/fab.py bundle
+
+renders:
+	$(KT)/fab.py render
+	$(PY) tools/gen_padmap.py
+
+step:
+	$(KT)/fab.py export
 
 clean:
 	cd firmware/soop && $(MAKE) clean
