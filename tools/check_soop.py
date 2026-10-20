@@ -13,6 +13,7 @@ Checks:
   solver             Prove the on-board C solver agrees with the Python reference, and compiles for the H743.
   nav                Gate the on-board navigation (firmware/soop/soop_nav.c) against simulated flights.
   bench              Can a bench recording from a receiver without a TCXO still be used?
+  flow               Does the guard's flow velocity invert what EKF3 says a flow sensor measures?
   gain               Does the analogue chain put the sky's noise where the DSP gates assume it is?
   spurs              Can a clock on the board land where the DSP looks for Ring Alert?
   spice              Gate wrapper around the SPICE suite in sim/ (see sim/run_suite.py).
@@ -1396,6 +1397,107 @@ def run_bench():
     return 0 if good else 1
 
 
+#flow
+
+"""Does the guard's flow velocity invert what EKF3 says a flow sensor measures?
+
+Usage:  python3 tools/check_soop.py flow [--self-test]
+
+AP_SoOP gives the spoofing guard a velocity the GPS cannot drag, from the downward flow
+sensor and rangefinder, through soop_flow_velocity() (soop_guard.c). This runs that function
+on the host (nav_host --flow) against cases built with EKF3's own forward model
+(AP_NavEKF3_OptFlowFusion.cpp: comp = flow + body rate, comp.x = v_body.y / range,
+comp.y = -v_body.x / range, range along the body's down axis) at random attitudes, speeds
+and heights, and checks the NED velocity comes back; and that a steep attitude is refused.
+--self-test compiles mutants - an axis's sign flipped, the matrix transposed, the vertical
+ignored - and exits 0 only if each fails.
+"""
+
+FLOW_CASES = 200
+FLOW_TOL = 1e-3                  #m/s, float arithmetic
+
+
+def flow_cases(seed=7):
+    rng = random.Random(seed)
+    out = []
+    for _ in range(FLOW_CASES):
+        ro, pi, ya = (math.radians(rng.uniform(-40, 40)), math.radians(rng.uniform(-40, 40)),
+                      math.radians(rng.uniform(-180, 180)))
+        cr, sr, cp, sp, cy, sy = (math.cos(ro), math.sin(ro), math.cos(pi), math.sin(pi),
+                                  math.cos(ya), math.sin(ya))
+        #body -> NED, ZYX Euler, as AP_AHRS's dcm
+        r = [[cp * cy, sr * sp * cy - cr * sy, cr * sp * cy + sr * sy],
+             [cp * sy, sr * sp * sy + cr * cy, cr * sp * sy - sr * cy],
+             [-sp, sr * cp, cr * cp]]
+        v = [rng.uniform(-10, 10), rng.uniform(-10, 10), rng.uniform(-2, 2)]
+        h = rng.uniform(0.5, 30.0)
+        rngm = h / r[2][2]
+        vb = [sum(r[k][i] * v[k] for k in range(3)) for i in range(3)]
+        comp = (vb[1] / rngm, -vb[0] / rngm)
+        out.append((sum(r, []), comp, rngm, v))
+    return out
+
+
+def flow_run(exe, cases):
+    lines = "".join(" ".join(f"{x:.9f}" for x in c[0]) + f" {c[1][0]:.9f} {c[1][1]:.9f} "
+                    f"{c[2]:.6f} {c[3][2]:.6f}\n" for c in cases)
+    lines += "1 0 0 0 0.34 -0.94 0 0.94 0.34 0.1 0.1 5 0\n"        #rolled 70 degrees
+    out = subprocess.run([exe, "--flow"], input=lines, capture_output=True, text=True).stdout.split("\n")
+    worst = max((max(abs(float(a) - b) for a, b in zip(out[i].split(), c[3]))
+                 if out[i] != "steep" else float("inf")) for i, c in enumerate(cases))
+    return worst, out[len(cases)] == "steep"
+
+
+def flow_build(tmp, src_dir):
+    exe = os.path.join(tmp, "nav_host_flow")
+    r = subprocess.run(["cc", "-O2", "-std=c99", "-Wall", "-Wextra", "-Werror", "-pedantic",
+                        "-fsingle-precision-constant", "-o", exe]
+                       + [os.path.join(src_dir, f) for f in SRC] + ["-lm"],
+                       capture_output=True, text=True)
+    return exe if r.returncode == 0 else None
+
+
+def run_flow():
+    print("=== the guard's flow velocity against EKF3's flow model ===")
+    tmp = tempfile.mkdtemp(prefix="soop_flow_")
+    cases = flow_cases()
+    if "--self-test" in sys.argv:
+        src = open(os.path.join(SOOP, "soop_guard.c")).read()
+        mutants = {
+            "an axis's sign flipped": ("const float bx = -comp_y * range", "const float bx = comp_y * range"),
+            "the matrix transposed": ("r[3 * i] * bx + r[3 * i + 1] * by + r[3 * i + 2] * bz",
+                                      "r[i] * bx + r[3 + i] * by + r[6 + i] * bz"),
+            "the vertical ignored": ("const float bz = (vd - r[6] * bx - r[7] * by) / r[8];",
+                                     "const float bz = 0.0f * vd;"),
+        }
+        caught = 0
+        for name, (a, b) in mutants.items():
+            d = os.path.join(tmp, name.replace(" ", "_").replace("'", ""))
+            shutil.copytree(SOOP, d, ignore=shutil.ignore_patterns("*.o", "*_host"))
+            assert src.count(a) == 1, f"mutant '{name}' no longer matches soop_guard.c"
+            open(os.path.join(d, "soop_guard.c"), "w").write(src.replace(a, b))
+            exe = flow_build(tmp, d)
+            worst, steep = flow_run(exe, cases) if exe else (float("inf"), False)
+            hit = worst > FLOW_TOL or not steep
+            caught += hit
+            print(f"  {'ok  ' if hit else 'MISS'}  {name}: worst error {worst:.3g} m/s")
+        shutil.rmtree(tmp, ignore_errors=True)
+        return 0 if caught == len(mutants) else 1
+    exe = flow_build(tmp, SOOP)
+    if exe is None:
+        print("  FAIL  nav_host did not build")
+        return 1
+    worst, steep = flow_run(exe, cases)
+    checks = [worst <= FLOW_TOL, steep]
+    print(f"  {'ok  ' if checks[0] else 'FAIL'}  {len(cases)} cases, roll and pitch to 40 deg, any "
+          f"yaw, 0.5-30 m up: NED velocity back to {worst * 1e3:.3f} mm/s (limit {FLOW_TOL * 1e3:.0f})")
+    print(f"  {'ok  ' if steep else 'FAIL'}  rolled 70 degrees: refused, not extrapolated")
+    shutil.rmtree(tmp, ignore_errors=True)
+    good = all(checks)
+    print(f"\n{'FLOW OK' if good else 'FLOW FAILED'} - {sum(checks)}/{len(checks)} assertions")
+    return 0 if good else 1
+
+
 #gain
 
 """Does the analogue chain put the sky's noise where the DSP gates assume it is?
@@ -1682,6 +1784,7 @@ CHECKS = {
     "solver": run_solver,
     "nav": run_nav,
     "bench": run_bench,
+    "flow": run_flow,
     "gain": run_gain,
     "spurs": run_spurs,
     "spice": run_spice,

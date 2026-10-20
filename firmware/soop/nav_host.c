@@ -32,10 +32,27 @@ static char *slurp(const char *path)
 
 int main(int argc, char **argv)
 {
+    //flow velocity, one case a line on stdin: r (9, body->NED by rows), comp_x comp_y range vd
+    if (argc == 2 && !strcmp(argv[1], "--flow")) {
+        char ln[512];
+        while (fgets(ln, sizeof ln, stdin)) {
+            float r[9], v[3];
+            char *p = ln;
+            for (int i = 0; i < 9; i++)
+                r[i] = strtof(p, &p);
+            const float cx = strtof(p, &p), cy = strtof(p, &p), rng = strtof(p, &p), vd = strtof(p, &p);
+            if (soop_flow_velocity(r, cx, cy, rng, vd, v))
+                printf("%.6f %.6f %.6f\n", v[0], v[1], v[2]);
+            else
+                printf("steep\n");
+        }
+        return 0;
+    }
     if (argc < 3) {
         fprintf(stderr, "usage: %s catalogue.tle obs.txt [--static] [--sats] [--vel-sigma M/S]\n"
-                        "       %s catalogue.tle --cat-age T_UTC   (print STALE <0|1> NEWEST <s J2000>)\n",
-                argv[0], argv[0]);
+                        "       %s catalogue.tle --cat-age T_UTC   (print STALE <0|1> NEWEST <s J2000>)\n"
+                        "       %s --flow < cases   (soop_flow_velocity, for check_soop.py flow)\n",
+                argv[0], argv[0], argv[0]);
         return 2;
     }
     char *tle = slurp(argv[1]);

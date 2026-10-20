@@ -45,6 +45,13 @@ void soop_guard_velocity(soop_guard_t *g, double t_board, float vn, float ve, fl
 //a velocity the GPS cannot drag (airspeed and wind, optical flow, a Doppler radar): while
 //it keeps coming, free takes it in place of the flight EKF's
 void soop_guard_velocity_ind(soop_guard_t *g, double t_board, float vn, float ve, float vd);
+
+//such a velocity from a downward flow sensor and rangefinder, as EKF3 models them: with
+//comp = flow + body rate (rad/s about body x, y), comp.x = v_body.y / range and comp.y =
+//-v_body.x / range, range along the body's down axis. Flow sees nothing vertical, so the
+//body-z speed is the one that keeps vd. r is body->NED, row-major; 0 if too steep to trust.
+int  soop_flow_velocity(const float r[9], float comp_x, float comp_y, float range, float vd,
+                        float v_ned[3]);
 void soop_guard_baro(soop_guard_t *g, double t_board, double h_m);
 void soop_guard_set_position(soop_guard_t *g, double t_board, const double ecef[3],
                              double sigma_m);

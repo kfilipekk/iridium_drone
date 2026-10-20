@@ -90,6 +90,18 @@ void soop_guard_set_time(soop_guard_t *g, double t, double t_utc)
         soop_nav_set_time(&g->free, t, t_utc);
 }
 
+int soop_flow_velocity(const float r[9], float comp_x, float comp_y, float range, float vd,
+                       float v_ned[3])
+{
+    if (fabsf(r[8]) < 0.5f || range <= 0.0f)
+        return 0;
+    const float bx = -comp_y * range, by = comp_x * range;
+    const float bz = (vd - r[6] * bx - r[7] * by) / r[8];
+    for (int i = 0; i < 3; i++)
+        v_ned[i] = r[3 * i] * bx + r[3 * i + 1] * by + r[3 * i + 2] * bz;
+    return 1;
+}
+
 int soop_guard_burst(soop_guard_t *g, double t, double f_hz, double sigma_hz)
 {
     if (FREE_RUNS(g))
