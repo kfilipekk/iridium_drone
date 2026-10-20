@@ -288,7 +288,7 @@ bool AP_SoOP::setup()
         return false;
     }
     soop_dsp_init(_dsp);
-    _bbg = 4;
+    _bbg = 2;                        //check_soop.py gain
     soop_nav_cfg_t cfg;
     soop_nav_default_cfg(&cfg);
     _nav->cfg = cfg;

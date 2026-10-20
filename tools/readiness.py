@@ -80,6 +80,13 @@ PREREQUISITES = [
     dict(id="fab.geometry", cls=GATED, tool="check.py geometry",
          claim="no track corner is sharper than 90 degrees, and no track or via dangles or "
                "leads to no pad or pour"),
+    dict(id="rf.gain", cls=GATED, tool="check_soop.py gain",
+         claim="the antenna's noise reaches the ADC well above the converter's own and well "
+               "under the tuner's compression and full scale, and the DSP meets its gates at "
+               "both ends of the parts' spread"),
+    dict(id="rf.spurs", cls=GATED, tool="check_soop.py spurs",
+         claim="no crystal-locked clock's harmonic folds into the Ring Alert search window, "
+               "at any LO offset soop.cfg can set"),
     dict(id="elec.sim", cls=GATED, tool="check_soop.py spice",
          claim="the analogue blocks - the buck output filters, the payload buck under a "
                "double servo stall, the battery hot-plug transient, the MAX2112 PLL loop "

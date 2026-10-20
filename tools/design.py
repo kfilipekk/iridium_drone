@@ -245,6 +245,20 @@ RF_PARTS = dict(
         x_min_ohm=250.0, f_carrier_ghz=1.6265,
         src="[D] Murata LQW15AN27N: SRF 3.5 GHz, DCR 0.52 ohm; [M] X at 1.6265 GHz = "
             "2*pi*f*L = 276 ohm; [M] C113111, 0402, 4497 in stock 2026-09-30"),
+    #the gain plan, check_soop.py gain
+    antenna=dict(
+        part="Tallysman HC610", gain_db=28.0, gain_tol_db=2.0, nf_db=2.0,
+        t_ant_k=100.0, t_ant_range_k=(50.0, 290.0), cable_db=0.5, board_db=0.5,
+        src="[D] HC610: 28 dB LNA, NF 2.0 dB; [A] gain +-2 dB; [A] 100 K for an upward helix, "
+            "50 K clear sky to 290 K looking at ground; [A] 15 cm RG178 ~0.5 dB at 1.6 GHz; "
+            "[M] sim/rf.py INSL_MAX_DB, the on-board path's budget"),
+    tuner=dict(
+        part="MAX2112", ref_dbm=-75.0, ref_vpp=1.0, ref_bbg=11, ref_bbg_doubt=4,
+        nf_db=8.0, gc_db=73.0, gc_v=(0.5, 2.7), p1db_vpp=3.0, vcc_rf=3.3,
+        src="[D] MAX2112 Rev 3: -75 dBm CW gives 1 Vp-p at VGC1 0.5 V with BBG adjusted "
+            "(the table's default is 1011, so +-4 steps of doubt [A]); NF 8 dB at max gain; "
+            "73 dB RF gain range over 0.5-2.7 V; BBG 1 dB per step; output 1 dB compression "
+            "3 Vp-p differential"),
 )
 #connector orientation
 MATING_FACE = {

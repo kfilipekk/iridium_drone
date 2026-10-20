@@ -12,6 +12,8 @@ Checks:
   sgp4               Gate: C SGP4 agrees with Python sgp4.api.Satrec.
   solver             Prove the on-board C solver agrees with the Python reference, and compiles for the H743.
   nav                Gate the on-board navigation (firmware/soop/soop_nav.c) against simulated flights.
+  gain               Does the analogue chain put the sky's noise where the DSP gates assume it is?
+  spurs              Can a clock on the board land where the DSP looks for Ring Alert?
   spice              Gate wrapper around the SPICE suite in sim/ (see sim/run_suite.py).
 """
 import csv, json, math, os, random, re, shutil, subprocess, sys, tempfile
@@ -1262,6 +1264,264 @@ def run_nav():
     return 0 if ok else 1
 
 
+#gain
+
+"""Does the analogue chain put the sky's noise where the DSP gates assume it is?
+
+Usage:  python3 tools/check_soop.py gain [--slots N]
+
+Every DSP gate feeds soop_dsp.c noise at 600 counts, a number picked for the simulation.
+This works it out from the parts instead - the HC610's gain and noise figure, the cable and
+board losses, the MAX2112's gain at the GC1 the R58/R35 divider sets and the BBG AP_SoOP
+writes, the OPA2374's gain, the ADC's scale - and then:
+
+1. the chain, not the converter, sets the noise floor;
+2. the MAX2112's output stays well under its compression point and the ADC far from clipping;
+3. the DSP still meets its gates with the noise at both ends of the chain's spread;
+4. it prints what the bench should see first: how far the noise steps up when the antenna
+   feed turns on, before any satellite is in view.
+
+The MAX2112 datasheet gives its gain only as "-75 dBm in, BBG adjusted for 1 Vp-p out", so
+the reference BBG is the table's default with design.RF_PARTS["tuner"]["ref_bbg_doubt"]
+steps of doubt either way.
+"""
+
+K_DBM_HZ = -174.0                 #kT at 290 K
+ADC_ENOB = 11.0                   #[A] H743 16-bit ADC at 1 MSPS, under its datasheet typical
+ADC_VREF = 3.3                    #VREF+ is VDDA through L1
+CREST = 4.0                       #peaks the chain must pass: 4 sigma
+
+
+def _t(nf_db):
+    return 290.0 * (10 ** (nf_db / 10) - 1)
+
+
+def gain_plan(t_ant, lna_db, bbg_ref, gc_loss_db):
+    """Noise as the DSP sees it, and the levels that bound it."""
+    A, T = design.RF_PARTS["antenna"], design.RF_PARTS["tuner"]
+    loss_db = A["cable_db"] + A["board_db"]
+    g, l = 10 ** (lna_db / 10), 10 ** (loss_db / 10)
+    t_sys = t_ant + _t(A["nf_db"]) + 290.0 * (l - 1) / g + _t(T["nf_db"]) * l / g
+    n0_dbm = K_DBM_HZ + 10 * math.log10(t_sys / 290.0) + lna_db - loss_db
+    #per rail: a tone at ref_dbm is ref_vpp, so noise density scales off it
+    adj = 10 ** ((firmware_bbg() - bbg_ref - gc_loss_db) / 20)
+    vn = 0.5 * T["ref_vpp"] * 10 ** ((n0_dbm - T["ref_dbm"]) / 20) * adj
+    rin, rf = (sig._ohms(design.COMPONENTS[r][2]) for r in ("R36", "R50"))
+    lsb = ADC_VREF / 65536
+    dens = vn * rf / rin / lsb                                    #counts/sqrt(Hz) at dc
+    counts = dens * math.sqrt(sig.FS_CAPTURE / 2)                 #the scenario's noise_counts
+    steps = 400
+    band = sum(sig.amp_gain((k + 0.5) * sig.TUNER_LPF_HZ / steps) ** 2
+               for k in range(steps)) * sig.TUNER_LPF_HZ / steps
+    adc_rms = dens * math.sqrt(band)
+    tuner_rms = vn * math.sqrt(sig.TUNER_LPF_HZ)
+    t_off = 290.0 + _t(T["nf_db"])                                #feed off, LNA dead
+    step_db = 10 * math.log10(t_sys * g / l / t_off)
+    return dict(t_sys=t_sys, n0_dbm=n0_dbm, counts=counts, adc_rms=adc_rms,
+                tuner_rms=tuner_rms, step_db=step_db)
+
+
+def firmware_bbg():
+    src = open(os.path.join(REPO, "firmware", "ardupilot", "AP_SoOP", "AP_SoOP.cpp")).read()
+    return int(re.search(r"_bbg = (\d+);", src).group(1))
+
+
+def gc_loss_max():
+    T = design.RF_PARTS["tuner"]
+    r35, r58 = (sig._ohms(design.COMPONENTS[r][2]) for r in ("R35", "R58"))
+    v = T["vcc_rf"] * r35 / (r35 + r58)
+    lo, hi = T["gc_v"]
+    return v, T["gc_db"] * (v - lo) / (hi - lo)
+
+
+def dsp_at(exe, tmp, noise, slots):
+    d = os.path.join(tmp, f"n{noise:.0f}")
+    truth = soop_scenario.make_iq(d, slots, seed=21, cn0_lo=42.0, cn0_hi=70.0,
+                                  noise_counts=noise)
+    out = subprocess.run([exe, os.path.join(d, "iq.bin")], capture_output=True, text=True)
+    r = score(truth, list(csv.DictReader(out.stdout.splitlines())))
+    g = soop_dsp_GATES
+    rate = r["det_strong"] / max(1, r["n_strong"])
+    ok = (rate >= g["detect_min"] and r["false"] <= g["false_max"] * max(1, r["n_det"])
+          and r["p90_strong"] <= g["p90_hz"] and r["within3"] >= g["within3_min"]
+          and abs(r["dt_median"]) <= g["timing_samples"])
+    return ok, rate, r, truth["clipped_samples"]
+
+
+def run_gain():
+    slots = int(sys.argv[sys.argv.index("--slots") + 1]) if "--slots" in sys.argv else 150
+    A, T = design.RF_PARTS["antenna"], design.RF_PARTS["tuner"]
+    print("=== the analogue chain's noise at the ADC ===")
+    vgc, gc_max = gc_loss_max()
+    doubt = T["ref_bbg_doubt"]
+    nom = gain_plan(A["t_ant_k"], A["gain_db"], T["ref_bbg"], gc_max / 2)
+    lo = gain_plan(A["t_ant_range_k"][0], A["gain_db"] - A["gain_tol_db"], T["ref_bbg"] + doubt,
+                   gc_max)
+    hi = gain_plan(A["t_ant_range_k"][1], A["gain_db"] + A["gain_tol_db"], T["ref_bbg"] - doubt,
+                   0.0)
+    print(f"    T_sys {nom['t_sys']:.0f} K, {nom['n0_dbm']:.1f} dBm/Hz into the MAX2112; GC1 "
+          f"{vgc:.2f} V (0-{gc_max:.1f} dB under max gain), BBG {firmware_bbg()}")
+    print(f"    noise per rail: {nom['counts']:.0f} counts (spread {lo['counts']:.0f}-"
+          f"{hi['counts']:.0f}); the DSP gates assume 600")
+    checks = []
+    adc_noise = 65536 / 2 ** ADC_ENOB / math.sqrt(12) / math.sqrt(sig.ADC_OVS)
+    margin = 20 * math.log10(lo["counts"] / adc_noise)
+    for good, text in (
+            (margin >= 20.0, f"the converter's own noise ({adc_noise:.1f} counts at ENOB "
+             f"{ADC_ENOB:.0f}) is {margin:.0f} dB under the chain's at its quietest (need 20): "
+             f"it costs {10 * math.log10(1 + 10 ** (-margin / 10)):.2f} dB"),
+            (CREST * hi["tuner_rms"] * 2 * math.sqrt(2) <= T["p1db_vpp"],
+             f"the MAX2112 puts out {hi['tuner_rms'] * 1e3:.0f} mV rms at its loudest: "
+             f"{CREST:.0f} sigma peaks are {CREST * hi['tuner_rms'] * 2 * math.sqrt(2):.2f} Vp-p "
+             f"against {T['p1db_vpp']:.0f} Vp-p compression"),
+            (CREST * hi["adc_rms"] <= sig.ADC_FULL_SCALE,
+             f"the ADC sees {hi['adc_rms']:.0f} counts rms at its loudest, "
+             f"{20 * math.log10(sig.ADC_FULL_SCALE / hi['adc_rms']):.0f} dB under full scale")):
+        checks.append(good)
+        print(f"  {'ok  ' if good else 'FAIL'}  {text}")
+
+    tmp = tempfile.mkdtemp(prefix="soop_gain_")
+    exe, info = soop_dsp_build(tmp)
+    if exe is None:
+        print(f"  FAIL  build: {info.strip()[:400]}")
+        return 1
+    for name, p in (("quietest", lo), ("loudest", hi)):
+        ok, rate, r, clipped = dsp_at(exe, tmp, p["counts"], slots)
+        ok = ok and clipped == 0
+        checks.append(ok)
+        print(f"  {'ok  ' if ok else 'FAIL'}  DSP at the {name} end, {p['counts']:.0f} counts: "
+              f"detects {rate:.0%} at >= {soop_dsp_GATES['strong_dbhz']:.0f} dB-Hz, p90 "
+              f"{r['p90_strong']:.2f} Hz, {r['false']} false, {clipped} clipped samples")
+    shutil.rmtree(tmp, ignore_errors=True)
+
+    print(f"\n    on the bench, antenna on J12: turning the feed on should raise the noise "
+          f"{nom['step_db']:.0f} dB\n    ({lo['step_db']:.0f}-{hi['step_db']:.0f}), "
+          f"from the MAX2112's own floor to the HC610's - the first sign the RF path works")
+    good = all(checks)
+    print(f"\n{'GAIN OK' if good else 'GAIN FAILED'} - {sum(checks)}/{len(checks)} assertions")
+    return 0 if good else 1
+
+
+#spurs
+
+"""Can a clock on the board land where the DSP looks for Ring Alert?
+
+Usage:  python3 tools/check_soop.py spurs
+
+A steady clock's harmonics inside the tuner's passband reach the ADC, and the 1 MSPS
+sampling and the 2:1 oversampler fold them into the 500 kSPS capture. The DSP searches only
+Ring Alert +-DSP_BAND_HZ plus Doppler. This takes the board's crystal-locked clocks - the
+8 MHz crystal through ArduPilot's PLLs as hwdef.dat and stm32h7_mcuconf.h set them, TIM6's
+ADC trigger and the tuner's 25 MHz TCXO - folds every harmonic within twice the tuner's
+filter of the LO, and fails if one lands in the search window less than SPUR_ATTEN_DB down
+from where it started. It does this for every lo_offset_hz soop.cfg could set, since a clock
+that misses at one offset can land at another. Free-running clocks (the bucks, I2C, DShot)
+wander too far to plan around; the dsp check's drifting spur covers them.
+"""
+
+SPUR_ATTEN_DB = 40.0
+MCUCONF = os.path.join(os.environ.get("AP_DIR", os.path.expanduser("~/.cache/navcore/ardupilot")),
+                       "libraries", "AP_HAL_ChibiOS", "hwdef", "common", "stm32h7_mcuconf.h")
+#stm32h7_mcuconf.h, the common tree for 8/16/32 MHz crystals at 400 MHz: (M, N, P, Q, R)
+PLLS = {"PLL1": (1, 100, 2, 10, 2), "PLL2": (1, 75, 3, 6, 3), "PLL3": (2, 72, None, 6, 9)}
+
+
+def board_clocks():
+    """(name, Hz) for every crystal-locked clock that runs all the time."""
+    hw = open(os.path.join(REPO, "firmware", "NAVCORE_SoOP", "hwdef.dat")).read()
+    hse = float(re.search(r"^OSCILLATOR_HZ\s+(\d+)", hw, re.M).group(1))
+    out = [("HSE crystal Y1", hse), ("TIM6 ADC trigger", sig.ADC_RAW_RATE),
+           ("tuner TCXO Y2", REF), ("tuner PLL comparison", REF)]
+    for pll, (m, n, *divs) in PLLS.items():
+        vco = hse / m * n
+        out.append((f"{pll} VCO", vco))
+        for tap, d in zip("PQR", divs):
+            if d:
+                out.append((f"{pll} {tap}", vco / d))
+    out.append(("HCLK", out[[c[0] for c in out].index("PLL1 P")][1] / 2))
+    out.append(("APB", out[-1][1] / 2))
+    return hse, out
+
+
+def mcuconf_agrees(hse):
+    """The PLL table above is what ArduPilot builds for this crystal."""
+    if not os.path.exists(MCUCONF):
+        return [f"{MCUCONF} not found - set AP_DIR"]
+    src = open(MCUCONF).read()
+    m = re.search(r"#elif STM32_HSECLK == %dU\n(.*?)#elif" % int(hse), src, re.S)
+    common = re.search(r"common clock tree for multiples of 8MHz crystals(.*?)#elif", src, re.S)
+    bad = []
+    for pll, (dm, n, p, q, r) in PLLS.items():
+        k = pll[-1]
+        for name, want, text in ((f"DIVM", dm, m.group(1) if m else ""),
+                                 (f"DIVN", n, common.group(1) if common else ""),
+                                 (f"DIVP", p, common.group(1) if common else ""),
+                                 (f"DIVQ", q, common.group(1) if common else ""),
+                                 (f"DIVR", r, common.group(1) if common else "")):
+            if want is None:
+                continue
+            vals = re.findall(rf"STM32_PLL{k}_{name}_VALUE\s+(\d+)", text)
+            if str(want) not in vals:
+                bad.append(f"STM32_PLL{k}_{name}_VALUE: table has {want}, mcuconf {vals or 'none'}")
+    return bad
+
+
+def landings(clocks, lo_off):
+    """Harmonics that land in the DSP's window: (clock, harmonic, RF Hz, capture Hz, atten dB)."""
+    lo = sig.F_RING_ALERT + lo_off
+    ra = sig.F_RING_ALERT - lo
+    half = soop_scenario.DSP_BAND_HZ
+    span = 2 * sig.TUNER_LPF_HZ
+    hits = []
+    for name, f in clocks:
+        for n in range(max(1, math.ceil((lo - span) / f)), math.floor((lo + span) / f) + 1):
+            bb = n * f - lo
+            got, gain = sig.fold(bb)
+            if abs(got - ra) <= half:
+                hits.append((name, n, n * f, got, -20 * math.log10(max(gain, 1e-12))))
+    return hits
+
+
+def run_spurs():
+    print("=== the board's clocks against the Ring Alert search window ===")
+    hse, clocks = board_clocks()
+    checks = []
+    bad = mcuconf_agrees(hse)
+    checks.append(not bad)
+    print(f"  {'ok  ' if not bad else 'FAIL'}  the PLL table matches ArduPilot's "
+          f"stm32h7_mcuconf.h for a {hse / 1e6:g} MHz crystal" + "".join(f"\n        {b}" for b in bad))
+    print("    " + ", ".join(f"{n} {f / 1e6:g}" for n, f in clocks) + " MHz")
+
+    hits = [h for h in landings(clocks, sig.LO_OFFSET_HZ) if h[4] < SPUR_ATTEN_DB]
+    checks.append(not hits)
+    print(f"  {'ok  ' if not hits else 'FAIL'}  at the flight LO offset "
+          f"({sig.LO_OFFSET_HZ / 1e3:g} kHz) no steady harmonic lands within "
+          f"{soop_scenario.DSP_BAND_HZ / 1e3:g} kHz of Ring Alert less than {SPUR_ATTEN_DB:.0f} dB down"
+          + "".join(f"\n        {n} x{k} at {rf / 1e6:.4f} MHz -> {c / 1e3:+.1f} kHz, "
+                    f"{a:.0f} dB down" for n, k, rf, c, a in hits))
+    #where the 1 MHz grid sits from Ring Alert, whatever the LO
+    grid = min(abs(((k * 1e6 - sig.F_RING_ALERT) + sig.FS_CAPTURE / 2) % sig.FS_CAPTURE
+                   - sig.FS_CAPTURE / 2) for k in range(1620, 1633))
+    print(f"    every clock above is a whole number of MHz, so its harmonics fold to "
+          f"{grid / 1e3:.1f} kHz from Ring Alert at any LO")
+
+    bad_lo = sorted({o for o in range(5_000, 250_001, 500)
+                     if any(h[4] < SPUR_ATTEN_DB for h in landings(clocks, float(o)))})
+    checks.append(not bad_lo)
+    print(f"  {'ok  ' if not bad_lo else 'FAIL'}  the same holds for every lo_offset_hz from 5 to "
+          f"250 kHz" + (f": fails at {bad_lo[:8]}" if bad_lo else ""))
+
+    #the TCXO's frequency is the part most likely to be swapped
+    for f in (19.2e6, 26e6, 27e6, 40e6):
+        swap = [(n, c) for n, c in clocks if n not in ("tuner TCXO Y2", "tuner PLL comparison")]
+        h = [x for x in landings(swap + [("TCXO", f)], sig.LO_OFFSET_HZ) if x[4] < SPUR_ATTEN_DB]
+        print(f"    a {f / 1e6:g} MHz TCXO instead: "
+              + ("clear" if not h else f"lands {h[0][3] / 1e3:+.1f} kHz, {h[0][4]:.0f} dB down"))
+    good = all(checks)
+    print(f"\n{'SPURS OK' if good else 'SPURS FAILED'} - {sum(checks)}/{len(checks)} assertions")
+    return 0 if good else 1
+
+
 #spice
 
 """Gate wrapper around the SPICE suite in sim/ (see sim/run_suite.py).
@@ -1289,6 +1549,8 @@ CHECKS = {
     "sgp4": run_sgp4,
     "solver": run_solver,
     "nav": run_nav,
+    "gain": run_gain,
+    "spurs": run_spurs,
     "spice": run_spice,
 }
 

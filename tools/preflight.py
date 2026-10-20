@@ -644,6 +644,18 @@ def firmware(board):
            else "the suite printed no tally - see sim/run_suite.py") if rc == 0 else
           "a simulation bound is violated, or a deck did not run - see sim/run_suite.py")
 
+    rc, out = run("check_soop.py gain")
+    m = re.search(r"noise per rail: (\d+) counts \(spread (\d+)-(\d+)\)", out)
+    check("firmware", "the receiver's gain plan suits the DSP", rc == 0,
+          (f"noise {m.group(1)} counts at the ADC ({m.group(2)}-{m.group(3)}), the DSP gated at "
+           f"both ends" if m else "see tools/check_soop.py gain") if rc == 0 else
+          "the chain clips, compresses or sinks under the ADC - see tools/check_soop.py gain")
+
+    rc, out = run("check_soop.py spurs")
+    check("firmware", "no clock harmonic in the Ring Alert window", rc == 0,
+          "every steady clock folds clear of the DSP's search window" if rc == 0 else
+          "a clock harmonic lands where the DSP looks - see tools/check_soop.py spurs")
+
     rc, out = run("check_soop.py antenna")
     m = re.search(r'ANT CHECK (?:PASSED|FAILED): (\d+) failure\(s\), (\d+) steps simulated', out)
     check("firmware", "antenna bias feed monitor", rc == 0,
