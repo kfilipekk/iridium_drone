@@ -28,7 +28,7 @@ IMPORT_DELAY = 12          #iq_import's filter delay, output samples
 def build(tmp):
     cc = ["cc", "-O2", "-std=c99", "-Wall", "-Wextra"]
     bins = dict(iq_import=["iq_import.c"], dsp_host=["dsp_host.c", "soop_dsp.c"],
-                nav_host=["nav_host.c", "soop_nav.c", "soop_ephem.c", "sgp4.c"])
+                nav_host=["nav_host.c", "soop_guard.c", "soop_nav.c", "soop_ephem.c", "sgp4.c"])
     out = {}
     for name, srcs in bins.items():
         exe = os.path.join(tmp, name)
