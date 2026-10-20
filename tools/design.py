@@ -52,7 +52,8 @@ COMPONENTS = {
  "U14": ("jlc_parts:OPA2374M{slash}TR",     "jlc:SOP-8_L4.9-W3.9-P1.27-LS6.0-BL",       "OPA2374",       "C444392",  False),
  "U15": ("jlc_parts:PSA4-5043+",            "jlc:SOT-343-4_L2.0-W1.3-P1.30-LS2.1-BR",           "PSA4-5043+",    "C5240848", True),
  "U16": ("jlc_parts:PSA4-5043+",            "jlc:SOT-343-4_L2.0-W1.3-P1.30-LS2.1-BR",           "PSA4-5043+",    "C5240848", True),
- #Y2 is an active 4-pad clipped-sine TCXO feeding U13's reference through C58
+ #Y2 is an active 4-pad clipped-sine TCXO feeding U13's reference through C58. Its datasheet
+#states no g-sensitivity and no 3225 TCXO at JLC does; check_soop.py dsp gates 2 g x 1 ppb/g
  "Y2" : ("jlc_parts:8132S-25.000MQ33DTL",     "jlc:OSC-SMD_4P-L3.2-W2.5-BL",              "25MHz TCXO",    "C19674258", False),
  "FL1": ("jlc_parts:TA1575IG",                   "jlc:FILTER-SMD_6P-L3.0-W3.0-P1.19-TR",                       "SAW 1620MHz",   "",         True),
 }
@@ -330,8 +331,10 @@ CONNECTOR_RETENTION = {
     "J11": ("latch", "JST-GH positive lock"),
     "J12": ("snap", "MMCX positive snap-lock"),
     "J14": ("latch", "JST-GH positive lock"),
-    "J17": ("friction", "JR standard servo plug friction fit + printed clip"),
-    "J23": ("friction", "JR standard servo plug friction fit + printed clip"),
+    #SMD pads: a through-hole header's pins would land on J5/J11 underneath, so the lander's
+    #leads are held by the clip and an epoxy fillet, and pull-tested at bring-up
+    "J17": ("friction", "JR standard servo plug friction fit + printed clip + epoxy fillet"),
+    "J23": ("friction", "JR standard servo plug friction fit + printed clip + epoxy fillet"),
     "J19": ("bench", "Tag-Connect TC2030-NL pogo-pin cable for recovery"),
     "J21": ("latch", "JST-GH positive lock"),
     "J22": ("latch", "JST-GH positive lock"),
@@ -2485,6 +2488,10 @@ STANDARD_ONLY = {
 }
 #sole-source parts whose stock the order sheet quotes
 SOLE_SOURCE = {"C5271084": "STM32H743VIT6", "C15639": "MS5611", "C596391": "MAX2112"}
+#MAX2112 is ADI "not recommended for new designs". The MAX2120 has the same pinout but an
+#integer-N synthesizer: Ring Alert is only reachable at R 17-23 (N 1106-1496, e.g. R 18 puts
+#the LO 118 kHz above it), a 1.1-1.5 MHz comparison instead of 25 MHz - a new loop filter,
+#another register image and ~25 dB more close-in phase noise. A respin, not a substitute.
 #parts JLCPCB assembles but the community mirror does not carry
 MIRROR_GAPS = {
     "C51940119": "J3's JST-GH 6P - jlcpcb.com/partdetail/C51940119 confirms the part; "
