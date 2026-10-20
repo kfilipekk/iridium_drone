@@ -858,7 +858,7 @@ def run_traces():
         else:
             print(f"  {n:8} (not routed)")
 
-    print("\n=== reference plane under the tuner's clock ===")
+    print("\n=== reference plane under the tuner's clock and the antenna line ===")
     for n, need in REFERENCED.items():
         frac = over_ground(board, n)
         bad = frac is not None and frac < need
@@ -872,8 +872,9 @@ def run_traces():
     return 1 if warn else 0
 
 
-#a clock whose return path runs in a supply plane carries that plane's noise
-REFERENCED = {"TUNER_REF": 0.9, "TUNER_XTAL": 0.9}
+#a clock whose return path runs in a supply plane carries that plane's noise, and the
+#antenna line is only 50 ohm over ground; J12's centre pin needs its own clearance in In1
+REFERENCED = {"TUNER_REF": 0.9, "TUNER_XTAL": 0.9, "ANT_IN": 0.85, "RFIN": 0.95}
 
 
 def over_ground(board, net, step=0.05):
