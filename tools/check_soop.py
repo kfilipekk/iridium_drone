@@ -884,6 +884,13 @@ SPOOFS = (
     ("drag 5 m/s", (49, 50), dict(start_s=300.0, rate=5.0), 420.0),
     ("drag 2 m/s", (53, 54), dict(start_s=300.0, rate=2.0), 1500.0),
 )
+#the same drags with a velocity the spoofer can't drag, this good (m/s)
+SPOOF_IND = 0.3
+SPOOFS_IND = (
+    ("drag 10 m/s", (47, 48), dict(start_s=300.0, rate=10.0), 60.0),
+    ("drag 5 m/s", (49, 50), dict(start_s=300.0, rate=5.0), 120.0),
+    ("drag 2 m/s", (53, 54), dict(start_s=300.0, rate=2.0), 300.0),
+)
 
 soop_nav_GATES = dict(median_m=400.0,       #horizontal error over every denied second, all flights
              p95_m=1200.0,
@@ -1060,12 +1067,15 @@ def fly(exe, tmp, name, seed, kw):
                 false_fused=false_fused, n_false=n_false, alarms=alarms, stderr=r.stderr.strip())
 
 
-def spoof_flight(exe, tmp, name, seed, spoof, **kw):
-    """One flight on GPS throughout, armed at 60 s, optionally spoofed."""
-    d = os.path.join(tmp, f"spoof_{seed}")
+def spoof_flight(exe, tmp, name, seed, spoof, ind=0.0, **kw):
+    """One flight on GPS throughout, armed at 60 s, optionally spoofed; ind > 0 adds an
+    independent velocity with that error."""
+    d = os.path.join(tmp, f"spoof_{seed}" + ("_ind" if ind else ""))
     kw = dict(dict(gps_min=30.0, denial_min=0.0), **kw)
-    truth = soop_scenario.make_obs(d, seed=seed, orbits="operator", spoof=spoof, **kw)
-    r = subprocess.run([exe, os.path.join(d, "iridium.tle"), os.path.join(d, "obs.txt")],
+    truth = soop_scenario.make_obs(d, seed=seed, orbits="operator", spoof=spoof, ind_sigma=ind,
+                                   **kw)
+    args = ["--ind-sigma", f"{1.5 * ind:g}"] if ind else []
+    r = subprocess.run([exe, os.path.join(d, "iridium.tle"), os.path.join(d, "obs.txt")] + args,
                        capture_output=True, text=True)
     track = truth["track"]
     tb = [p["board"] for p in track]
@@ -1120,6 +1130,21 @@ def check_spoofing(exe, tmp):
                         else ""))
     lines.append("        (after a drag is caught the simulation still feeds the dragged EKF velocity,")
     lines.append("        which the aircraft stops using once it drops the GPS - so it is not measured)")
+    lines.append(f"  with a velocity the spoofer can't drag, {SPOOF_IND:g} m/s error (airspeed, flow, radar):")
+    alarms = sum(spoof_flight(exe, tmp, "clean", s, None, ind=SPOOF_IND)[1] for s in SPOOF_CLEAN)
+    ok = alarms == 0
+    good &= ok
+    lines.append(f"  {'ok  ' if ok else 'FAIL'}  {len(SPOOF_CLEAN)} flights on honest GPS for 30 "
+                 f"minutes: {alarms} spoofing alarm(s)")
+    for name, seeds, spoof, deadline in SPOOFS_IND:
+        res = [spoof_flight(exe, tmp, name, s, spoof, ind=SPOOF_IND) for s in seeds]
+        lat = [r[0] for r in res]
+        ok = all(x is not None and x <= deadline for x in lat) and not any(r[1] for r in res)
+        good &= ok
+        moved = [spoof["rate"] * x for x in lat if x is not None]
+        lines.append(f"  {'ok  ' if ok else 'FAIL'}  spoofer, {name}: caught after "
+                     f"{', '.join('never' if x is None else f'{x:.0f} s' for x in lat)} "
+                     f"(limit {deadline:.0f} s), the GPS by then {max(moved or [0]):.0f} m off")
     return good, lines
 
 

@@ -17,6 +17,7 @@ void soop_guard_default_cfg(soop_guard_cfg_t *c)
     c->hold_s = 5.0;
     //tighter than main's 1.5: free then follows a dragged velocity less
     c->free_vel_sigma = 1.0;
+    c->ind_vel_sigma = 0.5;
 }
 
 void soop_guard_init(soop_guard_t *g, const soop_nav_cfg_t *nav_cfg,
@@ -30,25 +31,42 @@ void soop_guard_init(soop_guard_t *g, const soop_nav_cfg_t *nav_cfg,
     g->state = SOOP_G_UNARMED;
 }
 
+static double free_sigma(const soop_guard_t *g)
+{
+    return g->cfg.free_vel_sigma > 0.0 ? g->cfg.free_vel_sigma : g->main.cfg.vel_sigma;
+}
+
 void soop_guard_arm(soop_guard_t *g, double t_board)
 {
     (void)t_board;
     if (g->state == SOOP_G_SPOOFED)
         return;
     g->free = g->main;                //from here, free never hears the GPS
-    if (g->cfg.free_vel_sigma > 0.0)
-        g->free.cfg.vel_sigma = g->cfg.free_vel_sigma;
+    g->free.cfg.vel_sigma = free_sigma(g);
     g->state = SOOP_G_TRUSTED;
 }
 
 //free runs only once armed; before that it would just be a copy of main
 #define FREE_RUNS(g) ((g)->state != SOOP_G_UNARMED)
+#define IND_HOLD_S   2.0
 
 void soop_guard_velocity(soop_guard_t *g, double t, float vn, float ve, float vd)
 {
     soop_nav_velocity(&g->main, t, vn, ve, vd);
-    if (FREE_RUNS(g))
-        soop_nav_velocity(&g->free, t, vn, ve, vd);
+    if (!FREE_RUNS(g) || (g->n_ind && t - g->t_ind < IND_HOLD_S))
+        return;
+    g->free.cfg.vel_sigma = free_sigma(g);
+    soop_nav_velocity(&g->free, t, vn, ve, vd);
+}
+
+void soop_guard_velocity_ind(soop_guard_t *g, double t, float vn, float ve, float vd)
+{
+    if (!FREE_RUNS(g))
+        return;
+    g->t_ind = t;
+    g->n_ind++;
+    g->free.cfg.vel_sigma = g->cfg.ind_vel_sigma;
+    soop_nav_velocity(&g->free, t, vn, ve, vd);
 }
 
 void soop_guard_baro(soop_guard_t *g, double t, double h_m)

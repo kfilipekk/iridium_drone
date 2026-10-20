@@ -361,8 +361,9 @@ ORBIT_ERR = {
 def make_obs(outdir, seed=1, gps_min=5.0, denial_min=15.0, speed=15.0, tle_age_d=1.0,
              lat=52.2053, lon=0.1218, h=160.0, rate=1.0, vel_sigma=1.0, beta_sigma=50.0,
              orbits="tle", false_rate=0.05, outlier_frac=0.01, static=False, arm_s=60.0,
-             spoof=None, back_min=0.0, ira=False):
-    """A flight under the real constellation."""
+             spoof=None, back_min=0.0, ira=False, ind_sigma=0.0):
+    """A flight under the real constellation. ind_sigma > 0 adds a velocity the spoofer
+    can't drag (I records), with that error."""
     ira_rng, sv_of = random.Random(seed + 2000), {}
     import soop_solver as sol
     rng = random.Random(seed)
@@ -511,6 +512,8 @@ def make_obs(outdir, seed=1, gps_min=5.0, denial_min=15.0, speed=15.0, tle_age_d
     vel_err = [GaussMarkov(rng, vel_sigma, 300.0, 0.0), GaussMarkov(rng, vel_sigma, 300.0, 0.0),
                GaussMarkov(rng, 0.3, 60.0, 0.0)]
     baro_err = GaussMarkov(rng, 3.0, 600.0, 0.0)
+    ind_rng = random.Random(seed + 3000)
+    ind_err = [GaussMarkov(ind_rng, ind_sigma, 300.0, 0.0) for _ in range(2)]
     def spoofed(t):
         """The spoofer's offset at scenario time t: north, east (m) and their rates."""
         if not spoof or t < spoof["start_s"]:
@@ -531,6 +534,9 @@ def make_obs(outdir, seed=1, gps_min=5.0, denial_min=15.0, speed=15.0, tle_age_d
         sn, se, svn, sve = spoofed(t) if not denied else (0.0, 0.0, 0.0, 0.0)
         lines.append(f"E {tb:.6f} {vn + ve_[0] + svn:.4f} {ve + ve_[1] + sve:.4f} "
                      f"{vd + ve_[2]:.4f}")
+        if ind_sigma > 0.0:
+            lines.append(f"I {tb:.6f} {vn + ind_err[0].step(dt_tr):.4f} "
+                         f"{ve + ind_err[1].step(dt_tr):.4f} {vd + ind_rng.gauss(0, 0.1):.4f}")
         if round(t / dt_tr) % 2 == 0:
             b = baro_err.step(2 * dt_tr) if denied else 0.0
             lines.append(f"A {tb:.6f} {hh + b + rng.gauss(0, 0.3):.3f}")

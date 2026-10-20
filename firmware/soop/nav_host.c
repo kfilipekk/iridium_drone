@@ -82,7 +82,7 @@ int main(int argc, char **argv)
         return 2;
     }
     int sats = 0;
-    double prior = 0.0, prior_sd = 0.0;
+    double prior = 0.0, prior_sd = 0.0, ind_sigma = 0.0;
     unsigned aid_fused = 0, aid_in = 0, aid_windows = 0;
     soop_nav_cfg_t cfg;
     soop_nav_default_cfg(&cfg);
@@ -93,6 +93,8 @@ int main(int argc, char **argv)
             sats = 1;
         } else if (!strcmp(argv[k], "--vel-sigma") && k + 1 < argc) {
             cfg.vel_sigma = atof(argv[++k]);
+        } else if (!strcmp(argv[k], "--ind-sigma") && k + 1 < argc) {
+            ind_sigma = atof(argv[++k]);
         } else if (!strcmp(argv[k], "--clock-prior") && k + 2 < argc) {
             prior = atof(argv[k + 1]);
             prior_sd = atof(argv[k + 2]);
@@ -101,6 +103,8 @@ int main(int argc, char **argv)
     }
     soop_guard_cfg_t gcfg;
     soop_guard_default_cfg(&gcfg);
+    if (ind_sigma > 0.0)
+        gcfg.ind_vel_sigma = ind_sigma;
     soop_guard_init(&guard, &cfg, &gcfg, cat, n_cat, 0.0);
     if (prior_sd > 0.0) {
         soop_nav_clock_prior(&guard.main, prior, prior_sd);
@@ -117,7 +121,7 @@ int main(int argc, char **argv)
                 utc0 = soop_jd_to_j2000(a, b);
             continue;
         }
-        if (!strchr("EAGDPUR", line[0]) || sscanf(line + 1, "%lf", &t) != 1)
+        if (!strchr("EIAGDPUR", line[0]) || sscanf(line + 1, "%lf", &t) != 1)
             continue;
         if (next_fix < 0.0)
             next_fix = t;
@@ -151,6 +155,10 @@ int main(int argc, char **argv)
         case 'E':
             if (sscanf(line + 1, "%lf %lf %lf %lf", &t, &a, &b, &c) == 4)
                 soop_guard_velocity(&guard, t, (float)a, (float)b, (float)c);
+            break;
+        case 'I':
+            if (sscanf(line + 1, "%lf %lf %lf %lf", &t, &a, &b, &c) == 4)
+                soop_guard_velocity_ind(&guard, t, (float)a, (float)b, (float)c);
             break;
         case 'A':
             if (sscanf(line + 1, "%lf %lf", &t, &a) == 2)
