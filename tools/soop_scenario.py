@@ -117,8 +117,9 @@ class FrontEnd:
 
 
 #iq mode
-def make_iq(outdir, slots, seed, cn0_lo, cn0_hi, noise_counts, max_bursts=3, spurs=()):
-    """spurs: (f_hz, drift_hz_s, cn0_dbhz) continuous tones, e.g. a buck's harmonic"""
+def make_iq(outdir, slots, seed, cn0_lo, cn0_hi, noise_counts, max_bursts=3, spurs=(), vib=None):
+    """spurs: (f_hz, drift_hz_s, cn0_dbhz) continuous tones, e.g. a buck's harmonic;
+    vib: (peak_hz, f_hz), the TCXO shaken - every burst's carrier swings this far, this often"""
     rng = random.Random(seed)
     os.makedirs(outdir, exist_ok=True)
     fe = FrontEnd(rng, noise_counts)
@@ -128,6 +129,7 @@ def make_iq(outdir, slots, seed, cn0_lo, cn0_hi, noise_counts, max_bursts=3, spu
     slot_len = int(sig.SIMPLEX_SLOT_S * FS) + 2 * margin
     bursts = []
     ra_rng = random.Random(seed + 1000)       #header fields apart, so the sky itself is unchanged
+    vib_phase = random.Random(seed + 4000).uniform(0, 2 * math.pi)
     with open(os.path.join(outdir, "iq.bin"), "wb") as f:
         for s in range(slots):
             buf = [complex(rng.gauss(0, math.sqrt(0.5)), rng.gauss(0, math.sqrt(0.5)))
@@ -151,6 +153,11 @@ def make_iq(outdir, slots, seed, cn0_lo, cn0_hi, noise_counts, max_bursts=3, spu
                 amp = math.sqrt(10 ** (cn0 / 10) / FS)
                 wave = burst_waveform(syms, f_meas, fdot, rng.uniform(0, 2 * math.pi))
                 start = margin + rng.randrange(max(1, slot_len - 2 * margin - len(wave)))
+                if vib:
+                    dev, fv = vib
+                    for i in range(len(wave)):
+                        t = (s * slot_len + start + i) / FS
+                        wave[i] *= cmath.exp(-1j * dev / fv * math.cos(2 * math.pi * fv * t + vib_phase))
                 for i, c in enumerate(wave):
                     if start + i < slot_len:
                         buf[start + i] += amp * c
@@ -172,7 +179,7 @@ def make_iq(outdir, slots, seed, cn0_lo, cn0_hi, noise_counts, max_bursts=3, spu
                  mcu_ppm=mcu_ppm, lo_offset_hz=sig.LO_OFFSET_HZ,
                  iq_imbalance=dict(amp_db=20 * math.log10(1 + fe.amp_err),
                                    phase_deg=math.degrees(fe.phase_err)),
-                 noise_counts=noise_counts, clipped_samples=fe.clipped,
+                 noise_counts=noise_counts, clipped_samples=fe.clipped, vib=vib,
                  channels_hz=[sig.baseband_hz(c) for c in sig.SIMPLEX_CHANNELS],
                  bursts=bursts)
     json.dump(truth, open(os.path.join(outdir, "truth.json"), "w"), indent=1)

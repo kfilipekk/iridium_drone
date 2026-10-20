@@ -329,6 +329,13 @@ soop_dsp_GATES = dict(detect_min=0.90,      #of eligible bursts at C/N0 >= stron
              timing_samples=20)    #median preamble-start error: one symbol
 
 
+#motor vibration at the TCXO: [A] 2 g on the stack's grommets, [A] 1 ppb/g, a typical AT-cut
+#TCXO (Y2's datasheet gives none); rotor and blade-pass rates of 2806.5 1300KV on 4S at hover
+VIB_G = 2.0
+VIB_PPB_G = 1.0
+VIB_HZ = (160.0, 320.0)
+
+
 def check_constants():
     h = open(os.path.join(SOOP, "soop_signal.h")).read()
     want = dict(SOOP_SYMBOL_RATE=sig.SYMBOL_RATE, SOOP_CH_SPACING=sig.CHANNEL_SPACING,
@@ -542,6 +549,23 @@ def run_dsp():
           f"300 Hz/s: {rs['false']} false of {rs['n_det']}; {rate_s:.0%} of bursts over 5 kHz "
           f"from a spur detected at >= {g['strong_dbhz']:.0f} dB-Hz "
           f"({rs['det_strong'] / max(1, rs['n_strong']):.0%} counting those on it)")
+
+    #the TCXO shaken by the motors: VIB_G at the rotor and blade-pass rates, VIB_PPB_G of
+    #g-sensitivity, swings every carrier; the solver still needs its budget and honest sigmas
+    for fv in VIB_HZ:
+        dev = VIB_PPB_G * 1e-9 * VIB_G * sig.F_RING_ALERT
+        d = os.path.join(tmp, f"vib{fv:.0f}")
+        vt = soop_scenario.make_iq(d, slots, seed=21, cn0_lo=42.0, cn0_hi=70.0, noise_counts=600.0,
+                                   vib=(dev, fv))
+        out = subprocess.run([exe, os.path.join(d, "iq.bin")], capture_output=True, text=True)
+        rv = score(vt, list(csv.DictReader(out.stdout.splitlines())))
+        rate_v = rv["det_strong"] / max(1, rv["n_strong"])
+        good = (rv["p90_strong"] <= g["p90_hz"] and rv["within3"] >= g["within3_min"]
+                and rate_v >= g["detect_min"])
+        checks.append(good)
+        print(f"  {'ok  ' if good else 'FAIL'}  TCXO shaken at {fv:.0f} Hz ({VIB_G:g} g x "
+              f"{VIB_PPB_G:g} ppb/g = {dev:.1f} Hz peak): p90 {rv['p90_strong']:.2f} Hz (budget "
+              f"{g['p90_hz']:.0f}), {rv['within3']:.1%} inside 3 sigma, detects {rate_v:.0%}")
 
     #aided: windows where the navigation would predict each burst, 20 Hz off, plus ten decoys a
     #slot with nothing under them
