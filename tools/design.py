@@ -2470,6 +2470,8 @@ ROUTING_PRIORITY = [
 ]
 #dielectric between successive copper layers, mm, for the IR-drop solver
 LAYER_GAPS_MM = [0.1, 0.55, 0.2, 0.55, 0.1]
+#1 oz inner copper, chosen at checkout: at 0.5 oz the VBAT plane on In4 ran at 99% of its density
+INNER_COPPER_UM = 35.0
 
 #ordering
 #parts held back from an economic assembly order

@@ -230,6 +230,10 @@ PREREQUISITES = [
          claim="select 1 oz outer copper",
          why="half-ounce halves every trace's current rating and invalidates "
              "irdrop.py check. It is a checkout setting, not a design property."),
+    dict(id="act.inner_copper", cls=ORDER_ACTION,
+         claim="select 1 oz inner copper",
+         why="JLC's default 0.5 oz inner layers put the VBAT plane on In4 at 99% of its "
+             "current density; irdrop.py check now assumes 1 oz (design.INNER_COPPER_UM)."),
     dict(id="act.dfm", cls=ORDER_ACTION,
          claim="accept JLCPCB's free DFM review",
          why="it is the only thing that checks pad LAND SIZE and paste apertures; "
