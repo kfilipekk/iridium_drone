@@ -1053,6 +1053,10 @@ R_POWER_PART = {}
 CLASS1_REQUIRED = {
     "C15": "crystal load cap - a Class II part pulls the oscillator with temperature",
     "C16": "crystal load cap - a Class II part pulls the oscillator with temperature",
+    "C76": "anti-alias pole - a Class II part moves it with bias and unbalances the legs",
+    "C77": "anti-alias pole - a Class II part moves it with bias and unbalances the legs",
+    "C98": "anti-alias pole - a Class II part moves it with bias and unbalances the legs",
+    "C99": "anti-alias pole - a Class II part moves it with bias and unbalances the legs",
 }
 
 fails, warns, notes = [], [], []
