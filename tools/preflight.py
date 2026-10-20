@@ -750,7 +750,7 @@ def firmware(board):
 
     rc, out = run("gen_doc_tables.py --check")
     check("firmware", "generated doc tables match the code", rc == 0,
-          "sitl/README.md scenarios and docs/HARDWARE.md frame table are current" if rc == 0
+          "the runbook's buy list matches docs/PARTS.csv" if rc == 0
           else "a generated table is stale - run tools/gen_doc_tables.py")
 
     #the pad map is where every unprinted label is documented

@@ -109,7 +109,7 @@ The hardware configuration is defined in single-source-of-truth Python models:
 - **`gen_padmap.py`**: Generates `docs/img/padmap.svg` showing every solder pad and test point.
 - **`gen_scad_frame.py`**, **`gen_scad_mounts.py`**, **`gen_scad_plugs.py`**: Generates OpenSCAD 3D models for frame plates, printed mounts, and connector plugs.
 - **`parse_frame_dxf.py`**: Extracts carbon fiber frame geometry from flat DXF drawings.
-- **`gen_doc_tables.py`**: Synchronizes documentation tables in `docs/HARDWARE.md` and `sitl/README.md`.
+- **`gen_doc_tables.py`**: Regenerates the runbook's buy list from `docs/PARTS.csv`.
 
 ---
 
