@@ -3,12 +3,21 @@
 
 Usage:
   soop_bench.py REC --start UTC --site LAT LON H [--fc HZ] [--fs HZ] [--format cu8]
-                [--offset-km K] [--tle FILE] [--out DIR]
+                [--gain G|auto] [--lo-search] [--offset-km K] [--tle FILE] [--out DIR]
+
+A receiver without a TCXO - the ADALM-Pluto's crystal is +-25 ppm, +-40 kHz at 1626 MHz -
+needs --lo-search: the recording is tried at LO corrections across +-40 kHz, the one the
+navigation fuses most bursts at is kept, and its clock estimate refines it. The sample
+clock shares the crystal, so the same ppm corrects the time base. A Pluto recording:
+  rx_sdr -d driver=plutosdr -f 1626333333 -s 2000000 -g 40 -F CS16 rec.cs16
+  soop_bench.py rec.cs16 --format cs16 --gain auto --lo-search --start ... --site ...
 """
 import argparse
+import array
 import datetime
 import math
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -50,9 +59,11 @@ def dsp_bursts(exe, board_iq):
     return rows
 
 
-def nav_log(path, start, site_ecef, sigma_m, bursts, seconds):
+def nav_log(path, start, site_ecef, sigma_m, bursts, seconds, ppm=0.0):
     jd, fr = sol._jday(start)
+    #a recording clock fast by ppm stretches board time: the second tag says by how much
     lines = [f"H {jd:.1f} {fr:.12f}", "U 0.0 0.0",
+             f"U {seconds:.3f} {seconds / (1 + ppm * 1e-6):.6f}",
              "P 0.0 %.3f %.3f %.3f %.1f" % (*site_ecef, sigma_m)]
     ev = [(k * 0.1, f"E {k * 0.1:.3f} 0 0 0") for k in range(int(seconds * 10) + 1)]
     ev += [(b["t"], f"D {b['t']:.6f} {b['f']:.3f} {b['sigma']:.3f} {b['cn0']:.2f}")
@@ -75,6 +86,50 @@ def run_nav(exe, tle, log, extra=()):
             sats[int(p[2])] = dict(beta=float(p[3]), beta_sd=float(p[4]),
                                    tau_ms=float(p[5]) * 1e3, tau_sd_ms=float(p[6]) * 1e3)
     return fixes, bursts, sats, r.stderr.strip()
+
+
+BYTES = {"cu8": 2, "cs16": 4, "cf32": 8}
+LO_STEPS = [k * 10_000.0 for k in range(-4, 5)]   #+-40 kHz, gaps inside the filter's +-6 kHz search
+
+
+def import_rec(exe, rec, out, a, fc, gain):
+    r = subprocess.run([exe, rec, out, "--format", a.format, "--fs", str(a.fs), "--fc", str(fc),
+                        "--gain", str(gain)] + sig.amp_args(), capture_output=True, text=True)
+    if r.returncode:
+        sys.exit(r.stderr)
+    return r.stderr.strip()
+
+
+def board_rms(path, n=2_000_000):
+    """Per-rail rms of the first n samples of a board capture, in counts."""
+    a = array.array("h")
+    with open(path, "rb") as f:
+        a.frombytes(f.read(4 * n))
+    return math.sqrt(sum(v * v for v in a) / max(1, len(a)))
+
+
+def target_rms():
+    """What the board's own chain puts on the ADC, after the amp's pole (check_soop.py gain)."""
+    import check_soop
+    import design
+    A, T = design.RF_PARTS["antenna"], design.RF_PARTS["tuner"]
+    _, gc = check_soop.gc_loss_max()
+    counts = check_soop.gain_plan(A["t_ant_k"], A["gain_db"], T["ref_bbg"], gc / 2)["counts"]
+    band = sum(sig.amp_gain((k + 0.5) * sig.FS_CAPTURE / 200) ** 2 for k in range(100)) / 100
+    return counts * math.sqrt(band)
+
+
+def clock_of(stats):
+    m = re.search(r"clock (-?[\d.]+) Hz \(sd ([\d.]+)\)", stats)
+    return (float(m.group(1)), float(m.group(2))) if m else (0.0, float("inf"))
+
+
+def lo_search(trial, steps=LO_STEPS):
+    """trial(shift) -> (fused, clock Hz, clock sd): the shift fusing most bursts, refined by its clock.
+    Returns the total correction to add to fc, the fused count, and every trial."""
+    tried = [(s,) + tuple(trial(s)) for s in steps]
+    s, fused, clock, sd = max(tried, key=lambda t: t[1])
+    return s - clock, fused, tried
 
 
 def gr_iridium(rec, fc, fs, fmt):
@@ -106,7 +161,10 @@ def main():
     ap.add_argument("--fc", type=float, default=F_LO)
     ap.add_argument("--fs", type=float, default=2_000_000.0)
     ap.add_argument("--format", default="cu8", choices=("cu8", "cs16", "cf32"))
-    ap.add_argument("--gain", type=float, default=1.0)
+    ap.add_argument("--gain", default="1", help="scale to board counts, or auto")
+    ap.add_argument("--lo-search", action="store_true",
+                    help="the receiver has no TCXO: find its LO error first")
+    ap.add_argument("--search-seconds", type=float, default=240.0)
     ap.add_argument("--offset-km", type=float, default=5.0)
     ap.add_argument("--tle", default=sol.TLE_PATH)
     ap.add_argument("--out")
@@ -119,14 +177,43 @@ def main():
     os.makedirs(tmp, exist_ok=True)
     exe = build(tmp)
     board = os.path.join(tmp, "board.iq")
-    r = subprocess.run([exe["iq_import"], a.rec, board, "--format", a.format,
-                        "--fs", str(a.fs), "--fc", str(a.fc), "--gain", str(a.gain)] + sig.amp_args(),
-                       capture_output=True, text=True)
-    if r.returncode:
-        sys.exit(r.stderr)
+    site = sol.geodetic_to_ecef(*a.site)
+    fc, ppm = a.fc, 0.0
+
+    #the first minutes only, for the gain and the LO search
+    head = os.path.join(tmp, "head." + a.format)
+    with open(a.rec, "rb") as fi, open(head, "wb") as fo:
+        fo.write(fi.read(int(a.search_seconds * a.fs) * BYTES[a.format]))
+    if a.gain == "auto":
+        import_rec(exe["iq_import"], head, board, a, fc, 1.0)
+        gain = target_rms() / max(board_rms(board), 1e-3)
+        print(f"=== gain {gain:.1f}: the recording's noise scaled to the board chain's "
+              f"{target_rms():.0f} counts ===")
+    else:
+        gain = float(a.gain)
+    if a.lo_search:
+        def trial(shift):
+            import_rec(exe["iq_import"], head, board, a, fc + shift, gain)
+            sec = os.path.getsize(board) / 4 / sig.FS_CAPTURE
+            log = os.path.join(tmp, "search.txt")
+            nav_log(log, start, site, 5.0, dsp_bursts(exe["dsp_host"], board), sec)
+            _, brs, _, stats = run_nav(exe["nav_host"], a.tle, log)
+            return (sum(1 for b in brs if b[2] == "0"),) + clock_of(stats)
+        corr, fused, tried = lo_search(trial)
+        if fused < 20:
+            sys.exit("LO search: no correction fused 20 bursts - record longer, or check the "
+                     "antenna and the start time\n" + "\n".join(
+                         f"  {s / 1e3:+.0f} kHz: {n} fused" for s, n, _, _ in tried))
+        fc += corr
+        ppm = corr / a.fc * 1e6
+        print(f"=== LO search: the recording's LO is {corr:+.0f} Hz off ({ppm:+.2f} ppm), "
+              f"{fused} bursts fused in the first {a.search_seconds:.0f} s ===")
+    os.remove(head)
+
+    info = import_rec(exe["iq_import"], a.rec, board, a, fc, gain)
     seconds = os.path.getsize(board) / 4 / sig.FS_CAPTURE
     print(f"=== bench recording: {seconds:.0f} s from {start.isoformat()} ===")
-    print(f"    {r.stderr.strip()}")
+    print(f"    {info}")
 
     bursts = dsp_bursts(exe["dsp_host"], board)
     cn0 = [b["cn0"] for b in bursts]
@@ -138,10 +225,9 @@ def main():
     print(f"    TLEs: {len(tles)} satellites, newest epoch {age:+.2f} days from the recording"
           + ("  <- older than 3 days: refresh them (runbook)" if age > 3 else ""))
 
-    site = sol.geodetic_to_ecef(*a.site)
     #1. anchored at the site: measure the sky and the model fit
     log = os.path.join(tmp, "anchored.txt")
-    nav_log(log, start, site, 5.0, bursts, seconds)
+    nav_log(log, start, site, 5.0, bursts, seconds, ppm)
     fixes, brs, sats, stats = run_nav(exe["nav_host"], a.tle, log)
     fused = sum(1 for b in brs if b[2] == "0")
     nis = float(fixes[-1][10]) if fused else float("nan")
@@ -164,7 +250,7 @@ def main():
                                          lon + a.offset_km / 111.32 / math.sqrt(2)
                                          / math.cos(math.radians(lat)), h)
         log = os.path.join(tmp, "offset.txt")
-        nav_log(log, start, start_pos, a.offset_km * 1500.0, bursts, seconds)
+        nav_log(log, start, start_pos, a.offset_km * 1500.0, bursts, seconds, ppm)
         fixes, brs, _, stats = run_nav(exe["nav_host"], a.tle, log)
         print(f"\n  started {a.offset_km:g} km away: {stats}")
         #a guess this far out does not anchor the filter
@@ -176,7 +262,7 @@ def main():
             e = math.dist(sol.geodetic_to_ecef(float(p[2]), float(p[3]), float(p[4])), site)
             print(f"    t {float(p[1]):6.0f} s  error {e:7.0f} m  hacc {float(p[8]):7.0f} m")
 
-    gr = gr_iridium(a.rec, a.fc, a.fs, a.format)
+    gr = gr_iridium(a.rec, fc, a.fs, a.format)
     if gr is None:
         print("\n  gr-iridium not installed: no independent burst count")
     else:

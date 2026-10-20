@@ -12,6 +12,7 @@ Checks:
   sgp4               Gate: C SGP4 agrees with Python sgp4.api.Satrec.
   solver             Prove the on-board C solver agrees with the Python reference, and compiles for the H743.
   nav                Gate the on-board navigation (firmware/soop/soop_nav.c) against simulated flights.
+  bench              Can a bench recording from a receiver without a TCXO still be used?
   gain               Does the analogue chain put the sky's noise where the DSP gates assume it is?
   spurs              Can a clock on the board land where the DSP looks for Ring Alert?
   spice              Gate wrapper around the SPICE suite in sim/ (see sim/run_suite.py).
@@ -1288,6 +1289,88 @@ def run_nav():
     return 0 if ok else 1
 
 
+#bench
+
+"""Can a bench recording from a receiver without a TCXO still be used?
+
+Usage:  python3 tools/check_soop.py bench
+
+The ADALM-Pluto's crystal is +-25 ppm, up to +-40 kHz at 1626 MHz, and the filter's clock
+search spans +-6 kHz around a TCXO's error. tools/soop_bench.py --lo-search tries LO
+corrections across +-40 kHz and keeps the one the navigation fuses most bursts at. This
+runs that same lo_search on a simulated static sky whose every burst is shifted as a
+mistuned recording would shift it, losing those the shift pushes out of the DSP's band,
+and checks it finds the LO to within BENCH_LO_HZ - not one channel spacing off, which a
+plain clock search can lock to just as happily. First, soop_bench.py itself runs end to end
+on a synthetic recording, since nothing else ever builds it.
+"""
+
+BENCH_OFFSETS = (30_000.0, -38_000.0, 12_000.0, -3_000.0)
+BENCH_LO_HZ = 150.0
+
+
+def run_bench():
+    import soop_bench
+    print("=== the LO search for a bench receiver without a TCXO ===")
+    tmp = tempfile.mkdtemp(prefix="soop_bench_chk_")
+    exe = os.path.join(tmp, "nav_host")
+    r = subprocess.run(["cc", "-O2", "-std=c99", "-o", exe] + [os.path.join(SOOP, f) for f in SRC]
+                       + ["-lm"], capture_output=True, text=True)
+    if r.returncode:
+        print(f"  FAIL  nav_host build: {r.stderr.strip()[:300]}")
+        return 1
+    rtl = soop_scenario.make_rtl(os.path.join(tmp, "rtl"))
+    r = subprocess.run([sys.executable, os.path.join(HERE, "soop_bench.py"),
+                        os.path.join(tmp, "rtl", "rec.cu8"), "--fc", str(rtl["fc"]),
+                        "--start", "2026-01-01T00:00:00Z", "--site", "52.2", "0.12", "20",
+                        "--gain", "auto", "--offset-km", "0", "--out", os.path.join(tmp, "out")],
+                       capture_output=True, text=True)
+    m = re.search(r"DSP: (\d+) bursts", r.stdout)
+    good = r.returncode == 0 and m and int(m.group(1)) == len(rtl["bursts"])
+    checks = [good]
+    print(f"  {'ok  ' if good else 'FAIL'}  soop_bench.py runs end to end on a synthetic recording: "
+          + (f"{m.group(1)} of {len(rtl['bursts'])} bursts" if m else
+             (r.stderr or r.stdout).strip()[-300:]))
+
+    d = os.path.join(tmp, "sky")
+    soop_scenario.make_obs(d, seed=61, gps_min=15.0, denial_min=0.0, static=True)
+    obs = open(os.path.join(d, "obs.txt")).read().splitlines()
+    ra = sig.baseband_hz(sig.F_RING_ALERT)
+
+    def nav(shift):
+        out = []
+        for ln in obs:
+            if ln.startswith("D "):
+                p = ln.split()
+                f = float(p[2]) + shift
+                if abs(f - ra) > soop_scenario.DSP_BAND_HZ:
+                    continue
+                p[2] = f"{f:.3f}"
+                ln = " ".join(p)
+            out.append(ln)
+        path = os.path.join(d, "shifted.txt")
+        open(path, "w").write("\n".join(out) + "\n")
+        r = subprocess.run([exe, os.path.join(d, "iridium.tle"), path, "--static"],
+                           capture_output=True, text=True)
+        fused = int(re.search(r"fused (\d+)", r.stderr).group(1))
+        return (fused,) + soop_bench.clock_of(r.stderr)
+
+    _, base, _ = nav(0.0)                     #the scenario's own TCXO error
+    for off in BENCH_OFFSETS:
+        corr, fused, tried = soop_bench.lo_search(lambda s, off=off: nav(off + s))
+        err = corr + off + base
+        good = abs(err) <= BENCH_LO_HZ
+        checks.append(good)
+        print(f"  {'ok  ' if good else 'FAIL'}  recording {off / 1e3:+.0f} kHz off: corrected by "
+              f"{corr / 1e3:+.3f} kHz, {err:+.0f} Hz from right (limit {BENCH_LO_HZ:.0f}); "
+              f"{fused} fused at the best try, "
+              + ", ".join(f"{s / 1e3:+.0f}k:{n}" for s, n, _, _ in tried))
+    shutil.rmtree(tmp, ignore_errors=True)
+    good = all(checks)
+    print(f"\n{'BENCH OK' if good else 'BENCH FAILED'} - {sum(checks)}/{len(checks)} assertions")
+    return 0 if good else 1
+
+
 #gain
 
 """Does the analogue chain put the sky's noise where the DSP gates assume it is?
@@ -1573,6 +1656,7 @@ CHECKS = {
     "sgp4": run_sgp4,
     "solver": run_solver,
     "nav": run_nav,
+    "bench": run_bench,
     "gain": run_gain,
     "spurs": run_spurs,
     "spice": run_spice,
