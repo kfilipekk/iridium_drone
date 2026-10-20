@@ -5,7 +5,7 @@ extern const AP_HAL::HAL& hal;
 bool AP_SoOP_MAX2112::write_regs(uint8_t first, const uint8_t *v, uint8_t n)
 {
     uint8_t buf[16];
-    if (n + 1 > sizeof(buf)) {
+    if (size_t(n) + 1 > sizeof(buf)) {
         return false;
     }
     buf[0] = first;                         //the register address auto-increments
