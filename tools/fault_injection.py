@@ -5,6 +5,7 @@ Usage:  python3 tools/fault_injection.py [--recapture] [--list-gaps]
 """
 import argparse
 import math
+import shutil
 import contextlib
 import csv
 import io
@@ -155,6 +156,20 @@ def _fab_file(name, mutate):
         w = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
         w.writeheader()
         w.writerows(rows)
+    old = preflight.FAB
+    preflight.FAB = d
+    try:
+        yield
+    finally:
+        preflight.FAB = old
+
+
+@contextlib.contextmanager
+def _fab_text(name, mutate):
+    d = tempfile.mkdtemp(prefix="faultinj_")
+    shutil.copytree("fab", d, dirs_exist_ok=True)
+    path = os.path.join(d, name)
+    open(path, "w").write(mutate(open(path).read()))
     old = preflight.FAB
     preflight.FAB = d
     try:
@@ -488,6 +503,9 @@ def _belly_low():
 
 
 TIER_B = [
+    dict(pid="order.sheet", group="assembly", check="the order sheet states every checkout setting",
+         fault=lambda: _fab_text("HOW-TO-ORDER.in", lambda s: s.replace("Panel by JLCPCB", "Single PCB")),
+         why="a sheet that drops the panel setting must fail - the order would be refused"),
     dict(pid="assy.twosided", group="assembly", check="two-sided assembly",
          fault=lambda: _fab_file("CPL-NAVCORE-SoOP.csv", _cpl_all_top),
          why="a CPL whose every row says TOP is not a two-sided board"),

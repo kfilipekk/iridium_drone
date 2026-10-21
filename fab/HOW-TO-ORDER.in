@@ -5,7 +5,10 @@ Upload gerbers.zip as the PCB. Do NOT unzip it first.
 FABRICATION
   Layers            6          <- if the preview shows 4, STOP. The power planes
                                   are missing and the board will not work.
-  Dimensions        45.0 x 47.2 mm
+  Dimensions        @@SIZE@@   (JLC reads it from the gerbers; it should agree)
+  Delivery format   Panel by JLCPCB, 2 x 2   <- the board is under JLC's 70 x 70 mm
+                                  minimum for assembly; their panel adds the rails
+                                  and fiducials. Do NOT upload a panel of your own.
   Thickness         1.6 mm
   Outer copper      1 oz       <- 0.5 oz halves every trace's current rating and
                                   invalidates kicad-tools irdrop.py check
@@ -16,18 +19,21 @@ FABRICATION
                                         the design rules drifted
   Min via / drill   0.45 / 0.20 mm
   Impedance control No
-  Via covering      Epoxy Filled & Capped   <- 31 vias sit inside SMD pads (four on
-                                               U1's pins); left open they drain the
-                                               solder out of the joint
+  Via covering      Epoxy Filled & Capped   <- @@VIAS_IN_PADS@@ vias sit inside SMD pads;
+                                               left open they drain the solder out
+                                               of the joint
   Mark on PCB       "Remove Mark" (no order number). The silkscreen carries no
                     JLCJLCJLCJLC marker, so any other choice prints JLC's number
                     wherever it fits - possibly across a label. JLC may charge a
                     small fee for this; it is shown in the quote.
 
 ASSEMBLY
+  PCBA type         Standard   <- both sides populated, LGA IMUs; the parts list
+                                  and the readiness manifest assume it
   Quantity          5 bare PCBs, 2 assembled  (5 is the multilayer minimum,
                     2 the SMT minimum; the 3 spare bare boards are the practice
-                    pieces and cost almost nothing)
+                    pieces and cost almost nothing). With the panel, check the
+                    quote counts boards, not panels.
   Side              BOTH sides are populated - @@SIDES@@. Two stencils.
   BOM               BOM-NAVCORE-SoOP.csv
   CPL               CPL-NAVCORE-SoOP.csv

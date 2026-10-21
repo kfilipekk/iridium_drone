@@ -715,6 +715,14 @@ def firmware(board):
            f"fab/; placement counts re-derived from the bundled CPL") if rc == 0 else
           "the order bundle is stale or incomplete - re-run fab.py bundle")
 
+    #every order-time action in the manifest, stated on the sheet that goes up with the bundle
+    sheet = open(os.path.join(FAB, "HOW-TO-ORDER.in")).read()
+    acts = [p for p in readiness.PREREQUISITES if p["cls"] == readiness.ORDER_ACTION]
+    missing = [p["id"] for p in acts if not re.search(p["sheet"], sheet)]
+    check("assembly", "the order sheet states every checkout setting", not missing,
+          f"all {len(acts)} order-time actions are on HOW-TO-ORDER" if not missing else
+          "HOW-TO-ORDER.in does not state: " + ", ".join(missing))
+
     rc, out = run("fab.py variants")
     m = re.search(r'^(\d+) variant pair\(s\) checked', out, re.M)
     check("assembly", "every BOM/CPL variant matches the board", rc == 0,

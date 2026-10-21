@@ -93,6 +93,9 @@ PREREQUISITES = [
     dict(id="rf.flow", cls=GATED, tool="check_soop.py flow",
          claim="the guard's flow velocity inverts EKF3's own flow model at any attitude to 40 "
                "deg, and refuses a steeper one"),
+    dict(id="order.sheet", cls=GATED, check="the order sheet states every checkout setting",
+         claim="fab/HOW-TO-ORDER.in, the sheet uploaded with the bundle, states each order-time "
+               "action this manifest lists, so a setting cannot be left off the checkout"),
     dict(id="elec.sim", cls=GATED, tool="check_soop.py spice",
          claim="the analogue blocks - the buck output filters, the payload buck under a "
                "double servo stall, the battery hot-plug transient, the MAX2112 PLL loop "
@@ -232,19 +235,19 @@ PREREQUISITES = [
 
 
     #performed at the checkout, so they cannot be done earlier
-    dict(id="act.copper", cls=ORDER_ACTION,
+    dict(id="act.copper", cls=ORDER_ACTION, sheet=r"Outer copper\s+1 oz",
          claim="select 1 oz outer copper",
          why="half-ounce halves every trace's current rating and invalidates "
              "irdrop.py check. It is a checkout setting, not a design property."),
-    dict(id="act.inner_copper", cls=ORDER_ACTION,
+    dict(id="act.inner_copper", cls=ORDER_ACTION, sheet=r"Inner copper\s+1 oz",
          claim="select 1 oz inner copper",
          why="JLC's default 0.5 oz inner layers put the VBAT plane on In4 at 99% of its "
              "current density; irdrop.py check now assumes 1 oz (design.INNER_COPPER_UM)."),
-    dict(id="act.dfm", cls=ORDER_ACTION,
+    dict(id="act.dfm", cls=ORDER_ACTION, sheet=r"Accept JLCPCB's free DFM review",
          claim="accept JLCPCB's free DFM review",
          why="it is the only thing that checks pad LAND SIZE and paste apertures; "
              "check.py footprints verifies pad count, package and pitch but not those."),
-    dict(id="act.impedance", cls=ORDER_ACTION,
+    dict(id="act.impedance", cls=ORDER_ACTION, sheet=r"Impedance control\s+No",
          claim="leave impedance control OFF",
          why="none is needed. USB is a plain differential pair. The 1.62 GHz J12 -> U13 "
              "line is drawn as 50 ohm grounded coplanar on F.Cu over the solid In1 ground "
@@ -252,14 +255,14 @@ PREREQUISITES = [
              "(0.10-0.12 mm, er 4.1-4.2), so the uncontrolled tolerance costs a fraction of "
              "a dB behind the HC610's 28 dB of gain. Ordering impedance control would not "
              "change the drawn geometry."),
-    dict(id="act.quantity", cls=ORDER_ACTION,
+    dict(id="act.quantity", cls=ORDER_ACTION, sheet=r"5 bare PCBs, 2 assembled(.|\n)*BOTH sides",
          claim="5 bare PCBs / 2 assembled, BOTH sides",
          why="5 is the multilayer minimum and 2 the SMT minimum; both sides are populated "
              "so two stencils are needed."),
-    dict(id="act.panel", cls=ORDER_ACTION,
+    dict(id="act.panel", cls=ORDER_ACTION, sheet=r"Panel by JLCPCB, 2 x 2",
          claim="Panel by JLCPCB, 2 x 2 (not a committed panel file)",
          why="Standard assembly requires a single PCB of at least 70 x 70 mm and this is "
-             "45.1 x 47.3 mm, so the board must be panelled to be assembled at all. "
+             "46.5 x 47.2 mm, so the board must be panelled to be assembled at all. "
              "2 x 2 gives roughly 93 x 95 mm. Do NOT commit a panelised .kicad_pcb: the "
              "board files stay exactly as verified, so nothing has to be re-checked."),
 
