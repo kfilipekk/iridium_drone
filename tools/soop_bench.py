@@ -109,12 +109,15 @@ def board_rms(path, n=2_000_000):
 
 
 def target_rms():
-    """What the board's own chain puts on the ADC, after the amp's pole (check_soop.py gain)."""
+    """What the board's own chain puts on the ADC, after the amp's pole (check_soop.py gain);
+    on a board without a gain plan, the 600 counts the DSP gates run at."""
     import check_soop
     import design
-    A, T = design.RF_PARTS["antenna"], design.RF_PARTS["tuner"]
-    _, gc = check_soop.gc_loss_max()
-    counts = check_soop.gain_plan(A["t_ant_k"], A["gain_db"], T["ref_bbg"], gc / 2)["counts"]
+    counts = 600.0
+    if hasattr(check_soop, "gain_plan") and "antenna" in getattr(design, "RF_PARTS", {}):
+        A, T = design.RF_PARTS["antenna"], design.RF_PARTS["tuner"]
+        _, gc = check_soop.gc_loss_max()
+        counts = check_soop.gain_plan(A["t_ant_k"], A["gain_db"], T["ref_bbg"], gc / 2)["counts"]
     band = sum(sig.amp_gain((k + 0.5) * sig.FS_CAPTURE / 200) ** 2 for k in range(100)) / 100
     return counts * math.sqrt(band)
 
