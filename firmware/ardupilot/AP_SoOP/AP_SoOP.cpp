@@ -645,13 +645,15 @@ void AP_SoOP::log_status(double t)
     if (_capturing) {
         tuner.check_lock();
     }
-    AP::logger().WriteStreaming("SOS", "TimeUS,CPU,Bps,Ovr,AErr,Lock,VT,NT,Clk,Fused,Amb,Unm,G,GD,GL",
-                                "QfHIIBBBfIIIBff", AP_HAL::micros64(), cpu, uint16_t(_bursts_s),
+    //the noise floor the DSP has learnt, dB: turning the antenna feed on should lift it ~19 dB
+    const float nse = _dsp->noise_init && _dsp->noise > 0 ? 10 * log10f(_dsp->noise) : 0;
+    AP::logger().WriteStreaming("SOS", "TimeUS,CPU,Bps,Ovr,AErr,Lock,VT,NT,Clk,Fused,Amb,Unm,G,GD,GL,Nse",
+                                "QfHIIBBBfIIIBfff", AP_HAL::micros64(), cpu, uint16_t(_bursts_s),
                                 capture.overruns(), capture.adc_errors(), uint8_t(tuner.locked()), tuner.vtune_adc(),
                                 uint8_t(_nav->n_track), float(_nav->x[6]),
                                 _nav->count[SOOP_B_FUSED], _nav->count[SOOP_B_AMBIGUOUS],
                                 _nav->count[SOOP_B_UNMATCHED], uint8_t(_guard->state),
-                                float(_guard->dist_m), float(_guard->limit_m));
+                                float(_guard->dist_m), float(_guard->limit_m), nse);
     _cpu_us = 0;
     _samples_s = 0;
     _bursts_s = 0;
