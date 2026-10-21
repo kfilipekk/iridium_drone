@@ -12,6 +12,8 @@ extern "C" {
 #include <AP_GPS/AP_GPS.h>
 #include <AP_GPS/AP_SoOPFix.h>
 #include <AP_InertialSensor/AP_InertialSensor.h>
+#include <AP_OpticalFlow/AP_OpticalFlow.h>
+#include <AP_RangeFinder/AP_RangeFinder.h>
 #include <AP_Logger/AP_Logger.h>
 #include <GCS_MAVLink/GCS.h>
 
@@ -28,7 +30,7 @@ extern const AP_HAL::HAL& hal;
 static const uint64_t UNIX_J2000_US = 946728000ULL * 1000000ULL;   //12:00 UTC
 static const uint64_t GPS_UNIX_S = 315964800ULL;                     //1980-01-06 00:00 UTC
 static const uint32_t LEAP_S = 18;                                   //GPS - UTC since 2017
-static const char *DIR = "APM/SOOP";
+static const char *SOOP_DIR = "APM/SOOP";
 
 static AP_SoOP_MAX2112 tuner;
 static AP_SoOP_Capture capture;
@@ -98,6 +100,28 @@ void AP_SoOP::update()
         _have_baro_offset = true;
     }
     v.temp_c = AP::ins().get_temperature(0);
+#if AP_OPTICALFLOW_ENABLED && AP_RANGEFINDER_ENABLED
+    //a velocity the GPS cannot drag
+    const AP_OpticalFlow *of = AP::opticalflow();
+    const RangeFinder *rf = AP::rangefinder();
+    if (_ind_vel && of != nullptr && of->enabled() && of->healthy() && of->quality() >= AP_SOOP_IND_FLOW_Q
+        && AP_HAL::millis() - of->last_update() < 200 && rf != nullptr
+        && rf->status_orient(ROTATION_PITCH_270) == RangeFinder::Status::Good && v.vel_ok) {
+        const float rng = rf->distance_orient(ROTATION_PITCH_270);
+        const Vector2f comp = of->flowRate() + of->bodyRate();
+        const Matrix3f &m = ahrs.get_rotation_body_to_ned();
+        const float r[9] = { m.a.x, m.a.y, m.a.z, m.b.x, m.b.y, m.b.z, m.c.x, m.c.y, m.c.z };
+        float vi[3];
+        if (soop_flow_velocity(r, comp.x, comp.y, rng, v.vd, vi)) {
+            v.ivn = vi[0];
+            v.ive = vi[1];
+            v.ivd = vi[2];
+            v.ind_ok = true;
+            AP::logger().WriteStreaming("SOV", "TimeUS,VN,VE,Q,Rng", "QffBf", AP_HAL::micros64(),
+                                        v.ivn, v.ive, of->quality(), rng);
+        }
+    }
+#endif
     if (_have_baro_offset && AP::baro().healthy()) {
         v.baro_h = AP::baro().get_altitude() + _baro_offset;
         v.baro_ok = true;
@@ -161,7 +185,7 @@ void AP_SoOP::load_config()
 {
     //"key value" per line; unknown keys are reported, not ignored silently
     char path[40];
-    snprintf(path, sizeof(path), "%s/soop.cfg", DIR);
+    snprintf(path, sizeof(path), "%s/soop.cfg", SOOP_DIR);
     struct stat st;
     if (AP::FS().stat(path, &st) != 0 || st.st_size <= 0) {
         return;
@@ -194,6 +218,7 @@ void AP_SoOP::load_config()
         { "along_m_per_day", &c.orbit[SOOP_ORBIT_TLE].along_m_per_day },
         { "guard_k", &_gcfg.k }, { "guard_floor_m", &_gcfg.floor_m },
         { "guard_hold_s", &_gcfg.hold_s }, { "guard_free_vel", &_gcfg.free_vel_sigma },
+        { "ind_vel_sigma", &_gcfg.ind_vel_sigma },
     };
     //no scanf here: ArduPilot's C library has none with floating point
     char *save = nullptr;
@@ -214,11 +239,13 @@ void AP_SoOP::load_config()
         }
         bool known = true;
         if (!strcmp(key, "replay")) {
-            _replay = val != 0;
+            _replay = !is_zero(val);
         } else if (!strcmp(key, "swap_iq")) {
-            _swap_iq = val != 0;
+            _swap_iq = !is_zero(val);
         } else if (!strcmp(key, "ant_feed")) {
-            _ant_feed_off = val == 0;
+            _ant_feed_off = is_zero(val);
+        } else if (!strcmp(key, "ind_vel")) {
+            _ind_vel = !is_zero(val);
         } else if (!strcmp(key, "bbg")) {
             _bbg = uint8_t(constrain_int16(int16_t(val), 0, 15));
         } else if (!strcmp(key, "lo_offset_hz")) {
@@ -248,7 +275,7 @@ void AP_SoOP::load_config()
 int AP_SoOP::load_catalogue()
 {
     char path[40];
-    snprintf(path, sizeof(path), "%s/iridium.tle", DIR);
+    snprintf(path, sizeof(path), "%s/iridium.tle", SOOP_DIR);
     struct stat st;
     if (AP::FS().stat(path, &st) != 0 || st.st_size <= 0 || st.st_size > 64 * 1024) {
         return 0;
@@ -288,7 +315,7 @@ bool AP_SoOP::setup()
         return false;
     }
     soop_dsp_init(_dsp);
-    _bbg = 4;
+    _bbg = 2;                        //check_soop.py gain
     soop_nav_cfg_t cfg;
     soop_nav_default_cfg(&cfg);
     _nav->cfg = cfg;
@@ -302,12 +329,12 @@ bool AP_SoOP::setup()
     if (_n_cat < 60) {
         //a short catalogue narrows the geometry silently
         GCS_SEND_TEXT(MAV_SEVERITY_ERROR, "SoOP: %d satellites in %s/iridium.tle - need the full catalogue",
-                      _n_cat, DIR);
+                      _n_cat, SOOP_DIR);
         return false;
     }
 
     if (_replay) {
-        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "SoOP: replay of %s/replay.iq, %d satellites", DIR, _n_cat);
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "SoOP: replay of %s/replay.iq, %d satellites", SOOP_DIR, _n_cat);
     } else {
         // the LO the C side asks for, and the one the synthesiser can actually make
         if (!tuner.init(0, cfg.f_lo, _bbg)) {
@@ -344,7 +371,7 @@ void AP_SoOP::thread_main()
     uint64_t replay_sample = 0;
     if (_replay) {
         char path[40];
-        snprintf(path, sizeof(path), "%s/replay.iq", DIR);
+        snprintf(path, sizeof(path), "%s/replay.iq", SOOP_DIR);
         fd = AP::FS().open(path, O_RDONLY);
         _t0 = AP_HAL::micros64() / double(1000000);
     } else {
@@ -475,6 +502,9 @@ void AP_SoOP::feed_until(double horizon)
         if (v.vel_ok) {
             soop_guard_velocity(_guard, v.t, v.vn, v.ve, v.vd);
         }
+        if (v.ind_ok) {
+            soop_guard_velocity_ind(_guard, v.t, v.ivn, v.ive, v.ivd);
+        }
         if (v.gps_ok) {
             soop_guard_gps(_guard, v.t, v.gps_utc, v.gps_ecef);
             _guard_dist = float(_guard->dist_m);
@@ -534,7 +564,7 @@ void AP_SoOP::publish(double t)
 void AP_SoOP::clock_load(float temp_c)
 {
     char path[40];
-    snprintf(path, sizeof(path), "%s/clock.dat", DIR);
+    snprintf(path, sizeof(path), "%s/clock.dat", SOOP_DIR);
     const int fd = AP::FS().open(path, O_RDONLY);
     if (fd < 0) {
         return;
@@ -590,7 +620,7 @@ void AP_SoOP::clock_save(double t)
         return;
     }
     char path[40];
-    snprintf(path, sizeof(path), "%s/clock.dat", DIR);
+    snprintf(path, sizeof(path), "%s/clock.dat", SOOP_DIR);
     const int fd = AP::FS().open(path, O_WRONLY | O_CREAT | O_TRUNC);
     if (fd < 0) {
         return;
@@ -614,13 +644,15 @@ void AP_SoOP::log_status(double t)
     if (_capturing) {
         tuner.check_lock();
     }
-    AP::logger().WriteStreaming("SOS", "TimeUS,CPU,Bps,Ovr,AErr,Lock,VT,NT,Clk,Fused,Amb,Unm,G,GD,GL",
-                                "QfHIIBBBfIIIBff", AP_HAL::micros64(), cpu, uint16_t(_bursts_s),
+    //the noise floor the DSP has learnt, dB
+    const float nse = _dsp->noise_init && _dsp->noise > 0 ? 10 * log10f(_dsp->noise) : 0;
+    AP::logger().WriteStreaming("SOS", "TimeUS,CPU,Bps,Ovr,AErr,Lock,VT,NT,Clk,Fused,Amb,Unm,G,GD,GL,Nse",
+                                "QfHIIBBBfIIIBfff", AP_HAL::micros64(), cpu, uint16_t(_bursts_s),
                                 capture.overruns(), capture.adc_errors(), uint8_t(tuner.locked()), tuner.vtune_adc(),
                                 uint8_t(_nav->n_track), float(_nav->x[6]),
                                 _nav->count[SOOP_B_FUSED], _nav->count[SOOP_B_AMBIGUOUS],
                                 _nav->count[SOOP_B_UNMATCHED], uint8_t(_guard->state),
-                                float(_guard->dist_m), float(_guard->limit_m));
+                                float(_guard->dist_m), float(_guard->limit_m), nse);
     _cpu_us = 0;
     _samples_s = 0;
     _bursts_s = 0;

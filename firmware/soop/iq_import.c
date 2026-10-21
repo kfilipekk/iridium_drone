@@ -15,7 +15,7 @@ int main(int argc, char **argv)
 {
     const char *fmt = "cu8", *model = "board";
     double fs = 0.0, fc = 0.0, gain = 1.0, lo_off = SOOP_LO_OFFSET_HZ;
-    double tau = 1e-6, floor_ = 0.16;    //the difference amp: Rf*Cf, and its unfiltered-leg floor
+    double tau = 1e-6, floor_ = 0.0;     //the difference amp: Rf*Cf
     if (argc < 3) {
         fprintf(stderr, "usage: %s in out --format cu8|cs16|cf32 --fs HZ --fc HZ [--gain G]\n"
                 "       [--lo HZ] [--model board|ideal] [--amp-tau S] [--amp-floor A]\n"

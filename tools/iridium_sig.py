@@ -50,21 +50,22 @@ DUPLEX_CHANNELS = tuple(1_616_020_833.0 + k * CHANNEL_SPACING for k in range(240
 DUPLEX_PREAMBLE_SYMBOLS = 16
 
 
-#the difference amp's response re dc: Cf filters only the -IN leg
+#the difference amp's response re dc
 def amp_gain(f):
     rin, rf = _ohms(_design.COMPONENTS["R36"][2]), _ohms(_design.COMPONENTS["R50"][2])
+    cp = _ohms(_design.COMPONENTS["C98"][2]) if "C98" in _design.COMPONENTS else 0.0
     w = 2j * math.pi * abs(f)
     zf = rf / (1 + w * rf * _ohms(_design.COMPONENTS["C76"][2]))
-    h = 0.5 * rf / (rin + rf) * (1 + zf / rin) + 0.5 * zf / rin
+    zp = rf / (1 + w * rf * cp)
+    h = 0.5 * zp / (rin + zp) * (1 + zf / rin) + 0.5 * zf / rin
     return abs(h) / (rf / rin)
 
 
 #iq_import's board model of the same amp
 def amp_args():
-    rin, rf = _ohms(_design.COMPONENTS["R36"][2]), _ohms(_design.COMPONENTS["R50"][2])
-    k, a = rf / (rin + rf), rf / rin
+    rf = _ohms(_design.COMPONENTS["R50"][2])
     return ["--amp-tau", f"{rf * _ohms(_design.COMPONENTS['C76'][2]):.4g}",
-            "--amp-floor", f"{k / (k + a * (k + 1)):.4f}"]
+            "--amp-floor", f"{amp_gain(1e12):.4f}"]
 
 
 #where a baseband frequency lands after the ADC's raw sampling and the oversampler's

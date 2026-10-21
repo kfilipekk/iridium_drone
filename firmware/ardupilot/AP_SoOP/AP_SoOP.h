@@ -10,6 +10,7 @@ extern "C" {
 }
 
 #define AP_SOOP_VEH_QUEUE 64
+#define AP_SOOP_IND_FLOW_Q 100           //flow quality below which its velocity is not used
 #define AP_SOOP_BURST_QUEUE 32
 
 class AP_SoOP
@@ -32,6 +33,8 @@ private:
         double gps_utc;          //UTC s since J2000
         double gps_ecef[3];
         float  temp_c;           //IMU die temperature, the TCXO's nearest thermometer
+        float  ivn, ive, ivd;    //over the ground from flow and rangefinder: GPS can't drag it
+        bool   ind_ok;
     };
     struct burst_t {
         double t;
@@ -93,6 +96,7 @@ private:
     float      _ant_ma;
     AP_HAL::AnalogSource *_ant_adc;
     volatile bool _ant_feed_off;
+    volatile bool _ind_vel;          //feed the guard flow-derived velocity (soop.cfg ind_vel)
     uint64_t   _samples_s;
     //the TCXO's offset per degree, remembered across flights in clock.dat
     static const int CLK_T0 = -20, CLK_N = 100;

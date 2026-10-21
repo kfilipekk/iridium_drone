@@ -53,6 +53,7 @@ COMPONENTS = {
  "U15": ("jlc_parts:PSA4-5043+",            "jlc:SOT-343-4_L2.0-W1.3-P1.30-LS2.1-BR",           "PSA4-5043+",    "C5240848", True),
  "U16": ("jlc_parts:PSA4-5043+",            "jlc:SOT-343-4_L2.0-W1.3-P1.30-LS2.1-BR",           "PSA4-5043+",    "C5240848", True),
  #Y2 is an active 4-pad clipped-sine TCXO feeding U13's reference through C58
+#states no g-sensitivity and no 3225 TCXO at JLC does
  "Y2" : ("jlc_parts:8132S-25.000MQ33DTL",     "jlc:OSC-SMD_4P-L3.2-W2.5-BL",              "25MHz TCXO",    "C19674258", False),
  "FL1": ("jlc_parts:TA1575IG",                   "jlc:FILTER-SMD_6P-L3.0-W3.0-P1.19-TR",                       "SAW 1620MHz",   "",         True),
 }
@@ -245,6 +246,20 @@ RF_PARTS = dict(
         x_min_ohm=250.0, f_carrier_ghz=1.6265,
         src="[D] Murata LQW15AN27N: SRF 3.5 GHz, DCR 0.52 ohm; [M] X at 1.6265 GHz = "
             "2*pi*f*L = 276 ohm; [M] C113111, 0402, 4497 in stock 2026-09-30"),
+    #the gain plan, check_soop.py gain
+    antenna=dict(
+        part="Tallysman HC610", gain_db=28.0, gain_tol_db=2.0, nf_db=2.0,
+        t_ant_k=100.0, t_ant_range_k=(50.0, 290.0), cable_db=0.5, board_db=0.5,
+        src="[D] HC610: 28 dB LNA, NF 2.0 dB; [A] gain +-2 dB; [A] 100 K for an upward helix, "
+            "50 K clear sky to 290 K looking at ground; [A] 15 cm RG178 ~0.5 dB at 1.6 GHz; "
+            "[M] sim/rf.py INSL_MAX_DB, the on-board path's budget"),
+    tuner=dict(
+        part="MAX2112", ref_dbm=-75.0, ref_vpp=1.0, ref_bbg=11, ref_bbg_doubt=4,
+        nf_db=8.0, gc_db=73.0, gc_v=(0.5, 2.7), p1db_vpp=3.0, vcc_rf=3.3,
+        src="[D] MAX2112 Rev 3: -75 dBm CW gives 1 Vp-p at VGC1 0.5 V with BBG adjusted "
+            "(the table's default is 1011, so +-4 steps of doubt [A]); NF 8 dB at max gain; "
+            "73 dB RF gain range over 0.5-2.7 V; BBG 1 dB per step; output 1 dB compression "
+            "3 Vp-p differential"),
 )
 #connector orientation
 MATING_FACE = {
@@ -316,8 +331,9 @@ CONNECTOR_RETENTION = {
     "J11": ("latch", "JST-GH positive lock"),
     "J12": ("snap", "MMCX positive snap-lock"),
     "J14": ("latch", "JST-GH positive lock"),
-    "J17": ("friction", "JR standard servo plug friction fit + printed clip"),
-    "J23": ("friction", "JR standard servo plug friction fit + printed clip"),
+    #SMD pads: a through-hole header's pins would land on J5/J11 underneath
+    "J17": ("friction", "JR standard servo plug friction fit + printed clip + epoxy fillet"),
+    "J23": ("friction", "JR standard servo plug friction fit + printed clip + epoxy fillet"),
     "J19": ("bench", "Tag-Connect TC2030-NL pogo-pin cable for recovery"),
     "J21": ("latch", "JST-GH positive lock"),
     "J22": ("latch", "JST-GH positive lock"),
@@ -1113,6 +1129,8 @@ for r, v in [("R47","4k7"), ("R48","10k"), ("R49","10k"), ("R50","10k"),
     RES(r, v, F_R0402)
 CAP("C75", "1u", F_C0402)
 CAP("C76", "100p", F_C0402); CAP("C77", "100p", F_C0402)
+#their twins across R51/R49
+CAP("C98", "100p", F_C0201); CAP("C99", "100p", F_C0201)
 
 #i channel: IOUT+ -> R36 -> +in A (R51 to VREF)
 net("IOUT_P","U13.19","R36.1"); net("IOUT_N","U13.20","R37.1")
@@ -1127,6 +1145,7 @@ NETS["OPA_IN2N"] += ["C77.1"]                        #C77 across R48: anti-alias
 #the mid-rail reference both channels share
 net("BB_VREF","R52.2","R53.1","C75.1","R51.2","R49.2")
 NETS["+3V3A"] += ["R52.1", "U14.8", "C97.1"]; NETS["GND"] += ["R53.2", "C75.2", "U14.4", "C97.2"]
+NETS["OPA_IN1P"] += ["C98.1"]; NETS["OPA_IN2P"] += ["C99.1"]; NETS["BB_VREF"] += ["C98.2", "C99.2"]
 #DC-offset servo capacitors
 net("IDC_P","U13.21","C61.1"); net("IDC_N","U13.22","C61.2")
 net("QDC_P","U13.23","C63.1"); net("QDC_N","U13.24","C63.2")
@@ -1570,6 +1589,7 @@ ADJACENCY = {
     "R49": ("U14", "5", 8.0),  "R50": ("U14", "2", 8.0),
     "R51": ("U14", "3", 8.0),
     "C76": ("R50", "1", 12.0), "C77": ("R48", "1", 8.0),   #in parallel with them
+    "C98": ("R51", "1", 1.5), "C99": ("R49", "1", 1.5),     #under R51, beside R49
     "R52": ("U14", "8", 12.0),                #VREF divider: a DC reference, 1 uF at
     "R53": ("R52", "2", 3.0),                 #the far end makes distance irrelevant
     "C75": ("R53", "1", 3.0),
@@ -1689,7 +1709,7 @@ PASSIVE_LCSC = {
     #C17/C18, the VBAT bulk caps
     ("10u",  F_C0805): "C15850",  ("10u",  F_C1206): "C13585",
     ("1u",   F_C0805): "C28323",  ("22u",  F_C1206): "C12891",
-    ("0R",   F_R0402): "C17168",  ("100p", F_C0402): "C1546",
+    ("0R",   F_R0402): "C17168",  ("100p", F_C0402): "C1546", ("100p", F_C0201): "C62550",
     ("1n",   F_C0402): "C1523",
     ("100n", F_C0201): "C76939",   #Murata GRM033R61E104KE14D 100nF 25V X5R
     ("100R", F_R0402): "C25076",  ("120R", F_R0402): "C25079",
@@ -1761,6 +1781,7 @@ RATINGS = {
  "C26404":   ("3n3",   50,  "X7R",     "10%",  "0402",  None, None, "[D] LCSC product page, 2026-08-29"),
  "C60137":   ("47p",   50,  "NP0",     "5%",   "0402",  None, None, "[D] LCSC product page, 2026-08-29"),
  "C1546":    ("100p",  50,  "NP0",     "5%",   "0402",  None, None, "[D] LCSC product page (0402CG101J500NT), 2026-09-11"),
+ "C62550":   ("100p",  50,  "NP0",     "5%",   "0201",  None, None, "[L] JLCPCB part API: FH 0201CG101J500NT 100pF 50V C0G 0201, 898540 in stock 2026-10-20"),
  "C1523":    ("1n",    50,  "X7R",     "10%",  "0402",  None, None, "[D] LCSC product page (0402B102K500NT), 2026-09-11"),
  "C76939":   ("100n",  25,  "X5R",     "10%",  "0201",  -55,  85, "[L] JLCPCB part API: GRM033R61E104KE14D 100nF 25V X5R 0201, 2026-10-07"),
 }
@@ -2454,6 +2475,8 @@ ROUTING_PRIORITY = [
 ]
 #dielectric between successive copper layers, mm, for the IR-drop solver
 LAYER_GAPS_MM = [0.1, 0.55, 0.2, 0.55, 0.1]
+#1 oz inner copper, chosen at checkout
+INNER_COPPER_UM = 35.0
 
 #ordering
 #parts held back from an economic assembly order
@@ -2462,7 +2485,7 @@ STANDARD_ONLY = {
 }
 #sole-source parts whose stock the order sheet quotes
 SOLE_SOURCE = {"C5271084": "STM32H743VIT6", "C15639": "MS5611", "C596391": "MAX2112"}
-#parts JLCPCB assembles but the community mirror does not carry
+#MAX2112 is ADI "not recommended for new designs"
 MIRROR_GAPS = {
     "C51940119": "J3's JST-GH 6P - jlcpcb.com/partdetail/C51940119 confirms the part; "
                  "the mirror simply lacks the row",

@@ -10,6 +10,8 @@ RIN = value(D.COMPONENTS["R36"][2])    #4k7
 RF = value(D.COMPONENTS["R50"][2])     #10k
 C76 = value(D.COMPONENTS["C76"][2])    #100p
 C77 = value(D.COMPONENTS["C77"][2])    #the q channel's twin
+C98 = value(D.COMPONENTS["C98"][2])    #across R51: +IN filtered as -IN is
+C99 = value(D.COMPONENTS["C99"][2])
 VREF = 3.3 * value(D.COMPONENTS["R53"][2]) / (
     value(D.COMPONENTS["R52"][2]) + value(D.COMPONENTS["R53"][2]))
 VCM = 1.65                             #tuner output common mode (assumed ~VCC/2)
@@ -26,6 +28,7 @@ Bp   iout_p 0 V = V(c) + V(d)/2
 Bn   iout_n 0 V = V(c) - V(d)/2
 R36 iout_p opa_p {RIN}
 R51 opa_p vref {RF}
+C98 opa_p vref {C98}
 R37 iout_n opa_n {RIN}
 R50 opa_n adc {RF}
 C76 opa_n adc {C76}
@@ -109,7 +112,12 @@ def main(chk=None):
     model = 20 * math.log10(iridium_sig.amp_gain(1.0625e6))
     chk.ok(abs(model - alias) < 0.5, "the dsp's front-end model matches the circuit at 1 MHz",
            f"spice {alias:.1f} dB, model {model:.1f} dB")
-    chk.ok(C76 == C77, "i and q anti-alias caps match", f"C76 {C76:.3g} F, C77 {C77:.3g} F")
+    chk.ok(C76 == C77 == C98 == C99, "anti-alias caps match on both legs of both channels",
+           f"C76 {C76:.3g}, C77 {C77:.3g}, C98 {C98:.3g}, C99 {C99:.3g} F")
+    #with one leg unfiltered the response floors near -16 dB; both filtered
+    deep = at(f, mag, 4.0e6)
+    chk.ok(deep <= -24.0, "anti-alias response keeps falling to the tuner's 4 MHz filter",
+           f"{deep:.1f} dB at 4 MHz")
     return chk
 
 
