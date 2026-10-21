@@ -986,6 +986,10 @@ SCAN = ["README.md", "docs/*.md", "docs/*.tex", "fab/*.md", "tools/README.md", "
         "firmware/NAVCORE_SoOP/Readme.md"]
 
 RETIRED = [
+    (r"2\\?,m/s drag in 5 to 19", "the 2 m/s drag time before check_soop.py nav was rerun",
+     "19 to 24 minutes without an independent velocity, about two with one (check_soop.py nav)"),
+    (r"1\.3--2\.4\\?,km", "how far a caught drag had moved the GPS, before the rerun",
+     "1.4-2.9 km (check_soop.py nav)"),
     (r"\b52\.7\b", "the BATT_AMP_PERVLT value from a different SpeedyBee stack",
      "the firmware ships 25.0 - 1000 / the ESC's 40 mV/A, and check_mech.py build verifies it"),
     (r"\b89\.2\b", "a theta_JA that is NOT in SLVSD26",

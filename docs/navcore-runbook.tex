@@ -100,8 +100,7 @@ aircraft parts, assemble, power it up, and fly it. It exists because the same in
 used to be spread across four draft documents (ORDER, ASSEMBLY, BUILD and BUYING) that had
 drifted apart --- in three cases far enough to send you shopping for parts with nowhere to
 put them. On 2026-09-19 the first three were folded into this one and deleted;
-\file{docs/BUYING.md} survives as the order sheet generated from \file{docs/PARTS.csv}, the
-decision record.
+the buy list in Part~2 is generated from \file{docs/PARTS.csv}, the decision record.
 
 \textbf{Verify before you spend. Read the verdict, not a summary:}
 
@@ -191,6 +190,7 @@ Layers & \textbf{6} & In1 is a solid GND plane; In4 carries the rails \\
 Dimensions & 46.5 $\times$ 47.2 mm & the outline in \file{design.BOARD} \\
 Thickness & 1.6 mm & 30.5 mm stack standard \\
 Outer copper & \textbf{1 oz} & every current figure assumes it \\
+Inner copper & \textbf{1 oz} & the VBAT plane on In4 needs it (\file{irdrop.py check}) \\
 Surface finish & ENIG & 0402s and LGA-14s want a flat finish \\
 Min track / spacing & \textbf{0.1016 mm (4 mil)} & should be free tier \\
 Min via / drill & \textbf{0.45 mm / 0.20 mm} & \\
@@ -288,7 +288,7 @@ in the CPL is fitted to JLCPCB's own footprint for that LCSC part
 (\file{tools/jlc\_orientation.py}, 160 of 163 agreeing with the rule-based rotation it
 replaced). A part that still looks turned is a finding --- report it rather than rotating
 it by hand
-\item \textbf{1 oz outer copper}, explicitly
+\item \textbf{1 oz outer and 1 oz inner copper}, explicitly
 \item \textbf{Panel by JLCPCB.} Standard assembly requires a single PCB of at least
 $70 \times 70$~mm and this board is $46.5 \times 47.2$~mm, so the panel and its breakaway
 rails have to come from somewhere. Their own panelisation is the low-risk answer: you then
@@ -314,11 +314,11 @@ The list is staged by what you are trying to prove, not by what the aircraft nee
 put an Iridium receive chain on the bench and then on the board. \textbf{B1 and B2 are the
 aircraft.} Order everything at once if you can --- lead times run 2--4 weeks --- but if the
 budget is staged, this is the order. The table is generated from \file{docs/PARTS.csv}
-(\cmd{python3 tools/gen\_doc\_tables.py}); \file{docs/BUYING.md} is the same list with
-provenance and price tags.
+(\cmd{python3 tools/gen\_doc\_tables.py}); each row's provenance and price tag are in the
+CSV.
 
 % BEGIN GENERATED ORDER
-\subsubsection*{A1 --- The board, and its bench} 8 lines, about GBP 262.
+\subsubsection*{A1 --- The board, and its bench} 9 lines, about GBP 337.
 Power it, flash it, prove it - no aircraft. Runbook Parts 7-10 (T1-T3a).
 
 \begin{longtable}{@{}P{0.50\textwidth}P{0.12\textwidth}rP{0.22\textwidth}@{}}
@@ -331,6 +331,7 @@ NAVCORE-SoOP PCB + assembly & 1 order & 190 & JLCPCB \\
 ST-Link V2 programmer & 1 & 4 & AliExpress \\
 microSD card, 32GB & 1 & 8 & AliExpress / anywhere \\
 USB-C cable, data-capable & 1 & 3 & anywhere \\
+Spare MAX2112ETI+T tuners (U13), x5 & 5 & 75 & DigiKey \\
 JST GH 8P single-ended pigtail, GHR-08V-S (T1 bench feed into J2) & 2 & 3 & AliExpress \\
 Bench power supply, adjustable with CURRENT LIMIT & 1 & 35 & AliExpress \\
 Thermocouple meter or IR thermometer & 1 & 14 & AliExpress \\
@@ -338,7 +339,7 @@ Foam: open-cell block over the baro, closed-cell pad on the ESC & 1 small sheet 
 \end{longtable}
 Already have: Soldering iron and basic tools, Multimeter with continuity buzzer.
 
-\subsubsection*{A2 --- Iridium navigation, no aircraft} 5 lines, about GBP 176.
+\subsubsection*{A2 --- Iridium navigation, no aircraft} 4 lines, about GBP 24.
 The receive chain the board cannot supply, and the bench reference receiver for T3b step 1. The tuner (U13) is on the board; this is what feeds it.
 
 \begin{longtable}{@{}P{0.50\textwidth}P{0.12\textwidth}rP{0.22\textwidth}@{}}
@@ -347,13 +348,12 @@ The receive chain the board cannot supply, and the bench reference receiver for 
 \endhead
 \bottomrule
 \endfoot
-Tallysman HC610 active Iridium helical antenna & 1 & 130 & DigiKey \\
 MMCX to SMA pigtail, 15 cm, RG178 or RG316, right-angle SMA (J12 to the HC610) & 2 & 6 & AliExpress \\
 SMA DC block, inline, 10 MHz-6 GHz (bench) & 1 & 10 & AliExpress \\
-RTL-SDR Blog V4 (R820T2, with bias tee) & 1 & 30 & AliExpress / RTL-SDR Blog \\
+SMA bias tee, 10 MHz-6 GHz (bench, powers the HC610 from the Pluto side) & 1 & 8 & AliExpress \\
 gr-iridium + iridium-toolkit (software) & 1 & 0 & GitHub (muccc) \\
 \end{longtable}
-Already have: Raspberry Pi 5.
+Already have: Raspberry Pi 5, Tallysman HC610 active Iridium helical antenna, ADALM-PLUTO SDR (bench reference receiver).
 
 \subsubsection*{B1 --- The aircraft - minimum to fly on GPS} 28 lines, about GBP 389.
 Frame, propulsion, radio, GPS, fasteners, looms. Every optional sensor ships disabled, so nothing in B2 is needed for a GPS flight.
@@ -411,7 +411,7 @@ XIAO ESP32S3 Sense (recording camera) & 1 & 14 & AliExpress \\
 JST GH 3P lead, GHR-03V-S pigtail (J22 payload 5 V) & 2 & 2 & AliExpress \\
 \end{longtable}
 
-Total, everything to buy: about GBP 895. Generated from \file{docs/PARTS.csv} by \file{tools/gen\_doc\_tables.py}; every row's reasoning and link is in the CSV, and \file{docs/BUYING.md} is the same list with prices and provenance tags.
+Total, everything to buy: about GBP 818. Generated from \file{docs/PARTS.csv} by \file{tools/gen\_doc\_tables.py}; every row's reasoning, link and provenance is in the CSV.
 % END GENERATED ORDER
 
 \flag{Do not buy a bare PMW3901 or VL53L1X chip to hand-fit.} Both were deleted from the
@@ -611,8 +611,8 @@ has moved since this was compiled, run it rather than trust the table.
 \begin{itemize}
 \item \textbf{Centre-plate opening} clears 46.5 $\times$ 47.2 mm plus the plugs on every
 edge. The FC plate is 48.50 mm across the binding axis, so the board has only
-\flag{0.55 mm} on the tight side in the worst-case orientation (the generated spatial table
-in \file{docs/BUYING.md}). Check it with the real plate.
+\flag{0.55 mm} on the tight side in the worst-case orientation (\cmd{python3 tools/check\_mech.py
+mechanical} prints it). Check it with the real plate.
 \item \flag{Orientation.} The aft edge carries \file{J3} (GPS) and \file{J12} (antenna) and
 faces the tower; the fore edge carries the servo headers. The silkscreen arrow points at the
 fore edge, and the hwdef's IMU rotations are derived with that edge forward
@@ -887,7 +887,7 @@ hard-case pack on build day.
 \item Four pads are unlabelled; identify every pad on the padmap, never by counting from a neighbour.
 \item The board is \textbf{5S maximum} --- the input TVS sets it (Part~1).
 \item Wire one mission's payload onto \file{+5V\_PAYLOAD}, not every payload at once.
-\item Confirm 1 oz outer copper on the order; 0.5 oz halves every trace's rating.
+\item Confirm 1 oz outer and inner copper on the order; 0.5 oz halves every trace's rating.
 \end{itemize}
 
 \subsection{\file{J2}, the ESC connector --- confirmed rather than assumed}
@@ -1202,6 +1202,18 @@ rtl_sdr -f 1626333333 -s 2000000 -g 40 -n 1200000000 rec.cu8    # 10 min, 2.4 GB
 python3 tools/soop_bench.py rec.cu8 --start $(cat rec.time) --site LAT LON H
 \end{verbatim}
 
+With the ADALM-Pluto instead: the HC610's LNA takes its 15\,mA through an SMA bias tee
+(\file{RF+DC} to the antenna, \file{RF} to the Pluto, 5\,V from USB on its DC pin --- check
+5\,V on the \file{RF+DC} centre pin and none on \file{RF} before the Pluto goes on). The
+Pluto's crystal is $\pm$25\,ppm, up to $\pm$40\,kHz at 1626\,MHz, so let it warm up for
+20 minutes and let \file{soop\_bench.py} find its error first:
+
+\begin{verbatim}
+rx_sdr -d driver=plutosdr -f 1626333333 -s 2000000 -g 40 -F CS16 rec.cs16
+python3 tools/soop_bench.py rec.cs16 --format cs16 --gain auto --lo-search \
+    --start $(cat rec.time) --site LAT LON H
+\end{verbatim}
+
 \file{--site} is where the antenna was, in degrees and ellipsoidal metres (a phone's GPS is
 close enough). The tool converts the recording to what the board's ADCs would capture
 (\file{firmware/soop/iq\_import.c}), runs the flight DSP and the flight navigation over it,
@@ -1268,6 +1280,11 @@ in 23.8\,Hz steps, and the filter is told the one actually programmed.
 \item \textbf{Antenna feed.} The GCS shows \emph{SoOP: antenna ok, 15.0 mA} with the HC610
 on \file{J12}; \emph{open} or \emph{short} is the coax or the antenna, not the sky
 (Section~\ref{sec:plugs}). \file{SOA} in the log has it once a second.
+\item \textbf{The noise step --- the RF path's first sign of life.} Boot with \file{ant\_feed 0}
+in \file{soop.cfg}, note \file{SOS.Nse} after a minute, then reboot with the feed on: it
+should rise about 19\,dB (16--23), from the MAX2112's own noise to the HC610's
+(\file{check\_soop.py gain}). Much less is a dead LNA or a broken RF path, whatever the sky
+is doing.
 \item \textbf{Live capture}, outdoors, the HC610 on \file{J12} through its pigtail; the board
 feeds its LNA.
 \file{SOS.Bps} (bursts per second) should be comparable to step 1. If the board hears nothing
@@ -1302,6 +1319,12 @@ moves to it when the real one loses its fix. When denied, the EKF must take posi
 the Iridium fix, whose velocity is the EKF's own, corrected. Fly first with GPS healthy and
 compare \file{SOF} against \file{GPS} in the log; then a denial test in a safe area.
 
+\textbf{Vibration on the TCXO.} Log five minutes on the ground with the motors off, then a
+five-minute hover, and compare \file{SOB.Inn} (each fused burst's innovation) between them.
+The spread should not more than double. \file{check\_soop.py dsp} passes 2\,g at 1\,ppb/g
+on the stack's grommets, but 3\,g at 2\,ppb/g near 60\,Hz fails it: if the hover spreads
+the innovations out, soften the mount before trusting the fix.
+
 \textbf{What the aircraft will not do.} It offers no Iridium fix until it has had GPS (or a
 surveyed start within 50\,m): started blind, the filter linearises about a guess kilometres
 out and in simulation reported up to four times better than it was.
@@ -1318,12 +1341,20 @@ distance it measured.
 
 In simulation (\file{tools/check\_soop.py nav}) it raises no alarm on honest GPS ---
 including GPS coming back after a 15 minute denial --- and catches a 500\,m jump in 1--2\,s,
-a 10\,m/s drag in about 4 minutes, a 5\,m/s drag in about 4 and a 2\,m/s drag in 5 to 19;
-by then the spoofer has moved the GPS 1.3--2.4\,km. It cannot be faster: a spoofer that
-drags the position drags the EKF's velocity too, and until the aircraft has been pulled
-further than an Iridium-only fix can tell apart, the two stories agree. A slower drag may
-not be caught within a flight. Watch \file{SOS.GD} in flight: a distance that keeps growing
-while the GPS looks healthy is the early sign.
+a 10\,m/s drag in about 3 minutes, a 5\,m/s drag in 4--5 and a 2\,m/s drag in 19 to 24;
+by then the spoofer has moved the GPS 1.4--2.9\,km. A spoofer that drags the position drags
+the EKF's velocity too, and the Iridium-only copy is fed that velocity, so it follows part of
+the way. A slower drag may not be caught within a flight. Watch \file{SOS.GD} in flight: a
+distance that keeps growing while the GPS looks healthy is the early sign.
+
+\textbf{A velocity the spoofer cannot drag.} With \file{ind\_vel 1} in \file{soop.cfg}, the
+Iridium-only copy takes its velocity from the flow sensor and the downward rangefinder instead,
+whenever both are healthy (flow quality 100 or better; \file{SOV} logs it). In simulation, with
+that velocity good to 0.3\,m/s, a 10\,m/s drag is caught in 20--30\,s, a 5\,m/s drag in
+about a minute and a 2\,m/s drag in about two, the GPS by then only 260--370\,m off, and
+still no alarm on honest GPS. It ships off: a PMW3901-class sensor is unreliable over grass,
+so turn it on where the ground has texture, after checking \file{SOV} against \file{GPS}
+in a log.
 
 \subsection{TLEs and time}
 
@@ -1420,8 +1451,10 @@ of silicone:
 \file{J11}, \file{J14}, \file{J21}, \file{J22} --- latches: check each one clicks, and pull
 gently on the lead to prove it;
 \item the MMCX on \file{J12} snaps on with a detent; tie the coax down 10--15 mm from it;
-\item the servo plugs on \file{J17}/\file{J23} are a friction fit, held by the printed clip
-over both --- fit the clip before flight;
+\item the servo plugs on \file{J17}/\file{J23} are a friction fit on SMD pads, held by the
+printed clip over both --- fit the clip before flight. On the lander, where the leads take
+load, add an epoxy fillet along each header body too, then pull each lead sideways by hand:
+nothing may move. (Through-hole headers would land their pins on \file{J5}/\file{J11} underneath.)
 \item the LED strip and buzzer are soldered.
 \end{itemize}
 

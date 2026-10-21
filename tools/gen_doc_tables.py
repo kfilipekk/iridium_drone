@@ -76,7 +76,7 @@ def runbook_order():
         out.append("")
     out.append(_tex(f"Total, everything to buy: about GBP {total:.0f}. ") +
                r"Generated from \file{docs/PARTS.csv} by \file{tools/gen\_doc\_tables.py}; " +
-               r"every row's reasoning and link is in the CSV, and \file{docs/BUYING.md} is the same list with prices and provenance tags.")
+               r"every row's reasoning, link and provenance is in the CSV.")
     return "\n".join(out)
 
 
