@@ -102,6 +102,11 @@ SELF_TESTS = [
     ("assy.cpl", [os.path.join(kt.ROOT, "check.py"), "cpl", "--self-test"]),
     ("elec.current", [os.path.join(kt.ROOT, "irdrop.py"), "check", "--self-test"]),
     ("fw.max2112", ["tools/check_soop.py", "max2112", "--self-test"]),
+    ("rf.gain", ["tools/check_soop.py", "gain", "--self-test"]),
+    ("rf.spurs", ["tools/check_soop.py", "spurs", "--self-test"]),
+    ("rf.bench", ["tools/check_soop.py", "bench", "--self-test"]),
+    ("rf.flow", ["tools/check_soop.py", "flow", "--self-test"]),
+    ("solver.dsp", ["tools/check_soop.py", "dsp", "--self-test"]),
 ]
 
 

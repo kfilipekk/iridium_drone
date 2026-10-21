@@ -776,6 +776,14 @@ def traces_self_test():
         cables.CABLES["J14"]["buy"] = keep
         print(f"  {'ok  ' if caught else 'MISS'} {name}")
         bad += not caught
+    #the antenna line with no ground under it must fail the reference-plane rule
+    b = pcbnew.LoadBoard(BOARD)
+    for z in b.Zones():
+        if z.GetNetname() == "GND":
+            z.UnFill()
+    caught = (over_ground(b, "ANT_IN") or 0.0) < REFERENCED["ANT_IN"]
+    print(f"  {'ok  ' if caught else 'MISS'} the antenna line with its ground unfilled")
+    bad += not caught
     print("self-test " + ("FAILED" if bad else "passed"))
     return 1 if bad else 0
 

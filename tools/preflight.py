@@ -656,6 +656,16 @@ def firmware(board):
           "every steady clock folds clear of the DSP's search window" if rc == 0 else
           "a clock harmonic lands where the DSP looks - see tools/check_soop.py spurs")
 
+    rc, out = run("check_soop.py bench")
+    check("firmware", "the bench tool and its LO search work", rc == 0,
+          "soop_bench.py runs, and finds a mistuned recording's LO" if rc == 0 else
+          "soop_bench.py or its LO search fails - see tools/check_soop.py bench")
+
+    rc, out = run("check_soop.py flow")
+    check("firmware", "the guard's flow velocity matches EKF3's model", rc == 0,
+          "soop_flow_velocity inverts EKF3's flow model" if rc == 0 else
+          "the flow velocity disagrees with EKF3's flow model - see tools/check_soop.py flow")
+
     rc, out = run("check_soop.py antenna")
     m = re.search(r'ANT CHECK (?:PASSED|FAILED): (\d+) failure\(s\), (\d+) steps simulated', out)
     check("firmware", "antenna bias feed monitor", rc == 0,

@@ -451,7 +451,28 @@ def score(truth, rows):
                 bands=bands)
 
 
+def dsp_self_test():
+    """The TCXO shaken hard and slow - 3 g x 2 ppb/g at 60 Hz - must fail the solver's needs."""
+    tmp = tempfile.mkdtemp(prefix="soop_dsp_st_")
+    exe, info = soop_dsp_build(tmp)
+    if exe is None:
+        print(f"  FAIL  build: {info.strip()[:300]}")
+        return 1
+    g = soop_dsp_GATES
+    vt = soop_scenario.make_iq(os.path.join(tmp, "v"), 150, seed=21, cn0_lo=42.0, cn0_hi=70.0,
+                               noise_counts=600.0, vib=(2e-9 * 3 * sig.F_RING_ALERT, 60.0))
+    out = subprocess.run([exe, os.path.join(tmp, "v", "iq.bin")], capture_output=True, text=True)
+    rv = score(vt, list(csv.DictReader(out.stdout.splitlines())))
+    caught = rv["p90_strong"] > g["p90_hz"] or rv["within3"] < g["within3_min"]
+    shutil.rmtree(tmp, ignore_errors=True)
+    print(f"  {'ok  ' if caught else 'MISS'}  TCXO shaken 3 g x 2 ppb/g at 60 Hz: p90 "
+          f"{rv['p90_strong']:.2f} Hz, {rv['within3']:.1%} inside 3 sigma")
+    return 0 if caught else 1
+
+
 def run_dsp():
+    if "--self-test" in sys.argv:
+        return dsp_self_test()
     slots = int(sys.argv[sys.argv.index("--slots") + 1]) if "--slots" in sys.argv else 300
     keep = sys.argv[sys.argv.index("--keep") + 1] if "--keep" in sys.argv else None
     print("=== on-board Iridium DSP against a simulated sky ===")
@@ -1345,6 +1366,16 @@ def run_bench():
     if r.returncode:
         print(f"  FAIL  nav_host build: {r.stderr.strip()[:300]}")
         return 1
+    if "--self-test" in sys.argv:
+        #a search that keeps its first try, as a plain clock search does, must miss
+        def first_try(trial, steps=None):
+            fused, clock, sd = trial(0.0)
+            return -clock, fused, [(0.0, fused, clock, sd)]
+        nav, base = bench_sky(tmp, exe)
+        caught = not all(bench_offsets(nav, base, first_try))
+        shutil.rmtree(tmp, ignore_errors=True)
+        print(f"  {'ok  ' if caught else 'MISS'}  a search that keeps its first try")
+        return 0 if caught else 1
     rtl = soop_scenario.make_rtl(os.path.join(tmp, "rtl"))
     r = subprocess.run([sys.executable, os.path.join(HERE, "soop_bench.py"),
                         os.path.join(tmp, "rtl", "rec.cu8"), "--fc", str(rtl["fc"]),
@@ -1358,6 +1389,17 @@ def run_bench():
           + (f"{m.group(1)} of {len(rtl['bursts'])} bursts" if m else
              (r.stderr or r.stdout).strip()[-300:]))
 
+    nav, base = bench_sky(tmp, exe)
+    checks += bench_offsets(nav, base, soop_bench.lo_search)
+    shutil.rmtree(tmp, ignore_errors=True)
+    good = all(checks)
+    print(f"\n{'BENCH OK' if good else 'BENCH FAILED'} - {sum(checks)}/{len(checks)} assertions")
+    return 0 if good else 1
+
+
+def bench_sky(tmp, exe):
+    """A static simulated sky, and nav(shift): that sky as a recording `shift` Hz off."""
+    import soop_bench
     d = os.path.join(tmp, "sky")
     soop_scenario.make_obs(d, seed=61, gps_min=15.0, denial_min=0.0, static=True)
     obs = open(os.path.join(d, "obs.txt")).read().splitlines()
@@ -1382,8 +1424,13 @@ def run_bench():
         return (fused,) + soop_bench.clock_of(r.stderr)
 
     _, base, _ = nav(0.0)                     #the scenario's own TCXO error
+    return nav, base
+
+
+def bench_offsets(nav, base, search):
+    checks = []
     for off in BENCH_OFFSETS:
-        corr, fused, tried = soop_bench.lo_search(lambda s, off=off: nav(off + s))
+        corr, fused, tried = search(lambda s, off=off: nav(off + s))
         err = corr + off + base
         good = abs(err) <= BENCH_LO_HZ
         checks.append(good)
@@ -1391,10 +1438,7 @@ def run_bench():
               f"{corr / 1e3:+.3f} kHz, {err:+.0f} Hz from right (limit {BENCH_LO_HZ:.0f}); "
               f"{fused} fused at the best try, "
               + ", ".join(f"{s / 1e3:+.0f}k:{n}" for s, n, _, _ in tried))
-    shutil.rmtree(tmp, ignore_errors=True)
-    good = all(checks)
-    print(f"\n{'BENCH OK' if good else 'BENCH FAILED'} - {sum(checks)}/{len(checks)} assertions")
-    return 0 if good else 1
+    return checks
 
 
 #flow
@@ -1582,10 +1626,9 @@ def dsp_at(exe, tmp, noise, slots):
     return ok, rate, r, truth["clipped_samples"]
 
 
-def run_gain():
-    slots = int(sys.argv[sys.argv.index("--slots") + 1]) if "--slots" in sys.argv else 150
+def gain_corners():
+    """The chain at its nominal parts, and at its quietest and loudest ends."""
     A, T = design.RF_PARTS["antenna"], design.RF_PARTS["tuner"]
-    print("=== the analogue chain's noise at the ADC ===")
     vgc, gc_max = gc_loss_max()
     doubt = T["ref_bbg_doubt"]
     nom = gain_plan(A["t_ant_k"], A["gain_db"], T["ref_bbg"], gc_max / 2)
@@ -1593,14 +1636,15 @@ def run_gain():
                    gc_max)
     hi = gain_plan(A["t_ant_range_k"][1], A["gain_db"] + A["gain_tol_db"], T["ref_bbg"] - doubt,
                    0.0)
-    print(f"    T_sys {nom['t_sys']:.0f} K, {nom['n0_dbm']:.1f} dBm/Hz into the MAX2112; GC1 "
-          f"{vgc:.2f} V (0-{gc_max:.1f} dB under max gain), BBG {firmware_bbg()}")
-    print(f"    noise per rail: {nom['counts']:.0f} counts (spread {lo['counts']:.0f}-"
-          f"{hi['counts']:.0f}); the DSP gates assume 600")
-    checks = []
+    return vgc, gc_max, nom, lo, hi
+
+
+def gain_checks(lo, hi):
+    """(good, text) for the converter's margin, the tuner's compression and the ADC's scale."""
+    T = design.RF_PARTS["tuner"]
     adc_noise = 65536 / 2 ** ADC_ENOB / math.sqrt(12) / math.sqrt(sig.ADC_OVS)
     margin = 20 * math.log10(lo["counts"] / adc_noise)
-    for good, text in (
+    return (
             (margin >= 20.0, f"the converter's own noise ({adc_noise:.1f} counts at ENOB "
              f"{ADC_ENOB:.0f}) is {margin:.0f} dB under the chain's at its quietest (need 20): "
              f"it costs {10 * math.log10(1 + 10 ** (-margin / 10)):.2f} dB"),
@@ -1610,7 +1654,36 @@ def run_gain():
              f"against {T['p1db_vpp']:.0f} Vp-p compression"),
             (CREST * hi["adc_rms"] <= sig.ADC_FULL_SCALE,
              f"the ADC sees {hi['adc_rms']:.0f} counts rms at its loudest, "
-             f"{20 * math.log10(sig.ADC_FULL_SCALE / hi['adc_rms']):.0f} dB under full scale")):
+             f"{20 * math.log10(sig.ADC_FULL_SCALE / hi['adc_rms']):.0f} dB under full scale"))
+
+
+def gain_self_test():
+    """A BBG of 5 must compress the tuner; a 4-bit converter must sink the chain's noise."""
+    global ADC_ENOB, firmware_bbg
+    keep = ADC_ENOB, firmware_bbg
+    bad = 0
+    for name, enob, bbg in (("BBG 5", ADC_ENOB, lambda: 5), ("ENOB 4", 4.0, firmware_bbg)):
+        ADC_ENOB, firmware_bbg = enob, bbg
+        _, _, _, lo, hi = gain_corners()
+        caught = not all(g for g, _ in gain_checks(lo, hi))
+        ADC_ENOB, firmware_bbg = keep
+        print(f"  {'ok  ' if caught else 'MISS'}  {name}")
+        bad += not caught
+    return 1 if bad else 0
+
+
+def run_gain():
+    if "--self-test" in sys.argv:
+        return gain_self_test()
+    slots = int(sys.argv[sys.argv.index("--slots") + 1]) if "--slots" in sys.argv else 150
+    print("=== the analogue chain's noise at the ADC ===")
+    vgc, gc_max, nom, lo, hi = gain_corners()
+    print(f"    T_sys {nom['t_sys']:.0f} K, {nom['n0_dbm']:.1f} dBm/Hz into the MAX2112; GC1 "
+          f"{vgc:.2f} V (0-{gc_max:.1f} dB under max gain), BBG {firmware_bbg()}")
+    print(f"    noise per rail: {nom['counts']:.0f} counts (spread {lo['counts']:.0f}-"
+          f"{hi['counts']:.0f}); the DSP gates assume 600")
+    checks = []
+    for good, text in gain_checks(lo, hi):
         checks.append(good)
         print(f"  {'ok  ' if good else 'FAIL'}  {text}")
 
@@ -1684,6 +1757,10 @@ def mcuconf_agrees(hse):
     src = open(MCUCONF).read()
     m = re.search(r"#elif STM32_HSECLK == %dU\n(.*?)#elif" % int(hse), src, re.S)
     common = re.search(r"common clock tree for multiples of 8MHz crystals(.*?)#elif", src, re.S)
+    #the custom 480 MHz branch sits inside that block: only the default tree counts
+    if common:
+        common = re.match(r"(.*)", re.sub(r"#ifdef HAL_CUSTOM_MCU_CLOCKRATE.*?#else", "",
+                                          common.group(1), flags=re.S), re.S)
     bad = []
     for pll, (dm, n, p, q, r) in PLLS.items():
         k = pll[-1]
@@ -1716,7 +1793,28 @@ def landings(clocks, lo_off):
     return hits
 
 
+def spurs_self_test():
+    """A clock on Ring Alert / 65 must be flagged; a PLL the mcuconf does not build, refused."""
+    global PLLS
+    hse, clocks = board_clocks()
+    bad = 0
+    hits = [h for h in landings(clocks + [("on Ring Alert / 65", sig.F_RING_ALERT / 65)],
+                                sig.LO_OFFSET_HZ) if h[4] < SPUR_ATTEN_DB]
+    caught = any(h[0] == "on Ring Alert / 65" for h in hits)
+    print(f"  {'ok  ' if caught else 'MISS'}  a clock whose 65th harmonic is Ring Alert")
+    bad += not caught
+    keep = PLLS
+    PLLS = dict(PLLS, PLL1=(1, 120, 2, 12, 2))
+    caught = bool(mcuconf_agrees(hse))
+    PLLS = keep
+    print(f"  {'ok  ' if caught else 'MISS'}  a 480 MHz PLL1 the 400 MHz mcuconf does not build")
+    bad += not caught
+    return 1 if bad else 0
+
+
 def run_spurs():
+    if "--self-test" in sys.argv:
+        return spurs_self_test()
     print("=== the board's clocks against the Ring Alert search window ===")
     hse, clocks = board_clocks()
     checks = []

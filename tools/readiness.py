@@ -87,6 +87,12 @@ PREREQUISITES = [
     dict(id="rf.spurs", cls=GATED, tool="check_soop.py spurs",
          claim="no crystal-locked clock's harmonic folds into the Ring Alert search window, "
                "at any LO offset soop.cfg can set"),
+    dict(id="rf.bench", cls=GATED, tool="check_soop.py bench",
+         claim="soop_bench.py runs end to end, and its LO search finds a crystal-referenced "
+               "receiver's error (the Pluto's, up to 40 kHz) rather than a channel alias"),
+    dict(id="rf.flow", cls=GATED, tool="check_soop.py flow",
+         claim="the guard's flow velocity inverts EKF3's own flow model at any attitude to 40 "
+               "deg, and refuses a steeper one"),
     dict(id="elec.sim", cls=GATED, tool="check_soop.py spice",
          claim="the analogue blocks - the buck output filters, the payload buck under a "
                "double servo stall, the battery hot-plug transient, the MAX2112 PLL loop "
