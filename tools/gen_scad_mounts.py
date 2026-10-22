@@ -86,6 +86,16 @@ def geometry():
     g["range"] = dict(y=rc["y0"], x=rc["x"], yl=rc["y"], top_t=rc["top_t"], lid_t=rc["lid_t"],
                       body_h=rc["top_t"] + rd["H"] + 0.3, holes=[list(j[:2]) for j in
                                                                    rc["joints"][0]["at"]])
+    rr, ra = MT["radar_cradle"], MP["radar"]
+    px, py = ra["L"] / 2 + 0.2, ra["W"] / 2 + 0.2
+    ox, oy = px + rr["wall"], py + rr["wall"]
+    g["radar"] = dict(y=rr["y0"], px=px, py=py, ox=ox, oy=oy, floor_t=rr["floor_t"],
+                      cbore=rr["cbore"], lid_t=rr["lid_t"], lip=rr["lip"], h=ra["H"],
+                      body_h=rr["floor_t"] + rr["gap"] + ra["H"],
+                      #the lid's inserts in bosses run into the side walls
+                      boss_x=ox + boss_d("M2") / 2 - 0.8, bd=boss_d("M2"),
+                      holes=[list(j[:2]) for j in rr["joints"][0]["at"]],
+                      nuts=[list(n) for n in rr["press_nuts"]], relief=list(rr["press_nut_relief"]))
     rt, rb = MT["rid_tray"], MP["remote_id"]
     ux, uy = rt["arm"][0] / 2 ** 0.5, rt["arm"][1] / 2 ** 0.5
     lp, wp = rb["L"] + 2 * rt["gap"], rb["W"] + 2 * rt["gap"]
@@ -380,6 +390,48 @@ module belly_sensor() {{
         box({-rd['L'] / 2}, {rd['L'] / 2}, {-rd['W'] / 2}, {rd['W'] / 2}, 0, {rd['H']});
 }}
 
+// ---- radar cradle: the IWR6843AOP face down, forward of the lidar bracket -------------
+// Two M2 through the floor into nuts on the plate's top face, heads counterbored in the
+// pocket; the lid screws into two inserts and holds the board by its edge, its window over
+// the antennas. The floor clears the plate's press nuts, and the gap over the heat sink
+// vents out of both sides.
+radar_y      = {G['radar']['y']};
+radar_body_h = {G['radar']['body_h']:.2f};
+module radar_cradle() {{
+    px = {G['radar']['px']:.2f}; py = {G['radar']['py']:.2f}; ox = {G['radar']['ox']:.2f}; oy = {G['radar']['oy']:.2f};
+    f = {G['radar']['floor_t']}; bx = {G['radar']['boss_x']:.2f}; h = radar_body_h;
+    //render(): the preview otherwise hides the radar in the pocket and the lid's window
+    color("#d9822b") render() difference() {{
+        union() {{
+            box(-ox, ox, radar_y - oy, radar_y + oy, -h, 0);
+            for (s = [-1, 1]) translate([s * bx, radar_y, -h]) cylinder(d = {G['radar']['bd']:.1f}, h = h, $fn = 32);
+        }}
+        box(-px, px, radar_y - py, radar_y + py, -h - 1, -f);                       // the pocket
+        for (s = [-1, 1]) translate([s * bx, radar_y, -h]) bore(ins_m2, false);
+        for (p = {G['radar']['holes']}) translate([p[0], p[1], -f]) {{ hole({CLEAR['M2']}, f); translate([0, 0, -1]) cylinder(d = {HEAD['M2']}, h = {G['radar']['cbore']} + 1, $fn = 24); }}
+        for (n = {G['radar']['nuts']}) translate([n[0], n[1], -{G['radar']['relief'][1]}]) cylinder(d = {G['radar']['relief'][0]}, h = {G['radar']['relief'][1]} + 1, $fn = 32);
+        for (s = [-1, 1], v = [-1, 1])                                          // vents over the heat sink
+            box(s * ox - 1.5, s * ox + 1.5, radar_y + v * 4 - 3, radar_y + v * 4 + 3, -f - {MT['radar_cradle']['gap']}, -f);
+        box(-4, 4, radar_y - oy - 1, radar_y - py + 0.01, -h - 1, -h + 4);          // the lead, out of the front wall
+    }}
+}}
+module radar_lid() {{
+    px = {G['radar']['px']:.2f}; py = {G['radar']['py']:.2f}; ox = {G['radar']['ox']:.2f}; oy = {G['radar']['oy']:.2f};
+    bx = {G['radar']['boss_x']:.2f}; w = {G['radar']['lip']}; t = {G['radar']['lid_t']};
+    color("#e0a050") translate([0, 0, -radar_body_h - t]) render() difference() {{
+        union() {{
+            box(-ox, ox, radar_y - oy, radar_y + oy, 0, t);
+            for (s = [-1, 1]) translate([s * bx, radar_y, 0]) cylinder(d = {G['radar']['bd']:.1f}, h = t, $fn = 32);
+        }}
+        box(-px + w, px - w, radar_y - py + w, radar_y + py - w, -1, t + 1);       // the antennas' window
+        for (s = [-1, 1]) translate([s * bx, radar_y, 0]) hole({CLEAR['M2']}, t);
+    }}
+}}
+module radar() {{
+    color("#1d2a3a") box({-MP['radar']['L'] / 2}, {MP['radar']['L'] / 2}, radar_y - {MP['radar']['W'] / 2}, radar_y + {MP['radar']['W'] / 2},
+                         -radar_body_h, -radar_body_h + {MP['radar']['H']});
+}}
+
 // ---- Remote ID on the rear-port arm ({MP['remote_id']['name']}) ----------------------
 // A tray on the arm's top face holds the board in a pocket; the cover screws into the
 // tray's two M2 inserts and traps it; two cable ties over the cover's grooves hold the lot
@@ -422,6 +474,7 @@ module mounts() {{
     antenna_tower(); gps_pod(); gps_lid(); nose_mount(); xiao_lid(); rx_cover();
     lidar_bracket();
     range_cradle(); range_lid();
+    radar_cradle(); radar_lid();
     rid_tray(); rid_cover();
 }}
 module mounted_parts() {{
@@ -439,6 +492,8 @@ module print_rx_cover()      {{ translate([0, 0, -(rx_bot - {N['rx_cover']})]) r
 module print_lidar_bracket() {{ translate([0, 0, lidar_bracket_t]) lidar_bracket(); }}
 module print_range_cradle()  {{ rotate([180, 0, 0]) range_cradle(); }}
 module print_range_lid()     {{ translate([0, 0, range_body_h + {R['lid_t']}]) range_lid(); }}
+module print_radar_cradle()  {{ rotate([180, 0, 0]) radar_cradle(); }}
+module print_radar_lid()     {{ translate([0, 0, radar_body_h + {G['radar']['lid_t']}]) radar_lid(); }}
 module print_rid_tray()      {{ rid_tray_local(); }}
 module print_rid_cover()     {{ translate([0, 0, {G['rid']['base_t'] + G['rid']['h'] + G['rid']['cover_t']}]) rotate([180, 0, 0]) rid_cover_local(); }}
 module print_skid()          {{ translate([0, 0, {design.skid_geometry()['top']}]) rotate([180, 0, 0]) skid_local(); }}
@@ -446,7 +501,8 @@ module print_skid()          {{ translate([0, 0, {design.skid_geometry()['top']}
 
 
 PRINTED = ["antenna_tower", "gps_pod", "gps_lid", "nose_mount", "xiao_lid", "rx_cover", "lidar_bracket",
-           "range_cradle", "range_lid", "rid_tray", "rid_cover", "skid"]
+           "range_cradle", "range_lid", "radar_cradle", "radar_lid", "rid_tray", "rid_cover",
+           "skid"]
 
 
 def export_stl(dest=PRINT_DIR, quiet=False):

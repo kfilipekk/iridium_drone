@@ -216,6 +216,7 @@ stack_screws();
 if (show_rec_cam) rec_cam();
 belly_sensor();
 lidar360();
+radar();
 mounts();
 mounted_parts();
 if (show_plugs) plugs();

@@ -915,12 +915,14 @@ cad_fit_SCAD = os.path.join(CAD, "drone.scad")
 #the SCAD module that draws each part design.MOUNTED and design.MOUNTS name
 MODULE = {"iridium_antenna": "iridium_antenna", "gps": "gps", "rx": "rx",
           "elrs_antenna": "elrs_antennas", "xiao": "rec_cam", "lidar": "lidar360",
-          "range_down": "belly_sensor", "remote_id": "remote_id"}
+          "range_down": "belly_sensor", "remote_id": "remote_id", "radar": "radar"}
 #the printed parts that close a mount
 LIDS = {"gps_pod": ("antenna_tower", "gps"), "gps_lid": ("gps_pod", "gps"),
         "xiao_lid": ("nose_mount", "xiao"), "rx_cover": ("nose_mount", "rx"),
-        "range_lid": ("range_cradle", "range_down"), "rid_cover": ("rid_tray", "remote_id")}
+        "range_lid": ("range_cradle", "range_down"), "rid_cover": ("rid_tray", "remote_id"),
+        "radar_lid": ("radar_cradle", "radar")}
 MOUNTS = sorted(design.MOUNTS)
+MOUNTS_LIDAR_T = design.MOUNTS["lidar_bracket"]["plate"]["t"]
 PRINTED = MOUNTS + sorted(LIDS)
 #parts that belong to the airframe and are held by it
 AIRFRAME = ["battery", "esc", "fc", "frame", "motors", "props", "skids", "stack_screws"]
@@ -955,7 +957,54 @@ GROUND_PARTS = {
     "belly_sensor": 5.0,   #downward rangefinder
     "range_lid":    5.0,
     "xiao_lid":     5.0,   #the nose camera hangs under the mid plate
+    "radar_lid":    5.0,
 }
+#the radar's own housing is not in its way
+RADAR_HOUSING = ("radar", "radar_cradle", "radar_lid")
+
+
+def ray_hits(o, d, tri):
+    """Moller-Trumbore: does the ray from o along d cross the triangle."""
+    a, b, c = tri
+    e1, e2 = [b[i] - a[i] for i in range(3)], [c[i] - a[i] for i in range(3)]
+    p = (d[1] * e2[2] - d[2] * e2[1], d[2] * e2[0] - d[0] * e2[2], d[0] * e2[1] - d[1] * e2[0])
+    det = sum(e1[i] * p[i] for i in range(3))
+    if abs(det) < 1e-12:
+        return False
+    tv = [o[i] - a[i] for i in range(3)]
+    u = sum(tv[i] * p[i] for i in range(3)) / det
+    if u < 0.0 or u > 1.0:
+        return False
+    q = (tv[1] * e1[2] - tv[2] * e1[1], tv[2] * e1[0] - tv[0] * e1[2], tv[0] * e1[1] - tv[1] * e1[0])
+    v = sum(d[i] * q[i] for i in range(3)) / det
+    if v < 0.0 or u + v > 1.0:
+        return False
+    return sum(e2[i] * q[i] for i in range(3)) / det > 1e-6
+
+
+def radar_view(parts, box):
+    """The radar's cone, ray by ray: which directions something on the aircraft blocks.
+    Azimuth from the nose, clockwise from above; nadir angle from straight down."""
+    lo, hi = box["radar"]
+    o = ((lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, lo[2] - 0.01)
+    half = design.MOUNTED["radar"]["fov_half_deg"]
+    tris = [t for n, ts in parts.items() if n not in RADAR_HOUSING for t in ts
+            if min(v[2] for v in t) < o[2]]
+    rays = []
+    for th in range(1, int(half), 2):
+        for ph in range(0, 360, 3):
+            st, ct = math.sin(math.radians(th)), math.cos(math.radians(th))
+            d = (st * math.sin(math.radians(ph)), -st * math.cos(math.radians(ph)), -ct)
+            rays.append((ph, th, st, any(ray_hits(o, d, t) for t in tris)))
+    return rays
+
+
+def ignored(ph, th):
+    for a0, a1, n0 in design.RADAR_VIEW["ignore"]:
+        inside = a0 <= ph <= a1 if a0 <= a1 else (ph >= a0 or ph <= a1)
+        if inside and th >= n0:
+            return True
+    return False
 
 #pairs that touch by design
 CONTACT_OK = {
@@ -1365,6 +1414,40 @@ def run_cad_fit():
         if not ok:
             fails.append(f"{n}: {worst[1]} rises {worst[0]:.1f} deg above it, inside the "
                          f"{mask:.0f} deg mask")
+
+    print(f"\nradar view (+-{design.MOUNTED['radar']['fov_half_deg']:.0f} deg about straight down)")
+    rays = radar_view(parts, box)
+    total = sum(st for *_, st, _ in rays)
+    blocked = [(ph, th) for ph, th, st, hit in rays if hit]
+    frac = sum(st for ph, th, st, hit in rays if hit) / total
+    loose = [(ph, th) for ph, th in blocked if not ignored(ph, th)]
+    cap = design.RADAR_VIEW["max_blocked"]
+    print(f"  {frac:.1%} of the cone's solid angle blocked (limit {cap:.0%})  "
+          f"{'ok' if frac <= cap else 'FAIL'}")
+    if frac > cap:
+        fails.append(f"radar: {frac:.1%} of its cone is blocked, over {cap:.0%}")
+    if blocked:
+        az = sorted({ph for ph, _ in blocked})
+        print(f"  blocked from azimuth {az[0]} to {az[-1]} deg, from {min(th for _, th in blocked)} "
+              f"deg off nadir")
+    print(f"  {len(loose)} blocked direction(s) outside design.RADAR_VIEW['ignore']  "
+          f"{'ok' if not loose else 'FAIL'}")
+    if loose:
+        fails.append(f"radar: {len(loose)} blocked direction(s) the firmware would not ignore, "
+                     f"e.g. azimuth {loose[0][0]} deg, {loose[0][1]} deg off nadir - add the "
+                     f"wedge to design.RADAR_VIEW['ignore']")
+    sp = design.OFFBOARD["lidar"]["scan_plane_height_mm"]
+    low = min(v[2] for t in parts["radar_lid"] for v in t)
+    if sp is None:
+        warns.append(f"radar: hangs to z = {low:.1f} mm; the LD06's scan plane is unmeasured, so "
+                     f"whether the radar cuts it is unchecked - caliper the window height")
+    else:
+        scan_z = -MOUNTS_LIDAR_T - sp
+        ok = low >= scan_z + 2.0
+        print(f"  lowest point z {low:.1f} against the LD06's scan plane at {scan_z:.1f}  "
+              f"{'ok' if ok else 'FAIL'}")
+        if not ok:
+            fails.append(f"radar: hangs to z = {low:.1f}, into the LD06's scan plane at {scan_z:.1f}")
 
     print("\nmounts: every part off the board on a printed mount, held by screws")
     import fasteners

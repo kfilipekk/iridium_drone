@@ -701,7 +701,7 @@ PAYLOAD = dict(
     serial_unrouted=[(4, "USART3"),   #PD8/PD9 stop at the MCU
                      (5, "UART8"),    #declared in hwdef, no nets in the design at all
                      (6, "EMPTY")],   #UART4 gave PB8 to servo PWM7; SERIAL6 has no UART
-    serial_earmarked=[(1, "companion computer, MAVLink2 + OPTICAL_FLOW on J21"),
+    serial_earmarked=[(1, "downward radar on J21, or a companion instead of it"),
                       (2, "360 lidar, PRX1_TYPE 16")],
     power_5v=["J21.1", "J22.1", "P151", "J5.1", "J9.1", "J11.1"],
     gnd=["J21.6", "J22.2", "P153", "J5.4", "J9.4", "J11.4"],
@@ -817,6 +817,13 @@ MOUNTED = dict(
     range_down=dict(name="Benewake TFS20-L", L=15.0, W=21.0, H=7.87, g=1.35,
                     src="[D] Benewake TFS20-L datasheet: 21 x 15 mm board, 7.87 mm tall, "
                         "1.35 g, no mounting holes, so it sits in a cradle under a lid"),
+    #the downward velocity radar: antennas on the chip, which faces the ground
+    radar=dict(name="TI IWR6843AOPEVM mission board (60-64 GHz, antennas on package)",
+               L=30.0, W=22.0, H=9.0, g=15.0, fov_half_deg=60.0,
+               src="[D] TI SWRU546E: +-60 deg azimuth and elevation, 50 % duty at most, heat "
+                   "sink recommended, UART out through a CP2105 in modular mode; [A] 30 x 22 mm, "
+                   "9 mm over the heat sink, 15 g - TI publishes no board dimensions. MEASURE "
+                   "ON ARRIVAL and re-run check_mech.py cad_fit"),
     remote_id=dict(name="Holybro Remote ID (PCB, ArduRemoteID)", L=35.3, W=23.5, H=6.0, g=6.0,
                    src="[L] docs.holybro.com Remote ID: PCB 35.3 x 23.5 mm, 4 g, JST-GH 4P CAN, "
                        "IPEX antenna; [A] 6 mm over its parts and 2 g for the antenna"),
@@ -901,6 +908,22 @@ MOUNTS = dict(
                      layers=[("lid", "lid_t"), ("cradle", "body_h"),
                              ("bottom plate", FRAME["bottom_t"])], into="nut")],
         print_note="top down"),
+    #the radar, in the 26 mm strip between the plate's front edge and the lidar bracket
+    radar_cradle=dict(
+        carries=("radar",),
+        y0=-10.0, wall=1.2, floor_t=3.5, cbore=2.0, gap=1.5, lid_t=1.5, lip=2.0,
+        #the arm screws' press nuts in the plate's underside
+        press_nuts=[(-10.0, -10.0), (10.0, -10.0), (-15.25, -15.25), (15.25, -15.25)],
+        press_nut_relief=(7.0, 1.5),
+        joints=[dict(where="radar cradle to bottom plate, the forward M2 pair", size="M2",
+                     qty=2, at=[(-8.0, -19.75, 0.0), (8.0, -19.75, 0.0)],
+                     layers=[("cradle floor, under the counterbored head", "floor_t-cbore"),
+                             ("bottom plate", FRAME["bottom_t"])], into="nut"),
+                dict(where="radar lid to its cradle", size="M2", qty=2,
+                     layers=[("lid", "lid_t")], into="insert")],
+        #[U] the nuts go on the plate's top face, under the front arms' roots: check there
+        #is room on the frame, or fall back to the aft strip (docs/navcore-runbook.tex)
+        print_note="floor on the bed"),
     #the Remote ID board on the rear-port arm's top face
     rid_tray=dict(
         carries=("remote_id",),
@@ -909,6 +932,14 @@ MOUNTS = dict(
                      layers=[("cover", "cover_t")], into="insert")],
         print_note="base on the bed; the cover top down"),
 )
+#what the radar may not see: check_mech.py cad_fit fails a blocked direction this does not
+#list, and the firmware drops points in these wedges. Azimuth from the nose, clockwise
+#seen from above (90 = starboard), nadir angle from straight down; all degrees.
+RADAR_VIEW = dict(
+    #the LD06, aft: blocked 132-228 deg from 33 deg off nadir, plus one ray step each way
+    ignore=[(129, 231, 31)],
+    max_blocked=0.20,              #of the cone's solid angle
+    src="[M] tools/check_mech.py cad_fit, against cad/drone.scad")
 OFFBOARD["lidar"]["mount_y_mm"] = MOUNTS["lidar_bracket"]["lidar_y0"]
 
 
@@ -2316,6 +2347,19 @@ MODULES = {
         gbp=12, status="later",
         ma_5v=0, counted=True,
         note="External PMW3901 flow breakout connects via J14 on SPI3"),
+    "radar_velocity": dict(
+        what="TI IWR6843AOP 60 GHz radar, looking down: ground velocity from Doppler",
+        lands_on=["J21"],
+        conn="SERIAL1 (UART7) on J21: the radar's data UART TX to the FC's RX, its CLI UART "
+             "RX from the FC's TX, tapped on the chip side of the EVM's CP2105; J21's 5 V "
+             "pin left unconnected",
+        needs_board_change=None, gbp=150, status="later",
+        ma_5v=0, counted=True,
+        note="[A] ~2 W (the chip alone is 1.2 W at a typical duty cycle, TI E2E), so 5 V from "
+             "its OWN BEC off the battery leads: J21's 5 V is the FC rail, and on "
+             "+5V_PAYLOAD its 0.4 A takes U20 to 132 C on the drone mission. J21 is one "
+             "UART, so the radar and a companion are alternatives, and the radar is the one "
+             "the H743 runs itself. Mount: MOUNTS['radar_cradle']"),
     "payload_5v_rail": dict(
         what="on-board 5 V buck for payload/servos", lands_on=["J17", "J23", "J11"], conn="+5V_PAYLOAD",
         needs_board_change=None,

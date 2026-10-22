@@ -471,6 +471,9 @@ SHARED_BY_DESIGN = {
                                   "different-address alternative, never fitted together",
     ("rangefinder_up", "J9"): "I2C bus - 0x29; the other rangefinder (0x10) is a "
                                 "different-address alternative, never fitted together",
+    #J21 is one UART: the radar or a companion, never both
+    ("radar_velocity", "J21"): "one UART - the radar replaces the deferred companion",
+    ("flow_globalshutter", "J21"): "one UART - the radar replaces the deferred companion",
 }
 
 RAIL_BY_NATURE = {
