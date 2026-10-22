@@ -1702,14 +1702,12 @@ can be fixed, and one of them (\file{U8}) may force one anyway.
 \file{VBAT} and the ESC's battery pin through \file{U8} and \file{Q4}.
 \item \textbf{Four pads arrive unlabelled} (Section~\ref{sec:T3d}) because a 1.0\,mm label,
 placed where it reads as its own pad's, has nowhere to go among them.
-\item \textbf{The payload rail cannot carry every payload connector at once}: 1.43 A is
-inside \file{L5}'s 2.1 A, but puts \file{U20} at about 132\,\degC{} against 125\,\degC{}
+\item \textbf{The payload rail cannot carry every payload connector at once}: 1.48 A is
+inside \file{L5}'s 2.1 A, but puts \file{U20} at about 135\,\degC{} against 125\,\degC{}
 (\file{check\_order.py modules}). Each declared mission fits.
 \item \textbf{The Economic variant saves one part and not the feeder fees}, which makes it a
 worse deal than it reads as (Section 15.1).
 \item \textbf{In4 rail fragmentation} is an accepted warning on this board.
-\item \textbf{The 1620 MHz SAW filter is not stocked at LCSC}, so the RF front end needs a
-second supplier and a separate board.
 \end{itemize}
 
 % =============================================================================
