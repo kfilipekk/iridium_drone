@@ -318,7 +318,7 @@ budget is staged, this is the order. The table is generated from \file{docs/PART
 CSV.
 
 % BEGIN GENERATED ORDER
-\subsubsection*{A1 --- The board, and its bench} 9 lines, about GBP 337.
+\subsubsection*{A1 --- The board, and its bench} 10 lines, about GBP 345.
 Power it, flash it, prove it - no aircraft. Runbook Parts 7-10 (T1-T3a).
 
 \begin{longtable}{@{}P{0.50\textwidth}P{0.12\textwidth}rP{0.22\textwidth}@{}}
@@ -336,6 +336,7 @@ JST GH 8P single-ended pigtail, GHR-08V-S (T1 bench feed into J2) & 2 & 3 & AliE
 Bench power supply, adjustable with CURRENT LIMIT & 1 & 35 & AliExpress \\
 Thermocouple meter or IR thermometer & 1 & 14 & AliExpress \\
 Foam: open-cell block over the baro, closed-cell pad on the ESC & 1 small sheet each & 5 & anywhere \\
+Kapton tape, RTV silicone, and a foam cap for Y2 & 1 each & 8 & anywhere \\
 \end{longtable}
 Already have: Soldering iron and basic tools, Multimeter with continuity buzzer.
 
@@ -411,7 +412,7 @@ XIAO ESP32S3 Sense (recording camera) & 1 & 14 & AliExpress \\
 JST GH 3P lead, GHR-03V-S pigtail (J22 payload 5 V) & 2 & 2 & AliExpress \\
 \end{longtable}
 
-Total, everything to buy: about GBP 818. Generated from \file{docs/PARTS.csv} by \file{tools/gen\_doc\_tables.py}; every row's reasoning, link and provenance is in the CSV.
+Total, everything to buy: about GBP 826. Generated from \file{docs/PARTS.csv} by \file{tools/gen\_doc\_tables.py}; every row's reasoning, link and provenance is in the CSV.
 % END GENERATED ORDER
 
 \flag{Do not buy a bare PMW3901 or VL53L1X chip to hand-fit.} Both were deleted from the
@@ -844,6 +845,45 @@ records it once a second as \file{SOA}.
 \item The orbits on the card are fresh: \file{APM/SOOP/iridium.tle} fetched within the
 last few days. The filter ignores elements older than 7 days (Part~11, TLEs and time).
 \end{itemize}
+
+\subsection{The downward radar --- research first, then this}
+
+The radar is the velocity source the GNSS-denied fix is waiting for. In simulation the error is
+set by the flight EKF's velocity once the GPS is gone: 220\,m median at 1\,m/s, 33\,m at
+0.1\,m/s, 12\,m at 0.03\,m/s (\cmd{python3 tools/check\_soop.py sweep}). Better orbits, a
+steadier TCXO or a better barometer barely move it. A TI IWR6843AOP looking down reads each
+ground return's speed from its Doppler, so grass and sunlight do not defeat it the way they
+defeat a flow sensor, and a GPS spoofer cannot drag it. It is not an obstacle sensor: its
+$\pm$60$^\circ$ cone looks at the ground, never at the horizon.
+
+\flag{Nothing in the firmware reads it yet.} Buy it after the desk research (the module, the
+chirp that sees $\pm$20\,m/s, the published ego-velocity error fed through the sweep), and
+fly it only once \file{AP\_SoOP} has the driver and \file{check\_soop.py} gates it.
+
+\begin{enumerate}
+\item \textbf{Measure the board} before printing. TI publishes no dimensions, so
+\file{design.MOUNTED['radar']} is assumed (30 $\times$ 22 $\times$ 9\,mm, 15\,g). Enter the real
+figures, run \cmd{python3 tools/gen\_scad\_mounts.py --stl} and
+\cmd{python3 tools/check\_mech.py cad\_fit}. The cradle has 26\,mm between the plate's front edge
+and the lidar bracket; if the board is deeper than 22\,mm, the radar moves aft and the TFS20-L
+forward.
+\item \textbf{Check the nut side.} The cradle hangs from the plate's forward M2 pair, with nuts
+on the plate's top face under the front arms' roots. Look before printing: if there is no room
+for a nut, the radar takes the aft position instead.
+\item \textbf{Caliper the LD06's window height} above its base and enter it as
+\file{OFFBOARD['lidar']['scan\_plane\_height\_mm']}. Until then cad\_fit warns that it cannot
+say whether the radar cuts the LD06's scan; the radar hangs 15.5\,mm, the LD06 38.3.
+\item \textbf{Break off the mission board} and tap the IWR6843's CLI UART RX and data UART TX on
+the chip side of the CP2105: the EVM's UART otherwise leaves as USB, which the H743 cannot
+host. Wire them to a GH-6P lead for \file{J21} (SERIAL1), its 5\,V pin left unconnected. The
+radar draws about 2\,W, so its 5\,V comes from its own BEC off the battery leads: \file{J21}'s
+pin is the FC rail, and on the payload rail its 0.4\,A would take \file{U20} to 132\,\degC{} on
+the drone mission. Fit TI's heat sink, which faces the cradle's vented floor.
+\item \textbf{Fit it face down} in \file{radar\_cradle} (two M2 $\times$ 8 through the counterbored
+floor into lock nuts on the plate), then \file{radar\_lid} (two M2 $\times$ 4 into the cradle's
+inserts). The LD06 fills the aft 132--228$^\circ$ of its cone from 33$^\circ$ off nadir;
+\file{design.RADAR\_VIEW} lists that wedge, and cad\_fit fails a blocked direction it does not.
+\end{enumerate}
 
 \subsection{The harness --- six runs, and how not to make a nest of them}
 
@@ -1438,6 +1478,14 @@ socket \file{J8}, the MMCX \file{J12}, \file{SW1}/\file{SW2}, the Tag-Connect pa
 every test and solder pad (\file{docs/img/padmap.svg}), the four stack holes, and \file{U4}'s
 baro port --- coat that and the barometer reads the coating. Coat both sides, let it cure,
 then refit the foam.
+\item \textbf{A foam cap on \file{Y2}}, the tuner's TCXO on the underside: 3\,mm open-cell,
+edge-glued, not pressed on the part. It is against sudden steps and prop wash, not slow drift,
+which the filter absorbs (\cmd{check\_soop.py sweep}). Fit it after T3b step 2, so the bench
+measures the bare part first.
+\item \textbf{Kapton over the microSD card} (\file{J8}): the catalogue, \file{soop.cfg} and the
+dead-reckoning applet are on it, and vibration walks a push-push card out.
+\item \textbf{Neutral-cure RTV} on \file{L2}, \file{L5}, \file{J12} and \file{J1} --- never on
+\file{Y1}, \file{Y2} or the IMUs, because a stressed crystal changes frequency.
 \end{itemize}
 
 \subsection{Staking the plugs}
@@ -1476,6 +1524,24 @@ three prearm faults no build check saw.
 
 \textbf{Everything past GPS Loiter is research.} GNSS-denied position hold is
 uncharacterised until T3b is measured.
+
+\subsection{T5b --- the velocity the aircraft really has}
+
+The simulations assume the EKF's velocity drifts 1\,m/s once the GPS is gone. Measure it
+instead, with no new hardware:
+
+\begin{enumerate}
+\item Set \file{LOG\_REPLAY 1} and \file{LOG\_DISARMED 0}, do T3c (\file{INS\_TCAL}) first, and fly
+three 10-minute patterns on GPS --- 15\,m/s legs, turns, a hover --- on a calm day and a windy one.
+\item Build ArduPilot's Replay (\cmd{./waf replay} in the tree \file{tools/build\_firmware.sh}
+uses) and re-run each log with the GPS taken away 5 minutes in. The replayed EKF's velocity
+against the logged GPS velocity is the real drift: its size and how long it holds one way.
+\item Put those into \cmd{python3 tools/check\_soop.py sweep} (\file{--vel-sigma},
+\file{--vel-tau} on \file{soop\_scenario.py obs}) for the metres this aircraft would hold.
+\item Tune drag fusion from the same logs --- \file{EK3\_DRAG\_BCOEF\_X/Y} start at mass over frontal
+and side area, \file{EK3\_DRAG\_MCOEF} between 0.1 and 1.0, until the wind estimate holds steady
+across the legs --- and replay again. Ship the values only once measured.
+\end{enumerate}
 
 \begin{quote}
 \flag{Operational rule while no flow camera is fitted.} EKF source sets 2 and 3 use optical
