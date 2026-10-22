@@ -503,7 +503,7 @@ def _belly_low():
 
 
 TIER_B = [
-    dict(pid="order.sheet", group="assembly", check="the order sheet states every checkout setting",
+    dict(pid="order.sheet", group="firmware", check="the order sheet states every checkout setting",
          fault=lambda: _fab_text("HOW-TO-ORDER.in", lambda s: s.replace("Panel by JLCPCB", "Single PCB")),
          why="a sheet that drops the panel setting must fail - the order would be refused"),
     dict(pid="assy.twosided", group="assembly", check="two-sided assembly",
