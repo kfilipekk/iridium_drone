@@ -12,6 +12,7 @@ Checks:
   sgp4               Gate: C SGP4 agrees with Python sgp4.api.Satrec.
   solver             Prove the on-board C solver agrees with the Python reference, and compiles for the H743.
   nav                Gate the on-board navigation (firmware/soop/soop_nav.c) against simulated flights.
+  sweep              What each error source costs in metres: velocity, TCXO, burst rate, baro.
   bench              Can a bench recording from a receiver without a TCXO still be used?
   flow               Does the guard's flow velocity invert what EKF3 says a flow sensor measures?
   gain               Does the analogue chain put the sky's noise where the DSP gates assume it is?
@@ -882,6 +883,7 @@ soop_nav_TLE = os.path.join(REPO, "sitl", "tle", "iridium-next.tle")
 SRC = ["nav_host.c", "soop_guard.c", "soop_nav.c", "soop_ephem.c", "sgp4.c"]
 
 FINE = "flow-grade velocity, 0.1 m/s"
+FINE2 = "radar-grade velocity, 0.03 m/s"
 OP = dict(orbits="operator")
 #(name, seeds, scenario arguments)
 FLIGHTS = (
@@ -893,6 +895,8 @@ FLIGHTS = (
     ("a third of the bursts", (14,), dict(OP, rate=0.3)),
     ("public TLEs, the fallback", (15, 16, 17, 18), dict()),
     (FINE, (19, 20, 21, 22), dict(OP, vel_sigma=0.1)),
+    #the TCXO held still too, so only the velocity and the bursts are left
+    (FINE2, (23, 24, 25, 26), dict(OP, vel_sigma=0.03, tempco_ppm=0.0)),
 )
 #--quick flies the design case alone
 QUICK = FLIGHTS[:1]
@@ -923,7 +927,9 @@ soop_nav_GATES = dict(median_m=400.0,       #horizontal error over every denied 
              false_max=0.02,       #false bursts that got fused
              #the way toward 20 m (docs/IRIDIUM-RESEARCH.md)
              fine_median_m=60.0,
-             fine_p95_m=200.0)
+             fine_p95_m=200.0,
+             fine2_median_m=20.0,
+             fine2_p95_m=60.0)
 
 
 def soop_nav_build(tmp):
@@ -1302,13 +1308,17 @@ def run_nav():
         checks.append(good)
         print(f"  {'ok  ' if good else 'FAIL'}  {text}")
 
-    fine = [x for r in results if r["name"] == FINE for x in r["errs"]]
-    if fine:
-        good = pct(fine, 0.5) <= g["fine_median_m"] and pct(fine, 0.95) <= g["fine_p95_m"]
+    for name, key, vel in ((FINE, "fine", "0.1"), (FINE2, "fine2", "0.03")):
+        fine = [x for r in results if r["name"] == name for x in r["errs"]]
+        if not fine:
+            continue
+        good = (pct(fine, 0.5) <= g[key + "_median_m"]
+                and pct(fine, 0.95) <= g[key + "_p95_m"])
         checks.append(good)
-        print(f"  {'ok  ' if good else 'FAIL'}  with 0.1 m/s velocity: median {pct(fine, 0.5):.0f} m, "
-              f"p95 {pct(fine, 0.95):.0f} m (limits {g['fine_median_m']:.0f} / "
-              f"{g['fine_p95_m']:.0f}): the filter keeps what a better velocity gives it")
+        print(f"  {'ok  ' if good else 'FAIL'}  with {vel} m/s velocity: median "
+              f"{pct(fine, 0.5):.0f} m, p95 {pct(fine, 0.95):.0f} m (limits "
+              f"{g[key + '_median_m']:.0f} / {g[key + '_p95_m']:.0f}): the filter keeps what "
+              f"a better velocity gives it")
 
     al = sum(r["alarms"] for r in results)
     checks.append(al == 0)
@@ -1334,6 +1344,63 @@ def run_nav():
     print("\n" + (f"SOOP-NAV OK - {sum(checks)}/{len(checks)} assertions" if ok else
                   f"SOOP-NAV FAILED - {len(checks) - sum(checks)} of {len(checks)} assertions"))
     return 0 if ok else 1
+
+
+#sweep
+
+"""What each error source costs in metres.
+
+Usage:  python3 tools/check_soop.py sweep [--seeds N]
+
+Flies the gated filter through the same flights as nav, one error source changed per row, and
+prints the median and p95 horizontal error over every denied second. It reports; it gates
+nothing. docs/IRIDIUM-RESEARCH.md keeps the table.
+"""
+
+#(row, scenario arguments) - every row on Iridium's own orbits
+SWEEP = (
+    ("velocity 1 m/s (IMU alone)", dict(vel_sigma=1.0)),
+    ("velocity 0.3 m/s", dict(vel_sigma=0.3)),
+    ("velocity 0.1 m/s", dict(vel_sigma=0.1)),
+    ("velocity 0.03 m/s", dict(vel_sigma=0.03)),
+    ("0.1 m/s, TCXO without tempco", dict(vel_sigma=0.1, tempco_ppm=0.0)),
+    ("0.1 m/s, board held to 1 C", dict(vel_sigma=0.1, temp_sigma_c=1.0)),
+    ("0.1 m/s, twice the bursts", dict(vel_sigma=0.1, rate=2.0)),
+    ("0.1 m/s, half the bursts", dict(vel_sigma=0.1, rate=0.5)),
+    ("0.1 m/s, drifting over 60 s", dict(vel_sigma=0.1, vel_tau_s=60.0)),
+    ("0.1 m/s, drifting over 900 s", dict(vel_sigma=0.1, vel_tau_s=900.0)),
+    ("0.1 m/s, baro good to 0.5 m", dict(vel_sigma=0.1, baro_sigma_m=0.5)),
+    ("0.03 m/s, no tempco, 2x bursts", dict(vel_sigma=0.03, tempco_ppm=0.0, rate=2.0)),
+)
+SWEEP_SEED0 = 100
+
+
+def sweep_row(job):
+    tmp, i, seeds = job
+    name, kw = SWEEP[i]
+    d = os.path.join(tmp, f"row{i}")
+    os.makedirs(d, exist_ok=True)
+    exe = os.path.join(tmp, "nav_host")
+    e = [x for s in seeds for x in fly(exe, d, name, s, dict(OP, **kw))["errs"]]
+    return name, pct(e, 0.5), pct(e, 0.95)
+
+
+def run_sweep():
+    import multiprocessing
+    n = int(sys.argv[sys.argv.index("--seeds") + 1]) if "--seeds" in sys.argv else 24
+    seeds = range(SWEEP_SEED0, SWEEP_SEED0 + n)
+    tmp = tempfile.mkdtemp(prefix="soop_sweep_")
+    exe, info = soop_nav_build(tmp)
+    if exe is None or isinstance(info, str):
+        print(f"build failed: {str(info).strip()[:400]}")
+        return 1
+    print(f"=== what each error source costs: {n} flights per row, 15 min denied at 15 m/s ===")
+    print(f"    {'row':34s} {'median':>7s} {'p95':>7s}")
+    with multiprocessing.Pool() as pool:
+        for name, med, p95 in pool.imap(sweep_row, [(tmp, i, seeds) for i in range(len(SWEEP))]):
+            print(f"    {name:34s} {med:6.0f}m {p95:6.0f}m", flush=True)
+    shutil.rmtree(tmp, ignore_errors=True)
+    return 0
 
 
 #bench
@@ -1881,6 +1948,7 @@ CHECKS = {
     "sgp4": run_sgp4,
     "solver": run_solver,
     "nav": run_nav,
+    "sweep": run_sweep,
     "bench": run_bench,
     "flow": run_flow,
     "gain": run_gain,

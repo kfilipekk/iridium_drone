@@ -361,7 +361,8 @@ ORBIT_ERR = {
 def make_obs(outdir, seed=1, gps_min=5.0, denial_min=15.0, speed=15.0, tle_age_d=1.0,
              lat=52.2053, lon=0.1218, h=160.0, rate=1.0, vel_sigma=1.0, beta_sigma=50.0,
              orbits="tle", false_rate=0.05, outlier_frac=0.01, static=False, arm_s=60.0,
-             spoof=None, back_min=0.0, ira=False, ind_sigma=0.0):
+             spoof=None, back_min=0.0, ira=False, ind_sigma=0.0, tempco_ppm=0.03,
+             temp_sigma_c=4.0, vel_tau_s=300.0, baro_sigma_m=3.0):
     """A flight under the real constellation. ind_sigma > 0 adds a velocity the spoofer
     can't drag (I records), with that error."""
     ira_rng, sv_of = random.Random(seed + 2000), {}
@@ -390,7 +391,7 @@ def make_obs(outdir, seed=1, gps_min=5.0, denial_min=15.0, speed=15.0, tle_age_d
     f_lo = sig.F_RING_ALERT + sig.LO_OFFSET_HZ
     tcxo0 = rng.uniform(-1, 1) * sig.TCXO_PPM * 1e-6
     #board temperature, deg C
-    temp_drive, temp = GaussMarkov(rng, 4.0, 600.0, 0.0), 0.0
+    temp_drive, temp = GaussMarkov(rng, temp_sigma_c, 600.0, 0.0), 0.0
     tcxo_walk = 0.0
     mcu0 = rng.uniform(-1, 1) * sig.MCU_PPM * 1e-6
     mcu_ramp = rng.uniform(-1, 1) * 0.3e-6 / 1800.0     #crystal warming, per second
@@ -472,7 +473,7 @@ def make_obs(outdir, seed=1, gps_min=5.0, denial_min=15.0, speed=15.0, tle_age_d
                 ch = sig.RING_ALERT_INDEX if rng.random() < 0.5 else rng.randrange(4)
                 f_ch = sig.SIMPLEX_CHANNELS[ch]
                 f_rx = f_ch + s["beta_hz"] - f_ch * rdot / sig.C_LIGHT
-                eps_t = tcxo0 + 0.03e-6 * temp + tcxo_walk
+                eps_t = tcxo0 + tempco_ppm * 1e-6 * temp + tcxo_walk
                 f_meas = (f_rx - f_lo * (1 + eps_t)) / (1 + mcu_err(t))
                 if abs(f_meas - sig.baseband_hz(sig.F_RING_ALERT)) > DSP_BAND_HZ:
                     continue
@@ -509,9 +510,9 @@ def make_obs(outdir, seed=1, gps_min=5.0, denial_min=15.0, speed=15.0, tle_age_d
         t_blk += 10.0
 
     #the aircraft's other sensors
-    vel_err = [GaussMarkov(rng, vel_sigma, 300.0, 0.0), GaussMarkov(rng, vel_sigma, 300.0, 0.0),
-               GaussMarkov(rng, 0.3, 60.0, 0.0)]
-    baro_err = GaussMarkov(rng, 3.0, 600.0, 0.0)
+    vel_err = [GaussMarkov(rng, vel_sigma, vel_tau_s, 0.0) for _ in range(2)] \
+        + [GaussMarkov(rng, 0.3, 60.0, 0.0)]
+    baro_err = GaussMarkov(rng, baro_sigma_m, 600.0, 0.0)
     ind_rng = random.Random(seed + 3000)
     ind_err = [GaussMarkov(ind_rng, ind_sigma, 300.0, 0.0) for _ in range(2)]
     def spoofed(t):
@@ -605,6 +606,10 @@ def main():
     p.add_argument("--tle-age", type=float, default=1.0, help="days, at take-off")
     p.add_argument("--rate", type=float, default=1.0, help="bursts/s per satellite")
     p.add_argument("--vel-sigma", type=float, default=1.0, help="EKF velocity error, m/s")
+    p.add_argument("--vel-tau", type=float, default=300.0, help="its correlation time, s")
+    p.add_argument("--tempco", type=float, default=0.03, help="TCXO, ppm per deg C")
+    p.add_argument("--temp-sigma", type=float, default=4.0, help="board temperature wander, deg C")
+    p.add_argument("--baro-sigma", type=float, default=3.0, help="barometer drift, m")
     p.add_argument("--orbits", choices=sorted(ORBIT_ERR), default="tle",
                    help="public TLEs, or Iridium's own orbits (CelesTrak supplemental)")
     a = ap.parse_args()
@@ -617,7 +622,9 @@ def main():
         print(f"{len(t['bursts'])} bursts in {a.seconds:g} s -> {a.outdir}/rec.cu8 + truth.json")
     else:
         t = make_obs(a.outdir, a.seed, a.gps_min, a.minutes, a.speed, a.tle_age,
-                     rate=a.rate, vel_sigma=a.vel_sigma, orbits=a.orbits, static=a.static)
+                     rate=a.rate, vel_sigma=a.vel_sigma, orbits=a.orbits, static=a.static,
+                     vel_tau_s=a.vel_tau, tempco_ppm=a.tempco, temp_sigma_c=a.temp_sigma,
+                     baro_sigma_m=a.baro_sigma)
         n_false = sum(b["false"] for b in t["bursts"])
         print(f"{len(t['bursts'])} bursts ({n_false} false) from "
               f"{len({b['sat'] for b in t['bursts']} - {0})} satellites -> "
