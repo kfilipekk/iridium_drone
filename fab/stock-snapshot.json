@@ -1,6 +1,6 @@
 {
  "assembled_boards": 2,
- "date": "2026-10-22",
+ "date": "2026-10-23",
  "lines": {
   "C1017": {
    "describe": "-55\u2103~+125\u2103 1 300m\u03a9 500mA 600\u03a9@100MHz \u00b125% 0805 Ferrite Beads ROHS",
@@ -12,7 +12,7 @@
    "mpn": "GZ2012D601TF",
    "price_usd": 0.02,
    "spec": "0805",
-   "stock": 622951
+   "stock": 608778
   },
   "C107004": {
    "describe": "30pF 50V NP0 \u00b15% 0402 Multilayer Ceramic Capacitors MLCC - SMD/SMT ROHS",
@@ -24,7 +24,7 @@
    "mpn": "CC0402JRNPO9BN300",
    "price_usd": 0.0023,
    "spec": "0402",
-   "stock": 785430
+   "stock": 783992
   },
   "C113111": {
    "describe": "27nH 280mA 520m\u03a9 Unshielded Inductor \u00b13% 0402 Inductors (SMD) ROHS",
@@ -36,7 +36,7 @@
    "mpn": "LQW15AN27NH00D",
    "price_usd": 0.0452,
    "spec": "0402",
-   "stock": 9962
+   "stock": 9953
   },
   "C113993": {
    "describe": "-65\u2103~+150\u2103 16.9A@10/1000us 1uA 22V 26.9V 35.5V 600W@10/1000us TVS Unidirectional DO-214AA(SMB) ESD and Surge Protection (TVS/ESD) ROHS",
@@ -48,7 +48,7 @@
    "mpn": "SMBJ22A",
    "price_usd": 0.0565,
    "spec": "DO-214AA(SMB)",
-   "stock": 611
+   "stock": 605
   },
   "C11702": {
    "describe": "-55\u2103~+155\u2103 1k\u03a9 50V 62.5mW Thick Film Resistor \u00b11% \u00b1100ppm/\u2103 0402 Chip Resistor - Surface Mount ROHS",
@@ -60,7 +60,7 @@
    "mpn": "0402WGF1001TCE",
    "price_usd": 0.0013,
    "spec": "0402",
-   "stock": 20018117
+   "stock": 19541233
   },
   "C12084": {
    "describe": "-40\u2103~+85\u2103 1 17mA 1Mbps 370uA 3V~3.6V CAN Transceiver Low-power mode\u3001Wake-up function\u3001ESD protection\u3001Thermal shutdown protection\u3001Bus fault protection\u3001Hot-swap protection SOIC-8 CAN Transceivers ROHS",
@@ -70,9 +70,9 @@
    "library": "expand",
    "min_purchase": 1,
    "mpn": "SN65HVD230DR",
-   "price_usd": 0.5723,
+   "price_usd": 0.5757,
    "spec": "SOIC-8",
-   "stock": 150009
+   "stock": 126579
   },
   "C12530": {
    "describe": "2.2uF 6.3V X5R \u00b120% 0402 Multilayer Ceramic Capacitors MLCC - SMD/SMT ROHS",
@@ -84,7 +84,7 @@
    "mpn": "CL05A225MQ5NSNC",
    "price_usd": 0.0054,
    "spec": "0402",
-   "stock": 4023191
+   "stock": 3982671
   },
   "C12891": {
    "describe": "22uF 25V X5R \u00b110% 1206 Multilayer Ceramic Capacitors MLCC - SMD/SMT ROHS",
@@ -96,7 +96,7 @@
    "mpn": "CL31A226KAHNNNE",
    "price_usd": 0.1165,
    "spec": "1206",
-   "stock": 1696544
+   "stock": 1638735
   },
   "C13585": {
    "describe": "10uF 50V X5R \u00b110% 1206 Multilayer Ceramic Capacitors MLCC - SMD/SMT ROHS",
@@ -106,9 +106,9 @@
    "library": "base",
    "min_purchase": 1,
    "mpn": "CL31A106KBHNNNE",
-   "price_usd": 0.2507,
+   "price_usd": 0.2377,
    "spec": "1206",
-   "stock": 2260965
+   "stock": 2413170
   },
   "C138714": {
    "describe": "-40\u2103~+125\u2103 0.5pF 10nA 14V 2.5A@8/20us 40W@8/20us 5.5V 6.5V ESD Four channels IEC 61000-4-2\u3001IEC 61000-4-5\u3001IEC 61000-4-4 Unidirectional USON-10(1x2.5) ESD and Surge Protection (TVS/ESD) ROHS",
@@ -118,9 +118,9 @@
    "library": "expand",
    "min_purchase": 1,
    "mpn": "TPD4E05U06DQAR",
-   "price_usd": 0.0831,
+   "price_usd": 0.0833,
    "spec": "USON-10(1x2.5)",
-   "stock": 219188
+   "stock": 203852
   },
   "C148357": {
    "describe": "-55\u2103~+150\u2103 1 P-Channel 1.4W 2.2V 40V 420pF 55pF 58m\u03a9@4.5V 6A 77pF 9.5nC@10V P-Channel SOT-23-3L MOSFETs ROHS",
@@ -132,7 +132,7 @@
    "mpn": "WST4041",
    "price_usd": 0.1736,
    "spec": "SOT-23-3L",
-   "stock": 66621
+   "stock": 64860
   },
   "C15195": {
    "describe": "10nF 50V X7R \u00b110% 0402 Multilayer Ceramic Capacitors MLCC - SMD/SMT ROHS",
@@ -144,7 +144,7 @@
    "mpn": "CL05B103KB5NNNC",
    "price_usd": 0.0039,
    "spec": "0402",
-   "stock": 6956108
+   "stock": 6873108
   },
   "C1523": {
    "describe": "1nF 50V X7R \u00b110% 0402 Multilayer Ceramic Capacitors MLCC - SMD/SMT ROHS",
@@ -156,7 +156,7 @@
    "mpn": "0402B102K500NT",
    "price_usd": 0.0038,
    "spec": "0402",
-   "stock": 2719754
+   "stock": 2657082
   },
   "C1525": {
    "describe": "100nF 16V X7R \u00b110% 0402 Multilayer Ceramic Capacitors MLCC - SMD/SMT ROHS",
@@ -166,9 +166,9 @@
    "library": "base",
    "min_purchase": 1,
    "mpn": "CL05B104KO5NNNC",
-   "price_usd": 0.0037,
+   "price_usd": 0.0035,
    "spec": "0402",
-   "stock": 36889814
+   "stock": 36079897
   },
   "C1546": {
    "describe": "100pF 50V C0G \u00b15% 0402 Multilayer Ceramic Capacitors MLCC - SMD/SMT ROHS",
@@ -180,7 +180,7 @@
    "mpn": "0402CG101J500NT",
    "price_usd": 0.0033,
    "spec": "0402",
-   "stock": 3372405
+   "stock": 3342702
   },
   "C15639": {
    "describe": "-40\u2103~+85\u2103 1.8V~3.6V 140nA 150pa 1Kpa~1.2bar 8.22ms I2C\u3001SPI Integrated ADC and digital interface\u3001On-chip calibration and non-volatile storage\u3001Standby mode\u3001On-chip temperature output Yes QFN-8(3x5) Pressure Sensors ROHS",
@@ -190,9 +190,9 @@
    "library": "expand",
    "min_purchase": 1,
    "mpn": "MS561101BA03-50",
-   "price_usd": 6.7432,
+   "price_usd": 6.4778,
    "spec": "QFN-8(3x5)",
-   "stock": 2321
+   "stock": 2319
   },
   "C15850": {
    "describe": "10uF 25V X5R \u00b110% 0805 Multilayer Ceramic Capacitors MLCC - SMD/SMT ROHS",
@@ -204,7 +204,7 @@
    "mpn": "CL21A106KAYNNNE",
    "price_usd": 0.0426,
    "spec": "0805",
-   "stock": 9379725
+   "stock": 9238010
   },
   "C167879": {
    "describe": "1.6A 10uH 130m\u03a9 2.4A Magnetic Shielded Inductor \u00b120% SMD,4x4mm Power Inductors ROHS",
@@ -216,7 +216,7 @@
    "mpn": "FNR4030S100MT",
    "price_usd": 0.0468,
    "spec": "SMD,4x4mm",
-   "stock": 175245
+   "stock": 161354
   },
   "C17168": {
    "describe": "-55\u2103~+155\u2103 0\u03a9 50V 62.5mW Thick Film Resistor \u00b11% \u00b1800ppm/\u2103 0402 Chip Resistor - Surface Mount ROHS",
@@ -228,7 +228,7 @@
    "mpn": "0402WGF0000TCE",
    "price_usd": 0.0011,
    "spec": "0402",
-   "stock": 9500812
+   "stock": 8722795
   },
   "C173427": {
    "describe": "1 Independent 100nA@11V 14.25V~15.75V 15V 40\u03a9 500mW SOD-123 Zener Diodes ROHS",
@@ -240,7 +240,7 @@
    "mpn": "BZT52C15",
    "price_usd": 0.0161,
    "spec": "SOD-123",
-   "stock": 157292
+   "stock": 157271
   },
   "C18077720": {
    "describe": "-25\u2103~+85\u2103 1 1.25mm 125V 1A 1x4P 4 4.35mm 4P 5mm 8.25mm Auxiliary Solder Pin Beige GH LCP Phosphor Bronze Surface Mount, Right Angle Tin SMD,P=1.25mm,\u5367\u8d34 Wire To Board Connector ROHS",
@@ -250,21 +250,9 @@
    "library": "expand",
    "min_purchase": 1,
    "mpn": "BX-GH1.25-4PWT",
-   "price_usd": 0.0847,
+   "price_usd": 0.0848,
    "spec": "SMD,P=1.25mm,Surface Mount\uff0cRight Angle",
    "stock": 4686
-  },
-  "C1850418": {
-   "describe": "-40\u2103~+85\u2103 1.71V~3.6V 16bit 2KB 7.5uA IMU (accelerometer + gyroscope) SPI\u3001I2C X,Y,Z X,Y,Z \u00b116g \u00b12000dps Motion Event Detection, Synchronization, Timestamp Support LGA-14(2.5x3) Accelerometers ROHS",
-   "found": true,
-   "lcsc_url": "https://www.lcsc.com/product-detail/accelerometers_tdk-invensense-icm-42688-p_C1850418.html",
-   "least_patch": 0,
-   "library": "expand",
-   "min_purchase": 1,
-   "mpn": "ICM-42688-P",
-   "price_usd": 20.8605,
-   "spec": "LGA-14(2.5x3)",
-   "stock": 515
   },
   "C190862": {
    "describe": "-40\u2103~+85\u2103 100,000 cycles 10uA 120ms@(32KB) 128Mbit 133MHz 2.7V~3.6V 20 Years Power-on reset\u3001Hardware write protection\u3001Software write protection\u3001Write enable latch\u3001Absolute write protection\u3001Power lock protection SPI WSON-8-EP(5x6) NOR FLASH ROHS",
@@ -274,9 +262,9 @@
    "library": "expand",
    "min_purchase": 1,
    "mpn": "W25Q128JVPIQ",
-   "price_usd": 3.643,
+   "price_usd": 3.3902,
    "spec": "WSON-8-EP(5x6)",
-   "stock": 14329
+   "stock": 12964
   },
   "C192764": {
    "describe": "-200mV~26V -40\u2103~+125\u2103 1 100dB 100nA 197uA 1uV/\u2103 2.7V~5.5V 210kHz 25uV 2V/us 40nV/\u221aHz 50V/V 8mA High-side detection\u3001Low-side detection\u3001Analog output interface\u3001Enable/shutdown function \u00b126V SOT-23-5 Current Sense Amplifiers ROHS",
@@ -288,7 +276,7 @@
    "mpn": "INA180A2IDBVR",
    "price_usd": 0.1878,
    "spec": "SOT-23-5",
-   "stock": 98299
+   "stock": 94950
   },
   "C19674258": {
    "describe": "-40\u2103~+85\u2103 25MHz 3.3V Clipped sine wave \u00b1500ppb SMD3225-4P Temperature Compensated Crystal Oscillators (TCXO) ROHS",
@@ -298,7 +286,7 @@
    "library": "expand",
    "min_purchase": 1,
    "mpn": "8132S-25.000MQ33DTL",
-   "price_usd": 1.4193,
+   "price_usd": 1.4196,
    "spec": "SMD3225-4P",
    "stock": 275
   },
@@ -322,9 +310,9 @@
    "library": "base",
    "min_purchase": 1,
    "mpn": "AO3400A",
-   "price_usd": 0.0973,
+   "price_usd": 0.0889,
    "spec": "SOT-23",
-   "stock": 1264032
+   "stock": 1227437
   },
   "C2158037": {
    "describe": "-40\u2103~+85\u2103 1 2.1A 3V~5.5V 65m\u03a9 Active High High Side Switch Short-Circuit  Protection(SCP)\u3001Over Voltage Protection\u3001Undervoltage Protection(UVP)\u3001Overcurrent Protection(OCP)\u3001Overtemperature protection (OTP) SOT-26 Power Distribution Switches ROHS",
@@ -334,9 +322,9 @@
    "library": "expand",
    "min_purchase": 1,
    "mpn": "AP22653W6-7",
-   "price_usd": 0.2628,
+   "price_usd": 0.2629,
    "spec": "SOT-26",
-   "stock": 13052
+   "stock": 13017
   },
   "C22399950": {
    "describe": "-40\u2103~+125\u2103 1 1A 25uA 3.3V 425mV@(1A) 46dB@(100kHz) 5.5V 71.5uVrms Fixed Over Current Protection\u3001Thermal Shutdown\u3001Input undervoltage protection Positive SOT-23-5 Voltage Regulators - Linear, Low Drop Out (LDO) Regulators ROHS",
@@ -346,9 +334,9 @@
    "library": "expand",
    "min_purchase": 1,
    "mpn": "TLV75733PDYDR",
-   "price_usd": 0.2955,
+   "price_usd": 0.2956,
    "spec": "SOT-23-5",
-   "stock": 16154
+   "stock": 16049
   },
   "C22428347": {
    "describe": "-55\u2103~+150\u2103 1.8V~5.5V 15.5ms 16bit 2uA Factory temperature calibration\u3001Temperature threshold monitoring\u3001Low power standby\u3001Configurable temperature output\u3001On-chip non-volatile parameter storage\u3001On-chip digital filtering/averaging I2C\u3001SMBus \u00b10.08\u2103 DSBGA-6 Temperature Sensors ROHS",
@@ -358,9 +346,21 @@
    "library": "expand",
    "min_purchase": 1,
    "mpn": "TMP119AIYBGR",
-   "price_usd": 3.5972,
+   "price_usd": 3.5979,
    "spec": "DSBGA-6",
-   "stock": 5318
+   "stock": 5291
+  },
+  "C22459454": {
+   "describe": "LGA-14(3x2.5) Accelerometers ROHS",
+   "found": true,
+   "lcsc_url": "https://www.lcsc.com/product-detail/accelerometers_tdk-invensense-icm-45686_C22459454.html",
+   "least_patch": 0,
+   "library": "expand",
+   "min_purchase": 1,
+   "mpn": "ICM-45686",
+   "price_usd": 11.9187,
+   "spec": "LGA-14(3x2.5)",
+   "stock": 5689
   },
   "C231329": {
    "describe": "-25\u2103~+70\u2103 1.53N 1.6mm 12V 2.5mm 3mm 50mA Round Button SMD(SMT) Tab SPST Surface Mount,Vertical SMD,3x2.5mm Tactile Switches ROHS",
@@ -372,7 +372,7 @@
    "mpn": "B3U-1000P",
    "price_usd": 0.1876,
    "spec": "SMD,3x2.5mm",
-   "stock": 103772
+   "stock": 103505
   },
   "C25076": {
    "describe": "-55\u2103~+155\u2103 100\u03a9 50V 62.5mW Thick Film Resistor \u00b11% \u00b1100ppm/\u2103 0402 Chip Resistor - Surface Mount ROHS",
@@ -384,7 +384,7 @@
    "mpn": "0402WGF1000TCE",
    "price_usd": 0.0012,
    "spec": "0402",
-   "stock": 7630471
+   "stock": 7467370
   },
   "C25079": {
    "describe": "-55\u2103~+155\u2103 120\u03a9 50V 62.5mW Thick Film Resistor \u00b11% \u00b1100ppm/\u2103 0402 Chip Resistor - Surface Mount ROHS",
@@ -396,7 +396,7 @@
    "mpn": "0402WGF1200TCE",
    "price_usd": 0.0034,
    "spec": "0402",
-   "stock": 486572
+   "stock": 480330
   },
   "C25101": {
    "describe": "-55\u2103~+155\u2103 2.2\u03a9 50V 62.5mW Thick Film Resistor \u00b11% \u00b1200ppm/\u2103 0402 Chip Resistor - Surface Mount ROHS",
@@ -408,7 +408,7 @@
    "mpn": "0402WGF220KTCE",
    "price_usd": 0.0016,
    "spec": "0402",
-   "stock": 1525416
+   "stock": 1507588
   },
   "C25104": {
    "describe": "-55\u2103~+155\u2103 330\u03a9 50V 62.5mW Thick Film Resistor \u00b11% \u00b1100ppm/\u2103 0402 Chip Resistor - Surface Mount ROHS",
@@ -420,7 +420,7 @@
    "mpn": "0402WGF3300TCE",
    "price_usd": 0.0011,
    "spec": "0402",
-   "stock": 1401468
+   "stock": 1378469
   },
   "C25117": {
    "describe": "-55\u2103~+155\u2103 470\u03a9 50V 62.5mW Thick Film Resistor \u00b11% \u00b1100ppm/\u2103 0402 Chip Resistor - Surface Mount ROHS",
@@ -432,7 +432,7 @@
    "mpn": "0402WGF4700TCE",
    "price_usd": 0.0012,
    "spec": "0402",
-   "stock": 1146405
+   "stock": 1122240
   },
   "C25501": {
    "describe": "33\u03a9 4 62.5mW 8 \u00b1200ppm/\u2103 \u00b15% 0402x4 Resistor Networks, Arrays ROHS",
@@ -444,7 +444,7 @@
    "mpn": "4D02WGJ0330TCE",
    "price_usd": 0.0084,
    "spec": "0402x4",
-   "stock": 371318
+   "stock": 368753
   },
   "C25741": {
    "describe": "-55\u2103~+155\u2103 100k\u03a9 50V 62.5mW Thick Film Resistor \u00b11% \u00b1100ppm/\u2103 0402 Chip Resistor - Surface Mount ROHS",
@@ -456,7 +456,7 @@
    "mpn": "0402WGF1003TCE",
    "price_usd": 0.0015,
    "spec": "0402",
-   "stock": 8228020
+   "stock": 8045728
   },
   "C25744": {
    "describe": "-55\u2103~+155\u2103 10k\u03a9 50V 62.5mW Thick Film Resistor \u00b11% \u00b1100ppm/\u2103 0402 Chip Resistor - Surface Mount ROHS",
@@ -466,9 +466,9 @@
    "library": "base",
    "min_purchase": 1,
    "mpn": "0402WGF1002TCE",
-   "price_usd": 0.0013,
+   "price_usd": 0.0011,
    "spec": "0402",
-   "stock": 18464992
+   "stock": 18170148
   },
   "C25768": {
    "describe": "-55\u2103~+155\u2103 22k\u03a9 50V 62.5mW Thick Film Resistor \u00b11% \u00b1100ppm/\u2103 0402 Chip Resistor - Surface Mount ROHS",
@@ -480,7 +480,7 @@
    "mpn": "0402WGF2202TCE",
    "price_usd": 0.0012,
    "spec": "0402",
-   "stock": 1355064
+   "stock": 1327562
   },
   "C25792": {
    "describe": "-55\u2103~+155\u2103 47k\u03a9 50V 62.5mW Thick Film Resistor \u00b11% \u00b1100ppm/\u2103 0402 Chip Resistor - Surface Mount ROHS",
@@ -492,7 +492,7 @@
    "mpn": "0402WGF4702TCE",
    "price_usd": 0.002,
    "spec": "0402",
-   "stock": 6800819
+   "stock": 6769498
   },
   "C25804": {
    "describe": "-55\u2103~+155\u2103 100mW 10k\u03a9 75V Thick Film Resistor \u00b11% \u00b1100ppm/\u2103 0603 Chip Resistor - Surface Mount ROHS",
@@ -504,7 +504,7 @@
    "mpn": "0603WAF1002T5E",
    "price_usd": 0.0016,
    "spec": "0603",
-   "stock": 36871360
+   "stock": 36161526
   },
   "C25874": {
    "describe": "-55\u2103~+155\u2103 24.9k\u03a9 50V 62.5mW Thick Film Resistor \u00b11% \u00b1100ppm/\u2103 0402 Chip Resistor - Surface Mount ROHS",
@@ -516,7 +516,7 @@
    "mpn": "0402WGF2492TCE",
    "price_usd": 0.0012,
    "spec": "0402",
-   "stock": 43755
+   "stock": 33570
   },
   "C25879": {
    "describe": "-55\u2103~+155\u2103 2.2k\u03a9 50V 62.5mW Thick Film Resistor \u00b11% \u00b1100ppm/\u2103 0402 Chip Resistor - Surface Mount ROHS",
@@ -528,7 +528,7 @@
    "mpn": "0402WGF2201TCE",
    "price_usd": 0.0011,
    "spec": "0402",
-   "stock": 3162398
+   "stock": 3083180
   },
   "C25900": {
    "describe": "-55\u2103~+155\u2103 4.7k\u03a9 50V 62.5mW Thick Film Resistor \u00b11% \u00b1100ppm/\u2103 0402 Chip Resistor - Surface Mount ROHS",
@@ -540,7 +540,7 @@
    "mpn": "0402WGF4701TCE",
    "price_usd": 0.0021,
    "spec": "0402",
-   "stock": 14942141
+   "stock": 14800215
   },
   "C25905": {
    "describe": "-55\u2103~+155\u2103 5.1k\u03a9 50V 62.5mW Thick Film Resistor \u00b11% \u00b1100ppm/\u2103 0402 Chip Resistor - Surface Mount ROHS",
@@ -552,7 +552,7 @@
    "mpn": "0402WGF5101TCE",
    "price_usd": 0.0023,
    "spec": "0402",
-   "stock": 4410831
+   "stock": 4300173
   },
   "C2655099": {
    "describe": "-40\u2103~+85\u2103 1.71V~3.6V 16bit 2KB 7.5uA IMU (accelerometer + gyroscope) Motion event detection SPI\u3001I2C X,Y,Z X,Y,Z \u00b116g \u00b12000dps LGA-14(2.5x3) Accelerometers ROHS",
@@ -562,9 +562,9 @@
    "library": "expand",
    "min_purchase": 1,
    "mpn": "ICM-42605",
-   "price_usd": 8.9849,
+   "price_usd": 8.9865,
    "spec": "LGA-14(2.5x3)",
-   "stock": 3234
+   "stock": 3229
   },
   "C2682774": {
    "describe": "-40\u2103~+85\u2103 180\u03a9 20pF 8MHz Crystal Oscillator \u00b110ppm \u00b120ppm SMD3225-4P Crystals ROHS",
@@ -576,7 +576,7 @@
    "mpn": "X32258MSB4SI",
    "price_usd": 0.1943,
    "spec": "SMD3225-4P",
-   "stock": 99107
+   "stock": 91093
   },
   "C2687116": {
    "describe": "0.35pF\u30010.8pF 100nA 150W@8/20us 15V 2 5V 6A@8/20us 6V ESD SOT-23-6 ESD and Surge Protection (TVS/ESD) ROHS",
@@ -588,7 +588,7 @@
    "mpn": "USBLC6-2SC6",
    "price_usd": 0.0478,
    "spec": "SOT-23-6",
-   "stock": 127530
+   "stock": 124192
   },
   "C270346": {
    "describe": "-55\u2103~+155\u2103 25V 4.7k\u03a9 50mW Thick Film Resistor \u00b11% \u00b1200ppm/\u2103 0201 Chip Resistor - Surface Mount ROHS",
@@ -600,7 +600,7 @@
    "mpn": "0201WMF4701TEE",
    "price_usd": 0.0016,
    "spec": "0201",
-   "stock": 915376
+   "stock": 910161
   },
   "C2765186": {
    "describe": "-25\u2103~+85\u2103 1 10 thousand cycles 16P 3A 5V Black Female Surface Mount, Right Angle Type-C SMD USB Connectors ROHS",
@@ -612,7 +612,7 @@
    "mpn": "TYPE-C 16PIN 2MD(073)",
    "price_usd": 0.0748,
    "spec": "SMD",
-   "stock": 1056925
+   "stock": 1062444
   },
   "C28323": {
    "describe": "1uF 50V X7R \u00b110% 0805 Multilayer Ceramic Capacitors MLCC - SMD/SMT ROHS",
@@ -624,7 +624,7 @@
    "mpn": "CL21B105KBFNNNE",
    "price_usd": 0.0313,
    "spec": "0805",
-   "stock": 2078204
+   "stock": 1935773
   },
   "C2861505": {
    "describe": "-40\u2103~+125\u2103@(TJ) 1 1V~24V 24uA 3.8V~36V 3A 400kHz Adjustable Buck Buck Built-in Yes VQFN-12(2x3) DC-DC Converters ROHS",
@@ -634,9 +634,9 @@
    "library": "expand",
    "min_purchase": 1,
    "mpn": "LMR33630ARNXR",
-   "price_usd": 1.4684,
+   "price_usd": 1.4686,
    "spec": "VQFN-12(2x3)",
-   "stock": 2150
+   "stock": 2135
   },
   "C2894793": {
    "describe": "1 3.5mm 50\u03a9 6GHz Board Side Elbow Inner Bore MMCX \u63d2\u4ef6 Coaxial Connectors (RF) ROHS",
@@ -646,7 +646,7 @@
    "library": "expand",
    "min_purchase": 1,
    "mpn": "DL-MMCX-KWE-90",
-   "price_usd": 0.8895,
+   "price_usd": 0.8897,
    "spec": "Plugin",
    "stock": 20859
   },
@@ -660,7 +660,7 @@
    "mpn": "CL05B104KB54PNC",
    "price_usd": 0.0095,
    "spec": "0402",
-   "stock": 21652767
+   "stock": 21311878
   },
   "C32949": {
    "describe": "10pF 50V C0G \u00b15% 0402 Multilayer Ceramic Capacitors MLCC - SMD/SMT ROHS",
@@ -672,7 +672,7 @@
    "mpn": "CL05C100JB5NNNC",
    "price_usd": 0.0061,
    "spec": "0402",
-   "stock": 1725948
+   "stock": 1707232
   },
   "C354262": {
    "describe": "25V 4.7uF X7R \u00b110% 0805 Multilayer Ceramic Capacitors MLCC - SMD/SMT ROHS",
@@ -684,7 +684,7 @@
    "mpn": "CC0805KKX7R8BB475",
    "price_usd": 0.0805,
    "spec": "0805",
-   "stock": 588025
+   "stock": 586748
   },
   "C354610": {
    "describe": "10uH 2.1A 2.5A 64m\u03a9 Magnetic Shielded Inductor \u00b120% SMD,5x5mm Power Inductors ROHS",
@@ -696,7 +696,7 @@
    "mpn": "CKCS5040-10uH/M",
    "price_usd": 0.0527,
    "spec": "SMD,5x5mm",
-   "stock": 7536
+   "stock": 7502
   },
   "C404027": {
    "describe": "-40\u2103~+125\u2103@(Tj) 1 238mV@(500mA) 25uA 3.3V 46dB@(100kHz) 5.5V 500mA 71.5uVrms Fixed Over Current Protection\u3001Thermal Shutdown\u3001Input undervoltage protection Positive SOT-23-5 Voltage Regulators - Linear, Low Drop Out (LDO) Regulators ROHS",
@@ -706,9 +706,9 @@
    "library": "expand",
    "min_purchase": 1,
    "mpn": "TLV75533PDBVR",
-   "price_usd": 0.1215,
+   "price_usd": 0.1216,
    "spec": "SOT-23-5",
-   "stock": 110486
+   "stock": 108970
   },
   "C42376901": {
    "describe": "-25\u2103~+85\u2103 1 1.25mm 125V 1A 1x8P 8 8P Beige GH LCP Phosphor bronze Surface Mount, Right Angle Tin UL94V-0 SMD,P=1.25mm,Surface Mount\uff0cRight Angle Wire To Board Connector ROHS",
@@ -720,7 +720,7 @@
    "mpn": "SH-SM08B-GHS-TB(LF)(SN)",
    "price_usd": 0.0843,
    "spec": "SMD,P=1.25mm,Surface Mount\uff0cRight Angle",
-   "stock": 23638
+   "stock": 26727
   },
   "C444392": {
    "describe": "-2.75V~-1.15V\u30011.15V~2.75V -40\u2103~+125\u2103 0.5pA 10nV/\u221aHz@10kHz 10pA 2 2.3V~5.5V 53mA 585uA 5V/us 5mV 6.5MHz 6.5uV/\u2103 90dB Rail-to-Rail Input, Rail-to-Rail Output SOP-8 Operational Amplifier ROHS",
@@ -756,7 +756,7 @@
    "mpn": "SM03B-GHS-TB(LF)(SN)",
    "price_usd": 0.3409,
    "spec": "SMD,P=1.25mm,Surface Mount\uff0cRight Angle",
-   "stock": 24306
+   "stock": 46094
   },
   "C51940119": {
    "describe": "-25\u2103~+85\u2103 1 1.25mm 1A 1x6P 250V 6 6P Brass LCP Surface Mount, Right Angle Tin UL94V-0 SMD,P=1.25mm,\u5367\u8d34 Wire To Board Connector ROHS",
@@ -766,9 +766,9 @@
    "library": "expand",
    "min_purchase": 1,
    "mpn": "XY-SM06B-GHS-TB",
-   "price_usd": 0.0708,
+   "price_usd": 0.0709,
    "spec": "SMD,P=1.25mm,Surface Mount\uff0cRight Angle",
-   "stock": 6091
+   "stock": 6011
   },
   "C5271084": {
    "describe": "-40\u2103~+85\u2103 1.71V~3.6V 12bit 16bit 1MB 2MB 32 Bit 480MHz 82 ARM Cortex-M7 Built-in+External FLASH LQFP-100(14x14) Microcontrollers (MCU/MPU/SOC) ROHS",
@@ -778,9 +778,9 @@
    "library": "expand",
    "min_purchase": 1,
    "mpn": "STM32H743VIT6TR",
-   "price_usd": 12.5657,
+   "price_usd": 12.568,
    "spec": "LQFP-100(14x14)",
-   "stock": 963
+   "stock": 965
   },
   "C52923": {
    "describe": "1uF 25V X5R \u00b110% 0402 Multilayer Ceramic Capacitors MLCC - SMD/SMT ROHS",
@@ -792,7 +792,7 @@
    "mpn": "CL05A105KA5NQNC",
    "price_usd": 0.007,
    "spec": "0402",
-   "stock": 7710341
+   "stock": 7232794
   },
   "C5380694": {
    "describe": "1 400W 43.6A 500uA 5V 6.4V 9.2V IEC 61000-4-2 TVS Unidirectional SOD-123 ESD and Surge Protection (TVS/ESD) ROHS",
@@ -804,7 +804,7 @@
    "mpn": "PTVS5V0S1UR-FS",
    "price_usd": 0.0772,
    "spec": "SOD-123",
-   "stock": 66673
+   "stock": 66152
   },
   "C5446": {
    "describe": "-40\u2103~+85\u2103@(Ta) 1 1uA 200mA 3.3V 6V Fixed Over Current Protection Positive SOT-23-3L Voltage Regulators - Linear, Low Drop Out (LDO) Regulators ROHS",
@@ -816,7 +816,7 @@
    "mpn": "XC6206P332MR-G",
    "price_usd": 0.1451,
    "spec": "SOT-23-3L",
-   "stock": 462848
+   "stock": 462086
   },
   "C58827": {
    "describe": "-55\u2103~+155\u2103 210k\u03a9 50V 62.5mW Thick Film Resistor \u00b11% \u00b1100ppm/\u2103 0402 Chip Resistor - Surface Mount ROHS",
@@ -838,7 +838,7 @@
    "library": "expand",
    "min_purchase": 1,
    "mpn": "MAX2112ETI+T",
-   "price_usd": 19.2712,
+   "price_usd": 19.2747,
    "spec": "TQFN-28-EP(5x5)",
    "stock": 15
   },
@@ -852,7 +852,7 @@
    "mpn": "0201CG101J500NT",
    "price_usd": 0.0014,
    "spec": "0201",
-   "stock": 875298
+   "stock": 873566
   },
   "C6454456": {
    "describe": "-40\u2103~+125\u2103 0.6pF 12V 1uA 4.5A@8/20us 5V 60W@8/20us 6V ESD Four channels IEC 61000-4-2 SOT-23-6 ESD and Surge Protection (TVS/ESD) ROHS",
@@ -864,7 +864,7 @@
    "mpn": "SRV05-4-P-T7",
    "price_usd": 0.0404,
    "spec": "SOT-23-6",
-   "stock": 3194
+   "stock": 2789
   },
   "C6952426": {
    "describe": "-55\u2103~+175\u2103 10pF 1nA 2 24V 35.5V 41V 4A Bidirectional ESD IEC 61000-4-2 TO-236AB ESD and Surge Protection (TVS/ESD) ROHS",
@@ -876,7 +876,7 @@
    "mpn": "PESD2CANFD24LT-QR",
    "price_usd": 0.1963,
    "spec": "TO-236AB",
-   "stock": 13598
+   "stock": 13588
   },
   "C76939": {
    "describe": "100nF 25V X5R \u00b110% 0201 Multilayer Ceramic Capacitors MLCC - SMD/SMT ROHS",
@@ -888,7 +888,7 @@
    "mpn": "GRM033R61E104KE14D",
    "price_usd": 0.0123,
    "spec": "0201",
-   "stock": 1447500
+   "stock": 1431555
   },
   "C7836": {
    "describe": "-40\u2103~+125\u2103 1 1 1.65V~5.5V 10uA 32mA 32mA 4.6ns@3.3V,15pF 74LVC Power-off isolation\u3001Level shifting Push-pull Schmitt trigger Unidirectional SOT-23-5 Buffers, Drivers, Receivers, Transceivers ROHS",
@@ -898,9 +898,9 @@
    "library": "expand",
    "min_purchase": 1,
    "mpn": "SN74LVC1G17DBVR",
-   "price_usd": 0.1547,
+   "price_usd": 0.1548,
    "spec": "SOT-23-5",
-   "stock": 10466
+   "stock": 9949
   },
   "C81598": {
    "describe": "150mA 1A 1V@50mA 1uA@75V 400mW 4ns 75V Independent SOD-123 Switching Diodes ROHS",
@@ -912,7 +912,7 @@
    "mpn": "1N4148W",
    "price_usd": 0.0124,
    "spec": "SOD-123",
-   "stock": 4204920
+   "stock": 4152955
   },
   "C82219": {
    "describe": "47nF 50V X7R \u00b110% 0402 Multilayer Ceramic Capacitors MLCC - SMD/SMT ROHS",
@@ -924,7 +924,7 @@
    "mpn": "0402B473K500NT",
    "price_usd": 0.006,
    "spec": "0402",
-   "stock": 181516
+   "stock": 179659
   },
   "C8598": {
    "describe": "1A 40V 600mV@1A 9A Independent SOD-123 Schottky Diodes ROHS",
@@ -936,7 +936,7 @@
    "mpn": "B5819W SL",
    "price_usd": 0.0265,
    "spec": "SOD-123",
-   "stock": 611944
+   "stock": 600290
   },
   "C91145": {
    "describe": "1.85mm Connector and Ejector MicroSD Card (TF Card) Push-Push With Locating Pins SMD SD Card / Memory Card Connector ROHS",
@@ -948,7 +948,7 @@
    "mpn": "TF-01A",
    "price_usd": 0.193,
    "spec": "SMD",
-   "stock": 177186
+   "stock": 173586
   },
   "C965804": {
    "describe": "-40\u2103~+85\u2103 120\u00b0 20mA 3.3V 515nm~535nm 525nm 70mW 810mcd Discrete Diode Emerald Green Top-mount Water Clear 0603 LED Indication - Discrete ROHS",
@@ -960,7 +960,7 @@
    "mpn": "XL-1608UGC-04",
    "price_usd": 0.005,
    "spec": "0603",
-   "stock": 2231835
+   "stock": 2090376
   },
   "C965807": {
    "describe": "-40\u2103~+85\u2103 120\u00b0 20mA 3.3V 300mcd 455nm~475nm 470nm 70mW Blue Discrete Diode Top-mount Water Clear 0603 LED Indication - Discrete ROHS",
@@ -972,7 +972,7 @@
    "mpn": "XL-1608UBC-04",
    "price_usd": 0.0043,
    "spec": "0603",
-   "stock": 1878954
+   "stock": 1818138
   }
  },
  "source": "https://jlcpcb.com/api/overseas-pcb-order/v1/shoppingCart/smtGood/selectSmtComponentList"
