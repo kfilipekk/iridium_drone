@@ -387,7 +387,8 @@ def _wrap(text, width=76):
     return out
 
 
-#SPI pads of the TDK LGA-14 IMUs (ICM-42688-P and ICM-42605 datasheets, pin table)
+#SPI pads of the TDK LGA-14 IMUs (ICM-42688-P and ICM-42605 datasheets, pin table; the
+#ICM-45686 fitted as U2 has the same pads)
 IMU_SPI_PADS = {"cs": "12", "sck": "13", "miso": "1", "mosi": "14"}
 
 

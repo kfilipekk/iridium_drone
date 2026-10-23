@@ -578,7 +578,7 @@ TIER_B = [
          fault=_no_crystal, why="a board without Y1 has no crystal near the MCU"),
     dict(pid="fab.connnames", group="silkscreen", check="connector names on the silkscreen",
          fault=_no_silk_texts, why="no printed names leaves listed connectors blank"),
-    dict(pid="project.functions", group="project", check="IMU 1 (ICM-42688-P)",
+    dict(pid="project.functions", group="project", check="IMU 1 (ICM-45686)",
          fault=_no_imu, why="a board without its IMUs has lost a function"),
     dict(pid="mech.belly", group="firmware", check="belly parts clear the ground",
          fault=_belly_low, why="a belly part 1 mm above the skid plane is inside its 5 mm need"),

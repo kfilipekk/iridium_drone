@@ -21,7 +21,7 @@ Project repository: <https://github.com/kfilipekk/iridium_drone>
 * Processor: STM32H743VIT6, 480 MHz, LQFP-100
 * Flash for logging: microSD (SDMMC1, 4-bit) and a W25Q128 16 MB SPI flash used for the
   Iridium TLE catalogue
-* IMUs: ICM-42688-P (SPI1) and ICM-42605 (SPI4), both on their own 3.3 V analogue rail
+* IMUs: ICM-45686 (SPI1) and ICM-42605 (SPI4), both on their own 3.3 V analogue rail
 * Barometer: MS5611 (I2C, address 0x77)
 * Compass: none on board, external I2C compass on the GPS connector
 * SoOP receiver: MAX2112 L-band tuner (I2C2) and OPA2374 baseband amplifiers into ADC1/ADC2,
@@ -139,11 +139,13 @@ is not terminated on the board. Fit R15 (120 ohm) if the board is at one end of 
 ## IMU Orientation
 
 Both IMUs are on the bottom of the board. The hwdef declares `ROTATION_YAW_180` for the
-ICM-42688-P and `ROTATION_YAW_90` for the ICM-42605, worked out from the footprint pads,
-with forward as marked by the silkscreen arrow.
+ICM-45686 and `ROTATION_YAW_90` for the ICM-42605, worked out from the footprint pads,
+with forward as marked by the silkscreen arrow. The ICM-45686 sits on the ICM-42688-P's
+footprint and device name (`SPI:icm42688`): ArduPilot reads its WHOAMI after the 42688's, and
+its axes follow the same pin 1, so the rotation is the same.
 
 The ICM-42605's chip select is PE11, the pin MatekH743 gives its ICM-20602, so stock
-MatekH743 firmware finds only the ICM-42688-P. Check the attitude on the bench before
+MatekH743 firmware finds only the ICM-45686. Check the attitude on the bench before
 flying stock firmware, and set `AHRS_ORIENTATION` if it is off.
 
 ## RSSI, Airspeed and Analog Pins

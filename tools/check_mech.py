@@ -832,31 +832,20 @@ def buses():
 
 def bom_alternatives():
     print("\n=== substitution candidates for at-risk parts ===\n")
-    print("U2 primary IMU - ICM-42688-P (C1850418) is OUT OF STOCK at LCSC, was $17.96.")
-    print("AP_InertialSensor_Invensensev3 drives all of these, and this board's footprint")
-    print("is jlc:LGA-14_L3.0-W2.5-P0.50-TL, which they all share:\n")
-    print(f"   {'part':14}{'LCSC':12}{'stock':>8}{'US$':>8}  {'hwdef string':16} note")
-    for part, lcsc, stock, price, dev, note_ in (
-        ("ICM-45686",   "C22459454", "6828", "11.84", "SPI:icm45686",
-         "RECOMMENDED - newer gen, in stock, cheaper than the 42688"),
-        ("ICM-42670-P", "C3288646",  "7695", " 2.20", "SPI:icm42670",
-         "cheapest by far; lower spec but ample for IMU2"),
-        ("IIM-42652",   "C2988404",  "  ?",  " 9.77", "SPI:iim42652",
-         "industrial sibling of the 42688"),
-        ("ICM-42605",   "C2655099",  " yes", " 3.28", "SPI:icm42605",
-         "ALREADY on this board as U3 - buy two of one part"),
-        ("ICM-42688-P", "C1850418",  " OUT", "17.96", "SPI:icm42688",
-         "the current BOM line")):
-        print(f"   {part:14}{lcsc:12}{stock:>8}{price:>8}  {dev:16} {note_}")
+    print("U2 primary IMU - ICM-45686 (C22459454), swapped 2026-10-23 from the ICM-42688-P")
+    print("(C1850418) at $11.92 against $21.52 [L JLC]. Same footprint and functional pins; the")
+    print("hwdef is unchanged, because Invensensev3 reads the 456xx WHOAMI (0x72) after the")
+    print("426xx one (0x75), so SPI:icm42688 finds either - CubeRedSecondary fits both chips on")
+    print("one footprint with one rotation. Trade: gyro noise 3.8 against 2.8 mdps/rtHz, accel")
+    print("the same 70 ug/rtHz, better vibration rejection and +-32 g / +-4000 dps range.")
+    print("Others AP_InertialSensor_Invensensev3 drives on this footprint:\n")
+    print(f"   {'part':14}{'LCSC':12}{'US$':>8}  note")
+    for part, lcsc, price, note_ in (
+        ("ICM-42688-P", "C1850418",  "21.52", "the part U2 replaced; lower gyro noise"),
+        ("ICM-42605",   "C2655099",  " 8.98", "U3 already - buy two of one part"),
+        ("ICM-42670-P", "C3288646",  " 1.85", "cheapest; lower spec")):
+        print(f"   {part:14}{lcsc:12}{price:>8}  {note_}")
     print()
-    print("   Package confirmed LGA-14 (3 x 2.5 mm) for the ICM-45686 [D LCSC], which is")
-    print("   this board's exact footprint. SPI:icm45686 appears in 25 shipping ArduPilot")
-    print("   board definitions, so it is well proven rather than obscure.")
-    print()
-    print("   SUBSTITUTING IS TWO LINES, no PCB change:")
-    print("     tools/design.py    U2 LCSC code and value")
-    print("     tools/gen_hwdef.py the IMU line: SPI:icm42688 -> SPI:icm45686")
-    print("   check_firmware.py hwdef will catch a mismatch between them.\n")
 
     print("Ground truth for SoOP validation: the fitted M10 GPS at 2-3 m against a")
     print("   20-30 m SoOP solution is already 10x better. RTK is NOT needed.\n")

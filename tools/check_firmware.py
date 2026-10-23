@@ -75,8 +75,9 @@ def run_hwdef():
 
     #4. sensors declared vs sensors actually on the BOM
     fitted = {v[2] for v in design.COMPONENTS.values()}
-    if not any("42688" in f for f in fitted):
-        warns.append("hwdef expects ICM-42688-P but it is not in the BOM")
+    #SPI:icm42688 is Matek's device name; Invensensev3 reads the 456xx WHOAMI after the 426xx one
+    if not any(p in f for f in fitted for p in ("42688", "45686")):
+        warns.append("hwdef expects an ICM-42688-P or ICM-45686 on SPI1 but neither is in the BOM")
     if not any("MS5611" in f for f in fitted):
         warns.append("hwdef expects MS5611 but it is not in the BOM")
 

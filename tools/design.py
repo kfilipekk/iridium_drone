@@ -26,7 +26,7 @@ COMPONENTS = {
  #core
  #C5271084 is STM32H743VIT6TR
     "U1" : ("jlc_parts:STM32H743VIT6_C114409", "jlc:LQFP-100_L14.0-W14.0-P0.50-LS16.0-BL", "STM32H743VIT6", "C5271084", False),
- "U2" : ("jlc_parts:ICM-42688-P",           "jlc:LGA-14_L3.0-W2.5-P0.50-TL",            "ICM-42688-P",   "C1850418", False),
+ "U2" : ("jlc_parts:ICM-45686",             "jlc:LGA-14_L3.0-W2.5-P0.50-TL",            "ICM-45686",     "C22459454", False),
  "U3" : ("jlc_parts:ICM-42605",             "jlc:LGA-14_L3.0-W2.5-P0.50-TL",            "ICM-42605",     "C2655099", False),
  "U4" : ("jlc_parts:MS561101BA03-50",       "jlc:SENSORS-SMD_MS5611-01BA03",            "MS5611",        "C15639",   False),
  "U5" : ("jlc_parts:W25Q128JVPIQTR",        "jlc:WSON-8-1EP_6x5mm_P1.27mm_EP3.4x4.3mm", "W25Q128JVPIQ",  "C190862",  False),
@@ -125,7 +125,7 @@ LOADS_3V3 = [   #through U9, TLV75733P
     ("INA180A2 antenna sense (U25)",   0.000, 0.000, "[D] INA180: 260 uA maximum quiescent"),
 ]
 LOADS_3V3A = [  #through U10, TLV75533
-    ("ICM-42688-P",                    0.001, 0.002, "[D] ~0.88 mA 6-axis continuous"),
+    ("ICM-45686",                      0.001, 0.002, "[D] 0.42 mA 6-axis low-noise mode"),
     ("ICM-42605",                      0.001, 0.002, "[D] ~0.75 mA 6-axis continuous"),
     ("MS5611 barometer",               0.001, 0.002, "[D] 1.4 mA peak during conversion"),
     #the SoOP receiver
@@ -511,7 +511,7 @@ FOAM = dict(
                     material="closed-cell foam pad, adhesive-backed, on the ESC's top face",
                     why="a radiation and convection break between the ESC and the IMUs; "
                         "it does not touch the board"),
-    src="[D] MS5611 1.0 mm, ICM-42688-P 0.91 mm package height; [A] foam thicknesses chosen "
+    src="[D] MS5611 1.0 mm, ICM-42605 0.91 mm package height (the ICM-45686 is 0.81); [A] foam thicknesses chosen "
         "to leave >= 1 mm of air to the facing part",
 )
 
@@ -2181,7 +2181,7 @@ PIN_INTENT = {
     "ESC_TEL":    dict(mcu="in",     why="ESC transmits telemetry to the FC - RX pin"),
 
     #IMU1 / IMU2 SPI
-    "SPI1_SCK": dict(mcu="out", why="clock to ICM-42688-P"),
+    "SPI1_SCK": dict(mcu="out", why="clock to the ICM-45686"),
     "SPI1_MOSI": dict(mcu="out", why="MCU drives"),
     "SPI1_MISO": dict(mcu="in",  why="sensor drives"),
     "IMU1_CS":  dict(mcu="out", boot="high", why="chip select, idle high"),

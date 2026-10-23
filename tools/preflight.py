@@ -370,7 +370,7 @@ def project(board):
 
     NEED = [
         ("MCU STM32H743",            {"U1"}),
-        ("IMU 1 (ICM-42688-P)",      {"U2"}),
+        ("IMU 1 (ICM-45686)",        {"U2"}),
         ("IMU 2 (ICM-42605)",        {"U3"}),
         ("barometer MS5611",         {"U4"}),
         ("dedicated I2C port",        {"J9"}),

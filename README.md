@@ -26,7 +26,7 @@ Optical flow and visual-inertial odometry drift without bound over long flights.
 | Subsystem | Components |
 |-----------|------------|
 | MCU | STM32H743VIT6, Cortex-M7 @ 480 MHz, 2 MB flash, 1 MB RAM |
-| IMUs | ICM-42688-P (SPI1) and ICM-42605 (SPI4) on a separate low-noise 3.3 V rail |
+| IMUs | ICM-45686 (SPI1) and ICM-42605 (SPI4) on a separate low-noise 3.3 V rail |
 | Barometer | MS5611 on I2C2 |
 | Storage | W25Q128 flash for the orbit catalogue, microSD over SDIO |
 | Power | 3S-5S input, TVS and reverse-polarity protection, two LMR33630 bucks (5 V 1.6 A system, 5 V 2.1 A payload) and three 3.3 V LDOs |
@@ -51,7 +51,7 @@ B.Cu:   Sensors, RF receiver, DroneCAN, bucks
 | | NAVCORE-SoOP | SpeedyBee F405 V4 | Matek H743-SLIM V3 | Pixhawk 6C |
 |---|---|---|---|---|
 | MCU | STM32H743 | STM32F405 | STM32H743 | STM32H743 + F103 |
-| IMUs | ICM-42688-P + ICM-42605 | ICM-42688-P | ICM-42688-P + ICM-42605 | ICM-42688-P + BMI088 |
+| IMUs | ICM-45686 + ICM-42605 | ICM-42688-P | ICM-42688-P + ICM-42605 | ICM-42688-P + BMI088 |
 | Input | 3-5S | 3-6S | 2-8S | power module |
 | Port ESD | every cable signal | none stated | none stated | none stated |
 | Position without GNSS | Iridium Doppler, 100-200 m | none | none | none |

@@ -110,7 +110,7 @@ The project builds its firmware with `tools/build_firmware.sh`, pinned to
 >
 > **Sensors:**
 >
-> * IMU: ICM-42688-P (SPI1) and ICM-42605 (SPI4)
+> * IMU: ICM-45686 (SPI1) and ICM-42605 (SPI4)
 > * Barometer: MS5611 (I2C, 0x77)
 > * Compass: external I2C compass on the GPS connector, no on-board compass
 > * Logging: microSD and W25Q128 SPI flash

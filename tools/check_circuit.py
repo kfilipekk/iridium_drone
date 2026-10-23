@@ -1313,12 +1313,14 @@ DATASHEET_VERIFIED = {
                       "2026-09-20"),
     "SN74LVC1G17DBVR": ("docs/datasheets/SN74LVC1G17-TI.pdf Pin Functions, DBV column",
                         "all 5 pins: NC A GND Y VCC", "2026-09-18"),
-    "ICM-42688-P": ("docs/datasheets/ICM-42688-P-TDK.pdf DS-000347 pin table, and an "
-                    "independent KiCad symbol (hub.allspice.io MUREX/electrical)",
-                    "all 14 pins. FOUND pin 7 RESV 'Connect to GND' floating - fixed",
-                    "2026-09-18"),
+    "ICM-45686": ("JLCPCB/EasyEDA symbol for C22459454, pin by pin against the ICM-42688-P's "
+                  "(docs/datasheets/ICM-42688-P-TDK.pdf DS-000347), whose footprint it shares",
+                  "all 14 pins. Every functional pin matches; 2, 3, 10 and 11 are RESV on the "
+                  "42688-P and an AUX1 interface here, off until enabled, and unconnected on "
+                  "this board. Pin 7 RESV grounded as before",
+                  "2026-10-23"),
     "ICM-42605": ("docs/datasheets/ICM-42605-TDK.pdf DS-000292 pin table",
-                  "all 14 pins. Same pin 7 finding as the ICM-42688-P - fixed",
+                  "all 14 pins. Pin 7 RESV 'Connect to GND' was floating - fixed",
                   "2026-09-18"),
     "WST4041": ("docs/datasheets/WST4041_WINSOK.pdf SOT-23-3L Pin Configuration figure",
                 "G S D on 1 2 3, and P-channel as the topology needs", "2026-09-18"),
