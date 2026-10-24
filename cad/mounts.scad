@@ -223,6 +223,48 @@ module belly_sensor() {
         box(-7.5, 7.5, -10.5, 10.5, 0, 7.87);
 }
 
+// ---- radar cradle: the IWR6843AOP face down, forward of the lidar bracket -------------
+// Two M2 through the floor into nuts on the plate's top face, heads counterbored in the
+// pocket; the lid screws into two inserts and holds the board by its edge, its window over
+// the antennas. The floor clears the plate's press nuts, and the gap over the heat sink
+// vents out of both sides.
+radar_y      = -10.0;
+radar_body_h = 14.00;
+module radar_cradle() {
+    px = 15.20; py = 11.20; ox = 16.40; oy = 12.40;
+    f = 3.5; bx = 19.00; h = radar_body_h;
+    //render(): the preview otherwise hides the radar in the pocket and the lid's window
+    color("#d9822b") render() difference() {
+        union() {
+            box(-ox, ox, radar_y - oy, radar_y + oy, -h, 0);
+            for (s = [-1, 1]) translate([s * bx, radar_y, -h]) cylinder(d = 6.8, h = h, $fn = 32);
+        }
+        box(-px, px, radar_y - py, radar_y + py, -h - 1, -f);                       // the pocket
+        for (s = [-1, 1]) translate([s * bx, radar_y, -h]) bore(ins_m2, false);
+        for (p = [[-8.0, -19.75], [8.0, -19.75]]) translate([p[0], p[1], -f]) { hole(2.4, f); translate([0, 0, -1]) cylinder(d = 4.2, h = 2.0 + 1, $fn = 24); }
+        for (n = [[-10.0, -10.0], [10.0, -10.0], [-15.25, -15.25], [15.25, -15.25]]) translate([n[0], n[1], -1.5]) cylinder(d = 7.0, h = 1.5 + 1, $fn = 32);
+        for (s = [-1, 1], v = [-1, 1])                                          // vents over the heat sink
+            box(s * ox - 1.5, s * ox + 1.5, radar_y + v * 4 - 3, radar_y + v * 4 + 3, -f - 1.5, -f);
+        box(-4, 4, radar_y - oy - 1, radar_y - py + 0.01, -h - 1, -h + 4);          // the lead, out of the front wall
+    }
+}
+module radar_lid() {
+    px = 15.20; py = 11.20; ox = 16.40; oy = 12.40;
+    bx = 19.00; w = 2.0; t = 1.5;
+    color("#e0a050") translate([0, 0, -radar_body_h - t]) render() difference() {
+        union() {
+            box(-ox, ox, radar_y - oy, radar_y + oy, 0, t);
+            for (s = [-1, 1]) translate([s * bx, radar_y, 0]) cylinder(d = 6.8, h = t, $fn = 32);
+        }
+        box(-px + w, px - w, radar_y - py + w, radar_y + py - w, -1, t + 1);       // the antennas' window
+        for (s = [-1, 1]) translate([s * bx, radar_y, 0]) hole(2.4, t);
+    }
+}
+module radar() {
+    color("#1d2a3a") box(-15.0, 15.0, radar_y - 11.0, radar_y + 11.0,
+                         -radar_body_h, -radar_body_h + 9.0);
+}
+
 // ---- Remote ID on the rear-port arm (Holybro Remote ID (PCB, ArduRemoteID)) ----------------------
 // A tray on the arm's top face holds the board in a pocket; the cover screws into the
 // tray's two M2 inserts and traps it; two cable ties over the cover's grooves hold the lot
@@ -265,6 +307,7 @@ module mounts() {
     antenna_tower(); gps_pod(); gps_lid(); nose_mount(); xiao_lid(); rx_cover();
     lidar_bracket();
     range_cradle(); range_lid();
+    radar_cradle(); radar_lid();
     rid_tray(); rid_cover();
 }
 module mounted_parts() {
@@ -317,6 +360,8 @@ module print_rx_cover()      { translate([0, 0, -(rx_bot - 1.5)]) rx_cover(); }
 module print_lidar_bracket() { translate([0, 0, lidar_bracket_t]) lidar_bracket(); }
 module print_range_cradle()  { rotate([180, 0, 0]) range_cradle(); }
 module print_range_lid()     { translate([0, 0, range_body_h + 1.5]) range_lid(); }
+module print_radar_cradle()  { rotate([180, 0, 0]) radar_cradle(); }
+module print_radar_lid()     { translate([0, 0, radar_body_h + 1.5]) radar_lid(); }
 module print_rid_tray()      { rid_tray_local(); }
 module print_rid_cover()     { translate([0, 0, 9.5]) rotate([180, 0, 0]) rid_cover_local(); }
 module print_skid()          { translate([0, 0, 2.5]) rotate([180, 0, 0]) skid_local(); }

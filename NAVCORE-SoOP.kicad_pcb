@@ -28100,7 +28100,7 @@
 				(justify mirror)
 			)
 		)
-		(property "Value" "ICM-42688-P"
+		(property "Value" "ICM-45686"
 			(at -0.000127 -3.326213 270)
 			(layer "B.Fab")
 			(hide yes)
@@ -28139,7 +28139,7 @@
 				(justify mirror)
 			)
 		)
-		(property "LCSC" "C1850418"
+		(property "LCSC" "C22459454"
 			(at 0 0 270)
 			(layer "B.SilkS")
 			(hide yes)
