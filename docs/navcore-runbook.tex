@@ -1707,6 +1707,11 @@ inside \file{L5}'s 2.1 A, but puts \file{U20} at about 135\,\degC{} against 125\
 (\file{check\_order.py modules}). Each declared mission fits.
 \item \textbf{The Economic variant saves one part and not the feeder fees}, which makes it a
 worse deal than it reads as (Section 15.1).
+\item \textbf{\file{U20}'s input decoupling is a corner short}: one 100\,nF (\file{C66}) 2.4\,mm
+from its input pins and the nearest 10\,\textmu F (\file{C18}) 5.8\,mm away, where the datasheet's
+layout puts both within about 1.5\,mm. \file{L5} fills the underside beneath it and the top side
+is full, so there is no site on this board. It only feeds the payload rail; T3b step 1b shows
+what its switching noise does to Iridium reception.
 \item \textbf{In4 rail fragmentation} is an accepted warning on this board.
 \end{itemize}
 
