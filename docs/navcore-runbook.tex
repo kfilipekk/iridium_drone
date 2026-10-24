@@ -79,8 +79,8 @@ Toolchain & KiCad 9.0.8, ArduPilot Copter-4.7.0, Python 3 + pcbnew \\
 \vspace{8mm}
 \begin{minipage}{0.82\textwidth}
 \small\itshape
-Every figure in this document was re-derived from the repository's own tooling on
-19 September 2026 rather than copied from another document. Where a number is a
+Every figure in this document is derived from the repository's own tooling rather than
+copied from another document. Where a number is a
 judgement, an assumption or genuinely unknown, it says so. Sections marked
 \flag{flag} are the ones capable of costing money, a board, or a bench session.
 \end{minipage}
@@ -191,10 +191,10 @@ Dimensions & 46.5 $\times$ 47.2 mm & the outline in \file{design.BOARD} \\
 Thickness & 1.6 mm & 30.5 mm stack standard \\
 Outer copper & \textbf{1 oz} & every current figure assumes it \\
 Inner copper & \textbf{1 oz} & the VBAT plane on In4 needs it (\file{irdrop.py check}) \\
-Surface finish & ENIG & 0402s and LGA-14s want a flat finish \\
+Surface finish & ENIG & 0201s, LGA-14s and a DSBGA want a flat finish \\
 Min track / spacing & \textbf{0.1016 mm (4 mil)} & should be free tier \\
 Min via / drill & \textbf{0.45 mm / 0.20 mm} & \\
-Impedance control & No & USB is a plain pair; the RF run loses $<$1.5 dB \\
+Impedance control & No & USB is a plain pair; the RF run follows the antenna's 28 dB LNA, so a mismatch costs under 0.1 dB \\
 Via covering & \textbf{Epoxy Filled \& Capped} & some vias sit in SMD pads \\
 Stencil & not needed & everything machine-placed but Section~\ref{sec:solder} \\
 Mark on PCB & \textbf{Remove Mark} & no JLC marker on the board; small fee \\
@@ -552,8 +552,7 @@ ones that strip a frame.
 \file{fab/assembly-top.svg} and \file{fab/assembly-bottom.svg}.} Every reference designator
 is on the assembly drawings, and Section~\ref{sec:plugs} has every connector by edge. Pads
 print their function (\file{L5V}, \file{DIN}, \file{BZ} \dots) rather than a designator,
-and only where it sits unambiguously beside its pad. Four pads arrive with no label
-(Section~\ref{sec:T3d}).
+and only where it sits unambiguously beside its pad (Section~\ref{sec:T3d}).
 \item \textbf{Decide the board's orientation before cutting any loom.} All four edges carry
 connectors, top and bottom; the aft edge (\file{J3} GPS, \file{J12} antenna) faces the
 antenna tower. Read the orientation flag in Section~\ref{sec:T0} first.
@@ -694,8 +693,7 @@ copper. If the board has moved since this was compiled, \cmd{python3 tools/dimen
 
 \begin{enumerate}
 \item \textbf{Inspect the boards} (Section 4.1).
-\item \textbf{Print the assembly drawings and the pad map.} Four unlabelled pads ---
-Section~\ref{sec:T3d}.
+\item \textbf{Print the assembly drawings and the pad map} (Section~\ref{sec:T3d}).
 \item \textbf{Dry-fit the FC into the centre plate.} Confirm nothing blocks the west
 edge's underside, where the microSD ejects.
 \item \textbf{Buzz the GH 8P to SH 8P ESC lead}, all eight pins end to end, against the
@@ -924,7 +922,7 @@ hard-case pack on build day.
 \item The ESC's own leads do not fit \file{J2}; the GH 8P to SH 8P lead is a gamble until you buzz it.
 \item \file{J12} carries +5 V: a bench instrument goes on through the DC block.
 \item A servo plug fits either way round on its header; signal is pin 1.
-\item Four pads are unlabelled; identify every pad on the padmap, never by counting from a neighbour.
+\item Identify every pad by its label or on the padmap, never by counting from a neighbour.
 \item The board is \textbf{5S maximum} --- the input TVS sets it (Part~1).
 \item Wire one mission's payload onto \file{+5V\_PAYLOAD}, not every payload at once.
 \item Confirm 1 oz outer and inner copper on the order; 0.5 oz halves every trace's rating.
@@ -1439,26 +1437,20 @@ Do this with the \textbf{stack assembled}, not the board in free air, because th
 \emph{is} the thermal environment.
 
 % =============================================================================
-\section{Part 13 --- T3d: the four unlabelled pads}
+\section{Part 13 --- T3d: the pads and test points}
 \label{sec:T3d}
 
-Of the \textbf{10} pads and test points on the board, \textbf{6} print their function
-(\file{L5V}, \file{DIN}, \file{BZ} \dots) at 1.0\,mm. A label is printed only where it is
-legal silkscreen \emph{and} sits clearly nearer its own pad than any other part ---
-\file{tools/check\_board.py silk\_owner} gates that --- because a label that reads as its
-neighbour's is worse than a blank pad: it will be trusted. These \textbf{4} have no such
-place, so they are blank on the board and named on \file{docs/img/padmap.svg} and the
-assembly drawings; \file{design.PAD\_LABELS\_UNPRINTED} gives each reason:
+All \textbf{10} pads and test points print their function (\file{L5V}, \file{DIN}, \file{BZ},
+\file{B5V} \dots) at 1.0\,mm, each placed where it is legal silkscreen \emph{and} sits clearly
+nearer its own pad than any other part --- \file{tools/check\_board.py silk\_owner} gates
+that, because a label that reads as its neighbour's is worse than a blank pad: it will be
+trusted. Preflight fails a pad left blank. \file{docs/img/padmap.svg} and the assembly
+drawings name them too.
 
-\begin{center}
-\file{P151} (LED 5 V)\quad \file{P153} (LED GND)\quad \file{P161} (buzzer 5 V)\quad
-\file{TP3} (servo 5)
-\end{center}
-
-\flag{Three of them are wire pads} --- the LED strip's supply and ground and the buzzer's
-supply. Never identify a gold square by counting from its neighbour --- use the printed
-gerber and \file{docs/img/padmap.svg}. Preflight fails any other pad left blank, so treat
-any other list you read as stale.
+\flag{Three of them are wire pads} --- the LED strip's supply and ground (\file{P151},
+\file{P153}) and the buzzer's supply (\file{P161}). Check each against
+\file{docs/img/padmap.svg} before soldering; never identify a gold square by counting from
+its neighbour.
 
 % =============================================================================
 \section{Part 14 --- T4/T5: tethered, then flight, strictly in this order}
@@ -1700,8 +1692,6 @@ can be fixed, and one of them (\file{U8}) may force one anyway.
 \begin{itemize}
 \item \textbf{USB runs the logic but not the payload rail}, and back-feeds about 4\,V onto
 \file{VBAT} and the ESC's battery pin through \file{U8} and \file{Q4}.
-\item \textbf{Four pads arrive unlabelled} (Section~\ref{sec:T3d}) because a 1.0\,mm label,
-placed where it reads as its own pad's, has nowhere to go among them.
 \item \textbf{The payload rail cannot carry every payload connector at once}: 1.48 A is
 inside \file{L5}'s 2.1 A, but puts \file{U20} at about 135\,\degC{} against 125\,\degC{}
 (\file{check\_order.py modules}). Each declared mission fits.
@@ -1817,7 +1807,7 @@ orientation and \file{AHRS\_ORIENTATION}
 \item T1 current-limited rails $\rightarrow$ T2 bootloader over USB DFU (\file{BOOT} +
 \file{RESET}) $\rightarrow$ T3 sensors, props off
 \item T3a thermal (\file{U8} needs a probe) $\rightarrow$ T3c IMU temp cal $\rightarrow$ T3d
-four unlabelled pads
+the wire pads, checked on the padmap
 \item T3b before any position-hold claim: measure the real sigma
 \item SITL scenarios $\rightarrow$ tethered hover $\rightarrow$ GPS Loiter. \textbf{Props on
 last}
@@ -1827,7 +1817,7 @@ last}
 \vfill
 \begin{center}
 \footnotesize\color{sidegrey}
-Generated from the NAVCORE-SoOP working tree, 19 September 2026.\\
+Generated from the NAVCORE-SoOP working tree.\\
 Gate: READY TO ORDER, every gated prerequisite proven --- the count is printed by the gate, not typed here.\\
 Hardware: NOT READY TO FLY, 6 items requiring hardware.
 \end{center}

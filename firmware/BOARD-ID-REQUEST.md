@@ -125,9 +125,12 @@ The project builds its firmware with `tools/build_firmware.sh`, pinned to
 > * ArduPilot: hwdef completed and builds successfully (`Copter-4.7.0`)
 > * Basic testing: not yet powered, bring-up is next
 >
-> **Pin compatibility:** the pinout matches the MatekH743 across all 72 assigned pins, so
-> stock MatekH743 binaries run on it unmodified for bring-up. This hwdef exists to give the
-> board its own ID and to describe only the hardware that is actually populated.
+> **Pin compatibility:** every pin this board assigns is a MatekH743 pin, and 50 of its 65
+> do the same job, so a stock MatekH743 binary is a usable bring-up image: the first IMU, the
+> baro, microSD, USB and GPS sit on Matek's pins and buses. The other 15 differ on purpose -
+> the motors on TIM3, two servo outputs where Matek has UART4, the RC UART, and the Iridium
+> receiver's ADC and antenna-feed pins. This hwdef gives the board its own ID and describes
+> only the hardware that is actually populated.
 >
 > **Requested ID:** 7180, which is free in `Tools/AP_Bootloader/board_types.txt` and fills
 > a gap below #7199. Happy to take any other ID you prefer.

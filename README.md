@@ -35,12 +35,12 @@ Optical flow and visual-inertial odometry drift without bound over long flights.
 
 ### Layer Stackup
 ```
-F.Cu:   RF, crystals, MCU fanout
+F.Cu:   MCU, RF receiver, bucks and LDOs, flash, the edge connectors
 In1.Cu: Continuous ground plane
 In2.Cu: SPI, SDIO and I2C
 In3.Cu: UARTs, PWM and slow I/O
 In4.Cu: Power planes (+5V, +5V_PAYLOAD, +3V3, VBAT)
-B.Cu:   Sensors, RF receiver, DroneCAN, bucks
+B.Cu:   IMUs, baro, both crystals, CAN, microSD, the underside connectors
 ```
 
 ### Supported Platforms
