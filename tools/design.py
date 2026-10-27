@@ -39,7 +39,7 @@ COMPONENTS = {
  "U11": ("jlc_parts:SN65HVD230DR",          "jlc:SOIC-8_L4.9-W3.9-P1.27-LS6.0-BL",      "SN65HVD230",    "C12084",   False),
  "U12": ("jlc_parts:USBLC6-2SC6_C2687116",  "jlc:SOT-23-6_L2.9-W1.6-P0.95-LS2.8-BL",    "USBLC6-2SC6",   "C2687116", False),
  "J1" : ("jlc_parts:TYPE-C_16PIN_2MD(073)", "jlc:USB-C-SMD_TYPE-C-16PIN-2MD-073",       "USB-C",         "C2765186", False),
- "J2" : ("jlc_parts:SM08B-GHS-TB(LF)(SN)", "jlc:CONN-SMD_SM08B-GHS-TB-LF-SN",       "ESC 8P",        "C42376901",  False),  #Shou Han GH clone; the JST part (C265111) is out of stock
+ "J2" : ("jlc_parts:SM08B-SRSS-TB(LF)(SN)", "jlc:CONN-TH_SM08B-SRSS-TB-LF-SN",                "ESC 8P",        "C160407",  False),
  "J3" : ("jlc_parts:XY-SM06B-GHS-TB",       "jlc:CONN-SMD_XY-SM06B-GHS-TB",            "GPS+I2C",       "C51940119",False),
  "J5" : ("jlc_parts:BX-GH1_25-4PWT",        "jlc:CONN-SMD_4P-P1.25_BX-GH1.25-4PWT","RC IN",   "C18077720",False),
  "J6" : ("jlc_parts:BX-GH1_25-4PWT",        "jlc:CONN-SMD_4P-P1.25_BX-GH1.25-4PWT","CAN 4P",  "C18077720",False),
@@ -264,7 +264,7 @@ RF_PARTS = dict(
 #connector orientation
 MATING_FACE = {
     "J1": (0.0, +1.0),   #USB-C
-    "J2": (0.0, +1.0),   #ESC JST-GH 8P
+    "J2": (0.0, +1.0),   #ESC JST-SH 8P
     "J3": (0.0, +1.0),   #GPS/I2C JST-GH 6P
     "J8": (0.0, +1.0),   #microSD card slot
     "J5": (0.0, +1.0),   #RC receiver JST-GH 4P
@@ -281,7 +281,7 @@ MATING_FACE = {
 
 MATING_PLUG = {
     "J1":  (9.0,   "[A] USB-C plug overmould, typical 9 mm"),
-    "J2":  (12.9,  "[D] JST GHR 8P: 8 x 1.25 + 2.90"),
+    "J2":  (10.6,  "[D] JST SHR 8P: 8 x 1.00 + 2.60"),
     "J3":  (10.4,  "[D] JST GHR 6P: 6 x 1.25 + 2.90"),
     "J5":  (7.9,   "[D] JST GHR 4P: 4 x 1.25 + 2.90"),
     "J6":  (7.9,   "[D] JST GHR 4P"),
@@ -297,14 +297,14 @@ MATING_PLUG = {
 }
 
 MATING_PLUG_BODY = {
-    "J1": 6.0, "J2": 5.0, "J3": 5.0, "J5": 5.0, "J6": 5.0, "J8": 14.0,
+    "J1": 6.0, "J2": 4.0, "J3": 5.0, "J5": 5.0, "J6": 5.0, "J8": 14.0,
     "J9": 5.0, "J11": 5.0, "J12": 6.0, "J14": 5.0, "J17": 14.5, "J23": 14.5,
     "J21": 5.0, "J22": 5.0,
 }
 
 MATING_CLEARANCE = {
     "J1": 9.0,    #USB-C plug overmould
-    "J2": 6.0,    #JST-GH plug plus wire bend
+    "J2": 6.0,    #JST-SH plug plus wire bend
     "J3": 6.0,    #GPS/I2C JST-GH 6P
     "J5": 6.0,    #RC JST-GH 4P
     "J6": 6.0,    #DroneCAN JST-GH 4P
@@ -322,7 +322,7 @@ MATING_CLEARANCE = {
 MATING_PLUG_UNDER = {r: 0.0 for r in MATING_FACE}
 
 CONNECTOR_RETENTION = {
-    "J2": ("latch", "JST-GH positive lock"),
+    "J2": ("stake", "ESC harness, JST-SH 8P (friction fit)"),
     "J3": ("latch", "JST-GH positive lock"),
     "J5": ("latch", "JST-GH positive lock"),
     "J6": ("latch", "JST-GH positive lock"),
@@ -1693,7 +1693,7 @@ BOARD = dict(X0=99.25, Y0=99.4, W=46.5, H=47.2, R=0.5, MOUNT=30.5, HOLE_D=4.0)
 CONN_BODY = {
     "CONN-SMD_XY-SM06B-GHS-TB":         (5.53, 3.22, "[M] STEP bbox in the Rev C GLB"),
     "CONN-SMD_4P-P1.25_BX-GH1.25-4PWT": (4.13, 2.83, "[M] STEP bbox in the Rev C GLB"),
-    "CONN-SMD_SM08B-GHS-TB-LF-SN":      (6.63, 2.70, "[M] STEP bbox (C265111)"),
+    "CONN-TH_SM08B-SRSS-TB-LF-SN":       (5.25, 2.86, "[M] STEP bbox (C160407)"),
     "CONN-TH_SM03B-GHS-TB-LF-SN":       (3.50, 2.37, "[M] STEP bbox (C514175)"),
     "USB-C-SMD_TYPE-C-16PIN-2MD-073":   (4.47, 4.86, "[M] STEP bbox in the Rev C GLB"),
     "TF-SMD_TF-01A":                    (8.05, 9.63, "[M] STEP bbox in the Rev C GLB"),
@@ -1720,7 +1720,7 @@ FLOORPLAN_REV_D = {
     "J1":  dict(edge="E", side="F", at=129.00, front=+0.50, desc="USB-C"),
     "J14": dict(edge="E", side="B", at=116.30, front=-0.05, desc="flow GH-6P"),
     #port (W): ESC and payload power on top, the microSD underneath
-    "J2":  dict(edge="W", side="F", at=117.60, front=-0.55, desc="ESC GH-8P"),
+    "J2":  dict(edge="W", side="F", at=117.60, front=-0.39, desc="ESC SH-8P"),
     "J22": dict(edge="W", side="F", at=130.30, front=-0.90, desc="payload GH-3P"),
     "J8":  dict(edge="W", side="B", at=123.50, front=+1.00, desc="microSD"),
 }
@@ -1849,7 +1849,7 @@ INDUCTOR_LOAD_A = {"L2": LOADS_5V_CONT_A}
 #height of each package above the board surface it sits on, mm
 PART_HEIGHT = {
     "CONN-SMD_XY-SM06B": 4.4,   #JST GH 6P
-    "CONN-SMD_SM08B-GHS": 4.35, #J2 JST GH 8P side entry; [D] JST GH: 4.25 mm
+    "CONN-TH_SM08B-SRSS": 2.9,  #J2 JST SH 8P side entry; [D] JST SH: 2.9 mm
     "CONN-TH_SM03B-GHS": 4.35,  #J22 JST GH 3P side entry (SMD despite the name)
     "HDR-SMD_3P-P2.54-H-M_KH": 2.5,  #J17/J23; [D] C20610212 insulator height 2.5 mm
     "MMCX-TH_DL-MMCX-KWE-90": 4.0,   #J12; [D] DreamLNK drawing: 6.80 overall less 2.80 of pins
@@ -2263,7 +2263,7 @@ PIN_INTENT = {
 #the one board, and everything that can bolt onto it later
 MODULES = {
     "esc": dict(
-        what="SpeedyBee BLS 60A 4-in-1", lands_on=["J2"], conn="JST-GH 8P on J2, side entry; a GH-8P to SH-8P lead to the ESC",
+        what="SpeedyBee BLS 60A 4-in-1", lands_on=["J2"], conn="JST-SH 8P on J2, side entry; standard SH-8P to SH-8P ESC lead",
         needs_board_change=None, gbp=0, status="fitted",
         ma_5v=0, counted=True,
         note="J2 follows Betaflight's documented SpeedyBee pinout; buzz it before VBAT"),

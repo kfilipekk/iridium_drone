@@ -206,6 +206,18 @@
    "spec": "0805",
    "stock": 9238010
   },
+  "C160407": {
+   "describe": "-25\u2103~+85\u2103 1 10mm 1A 1mm 1x8P 2.9mm 4.32mm 50V 8 8P Auxiliary Solder Pin Copper alloy PA SH Surface Mount, Right Angle Tin UL94V-0 White SMD,P=1mm,\u5367\u8d34 Wire To Board Connector ROHS",
+   "found": true,
+   "lcsc_url": "https://www.lcsc.com/product-detail/wire-to-board-connector_jst-sm08b-srss-tb-lf-sn_C160407.html",
+   "least_patch": 0,
+   "library": "expand",
+   "min_purchase": 1,
+   "mpn": "SM08B-SRSS-TB(LF)(SN)",
+   "price_usd": 0.3238,
+   "spec": "SMD,P=1mm,Surface Mount\uff0cRight Angle",
+   "stock": 184113
+  },
   "C167879": {
    "describe": "1.6A 10uH 130m\u03a9 2.4A Magnetic Shielded Inductor \u00b120% SMD,4x4mm Power Inductors ROHS",
    "found": true,

@@ -18,8 +18,8 @@ module plug_box(x, y, ux, uy, w, depth, z0, h) {
 module plug_J1() {   // 9.0 mm clearance, 9.00 mm mouth
     plug_box(23.75, -6.00, 1.0000, -0.0000, 9.00, 9.00, fc_z + fc_pcb, plug_h);
 }
-module plug_J2() {   // 6.0 mm clearance, 12.90 mm mouth
-    plug_box(-22.70, 5.40, -1.0000, -0.0000, 12.90, 6.00, fc_z + fc_pcb, plug_h);
+module plug_J2() {   // 6.0 mm clearance, 10.60 mm mouth
+    plug_box(-22.86, 5.40, -1.0000, -0.0000, 10.60, 6.00, fc_z + fc_pcb, plug_h);
 }
 module plug_J3() {   // 6.0 mm clearance, 10.40 mm mouth
     plug_box(0.00, 23.55, 0.0000, 1.0000, 10.40, 6.00, fc_z + fc_pcb, plug_h);
