@@ -497,7 +497,7 @@ def run_topology():
 Usage:  python3 tools/check_circuit.py electrical [-v]
 """
 
-electrical_RAILS = {"+3V3", "+3V3A", "+3V3_CAN", "+5V", "+5V_PAYLOAD", "+9V", "VBAT", "VDDA", "VBUS"}
+electrical_RAILS = {"+3V3", "+3V3A", "+3V3_CAN", "+5V", "+5V_PAYLOAD", "VSERVO", "+9V", "VBAT", "VDDA", "VBUS"}
 DECOUPLE_NEAR = 3.0        #mm; beyond this a 100n is not doing its job at 100 MHz
 DECOUPLE_FAR  = 6.0        #mm; beyond this it is decoration
 #supply pins the symbol rule misses: a TCXO, a passive-typed op-amp pin, the tuner's rail
@@ -949,7 +949,7 @@ the connector's net: the resistor has to be in the path, not beside it.
 and exits 0 only if each is caught.
 """
 
-SUPPLY = {"GND", "+5V", "+5V_PAYLOAD", "+3V3", "+3V3A", "VBAT", "VBAT_IN", "VBUS"}
+SUPPLY = {"GND", "+5V", "+5V_PAYLOAD", "VSERVO", "+3V3", "+3V3A", "VBAT", "VBAT_IN", "VBUS"}
 
 
 def esd_positions():
@@ -1371,11 +1371,16 @@ DATASHEET_VERIFIED = {
         "Murata LQW15AN27N datasheet, 0402 wirewound RF inductor, 2 terminals, non-polarised",
         "2 used pins: 1, 2",
         "2026-10-01"),
-    "PTVS5V0S1UR": (
-        "Nexperia PTVS5V0S1UR datasheet, SOD-123FL unidirectional TVS clamp: "
-        "pin 1 is the cathode (banded, +5V_PAYLOAD) and pin 2 is the anode (GND)",
+    "SMF9_0A_C1973343": (
+        "SMF9.0A datasheet, SOD-123FL unidirectional TVS clamp, 9 V standoff: "
+        "pin 1 is the cathode (banded, VSERVO) and pin 2 is the anode (GND)",
         "2 used pins: 1 = K, 2 = A",
-        "2026-10-01"),
+        "2026-10-28"),
+    "B2020WS": (
+        "B2020WS datasheet, SOD-323 Schottky, 20 V 2 A: pin 1 is the cathode (banded, "
+        "VSERVO) and pin 2 is the anode (+5V_PAYLOAD); the footprint's band sits on pad 1",
+        "2 used pins: 1 = K (symbol '-'), 2 = A (symbol '+')",
+        "2026-10-28"),
     "D_TVS": (
         "KiCad Device:D_TVS bidirectional TVS diode symbol, 2 passive terminals",
         "2 used pins: 1 = A1, 2 = A2",

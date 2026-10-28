@@ -1402,9 +1402,13 @@ net("PWM7",  "U1.PB8", "J17.1")   #PB8 on U1's south edge, nearer J17 than PD12
 net("PWM8",  "U1.PD13", "J23.1")
 NETS["GND"] += ["J17.3", "J23.3"]
 
-#both servos share +5V_PAYLOAD
-NETS["+5V_PAYLOAD"] += ["J17.2", "J23.2", "D8.1", "C92.1"]
-add("D8", "jlc_parts:PTVS5V0S1UR", "jlc:SOD-123FL_L2.7-W1.8-LS3.8-RD", "PTVS5V0S1UR", "C5380694", False)
+#both servo sockets' pin 2 is VSERVO: +5V_PAYLOAD through D10 for small servos, or a UBEC
+#plugged into a socket on a servo Y-lead, which lifts VSERVO above 5 V and turns D10 off
+net("VSERVO", "J17.2", "J23.2", "D8.1", "C92.1", "D10.1")
+NETS["+5V_PAYLOAD"] += ["D10.2"]
+add("D10", "jlc_parts:B2020WS", "jlc:SOD-323_L1.7-W1.3-LS2.7-RD", "B2020WS", "C77284", False)
+#9 V standoff: a UBEC at up to 8.4 V must not make the clamp conduct
+add("D8", "jlc_parts:SMF9_0A_C1973343", "jlc:SOD-123FL_L2.7-W1.8-LS3.7-RD", "SMF9.0A", "C1973343", False)
 NETS["GND"].append("D8.2")
 CAP("C92", "22u", F_C1206)
 NETS["GND"].append("C92.2")
@@ -1876,6 +1880,7 @@ PART_HEIGHT = {
     "CONN-SMD_4P-P1.00_SM04B": 2.9,   #JST SH 4P vertical (J5/J9/J11), same 2.9 as the SH 8P
     "OSC-SMD_4P": 0.9,                 #3.2 x 2.5 clipped-sine TCXO (Y2) [D] Ostar
     "SOD-123": 1.1,                    #DZ1 zener, same body as the SOD-123F already here
+    "SOD-323": 1.0,                    #D10, [D] B2020WS SOD-323 body 0.8-1.0 mm
     "TQFN-28_L5.0": 0.8,               #U13 MAX2112, 5 x 5 QFN [D] Maxim
     "VQFN-12_L3.0": 0.9,              #U8 LMR33630ARNXR; [D] SNVSAN3F RNX0012B "0.9 mm max height"
     "U.FL_Hirose": 1.2,                #J12 vertical U.FL [D] Hirose U.FL-R-SMT-1
@@ -1927,6 +1932,7 @@ NET_VMAX = {
     "VBAT": CELLS * 4.2,
     "VBAT_IN": CELLS * 4.2,
     "+5V_PAYLOAD": 5.0,
+    "VSERVO": 8.4,          #a UBEC on the servo sockets, 2S HV servos at most
     "+5V": 5.0,
     "VBUS": 5.25,
     "+3V3": 3.3,
@@ -1985,6 +1991,7 @@ NET_SOURCE = {
     "VBAT":    "Q4.2",     #after the protection FET - Q4 pin 2 = source
     "+5V":   "L2.2",       #core 5 V buck output inductor
     "+5V_PAYLOAD": "L5.2", #payload 5 V buck output inductor
+    "VSERVO": "J17.2",     #a UBEC on a Y-lead at SRV1: SRV2's servo draws across the board
     "+3V3":  "U9.5",       #TLV757P output
     "+3V3A": "U10.5",      #TLV75533 output
     "+3V3_CAN": "U21.2",   #XC6206 output
@@ -1998,6 +2005,7 @@ NET_CURRENT = {
     "VBAT": 1.2,            #the same current, after Q4: the bucks are all VBAT feeds
     "+5V":  0.95,
     "+5V_PAYLOAD": 1.5,
+    "VSERVO": 1.5,
     "+5V_BIAS_SW": 0.155,   #AP22653 limit, RLIM 210k, max (DS41186)
     "+5V_BIAS": 0.155,
     "+3V3": 0.6,
@@ -2046,7 +2054,7 @@ NET_CLASSES = {
         "clearance": 0.1016,
         "via_dia": 0.60,
         "via_drill": 0.30,
-        "nets": ["VBAT", "VBAT_IN", "+5V", "+5V_PAYLOAD", "VBUS"],
+        "nets": ["VBAT", "VBAT_IN", "+5V", "+5V_PAYLOAD", "VSERVO", "VBUS"],
     },
     "RF": {
         "width": 0.21,
@@ -2073,14 +2081,15 @@ LOAD_CURRENT = {
         "P151.1": 0.06,
         #[D] LD06 steady 0.18 (300 mA is its start-up surge)
         "J11.1": 0.18,
-        #[M] Two TVC servos on J17 and J23, pin 2 (250 mA each running)
-        "J17.2": 0.25,
-        "J23.2": 0.25,
+        #[M] two micro servos on J17/J23 (250 mA each running), through D10 onto VSERVO
+        "D10.2": 0.50,
         #[D] U21 is the +3V3_CAN LDO feed for the SN65HVD230
         "U21.3": 0.10,
         #[A] the DroneCAN node on J6 - the Remote ID module
         "J6.1": 0.15,
     },
+    #[A] one 35 kg servo (DS3235 class) running under load on SRV2, fed by a UBEC at SRV1
+    "VSERVO": {"J23.2": 1.5},
     "+3V3A": {
         #[D] OPA2374: 585 uA per amplifier, two amplifiers (LOADS_3V3A row)
         "U14.8": 0.002,
@@ -2127,9 +2136,9 @@ PAYLOAD_PROFILES = {
     "drone": dict(keys=("J22.1", "P151.1", "J11.1", "U21.3", "J6.1"),
                   what="quad on GPS/SoOP: VTX + XIAO camera on J22, "
                        "LED strip, LD06 lidar, CAN transceiver and one node"),
-    "lander": dict(keys=("J17.2", "J23.2", "P151.1", "U21.3", "J6.1"),
-                   what="TVC lander: two TVC servos running on J17/J23 (aux servos are "
-                        "one-shot deployers), LED strip, CAN transceiver and one node"),
+    "lander": dict(keys=("D10.2", "P151.1", "U21.3", "J6.1"),
+                   what="TVC lander: two micro servos on J17/J23 through D10 (35 kg servos "
+                        "take a UBEC instead), LED strip, CAN transceiver and one node"),
 }
 PAYLOAD_ALL_WIRED = tuple(k for k in LOAD_CURRENT["+5V_PAYLOAD"] if k != "P151.1")
 
@@ -2161,12 +2170,14 @@ ANT_FEED = dict(
 
 
 SERVO_RAIL = dict(
-    refs=("J17", "J23"), net="+5V_PAYLOAD", count=2,
+    refs=("J17", "J23"), net="VSERVO", feed="D10", clamp="D8", count=2,
     run_a=0.250, stall_a=0.700,
-    v_min=4.765, v_max=5.267,
+    v_min=4.2, v_max=8.4, feed_vf=0.50,
+    ubec_run_a=1.5, ubec_stall_a=3.9,
     src="[D] docs/SENSORS.md: an 8-9 g micro (SG90 class) servo draws ~250 mA running "
-        "and ~700 mA stalled; [M] J17.2/J23.2 are the +5V_PAYLOAD pins (design.NETS); "
-        "[D] the buck's 5.016 V output is design.BUCK_RAILS")
+        "and ~700 mA stalled; [A] micro servos run from a 4-cell NiMH, 4.2 V near empty; "
+        "[D] B2020WS 550 mV at 2 A, ~500 mV at a double stall; [D] DS3235 stalls at 3.9 A "
+        "at 6.8 V; [A] 8.4 V is a UBEC set for 2S HV servos, under D8's 9 V standoff")
 
 
 #what each MCU pin is for, in the electrical sense
@@ -2365,8 +2376,15 @@ MODULES = {
         needs_board_change=None,
         gbp=0, status="fitted",
         ma_5v=0, counted=True,
-        note="LMR33630A buck U20 (2.1 A through L5) powering the servos on J17/J23, the lidar "
-             "on J11, J22 and the DroneCAN node on J6"),
+        note="LMR33630A buck U20 (2.1 A through L5) powering micro servos on J17/J23 through "
+             "D10, the lidar on J11, J22 and the DroneCAN node on J6"),
+    "servo_ubec": dict(
+        what="UBEC for 35 kg servos (DS3235, 9imod DS35MG)", lands_on=["J17", "J23"],
+        conn="its own JR lead into a servo socket on a servo Y-lead; VSERVO carries it to the "
+             "other socket and D10 keeps it off +5V_PAYLOAD",
+        needs_board_change=None, gbp=18, status="later", ma_5v=0, counted=True,
+        note="[D] 6.0 V for DS3235 (5-6.8 V), 7.4 V for 7.4 V servos, never above 8.4 V "
+             "(D8 9 V standoff). Fed from the pack on an XT60 Y-lead"),
     "remote_id": dict(
         what="Holybro Remote ID: direct broadcast ID, UK rule for home-built UAS >= 100 g with "
              "a camera from 1 Jan 2028", lands_on=["J6"], conn="JST-GH 4P on J6 (DroneCAN)",

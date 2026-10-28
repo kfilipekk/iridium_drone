@@ -413,7 +413,7 @@ JST GH 3P lead, GHR-03V-S pigtail (J22 payload 5 V) & 2 & 2 & AliExpress \\
 UBEC 6-8.4V >=8A with JR output lead (e.g. Hobbywing 8A UBEC) & 1 & 18 & AliExpress \\
 XT60 1-male to 2-female Y-splitter lead & 1 & 5 & AliExpress \\
 Inline 5A fuse lead (XT60 or inline mini-blade) & 1 & 4 & AliExpress \\
-Servo 3-pin JR Y-splitter cable (pair) & 2 & 4 & AliExpress \\
+Servo 3-pin JR Y-splitter cable (pair) & 1 & 4 & AliExpress \\
 High-torque TVC Servos (DS3235 or 9imod DS35MG 35kg) & 2 & 35 & AliExpress \\
 \end{longtable}
 
@@ -806,27 +806,26 @@ as a reversed plug will fit mechanically. The pins overhang the fore edge; \text
 clip over both plugs} so pulling forces transfer to the clip and not the SMD pads.
 
 \begin{itemize}
-\item \textbf{Small servos (9\,g micro / SG90 class):} plug directly into \file{J17} and \file{J23}.
-Pin 2 supplies \file{+5V\_PAYLOAD} from buck regulator \file{U20} (budgeted for $\sim$250\,mA
-running / 700\,mA stall per servo).
-\item \textbf{High-power / 35\,kg servos (e.g. DS3235, 9imod DS35MG):} must be powered via an
-\textbf{external UBEC and a standard Servo Y-harness}. Digital and coreless 35\,kg servos stall at
-3.9--5\,A each (up to 8--10\,A peak for two servos), which would overload the on-board buck and
-induce inductive ground noise.
+\item \textbf{Pin 2 of both sockets is \file{VSERVO}, the servo rail.} \file{D10}, a Schottky
+diode, feeds it from \file{+5V\_PAYLOAD}, and a UBEC plugged into either socket lifts it above
+5\,V and turns \file{D10} off, so the UBEC never reaches the payload rail. \file{D8} (9\,V
+standoff) clamps spikes on it. Nothing on the board is harmed whichever way the leads go.
+\item \textbf{Small servos (9\,g micro / SG90 class):} plug straight into \file{J17} and \file{J23}.
+They run at about 4.5\,V from \file{U20} through \file{D10}, budgeted at $\sim$250\,mA running and
+700\,mA stalled each.
+\item \textbf{35\,kg servos (DS3235, 9imod DS35MG and the like) take a UBEC.} They stall at
+3.9\,A or more each, more than \file{U20} can give. All of it plugs together:
 \begin{enumerate}
-\item \textbf{Wiring with Servo Y-harness:}
-Use a standard off-the-shelf 3-pin servo Y-splitter lead. Leg A plugs into \file{J17}/\file{J23}
-(connecting the 3.3\,V PWM signal on pin 1 and reference ground on pin 3; leave pin 2 unpowered
-or isolate its red wire). Leg B plugs into the UBEC's output lead (supplying high-current power
-and ground). The merged female socket plugs into the servo.
-\item \textbf{UBEC voltage selection:} Set the UBEC output to 6.0\,V for DS3235-class servos, or
-7.4\,V for 7.4\,V high-voltage servos such as the 9imod DS35MG. Never exceed 8.4\,V.
-\item \textbf{Powering the UBEC:} Feed the UBEC from the main flight battery using an off-the-shelf
-XT60 Y-lead (one branch to the ESC, one branch to the UBEC). Add a pre-terminated 5\,A inline fuse
-lead on the UBEC input for short-circuit protection.
-\item \textbf{End stops:} In Mission Planner, adjust \file{SERVO7\_MIN/MAX} and \file{SERVO8\_MIN/MAX}
-so the TVC gimbal or control surface stops safely short of mechanical limits, preventing continuous
-stall currents.
+\item \textbf{One standard servo Y-lead on SRV1:} its leg A into \file{J17}, its leg B onto the
+UBEC's own servo lead, its tail into servo 1. Servo 2 plugs straight into \file{J23}; the board
+carries the UBEC's power to it.
+\item \textbf{UBEC voltage:} 6.0\,V for DS3235-class servos (5--6.8\,V), 7.4\,V for 7.4\,V servos
+such as the 9imod DS35MG. \flag{Never above 8.4\,V}: \file{D8} starts to conduct at 10\,V.
+\item \textbf{Powering the UBEC:} from the flight pack on an XT60 Y-lead (one branch to the ESC,
+one to the UBEC), with a pre-terminated 5\,A inline fuse lead on the UBEC's input.
+\item \textbf{End stops:} set \file{SERVO7\_MIN/MAX} and \file{SERVO8\_MIN/MAX} so the gimbal
+stops short of its mechanical limits; a servo held against a stop draws its stall current
+continuously.
 \end{enumerate}
 \item \textbf{Lander pack voltage:} Fly with a \textbf{4S or 5S pack only}. TVS diode \file{D1}
 (\file{SMBJ22A}) sets 5S as the hard maximum ($V_{\mathrm{RWM}} = 22$\,V, breakdown 24.4\,V); a 6S
@@ -842,7 +841,8 @@ There is no magnetometer on the FC by design: one 15 mm from a 60 A 4-in-1 is us
 
 \textbf{The payload rail is budgeted per mission.} \file{U20} and its inductor \file{L5}
 carry 2.1 A continuous. The drone's payload (VTX or camera on \file{J22}, LED, LD06, CAN) is
-about 1.0 A; the lander's (two TVC servos, LED, CAN) is 0.76 A. \flag{Wire one mission's
+about 1.0 A; the lander's (two micro servos through \file{D10}, LED, CAN) is 0.81 A, falling to
+about 0.3 A (LED and CAN) once a UBEC powers the servos. \flag{Wire one mission's
 payload, not all of it}: every payload connector at once is over what \file{U20} should
 carry continuously, and \file{check\_order.py modules} fails any declared mission that does not
 fit. The Iridium antenna is not on this rail: its feed comes off the flight controller's
