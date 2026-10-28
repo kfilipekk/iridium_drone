@@ -39,7 +39,7 @@ COMPONENTS = {
  "U11": ("jlc_parts:SN65HVD230DR",          "jlc:SOIC-8_L4.9-W3.9-P1.27-LS6.0-BL",      "SN65HVD230",    "C12084",   False),
  "U12": ("jlc_parts:USBLC6-2SC6_C2687116",  "jlc:SOT-23-6_L2.9-W1.6-P0.95-LS2.8-BL",    "USBLC6-2SC6",   "C2687116", False),
  "J1" : ("jlc_parts:TYPE-C_16PIN_2MD(073)", "jlc:USB-C-SMD_TYPE-C-16PIN-2MD-073",       "USB-C",         "C2765186", False),
- "J2" : ("jlc_parts:SM08B-GHS-TB(LF)(SN)", "jlc:CONN-SMD_SM08B-GHS-TB-LF-SN",       "ESC 8P",        "C42376901",  False),  #Shou Han GH clone; the JST part (C265111) is out of stock
+ "J2" : ("jlc_parts:SM08B-SRSS-TB(LF)(SN)", "jlc:CONN-TH_SM08B-SRSS-TB-LF-SN",                "ESC 8P",        "C160407",  False),
  "J3" : ("jlc_parts:XY-SM06B-GHS-TB",       "jlc:CONN-SMD_XY-SM06B-GHS-TB",            "GPS+I2C",       "C51940119",False),
  "J5" : ("jlc_parts:BX-GH1_25-4PWT",        "jlc:CONN-SMD_4P-P1.25_BX-GH1.25-4PWT","RC IN",   "C18077720",False),
  "J6" : ("jlc_parts:BX-GH1_25-4PWT",        "jlc:CONN-SMD_4P-P1.25_BX-GH1.25-4PWT","CAN 4P",  "C18077720",False),
@@ -264,7 +264,7 @@ RF_PARTS = dict(
 #connector orientation
 MATING_FACE = {
     "J1": (0.0, +1.0),   #USB-C
-    "J2": (0.0, +1.0),   #ESC JST-GH 8P
+    "J2": (0.0, +1.0),   #ESC JST-SH 8P
     "J3": (0.0, +1.0),   #GPS/I2C JST-GH 6P
     "J8": (0.0, +1.0),   #microSD card slot
     "J5": (0.0, +1.0),   #RC receiver JST-GH 4P
@@ -281,7 +281,7 @@ MATING_FACE = {
 
 MATING_PLUG = {
     "J1":  (9.0,   "[A] USB-C plug overmould, typical 9 mm"),
-    "J2":  (12.9,  "[D] JST GHR 8P: 8 x 1.25 + 2.90"),
+    "J2":  (10.6,  "[D] JST SHR 8P: 8 x 1.00 + 2.60"),
     "J3":  (10.4,  "[D] JST GHR 6P: 6 x 1.25 + 2.90"),
     "J5":  (7.9,   "[D] JST GHR 4P: 4 x 1.25 + 2.90"),
     "J6":  (7.9,   "[D] JST GHR 4P"),
@@ -297,14 +297,14 @@ MATING_PLUG = {
 }
 
 MATING_PLUG_BODY = {
-    "J1": 6.0, "J2": 5.0, "J3": 5.0, "J5": 5.0, "J6": 5.0, "J8": 14.0,
+    "J1": 6.0, "J2": 4.0, "J3": 5.0, "J5": 5.0, "J6": 5.0, "J8": 14.0,
     "J9": 5.0, "J11": 5.0, "J12": 6.0, "J14": 5.0, "J17": 14.5, "J23": 14.5,
     "J21": 5.0, "J22": 5.0,
 }
 
 MATING_CLEARANCE = {
     "J1": 9.0,    #USB-C plug overmould
-    "J2": 6.0,    #JST-GH plug plus wire bend
+    "J2": 6.0,    #JST-SH plug plus wire bend
     "J3": 6.0,    #GPS/I2C JST-GH 6P
     "J5": 6.0,    #RC JST-GH 4P
     "J6": 6.0,    #DroneCAN JST-GH 4P
@@ -322,7 +322,7 @@ MATING_CLEARANCE = {
 MATING_PLUG_UNDER = {r: 0.0 for r in MATING_FACE}
 
 CONNECTOR_RETENTION = {
-    "J2": ("latch", "JST-GH positive lock"),
+    "J2": ("stake", "ESC harness, JST-SH 8P (friction fit)"),
     "J3": ("latch", "JST-GH positive lock"),
     "J5": ("latch", "JST-GH positive lock"),
     "J6": ("latch", "JST-GH positive lock"),
@@ -1398,9 +1398,12 @@ net("PWM7",  "U1.PB8", "J17.1")   #PB8 on U1's south edge, nearer J17 than PD12
 net("PWM8",  "U1.PD13", "J23.1")
 NETS["GND"] += ["J17.3", "J23.3"]
 
-#both servos share +5V_PAYLOAD
-NETS["+5V_PAYLOAD"] += ["J17.2", "J23.2", "D8.1", "C92.1"]
-add("D8", "jlc_parts:PTVS5V0S1UR", "jlc:SOD-123FL_L2.7-W1.8-LS3.8-RD", "PTVS5V0S1UR", "C5380694", False)
+#both servo sockets' pin 2 is VSERVO
+net("VSERVO", "J17.2", "J23.2", "D8.1", "C92.1", "D10.1")
+NETS["+5V_PAYLOAD"] += ["D10.2"]
+add("D10", "jlc_parts:B2020WS", "jlc:SOD-323_L1.7-W1.3-LS2.7-RD", "B2020WS", "C77284", False)
+#9 V standoff: a UBEC at up to 8.4 V must not make the clamp conduct
+add("D8", "jlc_parts:SMF9_0A_C1973343", "jlc:SOD-123FL_L2.7-W1.8-LS3.7-RD", "SMF9.0A", "C1973343", False)
 NETS["GND"].append("D8.2")
 CAP("C92", "22u", F_C1206)
 NETS["GND"].append("C92.2")
@@ -1689,7 +1692,7 @@ BOARD = dict(X0=99.25, Y0=99.4, W=46.5, H=47.2, R=0.5, MOUNT=30.5, HOLE_D=4.0)
 CONN_BODY = {
     "CONN-SMD_XY-SM06B-GHS-TB":         (5.53, 3.22, "[M] STEP bbox in the Rev C GLB"),
     "CONN-SMD_4P-P1.25_BX-GH1.25-4PWT": (4.13, 2.83, "[M] STEP bbox in the Rev C GLB"),
-    "CONN-SMD_SM08B-GHS-TB-LF-SN":      (6.63, 2.70, "[M] STEP bbox (C265111)"),
+    "CONN-TH_SM08B-SRSS-TB-LF-SN":       (5.25, 2.86, "[M] STEP bbox (C160407)"),
     "CONN-TH_SM03B-GHS-TB-LF-SN":       (3.50, 2.37, "[M] STEP bbox (C514175)"),
     "USB-C-SMD_TYPE-C-16PIN-2MD-073":   (4.47, 4.86, "[M] STEP bbox in the Rev C GLB"),
     "TF-SMD_TF-01A":                    (8.05, 9.63, "[M] STEP bbox in the Rev C GLB"),
@@ -1716,7 +1719,7 @@ FLOORPLAN_REV_D = {
     "J1":  dict(edge="E", side="F", at=129.00, front=+0.50, desc="USB-C"),
     "J14": dict(edge="E", side="B", at=116.30, front=-0.05, desc="flow GH-6P"),
     #port (W): ESC and payload power on top, the microSD underneath
-    "J2":  dict(edge="W", side="F", at=117.60, front=-0.55, desc="ESC GH-8P"),
+    "J2":  dict(edge="W", side="F", at=117.60, front=-0.39, desc="ESC SH-8P"),
     "J22": dict(edge="W", side="F", at=130.30, front=-0.90, desc="payload GH-3P"),
     "J8":  dict(edge="W", side="B", at=123.50, front=+1.00, desc="microSD"),
 }
@@ -1845,7 +1848,7 @@ INDUCTOR_LOAD_A = {"L2": LOADS_5V_CONT_A}
 #height of each package above the board surface it sits on, mm
 PART_HEIGHT = {
     "CONN-SMD_XY-SM06B": 4.4,   #JST GH 6P
-    "CONN-SMD_SM08B-GHS": 4.35, #J2 JST GH 8P side entry; [D] JST GH: 4.25 mm
+    "CONN-TH_SM08B-SRSS": 2.9,  #J2 JST SH 8P side entry; [D] JST SH: 2.9 mm
     "CONN-TH_SM03B-GHS": 4.35,  #J22 JST GH 3P side entry (SMD despite the name)
     "HDR-SMD_3P-P2.54-H-M_KH": 2.5,  #J17/J23; [D] C20610212 insulator height 2.5 mm
     "MMCX-TH_DL-MMCX-KWE-90": 4.0,   #J12; [D] DreamLNK drawing: 6.80 overall less 2.80 of pins
@@ -1872,6 +1875,7 @@ PART_HEIGHT = {
     "CONN-SMD_4P-P1.00_SM04B": 2.9,   #JST SH 4P vertical (J5/J9/J11), same 2.9 as the SH 8P
     "OSC-SMD_4P": 0.9,                 #3.2 x 2.5 clipped-sine TCXO (Y2) [D] Ostar
     "SOD-123": 1.1,                    #DZ1 zener, same body as the SOD-123F already here
+    "SOD-323": 1.0,                    #D10, [D] B2020WS SOD-323 body 0.8-1.0 mm
     "TQFN-28_L5.0": 0.8,               #U13 MAX2112, 5 x 5 QFN [D] Maxim
     "VQFN-12_L3.0": 0.9,              #U8 LMR33630ARNXR; [D] SNVSAN3F RNX0012B "0.9 mm max height"
     "U.FL_Hirose": 1.2,                #J12 vertical U.FL [D] Hirose U.FL-R-SMT-1
@@ -1923,6 +1927,7 @@ NET_VMAX = {
     "VBAT": CELLS * 4.2,
     "VBAT_IN": CELLS * 4.2,
     "+5V_PAYLOAD": 5.0,
+    "VSERVO": 8.4,          #a UBEC on the servo sockets, 2S HV servos at most
     "+5V": 5.0,
     "VBUS": 5.25,
     "+3V3": 3.3,
@@ -1981,6 +1986,7 @@ NET_SOURCE = {
     "VBAT":    "Q4.2",     #after the protection FET - Q4 pin 2 = source
     "+5V":   "L2.2",       #core 5 V buck output inductor
     "+5V_PAYLOAD": "L5.2", #payload 5 V buck output inductor
+    "VSERVO": "J17.2",     #a UBEC on a Y-lead at SRV1
     "+3V3":  "U9.5",       #TLV757P output
     "+3V3A": "U10.5",      #TLV75533 output
     "+3V3_CAN": "U21.2",   #XC6206 output
@@ -1994,6 +2000,7 @@ NET_CURRENT = {
     "VBAT": 1.2,            #the same current, after Q4: the bucks are all VBAT feeds
     "+5V":  0.95,
     "+5V_PAYLOAD": 1.5,
+    "VSERVO": 1.5,
     "+5V_BIAS_SW": 0.155,   #AP22653 limit, RLIM 210k, max (DS41186)
     "+5V_BIAS": 0.155,
     "+3V3": 0.6,
@@ -2042,7 +2049,7 @@ NET_CLASSES = {
         "clearance": 0.1016,
         "via_dia": 0.60,
         "via_drill": 0.30,
-        "nets": ["VBAT", "VBAT_IN", "+5V", "+5V_PAYLOAD", "VBUS"],
+        "nets": ["VBAT", "VBAT_IN", "+5V", "+5V_PAYLOAD", "VSERVO", "VBUS"],
     },
     "RF": {
         "width": 0.21,
@@ -2069,14 +2076,15 @@ LOAD_CURRENT = {
         "P151.1": 0.06,
         #[D] LD06 steady 0.18 (300 mA is its start-up surge)
         "J11.1": 0.18,
-        #[M] Two TVC servos on J17 and J23, pin 2 (250 mA each running)
-        "J17.2": 0.25,
-        "J23.2": 0.25,
+        #[M] two micro servos on J17/J23 (250 mA each running)
+        "D10.2": 0.50,
         #[D] U21 is the +3V3_CAN LDO feed for the SN65HVD230
         "U21.3": 0.10,
         #[A] the DroneCAN node on J6 - the Remote ID module
         "J6.1": 0.15,
     },
+    #[A] one 35 kg servo (DS3235 class) running under load on SRV2
+    "VSERVO": {"J23.2": 1.5},
     "+3V3A": {
         #[D] OPA2374: 585 uA per amplifier, two amplifiers (LOADS_3V3A row)
         "U14.8": 0.002,
@@ -2123,9 +2131,9 @@ PAYLOAD_PROFILES = {
     "drone": dict(keys=("J22.1", "P151.1", "J11.1", "U21.3", "J6.1"),
                   what="quad on GPS/SoOP: VTX + XIAO camera on J22, "
                        "LED strip, LD06 lidar, CAN transceiver and one node"),
-    "lander": dict(keys=("J17.2", "J23.2", "P151.1", "U21.3", "J6.1"),
-                   what="TVC lander: two TVC servos running on J17/J23 (aux servos are "
-                        "one-shot deployers), LED strip, CAN transceiver and one node"),
+    "lander": dict(keys=("D10.2", "P151.1", "U21.3", "J6.1"),
+                   what="TVC lander: two micro servos on J17/J23 through D10 (35 kg servos "
+                        "take a UBEC instead), LED strip, CAN transceiver and one node"),
 }
 PAYLOAD_ALL_WIRED = tuple(k for k in LOAD_CURRENT["+5V_PAYLOAD"] if k != "P151.1")
 
@@ -2156,12 +2164,14 @@ ANT_FEED = dict(
 
 
 SERVO_RAIL = dict(
-    refs=("J17", "J23"), net="+5V_PAYLOAD", count=2,
+    refs=("J17", "J23"), net="VSERVO", feed="D10", clamp="D8", count=2,
     run_a=0.250, stall_a=0.700,
-    v_min=4.765, v_max=5.267,
+    v_min=4.2, v_max=8.4, feed_vf=0.50,
+    ubec_run_a=1.5, ubec_stall_a=3.9,
     src="[D] docs/SENSORS.md: an 8-9 g micro (SG90 class) servo draws ~250 mA running "
-        "and ~700 mA stalled; [M] J17.2/J23.2 are the +5V_PAYLOAD pins (design.NETS); "
-        "[D] the buck's 5.016 V output is design.BUCK_RAILS")
+        "and ~700 mA stalled; [A] micro servos run from a 4-cell NiMH, 4.2 V near empty; "
+        "[D] B2020WS 550 mV at 2 A, ~500 mV at a double stall; [D] DS3235 stalls at 3.9 A "
+        "at 6.8 V; [A] 8.4 V is a UBEC set for 2S HV servos, under D8's 9 V standoff")
 
 
 #what each MCU pin is for, in the electrical sense
@@ -2258,7 +2268,7 @@ PIN_INTENT = {
 #the one board, and everything that can bolt onto it later
 MODULES = {
     "esc": dict(
-        what="SpeedyBee BLS 60A 4-in-1", lands_on=["J2"], conn="JST-GH 8P on J2, side entry; a GH-8P to SH-8P lead to the ESC",
+        what="SpeedyBee BLS 60A 4-in-1", lands_on=["J2"], conn="JST-SH 8P on J2, side entry; standard SH-8P to SH-8P ESC lead",
         needs_board_change=None, gbp=0, status="fitted",
         ma_5v=0, counted=True,
         note="J2 follows Betaflight's documented SpeedyBee pinout; buzz it before VBAT"),
@@ -2360,8 +2370,15 @@ MODULES = {
         needs_board_change=None,
         gbp=0, status="fitted",
         ma_5v=0, counted=True,
-        note="LMR33630A buck U20 (2.1 A through L5) powering the servos on J17/J23, the lidar "
-             "on J11, J22 and the DroneCAN node on J6"),
+        note="LMR33630A buck U20 (2.1 A through L5) powering micro servos on J17/J23 through "
+             "D10, the lidar on J11, J22 and the DroneCAN node on J6"),
+    "servo_ubec": dict(
+        what="UBEC for 35 kg servos (DS3235, 9imod DS35MG)", lands_on=["J17", "J23"],
+        conn="its own JR lead into a servo socket on a servo Y-lead; VSERVO carries it to the "
+             "other socket and D10 keeps it off +5V_PAYLOAD",
+        needs_board_change=None, gbp=18, status="later", ma_5v=0, counted=True,
+        note="[D] 6.0 V for DS3235 (5-6.8 V), 7.4 V for 7.4 V servos, never above 8.4 V "
+             "(D8 9 V standoff). Fed from the pack on an XT60 Y-lead"),
     "remote_id": dict(
         what="Holybro Remote ID: direct broadcast ID, UK rule for home-built UAS >= 100 g with "
              "a camera from 1 Jan 2028", lands_on=["J6"], conn="JST-GH 4P on J6 (DroneCAN)",
@@ -2458,7 +2475,7 @@ SILK_NAMES_UNPRINTED = {
 SILK_TITLE = ["IRIDIUM NAV", "KRYSTIAN FILIPEK"]
 #Rev C's hand-placed texts
 SILK_RETIRED = {"PYRO", "SERVO"}
-SILK_TITLE_SIDE = {"IRIDIUM NAV": "bottom", "KRYSTIAN FILIPEK": "top"}
+SILK_TITLE_SIDE = {"IRIDIUM NAV": "bottom", "KRYSTIAN FILIPEK": "bottom"}
 
 #3D models: bodies that legitimately sit off their outline or reach into the board
 MODEL_EXPECTED = {

@@ -117,7 +117,7 @@ def main(chk=None):
     dip, _total = _step(mission, stall)
     loop = (stall - mission) * T_LOOP / total_c
     total_dip = dip + loop
-    headroom = VOUT - S["v_min"]
+    headroom = VOUT - S["feed_vf"] - S["v_min"]     #the servos sit one diode below the rail
     print(f"  SPICE stall step {mission:.2f} -> {stall:.2f} A: dips {dip*1e3:.1f} mV; "
           f"loop-delay bracket +{loop*1e3:.1f} mV")
     print(f"  rail window {S['v_min']:.3f}-{S['v_max']:.3f} V, "
@@ -128,12 +128,15 @@ def main(chk=None):
 
     #topology: which rail the stall lands on
     pins = [f"{r}.2" for r in S["refs"]]
-    on_payload = all(p in D.NETS.get("+5V_PAYLOAD", []) for p in pins)
+    on_rail = all(p in D.NETS.get(S["net"], []) for p in pins)
+    fed = (f"{S['feed']}.1" in D.NETS.get(S["net"], [])
+           and f"{S['feed']}.2" in D.NETS.get("+5V_PAYLOAD", []))
     on_fc = any(p in D.NETS.get("+5V", []) for p in pins)
-    print(f"  {', '.join(pins)} on +5V_PAYLOAD: {on_payload}; on the FC's +5V: {on_fc}")
-    chk.ok(on_payload and not on_fc,
+    print(f"  {', '.join(pins)} on {S['net']}: {on_rail}; fed from +5V_PAYLOAD through "
+          f"{S['feed']}: {fed}; on the FC's +5V: {on_fc}")
+    chk.ok(on_rail and fed and not on_fc,
            "the stalled servo load cannot disturb the flight controller's own +5 V",
-           f"{', '.join(pins)} on {S['net']}, not +5V")
+           f"{', '.join(pins)} on {S['net']}, fed from +5V_PAYLOAD through {S['feed']}, not +5V")
     print()
     print("  The inductor model is power.py's open-loop switch node (right for the "
           "filter,\n  silent on the loop); the step model is an ideal regulator into the "

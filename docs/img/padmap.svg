@@ -11,8 +11,8 @@
 <text x="279.7" y="703.4" font-family="monospace" font-size="10" text-anchor="middle" fill="#9fd3c0">J17 SRV1</text>
 <rect x="188.8" y="127.1" width="57.3" height="99.3" fill="none" stroke="#9fd3c0" stroke-width="1.5"/>
 <text x="217.4" y="180.7" font-family="monospace" font-size="10" text-anchor="middle" fill="#9fd3c0">J19 SWD</text>
-<rect x="18.9" y="193.6" width="86.4" height="223.9" fill="none" stroke="#9fd3c0" stroke-width="1.5"/>
-<text x="62.1" y="309.5" font-family="monospace" font-size="10" text-anchor="middle" fill="#9fd3c0">J2 ESC</text>
+<rect x="17.4" y="216.7" width="90.7" height="177.7" fill="none" stroke="#9fd3c0" stroke-width="1.5"/>
+<text x="62.8" y="309.5" font-family="monospace" font-size="10" text-anchor="middle" fill="#9fd3c0">J2 ESC</text>
 <rect x="586.8" y="193.4" width="85.8" height="187.7" fill="none" stroke="#9fd3c0" stroke-width="1.5" stroke-dasharray="4 3"/>
 <text x="629.7" y="291.3" font-family="monospace" font-size="10" text-anchor="middle" fill="#9fd3c0">J21 TELEM</text>
 <rect x="19.5" y="418.8" width="89.7" height="128.9" fill="none" stroke="#9fd3c0" stroke-width="1.5"/>

@@ -714,6 +714,10 @@
       {
         "netclass": "SW",
         "pattern": "BUCK_PAYLOAD_PH"
+      },
+      {
+        "netclass": "High",
+        "pattern": "VSERVO"
       }
     ]
   },
