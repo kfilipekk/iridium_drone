@@ -259,12 +259,14 @@ PREREQUISITES = [
          claim="5 bare PCBs / 2 assembled, BOTH sides",
          why="5 is the multilayer minimum and 2 the SMT minimum; both sides are populated "
              "so two stencils are needed."),
-    dict(id="act.panel", cls=ORDER_ACTION, sheet=r"Panel by JLCPCB, 2 x 2",
-         claim="Panel by JLCPCB, 2 x 2 (not a committed panel file)",
+    dict(id="act.panel", cls=ORDER_ACTION, sheet=r"Panel by JLCPCB, 1 x 1, edge rails on all 4 sides, 12 mm",
+         claim="Panel by JLCPCB, 1 x 1, 12 mm rails on all 4 sides (not a committed panel file)",
          why="Standard assembly requires a single PCB of at least 70 x 70 mm and this is "
              "46.5 x 47.2 mm, so the board must be panelled to be assembled at all. "
-             "2 x 2 gives roughly 93 x 95 mm. Do NOT commit a panelised .kicad_pcb: the "
-             "board files stay exactly as verified, so nothing has to be re-checked."),
+             "1 x 1 with 12 mm rails gives about 70.5 x 71.2 mm. Not 2 x 2: J17/J23 "
+             "overhang the south edge by 6.3 mm and would sit over the neighbouring board. "
+             "Do NOT commit a panelised .kicad_pcb: the board files stay exactly as "
+             "verified, so nothing has to be re-checked."),
 
     dict(id="bench.u8", cls=BENCH, bound="87 C worst case against 125 C - 38 C of margin",
          claim="U8's junction temperature under load",
