@@ -106,7 +106,7 @@ def _xiao_pins():
 CABLES = {
     "J2": dict(
         to="SpeedyBee BLS 60A, its 8-pin JST-SH, directly below",
-        lead="JST-GH 8P to JST-SH 8P, pin 1 to pin 1", type="gh", wires=8, far="sh",
+        lead="stock SpeedyBee JST-SH 8P to JST-SH 8P, pin 1 to pin 1", type="gh", wires=8, far="sh",
         end=_sh_esc(), end_dir=(1.0, 0.0, 0.0),
         end_src="[A] the ESC turned so its socket is on the port edge, under J2; "
                 "[D] JST-SH 2.9 mm tall; [D] ESC 45.6 mm (design.ESC)",

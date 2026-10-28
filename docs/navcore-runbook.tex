@@ -396,7 +396,7 @@ TPU 95A filament 2.85 mm, for the skids & 1 spool (250-500 g) & 20 & anywhere \\
 \end{longtable}
 Already have: 4S LiPo packs, LiPo balance charger.
 
-\subsubsection*{B2 --- Aircraft sensors and payload - optional} 5 lines, about GBP 68.
+\subsubsection*{B2 --- Aircraft sensors and payload - optional} 10 lines, about GBP 134.
 RNGFNDn\_TYPE and PRX1\_TYPE ship at 0; enable each one at the bench after it is fitted. The +5 V rail cannot carry all of these at once - check\_order.py modules prints the budget.
 
 \begin{longtable}{@{}P{0.50\textwidth}P{0.12\textwidth}rP{0.22\textwidth}@{}}
@@ -410,9 +410,14 @@ VL53L1X ToF module (GY-53-L1X) & 1 & 6 & AliExpress \\
 LDROBOT LD06 360 lidar (INDOOR USE ONLY) & 1 & 14 & eBay - Okdo Lidar Hat kit (use the LIDAR UNIT only) \\
 XIAO ESP32S3 Sense (recording camera) & 1 & 14 & AliExpress \\
 JST GH 3P lead, GHR-03V-S pigtail (J22 payload 5 V) & 2 & 2 & AliExpress \\
+UBEC 6-8.4V >=8A with JR output lead (e.g. Hobbywing 8A UBEC) & 1 & 18 & AliExpress \\
+XT60 1-male to 2-female Y-splitter lead & 1 & 5 & AliExpress \\
+Inline 5A fuse lead (XT60 or inline mini-blade) & 1 & 4 & AliExpress \\
+Servo 3-pin JR Y-splitter cable (pair) & 2 & 4 & AliExpress \\
+High-torque TVC Servos (DS3235 or 9imod DS35MG 35kg) & 2 & 35 & AliExpress \\
 \end{longtable}
 
-Total, everything to buy: about GBP 823. Generated from \file{docs/PARTS.csv} by \file{tools/gen\_doc\_tables.py}; every row's reasoning, link and provenance is in the CSV.
+Total, everything to buy: about GBP 889. Generated from \file{docs/PARTS.csv} by \file{tools/gen\_doc\_tables.py}; every row's reasoning, link and provenance is in the CSV.
 % END GENERATED ORDER
 
 \flag{Do not buy a bare PMW3901 or VL53L1X chip to hand-fit.} Both were deleted from the
@@ -449,9 +454,9 @@ interruption. \\
 \textbf{10} pre-crimped JST-GH 4P pigtails, a GH 3P and the GH 6P leads &
 four ports (\file{J5}, \file{J6}, \file{J9}, \file{J11}) take a GH 4P, \file{J22} a GH 3P and
 \file{J21} a GH 6P; a spare of each means a bad solder joint is not a project stall \\
-\textbf{the GH 8P to SH 8P ESC lead}, two &
-\file{J2} is JST-GH and the ESC's socket JST-SH, so the leads in the ESC's box do not fit;
-without this lead nothing flies \\
+\textbf{the stock SH 8P to SH 8P ESC lead}, two &
+\file{J2} is JST-SH and matches the ESC's socket directly; the standard lead in the ESC box
+mates straight through. One to fly, one spare \\
 \textbf{the HC610 antenna, its MMCX to SMA pigtail, the DC block and the Blog V4 dongle},
 all with the first order &
 T3b step 1 needs the antenna and the dongle; the aircraft needs the antenna and the
@@ -696,7 +701,7 @@ copper. If the board has moved since this was compiled, \cmd{python3 tools/dimen
 \item \textbf{Print the assembly drawings and the pad map} (Section~\ref{sec:T3d}).
 \item \textbf{Dry-fit the FC into the centre plate.} Confirm nothing blocks the west
 edge's underside, where the microSD ejects.
-\item \textbf{Buzz the GH 8P to SH 8P ESC lead}, all eight pins end to end, against the
+\item \textbf{Buzz the SH 8P to SH 8P ESC lead}, all eight pins end to end, against the
 \file{J2} pinout below, before anything is powered.
 \item \textbf{Sit a skid under each arm}, holes aligned. Motor on top, wires inboard.
 Thread all four screws by hand before tightening any; tighten diagonally.
@@ -720,8 +725,8 @@ top plate is not flat.
 \subsection{What plugs in where}
 \label{sec:plugs}
 
-Every cable port is a latching JST-GH 1.25 mm connector except the two servo headers and the
-antenna. Pin 1 first; ``underside'' is the board's bottom face. From
+Every cable port is a latching JST-GH 1.25 mm connector except the ESC port (JST-SH 1.0 mm),
+the two servo headers and the antenna. Pin 1 first; ``underside'' is the board's bottom face. From
 \file{design.FLOORPLAN\_REV\_D} and the netlist.
 
 \begin{longtable}{@{}P{0.21\textwidth}P{0.19\textwidth}P{0.52\textwidth}@{}}
@@ -751,7 +756,7 @@ antenna. Pin 1 first; ``underside'' is the board's bottom face. From
 \file{J14} flow, underside & GH 6P & SPI3: 1 +3V3, 2 SCK, 3 MISO, 4 MOSI, 5 CS, 6 GND \\
 \midrule
 \multicolumn{3}{@{}l}{\textbf{West edge}} \\
-\file{J2} ESC, top & GH 8P, side entry & 1 GND, 2 VBAT, 3--6 M1--M4, 7 CUR, 8 TEL --- SpeedyBee's order \\
+\file{J2} ESC, top & SH 8P, side entry & 1 GND, 2 VBAT, 3--6 M1--M4, 7 CUR, 8 TEL --- SpeedyBee's order \\
 \file{J22} PAYLOAD, top & GH 3P, side entry & 1 \file{+5V\_PAYLOAD}, 2 GND, 3 GND. A 5 V VTX or the recording camera \\
 \file{J8} microSD, underside & TF-01A & the card: logs and Lua scripts \\
 \midrule
@@ -787,21 +792,50 @@ into anything else you connect. \textbf{A bench SDR, a signal generator or a spe
 analyser on \file{J12} or its pigtail goes through the DC block}, or put \file{ant\_feed 0}
 in \file{APM/SOOP/soop.cfg} and reboot first. Never short the centre pin to test it.
 
-\textbf{The ESC lead is GH 8P at the board and SH 8P at the ESC.} \file{J2} is wired in the
-SpeedyBee's own order, so the lead is \emph{straight-through}: pin 1 to pin 1, through pin 8.
-The SH-to-SH leads in the ESC's box do not fit \file{J2}. \flag{Buzz the lead you buy or
-splice, all eight pins, before any VBAT}: pin 2 is the battery, and a lead with two pins
-swapped puts VBAT on a motor signal or ground.
+\textbf{The ESC lead is JST-SH 8P straight through.} \file{J2} is a JST-SH 8P side-entry
+socket (\file{SM08B-SRSS-TB}) matching the SpeedyBee BLS 60A ESC socket pin-for-pin (1 GND, 2 VBAT,
+3--6 M1--M4, 7 CUR, 8 TEL). Use the stock SpeedyBee 8P-to-8P SH silicone cable included in the
+ESC box (75 mm, or a 100--150 mm SH lead along the drone route). No splicing or custom cable
+is needed. \flag{Buzz the cable before connecting VBAT}: verify pin 1 goes to the ESC battery
+ground and pin 2 to battery $+$. A pin-swap with VBAT will destroy motor signal pins or the MCU.
 
-\textbf{Servos on \file{J17} and \file{J23}.} Each is a male 1$\times$3 header in the
-standard order, so a servo's own female plug goes straight on: signal (orange, yellow or
-white) on pin 1, red in the middle, brown or black on pin 3 --- check pin 1 on the
-assembly drawing before pushing the plug home, because a reversed plug fits. The pins
-overhang the fore edge; \textbf{fit the printed clip over both plugs} so a pulled lead loads
-the clip and not the solder joints. For two 9\,g micro servos the header's own pin 2 feeds
-them from \file{+5V\_PAYLOAD}. Anything bigger goes on its own 5--6\,V BEC, with the BEC's
-ground joined to pin 3 and pin 2 left unconnected. \file{lander.parm} already drives
-\file{SERVO7}/\file{SERVO8}; check the travel direction with the props off.
+\textbf{Servos on \file{J17} and \file{J23}.} Each is a male 1$\times$3 right-angle header in the
+standard JR order: signal (orange, yellow or white) on pin 1, power in the middle (pin 2),
+ground (brown or black) on pin 3 --- verify pin 1 on the assembly drawing before seating the plug,
+as a reversed plug will fit mechanically. The pins overhang the fore edge; \textbf{fit the printed
+clip over both plugs} so pulling forces transfer to the clip and not the SMD pads.
+
+\begin{itemize}
+\item \textbf{Small servos (9\,g micro / SG90 class):} plug directly into \file{J17} and \file{J23}.
+Pin 2 supplies \file{+5V\_PAYLOAD} from buck regulator \file{U20} (budgeted for $\sim$250\,mA
+running / 700\,mA stall per servo).
+\item \textbf{High-power / 35\,kg servos (e.g. DS3235, 9imod DS35MG):} must be powered via an
+\textbf{external UBEC and a standard Servo Y-harness}. Digital and coreless 35\,kg servos stall at
+3.9--5\,A each (up to 8--10\,A peak for two servos), which would overload the on-board buck and
+induce inductive ground noise.
+\begin{enumerate}
+\item \textbf{Wiring with Servo Y-harness:}
+Use a standard off-the-shelf 3-pin servo Y-splitter lead. Leg A plugs into \file{J17}/\file{J23}
+(connecting the 3.3\,V PWM signal on pin 1 and reference ground on pin 3; leave pin 2 unpowered
+or isolate its red wire). Leg B plugs into the UBEC's output lead (supplying high-current power
+and ground). The merged female socket plugs into the servo.
+\item \textbf{UBEC voltage selection:} Set the UBEC output to 6.0\,V for DS3235-class servos, or
+7.4\,V for 7.4\,V high-voltage servos such as the 9imod DS35MG. Never exceed 8.4\,V.
+\item \textbf{Powering the UBEC:} Feed the UBEC from the main flight battery using an off-the-shelf
+XT60 Y-lead (one branch to the ESC, one branch to the UBEC). Add a pre-terminated 5\,A inline fuse
+lead on the UBEC input for short-circuit protection.
+\item \textbf{End stops:} In Mission Planner, adjust \file{SERVO7\_MIN/MAX} and \file{SERVO8\_MIN/MAX}
+so the TVC gimbal or control surface stops safely short of mechanical limits, preventing continuous
+stall currents.
+\end{enumerate}
+\item \textbf{Lander pack voltage:} Fly with a \textbf{4S or 5S pack only}. TVS diode \file{D1}
+(\file{SMBJ22A}) sets 5S as the hard maximum ($V_{\mathrm{RWM}} = 22$\,V, breakdown 24.4\,V); a 6S
+pack (25.2\,V fully charged) will conduct and destroy the diode.
+\item \textbf{Lander motor RPM (Bluejay):} On the TVC lander, set \file{SERVO\_BLH\_BDMASK 3}
+for bidirectional DShot on the two coaxial lift motors (motors 1 and 2: $2^0 + 2^1 = 3$).
+\file{lander.parm} already assigns \file{SERVO7}/\file{SERVO8} to the TVC tilt servos; verify travel
+directions with props removed.
+\end{itemize}
 
 \textbf{Mount the compass as far from the ESC and the battery leads as the frame allows.}
 There is no magnetometer on the FC by design: one 15 mm from a 60 A 4-in-1 is useless.
@@ -890,7 +924,7 @@ inserts). The LD06 fills the aft 132--228$^\circ$ of its cone from 33$^\circ$ of
 \toprule
 \textbf{Run} & \textbf{Wires} & \textbf{Note} \\
 \midrule
-\file{J2} $\rightarrow$ ESC & 8 & the GH 8P to SH 8P lead; stays inside the stack \\
+\file{J2} $\rightarrow$ ESC & 8 & the stock SH 8P to SH 8P lead; stays inside the stack \\
 \file{J3} $\rightarrow$ GPS & 6 & the module's lead, aft to the tower; the compass rides on it \\
 \file{J12} $\rightarrow$ HC610 & coax & the MMCX to SMA pigtail, aft to the tower, tied to its arm \\
 \file{J9} $\rightarrow$ rangefinders & 4 & one lead, split at a junction: down and up \\
@@ -919,7 +953,7 @@ each other: ELRS at the nose, the Iridium helix on the tower at the tail.
 hard-case pack on build day.
 \item The frame offers 16 $\times$ 16 and 19 $\times$ 19 motor patterns. The motors are 19 $\times$ 19.
 \item Measure both tapped depths before committing sixteen screws.
-\item The ESC's own leads do not fit \file{J2}; the GH 8P to SH 8P lead is a gamble until you buzz it.
+\item The stock SpeedyBee SH 8P to SH 8P cable plugs directly between \file{J2} and the ESC; buzz it before connecting VBAT.
 \item \file{J12} carries +5 V: a bench instrument goes on through the DC block.
 \item A servo plug fits either way round on its header; signal is pin 1.
 \item Identify every pad by its label or on the padmap, never by counting from a neighbour.
@@ -930,10 +964,10 @@ hard-case pack on build day.
 
 \subsection{\file{J2}, the ESC connector --- confirmed rather than assumed}
 
-Wired \textbf{1 GND, 2 VBAT, 3 M1, 4 M2, 5 M3, 6 M4, 7 CUR, 8 TEL} on a JST-GH 8P
-side-entry socket. Betaflight's board page for the SpeedyBee F405 V4 gives the same FC-side
-order on the SpeedyBee's JST-SH 8P, so the GH 8P to SH 8P lead is straight-through --- no
-pin is moved.
+Wired \textbf{1 GND, 2 VBAT, 3 M1, 4 M2, 5 M3, 6 M4, 7 CUR, 8 TEL} on a JST-SH 8P
+(\file{SM08B-SRSS-TB}) side-entry socket. Betaflight's board page for the SpeedyBee F405 V4
+gives the same FC-side order on the SpeedyBee's JST-SH 8P, so the stock SH 8P to SH 8P lead
+is straight-through --- no custom cable or splicing is required.
 
 The vendor table reads oddly because it lists the two \emph{ends} of the cable in opposite
 order, since they face each other. Reverse the ESC column and every pair lines up:
@@ -982,7 +1016,7 @@ nothing.
 
 Bench supply on \file{VBAT}, \textbf{16.8 V, current limit 100 mA}. \file{VBAT\_IN} reaches
 only \file{J2.2} --- there are no separate battery pads --- so feed it through the bare-ended
-GH 8P pigtail from the order (\file{J2.1} GND, \file{J2.2} VBAT, the other six insulated).
+SH 8P pigtail from the order (\file{J2.1} GND, \file{J2.2} VBAT, the other six insulated).
 Powering through the ESC instead works, but the ESC's own draw then sits inside the 80 mA
 below.
 
@@ -1487,8 +1521,8 @@ vibration walks a friction plug out over a few flights. On this board nothing ne
 of silicone:
 
 \begin{itemize}
-\item every JST-GH port --- \file{J2}, \file{J3}, \file{J5}, \file{J6}, \file{J9},
-\file{J11}, \file{J14}, \file{J21}, \file{J22} --- latches: check each one clicks, and pull
+\item every JST-GH port (\file{J3}, \file{J5}, \file{J6}, \file{J9}, \file{J11}, \file{J14},
+\file{J21}, \file{J22}) and the JST-SH ESC port (\file{J2}) latches or seats firmly: check each one clicks/seats, and pull
 gently on the lead to prove it;
 \item the MMCX on \file{J12} snaps on with a detent; tie the coax down 10--15 mm from it;
 \item the servo plugs on \file{J17}/\file{J23} are a friction fit on SMD pads, held by the
@@ -1642,7 +1676,7 @@ you print them. Measure the print \\
 \textbf{Grommet flange} $\leq$ 6.0 mm & the nearest copper is 3.32 mm from a hole centre; a
 6.0 mm flange clears it and a 7 mm washer overlaps by 0.18 mm (nylon, so no short) & calipers
 on the grommets you receive \\
-\textbf{ESC lead continuity} & whether the GH 8P to SH 8P lead is straight-through. Wrong here
+\textbf{ESC lead continuity} & whether the stock SH 8P to SH 8P lead is straight-through. Wrong here
 means a dead board or a smoked one & a multimeter, both ends, \textbf{before any VBAT} \\
 \file{J3} plug & whether the received GPS lead's boot seats & fit the plug on arrival \\
 \file{BATT\_AMP\_PERVLT} & battery failsafe and consumed-mAh. Ships 25.0; it is a property of
@@ -1798,7 +1832,7 @@ hand-fit \file{U3}
 \item Confirm \file{Y1} = \file{C2682774} and \file{Y2} = \file{C19674258}; refresh the stock
 snapshot if it is over 7 days old
 \item Order the aircraft parts from \file{docs/PARTS.csv}, \textbf{including the M3
-assortment}, the GH 8P to SH 8P ESC lead, the GH pigtails, the HC610 with its MMCX to
+assortment}, the stock SH 8P to SH 8P ESC lead, the GH pigtails, the HC610 with its MMCX to
 SMA pigtail, the DC block, and the Blog V4 dongle.
 Do not buy a bare PMW3901 or VL53L1X chip
 \item While waiting: prepare the board ID request, print the padmap, settle the board's

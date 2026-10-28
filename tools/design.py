@@ -2464,7 +2464,7 @@ SILK_NAMES_UNPRINTED = {
 SILK_TITLE = ["IRIDIUM NAV", "KRYSTIAN FILIPEK"]
 #Rev C's hand-placed texts
 SILK_RETIRED = {"PYRO", "SERVO"}
-SILK_TITLE_SIDE = {"IRIDIUM NAV": "bottom", "KRYSTIAN FILIPEK": "top"}
+SILK_TITLE_SIDE = {"IRIDIUM NAV": "bottom", "KRYSTIAN FILIPEK": "bottom"}
 
 #3D models: bodies that legitimately sit off their outline or reach into the board
 MODEL_EXPECTED = {
