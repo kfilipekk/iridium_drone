@@ -827,6 +827,14 @@ one to the UBEC), with a pre-terminated 5\,A inline fuse lead on the UBEC's inpu
 stops short of its mechanical limits; a servo held against a stop draws its stall current
 continuously.
 \end{enumerate}
+\item \textbf{The lander on this board.} The ESP32 lander's parts map as: its two DShot
+motors to \file{J2} M1/M2 (\file{PB0}/\file{PB1}, timer 3); its two gimbal servos to
+\file{J17}/\file{J23} (\file{PB8}/\file{PD13}, timer 4), so the PCA9685 is not needed; its
+BNO08x to the on-board IMUs; its BMP390 to the on-board MS5611, or onto \file{J9} beside it;
+ESP-NOW telemetry to ELRS in MAVLink mode on \file{J5} or a radio on \file{J21}. There is no
+pyro output, touchdown input or third servo: a recovery charge, leg switch or deployer goes on
+a DroneCAN node on \file{J6}. The firmware is a port, not a drop-in: \file{lander.parm} starts
+from ArduPilot's coax frame.
 \item \textbf{Lander pack voltage:} Fly with a \textbf{4S or 5S pack only}. TVS diode \file{D1}
 (\file{SMBJ22A}) sets 5S as the hard maximum ($V_{\mathrm{RWM}} = 22$\,V, breakdown 24.4\,V); a 6S
 pack (25.2\,V fully charged) will conduct and destroy the diode.
