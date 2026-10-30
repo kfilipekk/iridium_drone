@@ -78,8 +78,8 @@ PREREQUISITES = [
     dict(id="elec.traces", cls=GATED, tool="check_board.py traces",
          claim="trace lengths, differential skew and crystal stray capacitance are in limit"),
     dict(id="fab.geometry", cls=GATED, tool="check.py geometry",
-         claim="no track corner is sharper than 90 degrees, and no track or via dangles or "
-               "leads to no pad or pour"),
+         claim="no track corner is sharper than 90 degrees, no track or via dangles or "
+               "leads to no pad or pour, and no via enters an SMD pad mask opening"),
     dict(id="rf.gain", cls=GATED, tool="check_soop.py gain",
          claim="the antenna's noise reaches the ADC well above the converter's own and well "
                "under the tuner's compression and full scale, and the DSP meets its gates at "
@@ -186,6 +186,18 @@ PREREQUISITES = [
          why="the junction figures are BRACKETS between the datasheet's JEDEC and EVM "
              "copper, and this board is between them. No desk calculation narrows it; "
              "T3a measures it. U19 logs the board beside U9 every flight in the meantime."),
+    dict(id="adv.buck_cout", cls=ADVISORY, tool="check_circuit.py electrical",
+         why="TI Table 9-2 recommends 4 x 22 uF (88 uF) at 400 kHz / 5 V; the board fits "
+             "2 x 22 uF (32-34 uF effective), which exceeds the 26 uF transient stability floor "
+             "(TI SNVSAN3F Eq. 6 for delta_I 1 A, delta_V 250 mV) and relies on bench load-step validation."),
+    dict(id="adv.j2_contact", cls=ADVISORY, tool="check_circuit.py electrical",
+         why="J2 (JST-SH 8P) carries all board power through one contact rated 1.0 A [D]; "
+             "design.NET_CURRENT['VBAT_IN'] is 1.2 A. Measured lander flight draw is ~0.66 A at 4S "
+             "and ~0.9 A at low 3S; full payload load on 3S must be avoided until Rev E battery pads."),
+    dict(id="adv.i2c2_pullups", cls=ADVISORY, tool="check_circuit.py electrical",
+         why="I2C2 pull-ups sit on different 3.3 V rails (R11 on +3V3A, R12 on +3V3); "
+             "tolerated in Rev D as both rails are 3.3 V LDO outputs with matched enable, "
+             "scheduled for cleanup in Rev E (T2.2)."),
     dict(id="fab.padlabels", cls=GATED, check="pad silkscreen labels",
          claim="every solder pad and test point carries its function (design.PAD_LABELS) on "
                "the silkscreen, where check.py silk_owner reads it as that pad's - or is named "
@@ -276,13 +288,12 @@ PREREQUISITES = [
              "board; a reading can confirm it and cannot un-fit it.",
          refresh="runbook T3 (docs/navcore-runbook.tex Part 9)"),
     dict(id="bench.u9", cls=BENCH,
-         bound="104 C peak on good copper against 150 C - 46 C of margin",
+         bound="82 C peak on good copper against 125 C - 43 C of margin",
          claim="U9's board-to-junction offset",
-         why="BOUND. Only the datasheet's '(No Heatsink)' corner is over, and that corner "
-             "describes a 2-layer board - this one has "
-             "at 7443 mm2 of GND plane and 5 vias on the output pad. What the bench sets "
-             "is the offset between TEMP[0] and the junction, a constant U19 then carries "
-             "forward every flight.",
+         why="BOUND. U9 is a TLV75733PDYD with an exposed pad soldered to the GND plane; "
+             "check_circuit.py thermal gives 82 C peak on good copper against 125 C. "
+             "What the bench sets is the offset between TEMP[0] and the junction, a constant U19 "
+             "then carries forward every flight.",
          refresh="runbook T3a (docs/navcore-runbook.tex Part 10)"),
     dict(id="bench.u20", cls=BENCH,
          bound="104 C worst case against 125 C - 21 C of margin (check_circuit.py thermal)",

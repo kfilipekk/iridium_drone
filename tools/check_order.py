@@ -775,10 +775,9 @@ def build_rows():
     rows.append(dict(
         id="bench.u9", cls="BOUND",
         bound=f"check_circuit.py thermal: {u9_bound}",
-        evidence=("the good-copper corner would have to pass 150 C; it is 46 C below it, on "
+        evidence=("the good-copper corner would have to pass 125 C; it is 43 C below it, on "
                   "a board measured at 7443 mm2 of GND plane and 5 "
-                  "vias on the output pad. Only the datasheet's 'No Heatsink' corner is "
-                  "over, and that describes a 2-layer board this one is not"),
+                  "vias on the output pad. Even the minimal-copper corner stays at 104 C"),
         residual="T3a sets the board-to-junction offset once; U19 then logs it every flight"))
     u20 = th.get("U20")
     rows.append(dict(

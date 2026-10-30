@@ -195,7 +195,7 @@ Surface finish & ENIG & 0201s, LGA-14s and a DSBGA want a flat finish \\
 Min track / spacing & \textbf{0.1016 mm (4 mil)} & should be free tier \\
 Min via / drill & \textbf{0.45 mm / 0.20 mm} & \\
 Impedance control & No & USB is a plain pair; the RF run follows the antenna's 28 dB LNA, so a mismatch costs under 0.1 dB \\
-Via covering & \textbf{Epoxy Filled \& Capped} & some vias sit in SMD pads \\
+Via covering & \textbf{Epoxy Filled \& Capped} & free on 6 layers; no via sits in a pad \\
 Stencil & not needed & everything machine-placed but Section~\ref{sec:solder} \\
 Mark on PCB & \textbf{Remove Mark} & no JLC marker on the board; small fee \\
 \bottomrule
@@ -240,8 +240,8 @@ gated check --- fails if any pair disagrees with the board.
 \toprule
 \textbf{Variant} & \textbf{BOM lines} & \textbf{Placements} & \textbf{Difference from default} \\
 \midrule
-\file{NAVCORE-SoOP} (default) & 82 & \textbf{180} & --- \\
-\file{NAVCORE-SoOP-economic} & 82 & \textbf{179} & omits \file{U3} only \\
+\file{NAVCORE-SoOP} (default) & 88 & \textbf{197} & --- \\
+\file{NAVCORE-SoOP-economic} & 88 & \textbf{196} & omits \file{U3} only \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -457,9 +457,9 @@ four ports (\file{J5}, \file{J6}, \file{J9}, \file{J11}) take a GH 4P, \file{J22
 \textbf{the stock SH 8P to SH 8P ESC lead}, two &
 \file{J2} is JST-SH and matches the ESC's socket directly; the standard lead in the ESC box
 mates straight through. One to fly, one spare \\
-\textbf{the HC610 antenna, its MMCX to SMA pigtail, the DC block and the Blog V4 dongle},
-all with the first order &
-T3b step 1 needs the antenna and the dongle; the aircraft needs the antenna and the
+\textbf{the HC610 antenna, its MMCX to SMA pigtail, the DC block, and the bench bias tee for the Pluto}
+(the Blog V4 dongle is optional), all with the first order &
+T3b step 1 needs the antenna and the Pluto (with its bias tee, or the optional Blog V4 dongle); the aircraft needs the antenna and the
 pigtail; the DC block protects any bench instrument from the +5 V on \file{J12} \\
 \bottomrule
 \end{tabular}
@@ -768,6 +768,10 @@ the two servo headers and the antenna. Pin 1 first; ``underside'' is the board's
 \file{J19} SWD & Tag-Connect TC2030-NL & 1 +3V3, 2 SWDIO, 3 NRST, 4 SWCLK, 5--6 GND; fallback only (Part~8) \\
 \end{longtable}
 
+\flag{\file{J14} (FLOW) is +3V3, not +5V.} \file{J14} uses the same GH-6P connector as
+\file{J3} (GPS) and \file{J21} (COMPANION), but pin 1 is +3V3 (from \file{U9}). Never plug a
+GPS or telemetry lead into \file{J14}.
+
 \textbf{Serial leads cross over.} The board's TX goes to the module's RX and the board's RX
 to the module's TX: on \file{J5}, pin 2 (TX) to the receiver's RX and pin 3
 (\file{RC\_IN}) to its TX. A Pixhawk GPS lead on \file{J3} is already crossed.
@@ -799,11 +803,17 @@ ESC box (75 mm, or a 100--150 mm SH lead along the drone route). No splicing or 
 is needed. \flag{Buzz the cable before connecting VBAT}: verify pin 1 goes to the ESC battery
 ground and pin 2 to battery $+$. A pin-swap with VBAT will destroy motor signal pins or the MCU.
 
+\flag{\file{J2} carries all board power through one JST-SH contact rated 1 A.} Expected draw
+is about 0.66 A at 4S for the lander mission and about 0.9 A at a 3S pack's low end. On 3S,
+do not run the payload rail near its full budget.
+
 \textbf{Servos on \file{J17} and \file{J23}.} Each is a male 1$\times$3 right-angle header in the
 standard JR order: signal (orange, yellow or white) on pin 1, power in the middle (pin 2),
 ground (brown or black) on pin 3 --- verify pin 1 on the assembly drawing before seating the plug,
 as a reversed plug will fit mechanically. The pins overhang the fore edge; \textbf{fit the printed
 clip over both plugs} so pulling forces transfer to the clip and not the SMD pads.
+\flag{An epoxy fillet along each header body is mandatory on every build before a servo is plugged in},
+not just the lander, to secure the SMD pads against vibration and lateral pull.
 
 \begin{itemize}
 \item \textbf{Pin 2 of both sockets is \file{VSERVO}, the servo rail.} \file{D10}, a Schottky
@@ -879,7 +889,7 @@ slack, so vibration works on the tie and not the snap.
 \item The GCS shows \emph{SoOP: antenna ok, 15.0 mA} --- about 15 mA is the HC610's LNA.
 \emph{SoOP: antenna open} (under 3 mA) means the pigtail is not mated or the antenna is
 dead; \emph{SoOP: antenna short} (28 mA or more, or the switch's fault flag) means a short
-on the coax --- the firmware turns a short that lasts 5 s off for 10 s and retries. The log
+on the coax --- the firmware turns a short that lasts 1 s off for 10 s and retries. The log
 records it once a second as \file{SOA}.
 \item The tuner locks: \emph{SoOP: tuner locked, VCO n} at boot (Part~11, step 2).
 \item The orbits on the card are fresh: \file{APM/SOOP/iridium.tle} fetched within the
@@ -1072,11 +1082,21 @@ than a series diode. Use the XT60 keying and check twice.
 \end{quote}
 
 \begin{quote}
-\textbf{USB powers the logic, not the whole board.} \file{D\_USB} feeds VBUS into the +5\,V
-rail at about 4.7\,V, which runs both 3.3\,V rails, the MCU and the sensors --- enough to
-configure and flash it. The payload rail stays off (its buck needs about 6.6\,V), and
-through \file{U8}'s internal diode USB also lifts \file{VBAT}, and via \file{Q4} the ESC's
-battery pin, to about 4\,V. Do the first power-up (this Part) on \file{VBAT} regardless.
+\textbf{USB powers the logic, not the whole board, and back-feeds the ESC lead.} \file{D\_USB}
+feeds VBUS into the +5\,V rail at about 4.7\,V, which runs both 3.3\,V rails, the MCU and the
+sensors --- enough to configure and flash it. The payload rail stays off (its buck needs about
+6.6\,V). However, with USB in and no battery, +5\,V back-feeds \file{VBAT} through \file{U8}'s
+high-side body diode and the conducting \file{Q4}. About 4.2--4.4\,V appears on \file{J2.2}
+and charges the ESC's bulk capacitor through \file{D\_USB}. Unplug the ESC lead (or have the
+battery connected) before plugging in USB. Never leave a live XT60 lying about. Do the first
+power-up (this Part) on \file{VBAT} regardless.
+\end{quote}
+
+\begin{quote}
+\textbf{Do not enable DroneCAN (\file{CAN\_P1\_DRIVER}) on USB-only power or with payload power cut.}
+\file{U11} runs from \file{+3V3\_CAN} (\file{U21}, fed from \file{+5V\_PAYLOAD}) while the MCU
+drives \file{CAN1\_TX} high. When payload power is off, that exceeds the SN65HVD230 input
+limit ($V_{\mathrm{CC}}+0.5$\,V) and back-feeds \file{U11}.
 \end{quote}
 
 % =============================================================================
@@ -1166,7 +1186,7 @@ The active antenna bias feed (\file{U24}, \file{U25}) supplies +5\,V on \file{J1
 \begin{enumerate}
 \item \textbf{Open circuit (no antenna connected):} Probe \file{U25.1} (\file{ANT\_CURRENT}) with a DMM: output voltage sits near \textbf{0\,V} ($<$25\,mV, corresponding to $<$0.25\,mA). The GCS displays \cmd{SoOP: antenna open (0 mA)} once on transition, and the DataFlash \file{SOA} log records state \file{St=1} (\cmd{OPEN}) with \file{mA} under 3.0.
 \item \textbf{Normal active load (HC610 antenna connected):} Plug the HC610 helical antenna into \file{J12} via the RG178 pigtail. The LNA draws nominal 15\,mA. \file{U25.1} reads approximately \textbf{1.65\,V} ($15\,\mathrm{mA} \times 2.2\,\Omega \times 50$). The GCS reports \cmd{SoOP: antenna ok (15 mA)}, and the \file{SOA} log records \file{St=2} (\cmd{OK}) with \file{En=1}.
-\item \textbf{Short-circuit detection and automatic retry:} Do \emph{not} dead-short the coax centre pin directly to shield with a screwdriver. Instead, connect a \textbf{100\,$\Omega$ or 50\,$\Omega$ 1/4\,W test resistor} across an SMA pigtail on \file{J12} (drawing 50--100\,mA, well above the 28\,mA threshold). \file{U25.1} saturates near \textbf{3.25--3.30\,V}. After the 0.5\,s settle filter, the GCS reports \cmd{SoOP: antenna shorted (retry in 5s)}, and \file{SOA} records \file{St=3} (\cmd{SHORT}). After 5\,s of continuous fault, the firmware de-asserts \file{PC5} (\cmd{En=0}), turning \file{U24} off for 10\,s (\file{retry\_off\_s}) to protect the switch from dissipation. Disconnecting the test resistor allows the feed to recover to \cmd{OK} or \cmd{OPEN} on the next retry.
+\item \textbf{Short-circuit detection and automatic retry:} Do \emph{not} dead-short the coax centre pin directly to shield with a screwdriver. Instead, connect a \textbf{100\,$\Omega$ or 50\,$\Omega$ 1/4\,W test resistor} across an SMA pigtail on \file{J12} (drawing 50--100\,mA, well above the 28\,mA threshold). \file{U25.1} saturates near \textbf{3.25--3.30\,V}. After the 0.5\,s settle filter, the GCS reports \cmd{SoOP: antenna shorted (retry in 1s)}, and \file{SOA} records \file{St=3} (\cmd{SHORT}). After 1\,s of continuous fault, the firmware de-asserts \file{PC5} (\cmd{En=0}), turning \file{U24} off for 10\,s (\file{retry\_off\_s}) to protect the switch from dissipation. Disconnecting the test resistor allows the feed to recover to \cmd{OK} or \cmd{OPEN} on the next retry.
 \end{enumerate}
 
 \textbf{Everything optional ships disabled in \file{defaults.parm} and must be turned on
@@ -1271,18 +1291,11 @@ filter's settings (\file{soop\_nav\_default\_cfg} in \file{firmware/soop/soop\_n
 
 \subsection{Step 1 --- record the sky with the bench kit (no board needed)}
 
-Kit A2: the RTL-SDR, the HC610 antenna outdoors with open sky, and the Pi. The antenna's
-LNA takes its 15 mA from the RTL-SDR V4's bias tee (\cmd{rtl\_biast -b 1}), so the bench
-chain is the antenna and one cable.
+Kit A2: the ADALM-Pluto SDR (owned) with an SMA bias tee, or the optional RTL-SDR Blog V4,
+the HC610 antenna outdoors with open sky, and the Pi. The Pluto is the bench receiver and
+the Blog V4 dongle is optional.
 
-\begin{verbatim}
-bash sitl/tle/fetch_iridium_tle.sh                        # today's orbits
-date -u +%Y-%m-%dT%H:%M:%S.%NZ > rec.time
-rtl_sdr -f 1626333333 -s 2000000 -g 40 -n 1200000000 rec.cu8    # 10 min, 2.4 GB
-python3 tools/soop_bench.py rec.cu8 --start $(cat rec.time) --site LAT LON H
-\end{verbatim}
-
-With the ADALM-Pluto instead: the HC610's LNA takes its 15\,mA through an SMA bias tee
+When using the ADALM-Pluto: the HC610's LNA takes its 15\,mA through an SMA bias tee
 (\file{RF+DC} to the antenna, \file{RF} to the Pluto, 5\,V from USB on its DC pin --- check
 5\,V on the \file{RF+DC} centre pin and none on \file{RF} before the Pluto goes on). The
 Pluto's crystal is $\pm$25\,ppm, up to $\pm$40\,kHz at 1626\,MHz, so let it warm up for
@@ -1292,6 +1305,16 @@ Pluto's crystal is $\pm$25\,ppm, up to $\pm$40\,kHz at 1626\,MHz, so let it warm
 rx_sdr -d driver=plutosdr -f 1626333333 -s 2000000 -g 40 -F CS16 rec.cs16
 python3 tools/soop_bench.py rec.cs16 --format cs16 --gain auto --lo-search \
     --start $(cat rec.time) --site LAT LON H
+\end{verbatim}
+
+With the optional RTL-SDR Blog V4 instead: the antenna's LNA takes its 15\,mA from the
+dongle's bias tee (\cmd{rtl\_biast -b 1}), so the bench chain is the antenna and one cable:
+
+\begin{verbatim}
+bash sitl/tle/fetch_iridium_tle.sh                        # today's orbits
+date -u +%Y-%m-%dT%H:%M:%S.%NZ > rec.time
+rtl_sdr -f 1626333333 -s 2000000 -g 40 -n 1200000000 rec.cu8    # 10 min, 2.4 GB
+python3 tools/soop_bench.py rec.cu8 --start $(cat rec.time) --site LAT LON H
 \end{verbatim}
 
 \file{--site} is where the antenna was, in degrees and ellipsoidal metres (a phone's GPS is
@@ -1319,8 +1342,8 @@ bursts gr-iridium finds in the Ring Alert band.
 \file{tools/check\_order.py rf} (\file{fly.rfbench}) gates ready-to-fly on four measurements in
 \file{fab/rf-bench-results.json}. Start the file with
 \cmd{python3 tools/check\_order.py rf --template > fab/rf-bench-results.json}. Fit the HC610 in its
-flight position on the tower, run its pigtail to the RTL-SDR on the ground beside the aircraft,
-and take the four steps in one session, in this order, without moving the antenna:
+flight position on the tower, run its pigtail to the bench receiver (Pluto or optional RTL-SDR)
+on the ground beside the aircraft, and take the four steps in one session, in this order, without moving the antenna:
 
 \begin{enumerate}
 \item \textbf{baseline}: aircraft unpowered;
@@ -1329,10 +1352,12 @@ and take the four steps in one session, in this order, without moving the antenn
 \item \textbf{elrs\_tx}: as above, with the ELRS link transmitting.
 \end{enumerate}
 
-For each step, record five minutes with Step~1's \cmd{rtl\_sdr} line (\cmd{-n 600000000}),
-then run \file{soop\_bench.py}. Its \emph{DSP: N bursts, n/min} line gives
-\file{bursts\_per\_min}. For \file{noise\_floor\_dbm}, run
-\cmd{rtl\_power -f 1616M:1626.5M:10k -g 40 -i 10 -e 60 floor.csv} and take the median bin. It is relative dB, not calibrated dBm, but the gain is the same in all four steps, so the steps can be compared.
+For each step, record five minutes with Step~1's capture command (\cmd{rx\_sdr} for Pluto, or
+\cmd{rtl\_sdr -n 600000000} for RTL-SDR), then run \file{soop\_bench.py}. Its \emph{DSP: N bursts, n/min}
+line gives \file{bursts\_per\_min}. For \file{noise\_floor\_dbm}, run
+\cmd{rtl\_power -f 1616M:1626.5M:10k -g 40 -i 10 -e 60 floor.csv} (or measure the floor from the
+Pluto capture in \file{soop\_bench.py}) and take the median bin. It is relative dB, not calibrated dBm,
+but the gain is the same in all four steps, so the steps can be compared.
 Fill in \file{utc} and \file{sky} (clear, or the cloud cover), then run \cmd{python3 tools/check\_order.py rf}.
 A step passes if it keeps at least half the baseline's bursts. Because the steps are cumulative,
 the first step to fail names the culprit: the board's switchers, then the ESC and motor leads,
@@ -1534,8 +1559,8 @@ of silicone:
 gently on the lead to prove it;
 \item the MMCX on \file{J12} snaps on with a detent; tie the coax down 10--15 mm from it;
 \item the servo plugs on \file{J17}/\file{J23} are a friction fit on SMD pads, held by the
-printed clip over both --- fit the clip before flight. On the lander, where the leads take
-load, add an epoxy fillet along each header body too, then pull each lead sideways by hand:
+printed clip over both --- fit the clip before flight. Add an epoxy fillet along each header body
+on every build before a servo is plugged in, not just the lander, then pull each lead sideways by hand:
 nothing may move. (Through-hole headers would land their pins on \file{J5}/\file{J11} underneath.)
 \item the LED strip and buzzer are soldered.
 \end{itemize}
@@ -1765,10 +1790,8 @@ JLCPCB's upload preview & outline, panel size, CPL orientation, stackup and dril
 tool substitutes for looking at their render \\
 \textbf{1 oz outer copper} & every current figure assumes it, and 0.5 oz halves every trace's
 rating. Confirm what actually ships \\
-LCSC stock & a live external fact, age-gated at 7 days. Re-fetched \textbf{2026-09-19}:
-56/56 codes resolve, covering 2 boards \\
-The 1620 MHz SAW filter & not stocked at LCSC --- a separate board from a separate supplier,
-and the only part of the RF front end this BOM cannot buy \\
+LCSC stock & a live external fact, age-gated at 7 days. Re-fetched \textbf{2026-10-28}:
+82/82 codes resolve, covering 2 boards \\
 ArduPilot board ID & \textbf{7180} is free and below the ceiling; the request, the registry
 diff and the required \file{Readme.md} are ready in \file{firmware/}. The local build still
 uses 9001, which is above the ceiling the registry asks you to respect \\

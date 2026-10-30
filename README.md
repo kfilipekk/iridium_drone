@@ -26,10 +26,10 @@ Optical flow and visual-inertial odometry drift without bound over long flights.
 | Subsystem | Components |
 |-----------|------------|
 | MCU | STM32H743VIT6, Cortex-M7 @ 480 MHz, 2 MB flash, 1 MB RAM |
-| IMUs | ICM-45686 (SPI1) and ICM-42605 (SPI4) on a separate low-noise 3.3 V rail |
+| IMUs | ICM-45686 (SPI1) and ICM-42605 (SPI4) on a separate analogue 3.3 V rail, shared with the tuner |
 | Barometer | MS5611 on I2C2 |
 | Storage | W25Q128 flash for the orbit catalogue, microSD over SDIO |
-| Power | 3S-5S input, TVS and reverse-polarity protection, two LMR33630 bucks (5 V 1.6 A system, 5 V 2.1 A payload) and three 3.3 V LDOs |
+| Power | 3S-5S input, TVS and reverse-polarity protection, two 3 A LMR33630 bucks (limited by inductors L2/L5 to 1.6 A system, 2.1 A payload) and three 3.3 V LDOs |
 | Connectors | Latching JST-GH on every cable port, two servo headers, MMCX, USB-C, TC2030 SWD pads |
 | Protection | ESD clamp on every cable-facing signal, series resistors on the motor, telemetry, current, lidar and servo lines |
 
@@ -37,9 +37,9 @@ Optical flow and visual-inertial odometry drift without bound over long flights.
 ```
 F.Cu:   MCU, RF receiver, bucks and LDOs, flash, the edge connectors
 In1.Cu: Continuous ground plane
-In2.Cu: SPI, SDIO and I2C
-In3.Cu: UARTs, PWM and slow I/O
-In4.Cu: Power planes (+5V, +5V_PAYLOAD, +3V3, VBAT)
+In2.Cu: Mixed signal with GND fill
+In3.Cu: Mixed signal with GND fill
+In4.Cu: Split power planes (+5V, +5V_PAYLOAD, +3V3, VBAT)
 B.Cu:   IMUs, baro, both crystals, CAN, microSD, the underside connectors
 ```
 
