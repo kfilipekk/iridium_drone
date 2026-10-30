@@ -1093,10 +1093,8 @@ power-up (this Part) on \file{VBAT} regardless.
 \end{quote}
 
 \begin{quote}
-\textbf{Do not enable DroneCAN (\file{CAN\_P1\_DRIVER}) on USB-only power or with payload power cut.}
-\file{U11} runs from \file{+3V3\_CAN} (\file{U21}, fed from \file{+5V\_PAYLOAD}) while the MCU
-drives \file{CAN1\_TX} high. When payload power is off, that exceeds the SN65HVD230 input
-limit ($V_{\mathrm{CC}}+0.5$\,V) and back-feeds \file{U11}.
+\textbf{CAN transceiver power on USB desk power.}
+In Rev D, \file{U21} (\file{+3V3\_CAN} LDO) is powered from the \file{+5V} system rail (rather than \file{+5V\_PAYLOAD}), ensuring \file{U11} (SN65HVD230) is powered whenever the MCU logic is running from USB-C. DroneCAN (\file{CAN\_P1\_DRIVER}) can be safely enabled and operated during USB desk bring-up without back-feeding unpowered transceiver logic. Note that bus power to external CAN nodes via \file{J6.1} remains on \file{+5V\_PAYLOAD} and requires battery power (\file{VBAT}).
 \end{quote}
 
 % =============================================================================
@@ -1751,25 +1749,23 @@ are on this list only because they are properties of parts somebody else manufac
 both are silenced by owning the M3 assortment and a multimeter.
 \end{enumerate}
 
-\subsection{15.5 Design-level inefficiencies, for a future revision}
+\subsection{15.5 Design-level inefficiencies and Rev E roadmap}
 
-These do not affect this order. They are recorded because a respin is the only place they
-can be fixed, and one of them (\file{U8}) may force one anyway.
+These do not affect this order. Tier 2 respin changes (\file{U21} on \file{+5V}, \file{R27} DNP, and \file{C52} to 33\,pF) have been integrated into Rev D. The remaining architectural improvements are scheduled for Rev E:
 
 \begin{itemize}
-\item \textbf{USB runs the logic but not the payload rail}, and back-feeds about 4\,V onto
-\file{VBAT} and the ESC's battery pin through \file{U8} and \file{Q4}.
-\item \textbf{The payload rail cannot carry every payload connector at once}: 1.48 A is
-inside \file{L5}'s 2.1 A, but puts \file{U20} at about 135\,\degC{} against 125\,\degC{}
-(\file{check\_order.py modules}). Each declared mission fits.
-\item \textbf{The Economic variant saves one part and not the feeder fees}, which makes it a
-worse deal than it reads as (Section 15.1).
-\item \textbf{\file{U20}'s input decoupling is a corner short}: one 100\,nF (\file{C66}) 2.4\,mm
-from its input pins and the nearest 10\,\textmu F (\file{C18}) 5.8\,mm away, where the datasheet's
-layout puts both within about 1.5\,mm. \file{L5} fills the underside beneath it and the top side
-is full, so there is no site on this board. It only feeds the payload rail; T3b step 1b shows
-what its switching noise does to Iridium reception.
-\item \textbf{In4 rail fragmentation} is an accepted warning on this board.
+\item \textbf{Battery solder pads (VBAT/GND):} Add dedicated heavy solder pads (18--20 AWG) on the board perimeter so total board current does not ride through a single 1.0\,A JST-SH contact on \file{J2}.
+\item \textbf{Synchronous buck for 3.3\,V logic:} Replace \file{U9} (TLV75733P LDO) with a miniature high-frequency synchronous buck converter (e.g. TI TPS62825, 2.25\,MHz). Increases conversion efficiency from 66\% to $>92\%$, eliminates $\sim$0.5\,W heating and closes the \file{U9} thermal risk item.
+\item \textbf{Relocate D1 after Q4 / bidirectional TVS:} In Rev D, unidirectional TVS \file{D1} sits across \file{J2.2} before \file{Q4}. A reversed battery connection forward-biases \file{D1} across the pack. Moving \file{D1} after \file{Q4} or using a bidirectional TVS (SMAJ22CA) prevents reverse fault conduction.
+\item \textbf{Block USB back-feed into VBAT:} Add an ideal diode controller or blocking P-FET between \file{U8}'s buck output and the \file{+5V} system bus, preventing $\sim$4.2\,V leakage onto \file{VBAT} and the ESC lead when USB is plugged in without a battery.
+\item \textbf{Active 2nd-order baseband filter:} Replace the 1st-order passive RC anti-aliasing filter on the MAX2112 I/Q outputs with an active 2nd-order Multiple Feedback (MFB) low-pass stage and buffer \file{BB\_VREF} to prevent reference droop during dual ADC sampling.
+\item \textbf{RF layout and tuner matching:} Place \file{C52} (33\,pF C0G) immediately adjacent to \file{U13.2} (RFIN), shorten the 13.6\,mm RF run, and define standard 50\,$\Omega$ coplanar waveguide geometry for the JLCPCB 6-layer stackup.
+\item \textbf{Antenna bias resistor R62 to 0603:} Upsize \file{R62} from 0402 (62.5\,mW) to 0603 (100\,mW) for extended survivability under antenna short-circuit faults.
+\item \textbf{IMU hardware EXTI interrupts:} Route IMU1 INT1 and IMU2 INT1 to dedicated STM32 EXTI pins (and route CLKIN) for hardware sensor synchronization and interrupt-driven FIFO capture.
+\item \textbf{Buck decoupling and Cout capacity:} Place \file{U20} input caps within 1.5\,mm, move \file{C17}/\file{C19} beside \file{U8}, and expand output capacitance to 4\,$\times$\,22\,\textmu F per TI Table 9-2.
+\item \textbf{Pull-up rail alignment:} Route \file{R12.1} (I2C2\_SDA) to \file{+3V3A} matching \file{R11}, and \file{R59} (BIAS\_EN) to \file{+3V3}.
+\item \textbf{Interactive HTML BOM:} Integrate \file{InteractiveHtmlBom} into \file{fab.py} to generate \file{reference/ibom.html} in the release package for bench probing.
+\item \textbf{In4 rail fragmentation:} Rationalize plane polygons on In4.Cu during respin.
 \end{itemize}
 
 % =============================================================================

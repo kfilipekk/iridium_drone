@@ -219,11 +219,13 @@ add("SW1", SW, F_SW, "BOOT"); add("SW2", SW, F_SW, "RESET")
 
 #microSD
 CAP("C45","10u", F_C0805); CAP("C46","100n")
-for i,(r) in enumerate(["R22","R23","R24","R25","R26","R27"]): RES(r, "47k")  #SDMMC pullups
+for i,(r) in enumerate(["R22","R23","R24","R25","R26"]): RES(r, "47k")  #SDMMC pullups
+RES("R27", "47k")
+COMPONENTS["R27"] = (R, F_R0402, "47k", "C25792", True)  # DNP: SD_CD unrouted to MCU in Rev D
 
 #RF section passives
 for r,v in [("C49","100n"),("C50","100n"),("C51","1u"),
-            ("C52","100p"),("C56","100p"),("C57","100n")]:
+            ("C52","33p"),("C56","100p"),("C57","100n")]:
     CAP(r, v, F_C0402)
 for r,v in [("R28","0R"),("R29","0R"),("R31","4k7"),
             ("R34","330R"),("R35","1k"),("R36","4k7"),("R37","4k7")]:
@@ -1350,12 +1352,12 @@ NETS["GND"] += ["Q3.2", "R45.2", "C73.2"]
 NETS["BUCK_PAYLOAD_EN"] += ["Q3.3", "C73.1"]
 
 #6
-#powers U11 (SN65HVD230) from +5V_PAYLOAD with rock-solid 3.3V
+#powers U11 (SN65HVD230) from +5V with rock-solid 3.3V (powered on USB desk power and flight)
 add("U21", "jlc_parts:XC6206P332MR", "jlc:SOT-23-3_L2.9-W1.6-P1.90-LS2.8-BR",
     "XC6206P332MR", "C5446", False)
 CAP("C67", "1u")
 CAP("C80", "1u")
-NETS["+5V_PAYLOAD"] += ["U21.3", "C80.1"]
+NETS["+5V"] += ["U21.3", "C80.1"]
 NETS["GND"] += ["U21.1", "C67.2", "C80.2"]
 net("+3V3_CAN", "U21.2", "U11.3", "C67.1", "C41.1")
 NETS["+5V_PAYLOAD"] += ["J6.1"]
@@ -1746,6 +1748,7 @@ PASSIVE_LCSC = {
     ("10u",  F_C0805): "C15850",  ("10u",  F_C1206): "C13585",
     ("1u",   F_C0805): "C28323",  ("22u",  F_C1206): "C12891",
     ("0R",   F_R0402): "C17168",  ("100p", F_C0402): "C1546", ("100p", F_C0201): "C62550",
+    ("33p",  F_C0402): "C1562",
     ("1n",   F_C0402): "C1523",
     ("100n", F_C0201): "C76939",   #Murata GRM033R61E104KE14D 100nF 25V X5R
     ("100R", F_R0402): "C25076",  ("120R", F_R0402): "C25079",
@@ -1816,6 +1819,7 @@ RATINGS = {
  "C15195":   ("10n",   50,  "X7R",     "10%",  "0402",  None, None, "[D] LCSC product page, 2026-08-29"),
  "C26404":   ("3n3",   50,  "X7R",     "10%",  "0402",  None, None, "[D] LCSC product page, 2026-08-29"),
  "C60137":   ("47p",   50,  "NP0",     "5%",   "0402",  None, None, "[D] LCSC product page, 2026-08-29"),
+ "C1562":    ("33p",   50,  "NP0",     "5%",   "0402",  None, None, "[D] LCSC product page (0402CG330J500NT), 2026-10-30"),
  "C1546":    ("100p",  50,  "NP0",     "5%",   "0402",  None, None, "[D] LCSC product page (0402CG101J500NT), 2026-09-11"),
  "C62550":   ("100p",  50,  "NP0",     "5%",   "0201",  None, None, "[L] JLCPCB part API: FH 0201CG101J500NT 100pF 50V C0G 0201, 898540 in stock 2026-10-20"),
  "C1523":    ("1n",    50,  "X7R",     "10%",  "0402",  None, None, "[D] LCSC product page (0402B102K500NT), 2026-09-11"),
@@ -2022,8 +2026,8 @@ NET_CURRENT = {
     #J2's VBAT pin to Q4: everything the board takes from the pack
     "VBAT_IN": 1.2,
     "VBAT": 1.2,            #the same current, after Q4: the bucks are all VBAT feeds
-    "+5V":  0.95,
-    "+5V_PAYLOAD": 1.5,
+    "+5V":  1.05,
+    "+5V_PAYLOAD": 1.4,
     "VSERVO": 1.5,
     "+5V_BIAS_SW": 0.155,   #AP22653 limit, RLIM 210k, max (DS41186)
     "+5V_BIAS": 0.155,
@@ -2115,8 +2119,6 @@ LOAD_CURRENT = {
         "J11.1": 0.18,
         #[M] two micro servos on J17/J23 (250 mA each running), through D10 onto VSERVO
         "D10.2": 0.50,
-        #[D] U21 is the +3V3_CAN LDO feed for the SN65HVD230
-        "U21.3": 0.10,
         #[A] the DroneCAN node on J6 - the Remote ID module
         "J6.1": 0.15,
     },
@@ -2160,17 +2162,19 @@ LOAD_CURRENT = {
         "J9.1": 0.126,                  #TFS20-L 0.106 + upward ToF 0.02
         "J21.1": 0.25,                  #companion computer telemetry
         "U24.1": 0.015,                 #active bias-tee for active antenna LNA
+        #[D] U21 is the +3V3_CAN LDO feed for the SN65HVD230 (on +5V in Rev D respin)
+        "U21.3": 0.10,
     },
 }
 
 #the payload buck (U20, +5V_PAYLOAD)
 PAYLOAD_PROFILES = {
-    "drone": dict(keys=("J22.1", "P151.1", "J11.1", "U21.3", "J6.1"),
+    "drone": dict(keys=("J22.1", "P151.1", "J11.1", "J6.1"),
                   what="quad on GPS/SoOP: VTX + XIAO camera on J22, "
-                       "LED strip, LD06 lidar, CAN transceiver and one node"),
-    "lander": dict(keys=("D10.2", "P151.1", "U21.3", "J6.1"),
+                       "LED strip, LD06 lidar and one CAN node"),
+    "lander": dict(keys=("D10.2", "P151.1", "J6.1"),
                    what="TVC lander: two micro servos on J17/J23 through D10 (35 kg servos "
-                        "take a UBEC instead), LED strip, CAN transceiver and one node"),
+                        "take a UBEC instead), LED strip and one CAN node"),
 }
 PAYLOAD_ALL_WIRED = tuple(k for k in LOAD_CURRENT["+5V_PAYLOAD"] if k != "P151.1")
 
@@ -2272,7 +2276,7 @@ PIN_INTENT = {
     "SD_D3": dict(mcu="bidir", why="SDMMC data"),
     "SD_CMD": dict(mcu="bidir", why="SDMMC command"),
     "SD_CK":  dict(mcu="out",   why="SDMMC clock"),
-    "SD_CD":  dict(mcu="in",    why="card-detect switch to GND, 10k pull-up"),
+    "SD_CD":  dict(why="card-detect switch to GND, unrouted to MCU in Rev D (R27 DNP)"),
 
     #notify
     "LED0":   dict(mcu="out", why="status LED via 1k"),
