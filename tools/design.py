@@ -46,7 +46,7 @@ COMPONENTS = {
  "J8" : ("jlc_parts:TF-01A",                "jlc:TF-SMD_TF-01A",                        "microSD",       "C91145",   False),
  #Y1 is a passive crystal and the part number matters more than it looks
  "Y1" : ("jlc_parts:X32258MSB4SI",          "jlc:CRYSTAL-SMD_4P-L3.2-W2.5-BL",          "8MHz",          "C2682774", False),
- "D1" : ("jlc_parts:SMBJ22A_C113993",          "jlc:SMB_L4.6-W3.6-LS5.3-RD",                          "SMBJ22A",       "C113993",False),
+ "D1" : ("jlc_parts:SMBJ22CA_C113994",          "jlc:SMB_L4.6-W3.6-LS5.3-RD",                          "SMBJ22CA",       "C113994",False),
  #SoOP receiver
  "U13": ("jlc_parts:MAX2112ETI+T",          "jlc:TQFN-28_L5.0-W5.0-P0.50-BL-EP3.3",      "MAX2112",       "C596391",  False),
  "U14": ("jlc_parts:OPA2374M{slash}TR",     "jlc:SOP-8_L4.9-W3.9-P1.27-LS6.0-BL",       "OPA2374",       "C444392",  False),
@@ -166,6 +166,8 @@ TVS_CLAMP_V = {
     "SMBJ24A": (38.9, 24.0, 26.7, 15.4, "[D] Littelfuse SMBJ series datasheet"),
     "SMBJ22A": (35.5, 22.0, 24.4, 16.9, "[D] Littelfuse SMBJ series datasheet; JLCPCB C113993 "
                                          "lists Vrwm 22 V, Vc 35.5 V"),
+    "SMBJ22CA": (35.5, 22.0, 24.4, 16.9, "[D] Littelfuse SMBJ series datasheet; JLCPCB C113994 "
+                                          "lists Vrwm 22 V, Vc 35.5 V (bidirectional TVS)"),
     "SMBJ20A": (32.4, 20.0, 22.2, 18.6, "[D] Littelfuse SMBJ series datasheet"),
     "SMBJ18A": (29.2, 18.0, 20.0, 20.6, "[D] Littelfuse SMBJ series datasheet"),
 }

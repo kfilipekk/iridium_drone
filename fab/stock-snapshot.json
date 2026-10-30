@@ -38,17 +38,17 @@
    "spec": "0402",
    "stock": 4809
   },
-  "C113993": {
-   "describe": "-65\u2103~+150\u2103 16.9A@10/1000us 1uA 22V 26.9V 35.5V 600W@10/1000us TVS Unidirectional DO-214AA(SMB) ESD and Surge Protection (TVS/ESD) ROHS",
+  "C113994": {
+   "describe": "22V 35.5V 600W TVS Bidirectional DO-214AA(SMB) ESD and Surge Protection (TVS/ESD) ROHS",
    "found": true,
-   "lcsc_url": "https://www.lcsc.com/product-detail/esd-and-surge-protection-tvs-esd_mdd-microdiode-semiconductor-smbj22a_C113993.html",
+   "lcsc_url": "https://www.lcsc.com/product-detail/SMBJ22CA_C113994.html",
    "least_patch": 5,
    "library": "expand",
    "min_purchase": 1,
-   "mpn": "SMBJ22A",
+   "mpn": "SMBJ22CA",
    "price_usd": 0.0566,
    "spec": "DO-214AA(SMB)",
-   "stock": 596
+   "stock": 2768
   },
   "C11702": {
    "describe": "-55\u2103~+155\u2103 1k\u03a9 50V 62.5mW Thick Film Resistor \u00b11% \u00b1100ppm/\u2103 0402 Chip Resistor - Surface Mount ROHS",

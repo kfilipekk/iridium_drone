@@ -6992,7 +6992,7 @@
 				)
 			)
 		)
-		(property "Value" "SMBJ22A"
+		(property "Value" "SMBJ22CA"
 			(at 0 3.886208 270)
 			(layer "F.Fab")
 			(uuid "d971560c-40d0-478a-8980-c412fc27b51d")

@@ -1365,6 +1365,7 @@ CROSS_CHECK = {
     "XC6206P332MR":          ("Regulator_Linear", "XC6206PxxxMR"),
     #diodes (added for the D/L pinout pass)
     "SMBJ22A_C113993":       ("Device", "D_Zener"),
+    "SMBJ22CA_C113994":      ("Device", "D_TVS"),
     "1N4148W_C81598":        ("Device", "D"),
     "BZT52C15":              ("Device", "D_Zener"),
     "B5819W_C8598":          ("Device", "D_Schottky"),
