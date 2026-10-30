@@ -183,7 +183,7 @@ RES("R3","preset")   #EN only - C20 (soft-start) deleted: TPS54202 is internal
 RES("R4","392k"); RES("R5","78k7")                         #EN divider
 CAP("C21","100n")                                          #boot cap
 IND("L2", "10uH", F_ANR4030)   #4x4 land - the FNR4030 never fitted a 1210
-CAP("C22","22u", F_C1206); CAP("C23","22u", F_C1206)      #5V out
+CAP("C22","47u", F_C1206); CAP("C23","47u", F_C1206)      #5V out (TI Table 9-2: 4x22uF -> 2x47uF)
 CAP("C78","1u")                                           #U8 VCC bypass, pin 5
 RES("R6","10k2"); RES("R7","3k24")                         #-> overridden, see _VALUE_FIX
 #R8/C24/C25 COMP network deleted - TPS54202 compensates internally
@@ -1309,8 +1309,8 @@ IND("L5", "10uH", F_ANR5040)
 CAP("C66", "100n")                 #VIN hf (50V rated in PART_LCSC)
 CAP("C68", "100n")                 #bootstrap
 CAP("C79", "1u")                   #internal VCC bypass
-CAP("C69", "22u", F_C1206)         #output bulk
-CAP("C70", "22u", F_C1206)
+CAP("C69", "47u", F_C1206)         #output bulk (TI Table 9-2: 4x22uF -> 2x47uF)
+CAP("C70", "47u", F_C1206)
 RES("R40", "100k"); RES("R41", "22k")       #EN divider
 RES("R42", "100k"); RES("R43", "24k9")      #1.000 V reference -> 5.016 V output
 #J22: JST-GH 3P payload power port (+5V_PAYLOAD) for a VTX or camera
@@ -1748,7 +1748,7 @@ PASSIVE_LCSC = {
     ("47p",  F_C0402): "C60137",  ("3n3",  F_C0402): "C26404",
     #C17/C18, the VBAT bulk caps
     ("10u",  F_C0805): "C15850",  ("10u",  F_C1206): "C13585",
-    ("1u",   F_C0805): "C28323",  ("22u",  F_C1206): "C12891",
+    ("1u",   F_C0805): "C28323",  ("22u",  F_C1206): "C12891",  ("47u",  F_C1206): "C96123",
     ("0R",   F_R0402): "C17168",  ("100p", F_C0402): "C1546", ("100p", F_C0201): "C62550",
     ("33p",  F_C0402): "C1562",
     ("1n",   F_C0402): "C1523",
@@ -1821,6 +1821,7 @@ RATINGS = {
  "C15195":   ("10n",   50,  "X7R",     "10%",  "0402",  None, None, "[D] LCSC product page, 2026-08-29"),
  "C26404":   ("3n3",   50,  "X7R",     "10%",  "0402",  None, None, "[D] LCSC product page, 2026-08-29"),
  "C60137":   ("47p",   50,  "NP0",     "5%",   "0402",  None, None, "[D] LCSC product page, 2026-08-29"),
+ "C96123":   ("47u",   10,  "X5R",     "20%",  "1206",  -55,  85,   "[D] Samsung CL31A476MPHNNNE datasheet; JLCPCB basic part (2026-10-30)"),
  "C1562":    ("33p",   50,  "NP0",     "5%",   "0402",  None, None, "[D] LCSC product page (0402CG330J500NT), 2026-10-30"),
  "C1546":    ("100p",  50,  "NP0",     "5%",   "0402",  None, None, "[D] LCSC product page (0402CG101J500NT), 2026-09-11"),
  "C62550":   ("100p",  50,  "NP0",     "5%",   "0201",  None, None, "[L] JLCPCB part API: FH 0201CG101J500NT 100pF 50V C0G 0201, 898540 in stock 2026-10-20"),
@@ -1998,6 +1999,7 @@ BUCK_COUT_FLOOR_UF = 26.0
 #fraction of an mlcc's capacitance left at 5 V dc bias, by lcsc part
 CAP_DC_BIAS_DERATE = {
     "C12891": (0.72, "[D] Samsung CL31A226KAHNNNE 22uF 25V X5R 1206: ~72% effective at 5.0 V DC bias (~15.8 uF)"),
+    "C96123": (0.52, "[D] Samsung CL31A476MPHNNNE 47uF 10V X5R 1206: ~52% effective at 5.0 V DC bias (~24.4 uF)"),
 }
 
 #buses allowed pull-ups on two rails, and why

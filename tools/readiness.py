@@ -187,9 +187,9 @@ PREREQUISITES = [
              "copper, and this board is between them. No desk calculation narrows it; "
              "T3a measures it. U19 logs the board beside U9 every flight in the meantime."),
     dict(id="adv.buck_cout", cls=ADVISORY, tool="check_circuit.py electrical",
-         why="TI Table 9-2 recommends 4 x 22 uF (88 uF) at 400 kHz / 5 V; the board fits "
-             "2 x 22 uF (32-34 uF effective), which exceeds the 26 uF transient stability floor "
-             "(TI SNVSAN3F Eq. 6 for delta_I 1 A, delta_V 250 mV) and relies on bench load-step validation."),
+         why="TI Table 9-2 recommends 4 x 22 uF (88 uF) at 400 kHz / 5 V; the Rev D respin "
+             "fits 2 x 47 uF 1206 (Samsung CL31A476MPHNNNE, 94 uF rated, ~50 uF effective at 5.0 V bias), "
+             "exceeding Table 9-2 recommended capacity and Eq. 6 transient floor."),
     dict(id="adv.j2_contact", cls=ADVISORY, tool="check_circuit.py electrical",
          why="J2 (JST-SH 8P) carries all board power through one contact rated 1.0 A [D]; "
              "design.NET_CURRENT['VBAT_IN'] is 1.2 A. Measured lander flight draw is ~0.66 A at 4S "

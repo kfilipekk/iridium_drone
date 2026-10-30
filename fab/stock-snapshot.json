@@ -974,6 +974,18 @@
    "spec": "SMD",
    "stock": 161103
   },
+  "C96123": {
+   "describe": "10V 47uF X5R \u00b120% 1206 Multilayer Ceramic Capacitors MLCC - SMD/SMT ROHS",
+   "found": true,
+   "lcsc_url": "https://www.lcsc.com/product-detail/CL31A476MPHNNNE_C96123.html",
+   "least_patch": 5,
+   "library": "base",
+   "min_purchase": 1,
+   "mpn": "CL31A476MPHNNNE",
+   "price_usd": 0.0820,
+   "spec": "1206",
+   "stock": 535061
+  },
   "C965804": {
    "describe": "-40\u2103~+85\u2103 120\u00b0 20mA 3.3V 515nm~535nm 525nm 70mW 810mcd Discrete Diode Emerald Green Top-mount Water Clear 0603 LED Indication - Discrete ROHS",
    "found": true,
