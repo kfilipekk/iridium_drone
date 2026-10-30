@@ -1980,6 +1980,25 @@ BUCK_THERMAL = {
         src="[D] SNVSAN3F 7.4 Thermal Information, RNX (12-pin VQFN)"),
 }
 
+#ti's recommended output caps for the fitted bucks, keyed (fsw kHz, vout V):
+#(L uH, rated Cout uF, count, each uF, source)
+BUCK_TI_TABLE_9_2 = {
+    (400, 5.0): (8.0, 88.0, 4, 22.0, "[D] SNVSAN3F Table 9-2: 400 kHz, 5 V -> 8 uH, 4 x 22 uF rated Cout"),
+}
+
+#smallest effective Cout for a 1 A step inside 250 mV at 400 kHz, 12 V in (SNVSAN3F eq. 6: 25.7 uF)
+BUCK_COUT_FLOOR_UF = 26.0
+
+#fraction of an mlcc's capacitance left at 5 V dc bias, by lcsc part
+CAP_DC_BIAS_DERATE = {
+    "C12891": (0.72, "[D] Samsung CL31A226KAHNNNE 22uF 25V X5R 1206: ~72% effective at 5.0 V DC bias (~15.8 uF)"),
+}
+
+#buses allowed pull-ups on two rails, and why
+PULLUP_RAIL_EXCUSES = {
+    "I2C2": "[A] R11 on +3V3A, R12 on +3V3: Rev D layout anomaly tolerated because both are 3.3 V LDO rails; fixed in Rev E (T2.2)",
+}
+
 
 def buck_dnp(ref):
     """True when this rail's regulator is not fitted on the build being ordered."""
@@ -2012,6 +2031,19 @@ NET_CURRENT = {
     "+3V3A": 0.35,
     "+3V3_CAN": 0.1,
     "VBUS": 0.5,
+}
+
+#current per contact, keyed by symbol or footprint name
+CONNECTOR_CONTACT_RATING_A = {
+    "SM08B-SRSS-TB-LF-SN": (1.0, "[D] JST SH datasheet: 1.0 A per contact"),
+    "SM08B-SRSS-TB(LF)(SN)": (1.0, "[D] JST SH datasheet: 1.0 A per contact"),
+    "XY-SM06B-GHS-TB": (1.0, "[D] JST GH datasheet: 1.0 A per contact"),
+    "CONN-SMD_XY-SM06B-GHS-TB": (1.0, "[D] JST GH datasheet: 1.0 A per contact"),
+    "SM03B-GHS-TB(LF)(SN)": (1.0, "[D] JST GH datasheet: 1.0 A per contact"),
+    "CONN-TH_SM03B-GHS-TB-LF-SN": (1.0, "[D] JST GH datasheet: 1.0 A per contact"),
+    "BX-GH1.25-4PWT": (1.0, "[D] JST GH compatible 1.25mm: 1.0 A per contact"),
+    "BX-GH1_25-4PWT": (1.0, "[D] JST GH compatible 1.25mm: 1.0 A per contact"),
+    "CONN-SMD_4P-P1.25_BX-GH1.25-4PWT": (1.0, "[D] JST GH compatible 1.25mm: 1.0 A per contact"),
 }
 
 NET_CLASSES = {
@@ -2163,7 +2195,7 @@ INDUCTOR_LOAD_A["L5"] = RAIL_5V_PAYLOAD["worst_mission_a"]
 ANT_FEED = dict(
     sense_ref="R62", gain=50.0, vs=3.3, swing_v=0.02,
     lna_ma=15.0, short_circuit_ma=35.0,
-    open_ma=3.0, short_ma=28.0, settle_s=0.5, retry_after_s=5.0, retry_off_s=10.0,
+    open_ma=3.0, short_ma=28.0, settle_s=0.5, retry_after_s=1.0, retry_off_s=10.0,
     adc="PC2_C, ADC3_INP0 (SYSCFG PMCR PC2SO open)",
     src="[D] TI INAx180: A2 gain 50 V/V, output swing to VS-0.02 V; [D] Tallysman HC610 "
         "15 mA at 2.2-12 V; [D] Diodes DS41186 Rev 5-2: RLIM 210k short-circuit 35 mA typ")

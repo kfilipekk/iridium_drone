@@ -726,6 +726,38 @@ def run_electrical():
             warns.append(f"{name}: the {vth} V EN threshold for {part} is {src} - the "
                          f"UVLO figure above inherits that uncertainty")
 
+    #2b. buck output capacitance against ti's table 9-2 and eq. 6
+    for ref, rail, vout_declared, rtop, rbot, ind in design.BUCK_RAILS:
+        part = design.COMPONENTS[ref][2]
+        name = f"{rail} buck ({ref})"
+        fsw = design.BUCK_THERMAL.get(part, {}).get("fsw", 400e3)
+        key = (int(round(fsw / 1e3)), int(round(vout_declared)))
+        rail_caps = []
+        for cref, leg in caps.get(rail, []):
+            val_f = to_farads(value_of(cref))
+            if val_f:
+                c_uf = val_f * 1e6
+                lcsc = design.COMPONENTS[cref][3]
+                derate = design.CAP_DC_BIAS_DERATE.get(lcsc, (1.0,))[0]
+                eff_uf = c_uf * derate
+                rail_caps.append((cref, c_uf, eff_uf, lcsc))
+        tot_rated = sum(c[1] for c in rail_caps)
+        tot_eff = sum(c[2] for c in rail_caps)
+        tbl = design.BUCK_TI_TABLE_9_2.get(key)
+        if tbl:
+            _l_req, req_rated_uf, req_cnt, req_each, tbl_src = tbl
+            detail = (f"{name}: fitted Cout {tot_rated:.0f} uF rated ({tot_eff:.1f} uF effective at "
+                      f"{vout_declared:.1f} V bias) vs TI Table 9-2 recommended {req_rated_uf:.0f} uF "
+                      f"({req_cnt} x {req_each:.0f} uF)")
+            if tot_eff < design.BUCK_COUT_FLOOR_UF:
+                errs.append(f"{detail} - BELOW {design.BUCK_COUT_FLOOR_UF:.1f} uF transient stability floor "
+                            f"(TI SNVSAN3F Eq. 6)")
+            elif tot_rated < req_rated_uf:
+                warns.append(f"{detail} - below Table 9-2 recommended rated Cout; exceeds {design.BUCK_COUT_FLOOR_UF:.0f} uF "
+                             f"transient floor, validated by bench load-step test (adv.buck_cout)")
+            else:
+                notes.append(detail + " - meets datasheet Table 9-2")
+
     #3
     a, b = to_ohms(value_of("R18")), to_ohms(value_of("R19"))
     hw = open("firmware/NAVCORE_SoOP/hwdef.dat").read()
@@ -751,7 +783,7 @@ def run_electrical():
         a, b = npad.get(f"{ref}.1"), npad.get(f"{ref}.2")
         for sig, rail in ((a, b), (b, a)):
             if rail in electrical_RAILS and sig and sig not in electrical_RAILS and sig != "GND":
-                pulls.setdefault(sig, []).append((ref, value_of(ref)))
+                pulls.setdefault(sig, []).append((ref, value_of(ref), rail))
     for bus in ("I2C1_SCL", "I2C1_SDA", "I2C2_SCL", "I2C2_SDA"):
         if bus not in pulls:
             errs.append(f"{bus} has no pull-up - an open-drain bus cannot idle high")
@@ -762,6 +794,58 @@ def run_electrical():
     for cs in ("IMU1_CS", "IMU2_CS", "EXT_CS1", "EXT_CS2"):
         if cs not in pulls:
             notes.append(f"{cs} has no idle pull-up; it floats until the MCU drives it")
+
+    #4b. pull-ups on one bus must share one rail
+    for bus_name, lines in (("I2C1", ("I2C1_SCL", "I2C1_SDA")),
+                            ("I2C2", ("I2C2_SCL", "I2C2_SDA"))):
+        bus_pulls = [(ref, val, rail, sig) for sig in lines for (ref, val, rail) in pulls.get(sig, [])]
+        rails_used = sorted(set(rail for _, _, rail, _ in bus_pulls))
+        if len(rails_used) > 1:
+            detail = f"{bus_name} pull-ups are on split rails: {', '.join(f'{ref} ({sig}) on {rail}' for ref, _, rail, sig in bus_pulls)}"
+            excuse = getattr(design, "PULLUP_RAIL_EXCUSES", {}).get(bus_name)
+            if excuse:
+                warns.append(f"{detail} - {excuse}")
+            else:
+                errs.append(f"{detail} - every pull-up on a shared bus must connect to the same rail")
+        elif rails_used:
+            notes.append(f"{bus_name} pull-ups share rail {rails_used[0]}")
+
+    #4c. connector contact current rating
+    contact_ratings = getattr(design, "CONNECTOR_CONTACT_RATING_A", {})
+    sources = {v: k for k, v in design.NET_SOURCE.items()}
+    loads = {}
+    for rail, pinmap in getattr(design, "LOAD_CURRENT", {}).items():
+        for pin, i in pinmap.items():
+            loads[pin] = (rail, i)
+
+    for ref, comp in sorted(design.COMPONENTS.items()):
+        if not ref.startswith("J"):
+            continue
+        sym = comp[0].split(":")[-1]
+        fp = comp[1].split(":")[-1]
+        rating_info = contact_ratings.get(sym) or contact_ratings.get(fp)
+        if not rating_info:
+            continue
+        max_a, src = rating_info
+        pins_checked = set()
+        for net, pins in design.NETS.items():
+            for p in pins:
+                if p.startswith(ref + "."):
+                    pins_checked.add((p, net))
+
+        for p, net in sorted(pins_checked):
+            pin_i = 0.0
+            if p in sources:
+                pin_i = design.NET_CURRENT.get(sources[p], 0.0)
+            elif p in loads:
+                pin_i = loads[p][1]
+            elif net == "GND" and ref == "J2" and p == "J2.1":
+                pin_i = design.NET_CURRENT.get("VBAT_IN", 0.0)
+
+            if pin_i > max_a:
+                warns.append(f"connector {p} on net '{net}': design current {pin_i:.2f} A "
+                             f"exceeds {max_a:.1f} A contact rating ({src}) - "
+                             f"carries entire board power through one contact; advisory in readiness.py (adv.j2_contact)")
 
     #5. protection
     tvs = value_of("D1")

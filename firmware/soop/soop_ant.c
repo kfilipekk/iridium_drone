@@ -5,7 +5,7 @@ void soop_ant_default_cfg(soop_ant_cfg_t *cfg)
     cfg->open_ma = 3.0f;
     cfg->short_ma = 28.0f;
     cfg->settle_s = 0.5f;
-    cfg->retry_after_s = 5.0f;
+    cfg->retry_after_s = 1.0f;
     cfg->retry_off_s = 10.0f;
     cfg->feed_enabled = 1;
 }

@@ -940,10 +940,10 @@ def firmware(board):
           else "lengths, skew and crystal stray capacitance within limits")
 
     rc, out = run("check.py geometry")
-    m = re.search(r'FAIL - (\d+) acute corner\(s\), (\d+) dangling item\(s\), (\d+) dead', out)
+    m = re.search(r'FAIL - (\d+) acute corner\(s\), (\d+) dangling item\(s\), (\d+) dead copper item\(s\)(?:, (\d+) via\(s\) in pad mask openings)?', out)
     check("signal integrity", "no acute corners or dead copper", rc == 0,
-          "every track corner is 90 degrees or wider and all copper leads somewhere" if rc == 0 else
-          f"{m.group(1)} acute corner(s), {m.group(2)} dangling, {m.group(3)} dead copper item(s)"
+          "every track corner is 90 degrees or wider, all copper leads somewhere and no vias in pads" if rc == 0 else
+          f"{m.group(1)} acute, {m.group(2)} dangling, {m.group(3)} dead, {m.group(4) or 0} via-in-pad"
           " - see check.py geometry" if m else "check.py geometry did not run")
 
     rc, out = run("check_board.py placement")
