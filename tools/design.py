@@ -46,7 +46,7 @@ COMPONENTS = {
  "J8" : ("jlc_parts:TF-01A",                "jlc:TF-SMD_TF-01A",                        "microSD",       "C91145",   False),
  #Y1 is a passive crystal and the part number matters more than it looks
  "Y1" : ("jlc_parts:X32258MSB4SI",          "jlc:CRYSTAL-SMD_4P-L3.2-W2.5-BL",          "8MHz",          "C2682774", False),
- "D1" : ("jlc_parts:SMBJ22A_C113993",          "jlc:SMB_L4.6-W3.6-LS5.3-RD",                          "SMBJ22A",       "C113993",False),
+ "D1" : ("jlc_parts:SMBJ22CA_C113994",          "jlc:SMB_L4.6-W3.6-LS5.3-RD",                          "SMBJ22CA",       "C113994",False),
  #SoOP receiver
  "U13": ("jlc_parts:MAX2112ETI+T",          "jlc:TQFN-28_L5.0-W5.0-P0.50-BL-EP3.3",      "MAX2112",       "C596391",  False),
  "U14": ("jlc_parts:OPA2374M{slash}TR",     "jlc:SOP-8_L4.9-W3.9-P1.27-LS6.0-BL",       "OPA2374",       "C444392",  False),
@@ -166,6 +166,8 @@ TVS_CLAMP_V = {
     "SMBJ24A": (38.9, 24.0, 26.7, 15.4, "[D] Littelfuse SMBJ series datasheet"),
     "SMBJ22A": (35.5, 22.0, 24.4, 16.9, "[D] Littelfuse SMBJ series datasheet; JLCPCB C113993 "
                                          "lists Vrwm 22 V, Vc 35.5 V"),
+    "SMBJ22CA": (35.5, 22.0, 24.4, 16.9, "[D] Littelfuse SMBJ series datasheet; JLCPCB C113994 "
+                                          "lists Vrwm 22 V, Vc 35.5 V (bidirectional TVS)"),
     "SMBJ20A": (32.4, 20.0, 22.2, 18.6, "[D] Littelfuse SMBJ series datasheet"),
     "SMBJ18A": (29.2, 18.0, 20.0, 20.6, "[D] Littelfuse SMBJ series datasheet"),
 }
@@ -181,7 +183,7 @@ RES("R3","preset")   #EN only - C20 (soft-start) deleted: TPS54202 is internal
 RES("R4","392k"); RES("R5","78k7")                         #EN divider
 CAP("C21","100n")                                          #boot cap
 IND("L2", "10uH", F_ANR4030)   #4x4 land - the FNR4030 never fitted a 1210
-CAP("C22","22u", F_C1206); CAP("C23","22u", F_C1206)      #5V out
+CAP("C22","47u", F_C1206); CAP("C23","47u", F_C1206)      #5V out (TI Table 9-2: 4x22uF -> 2x47uF)
 CAP("C78","1u")                                           #U8 VCC bypass, pin 5
 RES("R6","10k2"); RES("R7","3k24")                         #-> overridden, see _VALUE_FIX
 #R8/C24/C25 COMP network deleted - TPS54202 compensates internally
@@ -219,11 +221,13 @@ add("SW1", SW, F_SW, "BOOT"); add("SW2", SW, F_SW, "RESET")
 
 #microSD
 CAP("C45","10u", F_C0805); CAP("C46","100n")
-for i,(r) in enumerate(["R22","R23","R24","R25","R26","R27"]): RES(r, "47k")  #SDMMC pullups
+for i,(r) in enumerate(["R22","R23","R24","R25","R26"]): RES(r, "47k")  #SDMMC pullups
+RES("R27", "47k")
+COMPONENTS["R27"] = (R, F_R0402, "47k", "C25792", True)  #DNP: SD_CD unrouted to MCU in Rev D
 
 #RF section passives
 for r,v in [("C49","100n"),("C50","100n"),("C51","1u"),
-            ("C52","100p"),("C56","100p"),("C57","100n")]:
+            ("C52","33p"),("C56","100p"),("C57","100n")]:
     CAP(r, v, F_C0402)
 for r,v in [("R28","0R"),("R29","0R"),("R31","4k7"),
             ("R34","330R"),("R35","1k"),("R36","4k7"),("R37","4k7")]:
@@ -1301,8 +1305,8 @@ IND("L5", "10uH", F_ANR5040)
 CAP("C66", "100n")                 #VIN hf (50V rated in PART_LCSC)
 CAP("C68", "100n")                 #bootstrap
 CAP("C79", "1u")                   #internal VCC bypass
-CAP("C69", "22u", F_C1206)         #output bulk
-CAP("C70", "22u", F_C1206)
+CAP("C69", "47u", F_C1206)         #output bulk (TI Table 9-2: 4x22uF -> 2x47uF)
+CAP("C70", "47u", F_C1206)
 RES("R40", "100k"); RES("R41", "22k")       #EN divider
 RES("R42", "100k"); RES("R43", "24k9")      #1.000 V reference -> 5.016 V output
 #J22: JST-GH 3P payload power port (+5V_PAYLOAD) for a VTX or camera
@@ -1346,12 +1350,12 @@ NETS["GND"] += ["Q3.2", "R45.2", "C73.2"]
 NETS["BUCK_PAYLOAD_EN"] += ["Q3.3", "C73.1"]
 
 #6
-#powers U11 (SN65HVD230) from +5V_PAYLOAD with rock-solid 3.3V
+#powers U11 (SN65HVD230) from +5V with rock-solid 3.3V (powered on USB desk power and flight)
 add("U21", "jlc_parts:XC6206P332MR", "jlc:SOT-23-3_L2.9-W1.6-P1.90-LS2.8-BR",
     "XC6206P332MR", "C5446", False)
 CAP("C67", "1u")
 CAP("C80", "1u")
-NETS["+5V_PAYLOAD"] += ["U21.3", "C80.1"]
+NETS["+5V"] += ["U21.3", "C80.1"]
 NETS["GND"] += ["U21.1", "C67.2", "C80.2"]
 net("+3V3_CAN", "U21.2", "U11.3", "C67.1", "C41.1")
 NETS["+5V_PAYLOAD"] += ["J6.1"]
@@ -1739,8 +1743,9 @@ PASSIVE_LCSC = {
     ("47p",  F_C0402): "C60137",  ("3n3",  F_C0402): "C26404",
     #C17/C18, the VBAT bulk caps
     ("10u",  F_C0805): "C15850",  ("10u",  F_C1206): "C13585",
-    ("1u",   F_C0805): "C28323",  ("22u",  F_C1206): "C12891",
+    ("1u",   F_C0805): "C28323",  ("22u",  F_C1206): "C12891",  ("47u",  F_C1206): "C96123",
     ("0R",   F_R0402): "C17168",  ("100p", F_C0402): "C1546", ("100p", F_C0201): "C62550",
+    ("33p",  F_C0402): "C1562",
     ("1n",   F_C0402): "C1523",
     ("100n", F_C0201): "C76939",   #Murata GRM033R61E104KE14D 100nF 25V X5R
     ("100R", F_R0402): "C25076",  ("120R", F_R0402): "C25079",
@@ -1811,6 +1816,8 @@ RATINGS = {
  "C15195":   ("10n",   50,  "X7R",     "10%",  "0402",  None, None, "[D] LCSC product page, 2026-08-29"),
  "C26404":   ("3n3",   50,  "X7R",     "10%",  "0402",  None, None, "[D] LCSC product page, 2026-08-29"),
  "C60137":   ("47p",   50,  "NP0",     "5%",   "0402",  None, None, "[D] LCSC product page, 2026-08-29"),
+ "C96123":   ("47u",   10,  "X5R",     "20%",  "1206",  -55,  85,   "[D] Samsung CL31A476MPHNNNE datasheet; JLCPCB basic part (2026-10-30)"),
+ "C1562":    ("33p",   50,  "NP0",     "5%",   "0402",  None, None, "[D] LCSC product page (0402CG330J500NT), 2026-10-30"),
  "C1546":    ("100p",  50,  "NP0",     "5%",   "0402",  None, None, "[D] LCSC product page (0402CG101J500NT), 2026-09-11"),
  "C62550":   ("100p",  50,  "NP0",     "5%",   "0201",  None, None, "[L] JLCPCB part API: FH 0201CG101J500NT 100pF 50V C0G 0201, 898540 in stock 2026-10-20"),
  "C1523":    ("1n",    50,  "X7R",     "10%",  "0402",  None, None, "[D] LCSC product page (0402B102K500NT), 2026-09-11"),
@@ -1975,6 +1982,25 @@ BUCK_THERMAL = {
         src="[D] SNVSAN3F 7.4 Thermal Information, RNX (12-pin VQFN)"),
 }
 
+#ti's recommended output caps for the fitted bucks
+BUCK_TI_TABLE_9_2 = {
+    (400, 5.0): (8.0, 88.0, 4, 22.0, "[D] SNVSAN3F Table 9-2: 400 kHz, 5 V -> 8 uH, 4 x 22 uF rated Cout"),
+}
+
+#smallest effective Cout for a 1 A step inside 250 mV at 400 kHz, 12 V
+BUCK_COUT_FLOOR_UF = 26.0
+
+#fraction of an mlcc's capacitance left at 5 V dc bias, by lcsc part
+CAP_DC_BIAS_DERATE = {
+    "C12891": (0.72, "[D] Samsung CL31A226KAHNNNE 22uF 25V X5R 1206: ~72% effective at 5.0 V DC bias (~15.8 uF)"),
+    "C96123": (0.52, "[D] Samsung CL31A476MPHNNNE 47uF 10V X5R 1206: ~52% effective at 5.0 V DC bias (~24.4 uF)"),
+}
+
+#buses allowed pull-ups on two rails, and why
+PULLUP_RAIL_EXCUSES = {
+    "I2C2": "[A] R11 on +3V3A, R12 on +3V3: Rev D layout anomaly tolerated because both are 3.3 V LDO rails; fixed in Rev E (T2.2)",
+}
+
 
 #true when this rail's regulator is not fitted on the build being ordered
 def buck_dnp(ref):
@@ -1998,8 +2024,8 @@ NET_CURRENT = {
     #J2's VBAT pin to Q4: everything the board takes from the pack
     "VBAT_IN": 1.2,
     "VBAT": 1.2,            #the same current, after Q4: the bucks are all VBAT feeds
-    "+5V":  0.95,
-    "+5V_PAYLOAD": 1.5,
+    "+5V":  1.05,
+    "+5V_PAYLOAD": 1.4,
     "VSERVO": 1.5,
     "+5V_BIAS_SW": 0.155,   #AP22653 limit, RLIM 210k, max (DS41186)
     "+5V_BIAS": 0.155,
@@ -2007,6 +2033,19 @@ NET_CURRENT = {
     "+3V3A": 0.35,
     "+3V3_CAN": 0.1,
     "VBUS": 0.5,
+}
+
+#current per contact, keyed by symbol or footprint name
+CONNECTOR_CONTACT_RATING_A = {
+    "SM08B-SRSS-TB-LF-SN": (1.0, "[D] JST SH datasheet: 1.0 A per contact"),
+    "SM08B-SRSS-TB(LF)(SN)": (1.0, "[D] JST SH datasheet: 1.0 A per contact"),
+    "XY-SM06B-GHS-TB": (1.0, "[D] JST GH datasheet: 1.0 A per contact"),
+    "CONN-SMD_XY-SM06B-GHS-TB": (1.0, "[D] JST GH datasheet: 1.0 A per contact"),
+    "SM03B-GHS-TB(LF)(SN)": (1.0, "[D] JST GH datasheet: 1.0 A per contact"),
+    "CONN-TH_SM03B-GHS-TB-LF-SN": (1.0, "[D] JST GH datasheet: 1.0 A per contact"),
+    "BX-GH1.25-4PWT": (1.0, "[D] JST GH compatible 1.25mm: 1.0 A per contact"),
+    "BX-GH1_25-4PWT": (1.0, "[D] JST GH compatible 1.25mm: 1.0 A per contact"),
+    "CONN-SMD_4P-P1.25_BX-GH1.25-4PWT": (1.0, "[D] JST GH compatible 1.25mm: 1.0 A per contact"),
 }
 
 NET_CLASSES = {
@@ -2078,8 +2117,6 @@ LOAD_CURRENT = {
         "J11.1": 0.18,
         #[M] two micro servos on J17/J23 (250 mA each running)
         "D10.2": 0.50,
-        #[D] U21 is the +3V3_CAN LDO feed for the SN65HVD230
-        "U21.3": 0.10,
         #[A] the DroneCAN node on J6 - the Remote ID module
         "J6.1": 0.15,
     },
@@ -2123,17 +2160,19 @@ LOAD_CURRENT = {
         "J9.1": 0.126,                  #TFS20-L 0.106 + upward ToF 0.02
         "J21.1": 0.25,                  #companion computer telemetry
         "U24.1": 0.015,                 #active bias-tee for active antenna LNA
+        #[D] U21 is the +3V3_CAN LDO feed for the SN65HVD230 (on +5V in Rev D respin)
+        "U21.3": 0.10,
     },
 }
 
 #the payload buck (U20, +5V_PAYLOAD)
 PAYLOAD_PROFILES = {
-    "drone": dict(keys=("J22.1", "P151.1", "J11.1", "U21.3", "J6.1"),
+    "drone": dict(keys=("J22.1", "P151.1", "J11.1", "J6.1"),
                   what="quad on GPS/SoOP: VTX + XIAO camera on J22, "
-                       "LED strip, LD06 lidar, CAN transceiver and one node"),
-    "lander": dict(keys=("D10.2", "P151.1", "U21.3", "J6.1"),
+                       "LED strip, LD06 lidar and one CAN node"),
+    "lander": dict(keys=("D10.2", "P151.1", "J6.1"),
                    what="TVC lander: two micro servos on J17/J23 through D10 (35 kg servos "
-                        "take a UBEC instead), LED strip, CAN transceiver and one node"),
+                        "take a UBEC instead), LED strip and one CAN node"),
 }
 PAYLOAD_ALL_WIRED = tuple(k for k in LOAD_CURRENT["+5V_PAYLOAD"] if k != "P151.1")
 
@@ -2157,7 +2196,7 @@ INDUCTOR_LOAD_A["L5"] = RAIL_5V_PAYLOAD["worst_mission_a"]
 ANT_FEED = dict(
     sense_ref="R62", gain=50.0, vs=3.3, swing_v=0.02,
     lna_ma=15.0, short_circuit_ma=35.0,
-    open_ma=3.0, short_ma=28.0, settle_s=0.5, retry_after_s=5.0, retry_off_s=10.0,
+    open_ma=3.0, short_ma=28.0, settle_s=0.5, retry_after_s=1.0, retry_off_s=10.0,
     adc="PC2_C, ADC3_INP0 (SYSCFG PMCR PC2SO open)",
     src="[D] TI INAx180: A2 gain 50 V/V, output swing to VS-0.02 V; [D] Tallysman HC610 "
         "15 mA at 2.2-12 V; [D] Diodes DS41186 Rev 5-2: RLIM 210k short-circuit 35 mA typ")
@@ -2234,7 +2273,7 @@ PIN_INTENT = {
     "SD_D3": dict(mcu="bidir", why="SDMMC data"),
     "SD_CMD": dict(mcu="bidir", why="SDMMC command"),
     "SD_CK":  dict(mcu="out",   why="SDMMC clock"),
-    "SD_CD":  dict(mcu="in",    why="card-detect switch to GND, 10k pull-up"),
+    "SD_CD":  dict(why="card-detect switch to GND, unrouted to MCU in Rev D (R27 DNP)"),
 
     #notify
     "LED0":   dict(mcu="out", why="status LED via 1k"),
