@@ -1132,7 +1132,9 @@ DERATE = 2.0          #warn below this multiple of the working voltage
 #package power ratings, W
 R_POWER = {"0201": 0.05, "0402": 0.0625, "0603": 0.10, "0805": 0.125, "1206": 0.25}
 #parts rated above their package's generic figure, by LCSC code
-R_POWER_PART = {}
+R_POWER_PART = {
+    "C1881139": (0.200, "[D] Vishay RCS0402 anti-surge: 200 mW at 70 C (LCSC C1881139)"),
+}
 #capacitors that must not be a Class II dielectric, and why
 CLASS1_REQUIRED = {
     "C15": "crystal load cap - a Class II part pulls the oscillator with temperature",

@@ -1764,7 +1764,7 @@ PASSIVE_LCSC = {
     ("27k",  F_R0402): "C25771",  ("47k",  F_R0402): "C25792",
     ("100k", F_R0402): "C25741",
     ("210k", F_R0402): "C58827",   #U24 RLIM; UNI-ROYAL 0402WGF2103TCE, 1%
-    ("2R2",  F_R0402): "C25101",   #R62 bias-feed sense; UNI-ROYAL 0402WGF220KTCE, 1%
+    ("2R2",  F_R0402): "C1881139", #R62 bias-feed sense; Vishay RCS04022R20FKED anti-surge, 1%, 200 mW
     ("10p",  F_C0402): "C32949",   #C91; Samsung CL05C100JB5NNNC 10pF 50V C0G
     ("37k4", F_R0402): "C25888",
     ("24k9", F_R0402): "C25874",
