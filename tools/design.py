@@ -39,6 +39,7 @@ COMPONENTS = {
  "U11": ("jlc_parts:SN65HVD230DR",          "jlc:SOIC-8_L4.9-W3.9-P1.27-LS6.0-BL",      "SN65HVD230",    "C12084",   False),
  "U12": ("jlc_parts:USBLC6-2SC6_C2687116",  "jlc:SOT-23-6_L2.9-W1.6-P0.95-LS2.8-BL",    "USBLC6-2SC6",   "C2687116", False),
  "J1" : ("jlc_parts:TYPE-C_16PIN_2MD(073)", "jlc:USB-C-SMD_TYPE-C-16PIN-2MD-073",       "USB-C",         "C2765186", False),
+ #J2 carries all board power
  "J2" : ("jlc_parts:SM08B-SRSS-TB(LF)(SN)", "jlc:CONN-TH_SM08B-SRSS-TB-LF-SN",                "ESC 8P",        "C160407",  False),
  "J3" : ("jlc_parts:XY-SM06B-GHS-TB",       "jlc:CONN-SMD_XY-SM06B-GHS-TB",            "GPS+I2C",       "C51940119",False),
  "J5" : ("jlc_parts:BX-GH1_25-4PWT",        "jlc:CONN-SMD_4P-P1.25_BX-GH1.25-4PWT","RC IN",   "C18077720",False),
@@ -183,7 +184,8 @@ RES("R3","preset")   #EN only - C20 (soft-start) deleted: TPS54202 is internal
 RES("R4","392k"); RES("R5","78k7")                         #EN divider
 CAP("C21","100n")                                          #boot cap
 IND("L2", "10uH", F_ANR4030)   #4x4 land - the FNR4030 never fitted a 1210
-CAP("C22","47u", F_C1206); CAP("C23","47u", F_C1206)      #5V out (TI Table 9-2: 4x22uF -> 2x47uF)
+CAP("C22","100u", F_C1206)                                 #U8 out, ahead of U31 (TI Table 9-2: 4x22uF -> 1x100uF)
+CAP("C23","47u", F_C1206)                                  #+5V bulk, after U31
 CAP("C78","1u")                                           #U8 VCC bypass, pin 5
 RES("R6","10k2"); RES("R7","3k24")                         #-> overridden, see _VALUE_FIX
 #R8/C24/C25 COMP network deleted - TPS54202 compensates internally
@@ -1032,8 +1034,8 @@ net("GND",
 #the battery input is protected by Q4
 net("VBAT_IN", "J2.2", "D1.1", "Q4.3")            #D1 pin 1 = cathode; Q4 pin 3 = drain
 net("VBAT", "Q4.2", "C17.1","C18.1","C19.1","U8.2","U8.10","R4.1","R18.1")  #Q4 p2 = source
-net("+5V",  "C22.1","C23.1","U9.1","C26.1","U10.1","C28.1",
-            "J3.1","J5.1","R6.1")
+net("+5V",  "C23.1","U9.1","C26.1","U10.1","C28.1",
+            "J3.1","J5.1")
 net("+3V3", "U9.5","C27.1","U1.11","U1.27","U1.50","U1.75","U1.100",
             "C1.1","C2.1","C3.1","C4.1","C5.1","C6.1","C7.1",
             "U5.8","C36.1",
@@ -1123,8 +1125,8 @@ net("PE1_SPARE","U1.PE1")       #UART8_TX, unused: ESC telemetry is receive-only
 net("PB2_SPARE","U1.PB2")
 net("PC3_SPARE","U1.PC3_C")
 #SoOP analogue front end (SoOP config, DNP)
-net("SOOP_I_ADC","U1.PC4","U14.1")
-net("SOOP_Q_ADC","U1.PA4","U14.7")
+net("SOOP_I_ADC","U1.PC4"); net("SOOP_I_OUT","U14.1")
+net("SOOP_Q_ADC","U1.PA4"); net("SOOP_Q_OUT","U14.7")
 #PC5 is free
 net("SPARE_ADC","U1.PA7")
 
@@ -1167,17 +1169,23 @@ CAP("C98", "100p", F_C0201); CAP("C99", "100p", F_C0201)
 #i channel: IOUT+ -> R36 -> +in A (R51 to VREF)
 net("IOUT_P","U13.19","R36.1"); net("IOUT_N","U13.20","R37.1")
 net("OPA_IN1P","R36.2","U14.3","R51.1"); net("OPA_IN1N","R37.2","U14.2","R50.1")
-NETS["SOOP_I_ADC"] += ["R50.2", "C76.2"]             #feedback, out A -> -IN A
+NETS["SOOP_I_OUT"] += ["R50.2", "C76.2"]             #feedback, out A -> -IN A
 NETS["OPA_IN1N"] += ["C76.1"]                        #C76 across R50: anti-alias
 #q channel: QOUT+ -> R47 -> +in B (R49 to VREF)
 net("QOUT_P","U13.17","R47.1"); net("QOUT_N","U13.18","R31.1")
 net("OPA_IN2P","R47.2","U14.5","R49.1"); net("OPA_IN2N","R31.2","U14.6","R48.1")
-NETS["SOOP_Q_ADC"] += ["R48.2", "C77.2"]             #feedback, out B -> -IN B
+NETS["SOOP_Q_OUT"] += ["R48.2", "C77.2"]             #feedback, out B -> -IN B
 NETS["OPA_IN2N"] += ["C77.1"]                        #C77 across R48: anti-alias
 #the mid-rail reference both channels share
 net("BB_VREF","R52.2","R53.1","C75.1","R51.2","R49.2")
 NETS["+3V3A"] += ["R52.1", "U14.8", "C97.1"]; NETS["GND"] += ["R53.2", "C75.2", "U14.4", "C97.2"]
 NETS["OPA_IN1P"] += ["C98.1"]; NETS["OPA_IN2P"] += ["C99.1"]; NETS["BB_VREF"] += ["C98.2", "C99.2"]
+#second pole and the ADC's charge reservoir: 680R + 1n is 234 kHz
+RES("R76", "680R", F_R0201); CAP("C100", "1n", F_C0201)
+RES("R77", "680R", F_R0201); CAP("C101", "1n", F_C0201)
+NETS["SOOP_I_OUT"] += ["R76.1"]; NETS["SOOP_I_ADC"] += ["R76.2", "C100.1"]
+NETS["SOOP_Q_OUT"] += ["R77.1"]; NETS["SOOP_Q_ADC"] += ["R77.2", "C101.1"]
+NETS["GND"] += ["C100.2", "C101.2"]
 #DC-offset servo capacitors
 net("IDC_P","U13.21","C61.1"); net("IDC_N","U13.22","C61.2")
 net("QDC_P","U13.23","C63.1"); net("QDC_N","U13.24","C63.2")
@@ -1199,7 +1207,12 @@ net("BUCK_BOOT","U8.4","C21.1")                   #boot (TPS54202 pin 6)
 net("BUCK_PH",  "U8.12","U8.3","C21.2","L2.1")    #SW 12 + NC 3, tied per SNVSAN3F 10.1
 net("BUCK_VCC", "U8.5","C78.1")                   #VCC, new pin - the internal 5 V LDO
 NETS["GND"] += ["C78.2"]
-NETS["+5V"] += ["L2.2"]
+#U31 is an ideal diode between U8 and the +5V loads
+net("+5V_BUCK", "L2.2", "C22.1", "R6.1")
+add("U31", "jlc_parts:LM66100DCKR", "jlc:SC-70-6_L2.0-W1.3-P0.65-LS2.1-BL", "LM66100", "C2869734", False)
+NETS["+5V_BUCK"].append("U31.1")
+NETS["+5V"] += ["U31.6", "U31.3"]               #CE on VOUT: TI SLVSEZ8A 8.3.2, always-on reverse blocking
+NETS["GND"] += ["U31.2", "U31.4", "U31.5"]      #ST unused and N/C, both to GND per the pin table
 net("BUCK_EN",  "U8.9","R4.2","R5.1")             #EN (TPS54202 pin 5)
 net("BUCK_FB",  "U8.7","R6.2","R7.1")             #FB (TPS54202 pin 4)
 NETS.pop("R3", None)
@@ -1225,7 +1238,7 @@ NETS["VCOBYP"] += ["C60.1"]; NETS["GND"] += ["C60.2"]
 #power flags: tell ERC these rails are actually driven
 PWR_FLAGS = {"VBAT":"PF1", "+5V":"PF2", "+3V3":"PF3", "+3V3A":"PF4",
              "GND":"PF5", "VDDA":"PF6", "VBUS":"PF7", "VCC_RF":"PF8",
-             "VBAT_IN":"PF9"}
+             "VBAT_IN":"PF9", "+5V_BUCK":"PF11"}
 for netname, ref in PWR_FLAGS.items():
     add(ref, "power:PWR_FLAG", "", "PWR_FLAG", "", netname == "VCC_RF")
     NETS[netname].append(f"{ref}.1")
@@ -1258,7 +1271,7 @@ for _r in ("U15", "U16", "FL1", "L3", "L4"):
     COMPONENTS.pop(_r, None)
 
 #keep the SoOP receiver interface reachable from the board edge even though the RF front end
-for _i, _n in enumerate(["SOOP_I_ADC", "SOOP_Q_ADC"], start=9):
+for _i, _n in enumerate(["SOOP_I_OUT", "SOOP_Q_OUT"], start=9):
     if _n in NETS:
         _r = f"TP{_i}"
         add(_r, "Connector:TestPoint", "TestPoint:TestPoint_Pad_1.5x1.5mm", _n, "", False)
@@ -1425,7 +1438,7 @@ net("+5V_BIAS_SW", "U24.6", "R62.1", "U25.3")
 #the switch's own bypass at IN and at OUT (DS41186, Power Supply Considerations)
 CAP("C95", "100n"); NETS["+5V"].append("C95.1"); NETS["GND"].append("C95.2")
 CAP("C96", "100n"); NETS["+5V_BIAS_SW"].append("C96.1"); NETS["GND"].append("C96.2")
-RES("R59", "10k"); NETS["+5V"].append("R59.1")
+RES("R59", "10k"); NETS["+3V3"].append("R59.1")   #to +3V3, so PC5 never sees 5 V before VDD is up
 RES("R60", "10k"); NETS["+3V3"].append("R60.1")
 RES("R61", "210k"); NETS["GND"].append("R61.2")
 
@@ -1613,7 +1626,7 @@ ADJACENCY = {
     "C95": ("U24", "1", 1.5), "C96": ("U24", "6", 1.5),
     "C94": ("U25", "5", 1.5),
     #Rev D: Active bias-tee and RF protection at J12
-    "D7": ("J12", "1", 2.5), "L6": ("J12", "1", 3.5), "C52": ("J12", "1", 5.0),
+    "D7": ("J12", "1", 2.5), "L6": ("J12", "1", 3.5), "C52": ("U13", "4", 2.0),
     "C90": ("L6", "1", 2.0), "C91": ("L6", "1", 2.0), "U24": ("L6", "1", 5.0),
     #U19 is a temperature sensor and its whole value is where it sits
     "U19": ("U9", "1", 5.0),
@@ -1624,6 +1637,7 @@ ADJACENCY = {
     "R49": ("U14", "5", 8.0),  "R50": ("U14", "2", 8.0),
     "R51": ("U14", "3", 8.0),
     "C76": ("R50", "1", 12.0), "C77": ("R48", "1", 8.0),   #in parallel with them
+    "C100": ("U1", "32", 2.0), "C101": ("U1", "28", 5.0),  #ADC reservoirs
     "C98": ("R51", "1", 1.5), "C99": ("R49", "1", 1.5),     #under R51, beside R49
     "R52": ("U14", "8", 12.0),                #VREF divider: a DC reference, 1 uF at
     "R53": ("R52", "2", 3.0),                 #the far end makes distance irrelevant
@@ -1644,8 +1658,10 @@ ADJACENCY = {
     "R6": ("U8", "7", 2.5), "R7": ("U8", "7", 2.5),
     "R4": ("U8", "9", 3.0), "R5": ("U8", "9", 3.0),
     "L2": ("U8", "12", 3.0), "C22": ("U8", "12", 5.0), "C23": ("U8", "12", 5.0),
+    "U31": ("L2", "2", 3.0),      #under L2, straight onto its output vias
     #payload 5V buck (U20 TI LMR33630A VQFN-12)
-    "C66": ("U20", "2", 1.5), "C68": ("U20", "4", 3.0),
+    #C66 sits across the pin 10/11 VIN/PGND pair
+    "C66": ("U20", "10", 1.5), "C68": ("U20", "4", 3.0),
     "C79": ("U20", "5", 2.5),
     "R42": ("U20", "7", 2.5), "R43": ("U20", "7", 2.5),
     "R40": ("U20", "9", 3.0), "R41": ("U20", "9", 3.0),
@@ -1743,8 +1759,8 @@ PASSIVE_LCSC = {
     ("47p",  F_C0402): "C60137",  ("3n3",  F_C0402): "C26404",
     #C17/C18, the VBAT bulk caps
     ("10u",  F_C0805): "C15850",  ("10u",  F_C1206): "C13585",
-    ("1u",   F_C0805): "C28323",  ("22u",  F_C1206): "C12891",  ("47u",  F_C1206): "C96123",
-    ("0R",   F_R0402): "C17168",  ("100p", F_C0402): "C1546", ("100p", F_C0201): "C62550",
+    ("1u",   F_C0805): "C28323",  ("22u",  F_C1206): "C12891",  ("47u",  F_C1206): "C96123",  ("100u", F_C1206): "C883598",
+    ("0R",   F_R0402): "C17168",  ("100p", F_C0402): "C1546", ("100p", F_C0201): "C62550",  ("1n", F_C0201): "C710792",  ("680R", F_R0201): "C473509",
     ("33p",  F_C0402): "C1562",
     ("1n",   F_C0402): "C1523",
     ("100n", F_C0201): "C76939",   #Murata GRM033R61E104KE14D 100nF 25V X5R
@@ -1759,7 +1775,7 @@ PASSIVE_LCSC = {
     ("27k",  F_R0402): "C25771",  ("47k",  F_R0402): "C25792",
     ("100k", F_R0402): "C25741",
     ("210k", F_R0402): "C58827",   #U24 RLIM; UNI-ROYAL 0402WGF2103TCE, 1%
-    ("2R2",  F_R0402): "C25101",   #R62 bias-feed sense; UNI-ROYAL 0402WGF220KTCE, 1%
+    ("2R2",  F_R0402): "C1881139", #R62 bias-feed sense
     ("10p",  F_C0402): "C32949",   #C91; Samsung CL05C100JB5NNNC 10pF 50V C0G
     ("37k4", F_R0402): "C25888",
     ("24k9", F_R0402): "C25874",
@@ -1816,10 +1832,12 @@ RATINGS = {
  "C15195":   ("10n",   50,  "X7R",     "10%",  "0402",  None, None, "[D] LCSC product page, 2026-08-29"),
  "C26404":   ("3n3",   50,  "X7R",     "10%",  "0402",  None, None, "[D] LCSC product page, 2026-08-29"),
  "C60137":   ("47p",   50,  "NP0",     "5%",   "0402",  None, None, "[D] LCSC product page, 2026-08-29"),
+ "C883598":  ("100u",  10,  "X5R",     "20%",  "1206",  -55,  85,   "[L] JLCPCB part API: Murata GRM31CR61A107MEA8L 100uF 10V X5R 1206, 58707 in stock 2026-10-31"),
  "C96123":   ("47u",   10,  "X5R",     "20%",  "1206",  -55,  85,   "[D] Samsung CL31A476MPHNNNE datasheet; JLCPCB basic part (2026-10-30)"),
  "C1562":    ("33p",   50,  "NP0",     "5%",   "0402",  None, None, "[D] LCSC product page (0402CG330J500NT), 2026-10-30"),
  "C1546":    ("100p",  50,  "NP0",     "5%",   "0402",  None, None, "[D] LCSC product page (0402CG101J500NT), 2026-09-11"),
  "C62550":   ("100p",  50,  "NP0",     "5%",   "0201",  None, None, "[L] JLCPCB part API: FH 0201CG101J500NT 100pF 50V C0G 0201, 898540 in stock 2026-10-20"),
+ "C710792":  ("1n",    25,  "C0G",     "2%",   "0201",  -55, 125,  "[L] JLCPCB part API: Murata GRM0335C1E102GA01D 1nF 25V C0G 2% 0201, 19106 in stock 2026-10-31"),
  "C1523":    ("1n",    50,  "X7R",     "10%",  "0402",  None, None, "[D] LCSC product page (0402B102K500NT), 2026-09-11"),
  "C76939":   ("100n",  25,  "X5R",     "10%",  "0201",  -55,  85, "[L] JLCPCB part API: GRM033R61E104KE14D 100nF 25V X5R 0201, 2026-10-07"),
 }
@@ -1872,6 +1890,7 @@ PART_HEIGHT = {
     "LQFP": 1.6, "LGA-14": 0.95, "SENSORS-SMD_MS5611": 1.1,
     "CRYSTAL-SMD_4P": 0.9, "SOD-123F": 1.1,
     "SOT-23-3": 1.45, "SOT-23-5": 1.45, "SOT-23-6": 1.45, "SOT-25": 1.45,
+    "SC-70-6": 1.1,             #U31; [D] TI DCK0006A outline, 1.1 max
     "SW_SPST_B3U": 0.8, "TestPoint_Pad": 0.0,
     "L_APV_ANR4030": 3.0, "L_1210": 3.0,
     "L_0805": 1.2,        #ferrite bead
@@ -1936,6 +1955,7 @@ NET_VMAX = {
     "+5V_PAYLOAD": 5.0,
     "VSERVO": 8.4,          #a UBEC on the servo sockets, 2S HV servos at most
     "+5V": 5.0,
+    "+5V_BUCK": 5.0,
     "VBUS": 5.25,
     "+3V3": 3.3,
     "+3V3A": 3.3,
@@ -1968,7 +1988,7 @@ VREF_V = {
 }
 
 #(ref, rail, vout_as_fitted_V, Rtop, Rbot, inductor)
-BUCK_RAILS = (("U8",  "+5V",         5.016, "R6",  "R7",  "L2"),
+BUCK_RAILS = (("U8",  "+5V_BUCK",    5.016, "R6",  "R7",  "L2"),
               ("U20", "+5V_PAYLOAD", 5.016, "R42", "R43", "L5"))
 
 BUCK_THERMAL = {
@@ -1993,12 +2013,17 @@ BUCK_COUT_FLOOR_UF = 26.0
 #fraction of an mlcc's capacitance left at 5 V dc bias, by lcsc part
 CAP_DC_BIAS_DERATE = {
     "C12891": (0.72, "[D] Samsung CL31A226KAHNNNE 22uF 25V X5R 1206: ~72% effective at 5.0 V DC bias (~15.8 uF)"),
+    "C883598": (0.35, "[A] Murata GRM31CR61A107MEA8L 100uF 10V X5R 1206: no maker curve read; the 47uF "
+                      "C96123 keeps 52% at 5 V and a 100uF in the same case runs a thinner dielectric, so 35% (~35 uF). "
+                      "Confirmed or not by the adv.buck_cout load step"),
     "C96123": (0.52, "[D] Samsung CL31A476MPHNNNE 47uF 10V X5R 1206: ~52% effective at 5.0 V DC bias (~24.4 uF)"),
 }
 
 #buses allowed pull-ups on two rails, and why
 PULLUP_RAIL_EXCUSES = {
-    "I2C2": "[A] R11 on +3V3A, R12 on +3V3: Rev D layout anomaly tolerated because both are 3.3 V LDO rails; fixed in Rev E (T2.2)",
+    "I2C2": "[M] R11 on +3V3A, R12 on +3V3: both are 3.3 V rails off the same +5V; R12 is boxed in under U1 "
+            "(no legal +3V3A via within reach on either side, rev E layout search), and with the "
+            "+3V3A LDO up before the +3V3 rail no pull-up back-powers a sensor",
 }
 
 
@@ -2010,7 +2035,8 @@ def buck_dnp(ref):
 NET_SOURCE = {
     "VBAT_IN": "J2.2",     #battery connector, before the protection FET
     "VBAT":    "Q4.2",     #after the protection FET - Q4 pin 2 = source
-    "+5V":   "L2.2",       #core 5 V buck output inductor
+    "+5V_BUCK": "L2.2",    #core 5 V buck output inductor
+    "+5V":   "U31.6",      #after the ideal diode
     "+5V_PAYLOAD": "L5.2", #payload 5 V buck output inductor
     "VSERVO": "J17.2",     #a UBEC on a Y-lead at SRV1
     "+3V3":  "U9.5",       #TLV757P output
@@ -2025,6 +2051,7 @@ NET_CURRENT = {
     "VBAT_IN": 1.2,
     "VBAT": 1.2,            #the same current, after Q4: the bucks are all VBAT feeds
     "+5V":  1.05,
+    "+5V_BUCK": 1.05,
     "+5V_PAYLOAD": 1.4,
     "VSERVO": 1.5,
     "+5V_BIAS_SW": 0.155,   #AP22653 limit, RLIM 210k, max (DS41186)
@@ -2088,7 +2115,7 @@ NET_CLASSES = {
         "clearance": 0.1016,
         "via_dia": 0.60,
         "via_drill": 0.30,
-        "nets": ["VBAT", "VBAT_IN", "+5V", "+5V_PAYLOAD", "VSERVO", "VBUS"],
+        "nets": ["VBAT", "VBAT_IN", "+5V", "+5V_BUCK", "+5V_PAYLOAD", "VSERVO", "VBUS"],
     },
     "RF": {
         "width": 0.21,
@@ -2164,6 +2191,8 @@ LOAD_CURRENT = {
         "U21.3": 0.10,
     },
 }
+#every +5V load comes through U31 from U8
+LOAD_CURRENT["+5V_BUCK"] = {"U31.1": round(sum(LOAD_CURRENT["+5V"].values()), 3)}
 
 #the payload buck (U20, +5V_PAYLOAD)
 PAYLOAD_PROFILES = {
