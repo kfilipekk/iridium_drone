@@ -319,7 +319,7 @@ def run_topology():
                       'ties the SW pin to the NC pin on the PCB (10.1).'),
     }
     print("=== buck regulators: is the required freewheel path present? ===")
-    for ref, ph, boot, out in (("U8", "BUCK_PH", "BUCK_BOOT", "+5V"),
+    for ref, ph, boot, out in (("U8", "BUCK_PH", "BUCK_BOOT", "+5V_BUCK"),
                                ("U18", "BUCK9_PH", "BUCK9_BOOT", "+9V")):
         if ref not in comps:
             continue
@@ -497,7 +497,7 @@ def run_topology():
 Usage:  python3 tools/check_circuit.py electrical [-v]
 """
 
-electrical_RAILS = {"+3V3", "+3V3A", "+3V3_CAN", "+5V", "+5V_PAYLOAD", "VSERVO", "+9V", "VBAT", "VDDA", "VBUS"}
+electrical_RAILS = {"+3V3", "+3V3A", "+3V3_CAN", "+5V", "+5V_BUCK", "+5V_PAYLOAD", "VSERVO", "+9V", "VBAT", "VDDA", "VBUS"}
 DECOUPLE_NEAR = 3.0        #mm; beyond this a 100n is not doing its job at 100 MHz
 DECOUPLE_FAR  = 6.0        #mm; beyond this it is decoration
 #supply pins the symbol rule misses: a TCXO, a passive-typed op-amp pin, the tuner's rail
@@ -668,7 +668,7 @@ def run_electrical():
             notes.append(f"{name}: cannot read {rtop}/{rbot}")
             continue
         vout = vref * (1 + a / b)
-        want = {"+5V": 5.0, "+9V": 9.0, "+5V_PAYLOAD": 5.0}[rail]
+        want = {"+5V": 5.0, "+5V_BUCK": 5.0, "+9V": 9.0, "+5V_PAYLOAD": 5.0}[rail]
         detail = (f"{name}: {value_of(rtop)}/{value_of(rbot)} on a {vref:.3f} V "
                   f"reference -> {vout:.3f} V (design.BUCK_RAILS declares "
                   f"{vout_declared:.3f} V, nominal {want} V)")
@@ -1033,7 +1033,7 @@ the connector's net: the resistor has to be in the path, not beside it.
 and exits 0 only if each is caught.
 """
 
-SUPPLY = {"GND", "+5V", "+5V_PAYLOAD", "VSERVO", "+3V3", "+3V3A", "VBAT", "VBAT_IN", "VBUS"}
+SUPPLY = {"GND", "+5V", "+5V_BUCK", "+5V_PAYLOAD", "VSERVO", "+3V3", "+3V3A", "VBAT", "VBAT_IN", "VBUS"}
 
 
 def esd_positions():
@@ -1435,6 +1435,11 @@ DATASHEET_VERIFIED = {
         "by an external resistor and is 125 mA to 2665 mA - it cannot be programmed to the "
         "plan's 50-100 mA, so the real choice is 125 mA or another part",
         "2026-09-30"),
+    "LM66100DCKR": (
+        "TI LM66100 datasheet SLVSEZ8A, 5 Pin Configuration and Functions, DCK 6-pin SC-70",
+        "all 6 pins: 1 VIN, 2 GND, 3 CE (active low; to VOUT for reverse current protection), "
+        "4 N/C (not internally connected, GND or float), 5 ST (open drain, GND if unused), 6 VOUT",
+        "2026-10-31"),
     #d/L parts KiCad's Device library cannot corroborate
     "LED": (
         "0603 LED: pin 1 is the cathode and pin 2 the anode, the same polarity the "
@@ -1671,7 +1676,7 @@ Usage:  python3 tools/check_circuit.py pin_semantics [-v]
 """
 
 HW = "firmware/NAVCORE_SoOP/hwdef.dat"
-pin_semantics_RAILS = {"+3V3", "+3V3A", "+5V", "+9V", "VBAT", "VDDA", "VBUS"}
+pin_semantics_RAILS = {"+3V3", "+3V3A", "+5V", "+5V_BUCK", "+9V", "VBAT", "VDDA", "VBUS"}
 #peripheral labels that are inherently one-way, and which way
 ROLE_DIR = [
     (re.compile(r'^(U(S)?ART\d+)_TX$'), "out"), (re.compile(r'^(U(S)?ART\d+)_RX$'), "in"),
