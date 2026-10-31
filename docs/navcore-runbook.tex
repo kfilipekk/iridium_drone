@@ -1810,6 +1810,11 @@ reservoir. \file{C100} is 1.6\,mm from pin~32; \file{C101} sits on the back, 4.8
 pin~28 (about 10\,mm of copper through two vias), the nearest legal spot. I no longer runs
 under \file{U1}: it reaches pin~32 from the top edge. \file{TP9}/\file{TP10} now probe the
 amplifier outputs, ahead of the resistors \\
+\file{C56} & the PLL loop-filter cap moved, as a 100\,pF C0G 0201, to sit beside \file{R57} on the
+\file{VTUNE} node. \file{VTUNE} was a 59\,mm lap of the board to reach it; it is 6\,mm now, so the
+tuning voltage picks up far less of the board's switching noise \\
+\file{U8} pin~2 & its \file{VBAT} feed is 0.3\,mm instead of a 0.1\,mm dogleg; \file{C19} stays right
+under the pin on the back \\
 \bottomrule
 \end{tabular}
 \end{center}

@@ -230,8 +230,9 @@ COMPONENTS["R27"] = (R, F_R0402, "47k", "C25792", True)  # DNP: SD_CD unrouted t
 
 #RF section passives
 for r,v in [("C49","100n"),("C50","100n"),("C51","1u"),
-            ("C52","33p"),("C56","100p"),("C57","100n")]:
+            ("C52","33p"),("C57","100n")]:
     CAP(r, v, F_C0402)
+CAP("C56", "100p", F_C0201)     #PLL loop filter, 0201 so it fits beside R57 on the VTUNE node
 for r,v in [("R28","0R"),("R29","0R"),("R31","4k7"),
             ("R34","330R"),("R35","1k"),("R36","4k7"),("R37","4k7")]:
     RES(r, v, F_R0402)
@@ -1646,6 +1647,7 @@ ADJACENCY = {
     "R49": ("U14", "5", 8.0),  "R50": ("U14", "2", 8.0),
     "R51": ("U14", "3", 8.0),
     "C76": ("R50", "1", 12.0), "C77": ("R48", "1", 8.0),   #in parallel with them
+    "C56": ("R57", "2", 1.5),      #VTUNE stays a few mm long, not a lap of the board
     "C100": ("U1", "32", 2.0), "C101": ("U1", "28", 5.0),  #ADC reservoirs: I right above its pin, Q past the junction via
     "C98": ("R51", "1", 1.5), "C99": ("R49", "1", 1.5),     #under R51, beside R49
     "R52": ("U14", "8", 12.0),                #VREF divider: a DC reference, 1 uF at
