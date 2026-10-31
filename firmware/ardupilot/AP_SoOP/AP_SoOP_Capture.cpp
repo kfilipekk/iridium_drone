@@ -75,8 +75,8 @@ bool AP_SoOP_Capture::start(bool swap_iq)
               | (uint32_t(__builtin_ctz(SOOP_CAPTURE_OVS)) << ADC_CFGR2_OVSS_Pos);
     grp.ccr = ADC_CCR_DUAL_REG_SIMULT;
     grp.pcsel = (1U << 4) | (1U << 18);
-    //16.5 + 8.5 cycles at the 32 MHz ADC clock is 0.78 us of the 1 us raw period: the op-amp
-    //has no reservoir cap at the pin, so it gets all the settling time there is
+    //16.5 + 8.5 cycles at the 32 MHz ADC clock is 0.78 us of the 1 us raw period: the 1 nF at
+    //each pin (C100/C101) feeds the sample cap, and its 680R refills it between samples
     grp.smpr[0] = ADC_SMPR1_SMP_AN4(ADC_SMPR_SMP_16P5);
     grp.sqr[0] = ADC_SQR1_SQ1_N(ADC_CHANNEL_IN4);            //ADC1: PC4, I
     grp.ssmpr[1] = ADC_SMPR2_SMP_AN18(ADC_SMPR_SMP_16P5);

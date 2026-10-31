@@ -1128,8 +1128,8 @@ net("PE1_SPARE","U1.PE1")       #UART8_TX, unused: ESC telemetry is receive-only
 net("PB2_SPARE","U1.PB2")
 net("PC3_SPARE","U1.PC3_C")
 #SoOP analogue front end (SoOP config, DNP)
-net("SOOP_I_ADC","U1.PC4","U14.1")
-net("SOOP_Q_ADC","U1.PA4","U14.7")
+net("SOOP_I_ADC","U1.PC4"); net("SOOP_I_OUT","U14.1")
+net("SOOP_Q_ADC","U1.PA4"); net("SOOP_Q_OUT","U14.7")
 #PC5 is free
 net("SPARE_ADC","U1.PA7")
 
@@ -1172,17 +1172,24 @@ CAP("C98", "100p", F_C0201); CAP("C99", "100p", F_C0201)
 #i channel: IOUT+ -> R36 -> +in A (R51 to VREF)
 net("IOUT_P","U13.19","R36.1"); net("IOUT_N","U13.20","R37.1")
 net("OPA_IN1P","R36.2","U14.3","R51.1"); net("OPA_IN1N","R37.2","U14.2","R50.1")
-NETS["SOOP_I_ADC"] += ["R50.2", "C76.2"]             #feedback, out A -> -IN A
+NETS["SOOP_I_OUT"] += ["R50.2", "C76.2"]             #feedback, out A -> -IN A
 NETS["OPA_IN1N"] += ["C76.1"]                        #C76 across R50: anti-alias
 #q channel: QOUT+ -> R47 -> +in B (R49 to VREF)
 net("QOUT_P","U13.17","R47.1"); net("QOUT_N","U13.18","R31.1")
 net("OPA_IN2P","R47.2","U14.5","R49.1"); net("OPA_IN2N","R31.2","U14.6","R48.1")
-NETS["SOOP_Q_ADC"] += ["R48.2", "C77.2"]             #feedback, out B -> -IN B
+NETS["SOOP_Q_OUT"] += ["R48.2", "C77.2"]             #feedback, out B -> -IN B
 NETS["OPA_IN2N"] += ["C77.1"]                        #C77 across R48: anti-alias
 #the mid-rail reference both channels share
 net("BB_VREF","R52.2","R53.1","C75.1","R51.2","R49.2")
 NETS["+3V3A"] += ["R52.1", "U14.8", "C97.1"]; NETS["GND"] += ["R53.2", "C75.2", "U14.4", "C97.2"]
 NETS["OPA_IN1P"] += ["C98.1"]; NETS["OPA_IN2P"] += ["C99.1"]; NETS["BB_VREF"] += ["C98.2", "C99.2"]
+#second pole and the ADC's charge reservoir: 680R + 1n is 234 kHz, so a signal 1 MHz off
+#tune folds back ~29 dB down instead of ~16. The 1n sits by the pin, the R wherever it fits
+RES("R76", "680R", F_R0201); CAP("C100", "1n", F_C0201)
+RES("R77", "680R", F_R0201); CAP("C101", "1n", F_C0201)
+NETS["SOOP_I_OUT"] += ["R76.1"]; NETS["SOOP_I_ADC"] += ["R76.2", "C100.1"]
+NETS["SOOP_Q_OUT"] += ["R77.1"]; NETS["SOOP_Q_ADC"] += ["R77.2", "C101.1"]
+NETS["GND"] += ["C100.2", "C101.2"]
 #DC-offset servo capacitors
 net("IDC_P","U13.21","C61.1"); net("IDC_N","U13.22","C61.2")
 net("QDC_P","U13.23","C63.1"); net("QDC_N","U13.24","C63.2")
@@ -1270,7 +1277,7 @@ for _r in ("U15", "U16", "FL1", "L3", "L4"):
     COMPONENTS.pop(_r, None)
 
 #keep the SoOP receiver interface reachable from the board edge even though the RF front end
-for _i, _n in enumerate(["SOOP_I_ADC", "SOOP_Q_ADC"], start=9):
+for _i, _n in enumerate(["SOOP_I_OUT", "SOOP_Q_OUT"], start=9):
     if _n in NETS:
         _r = f"TP{_i}"
         add(_r, "Connector:TestPoint", "TestPoint:TestPoint_Pad_1.5x1.5mm", _n, "", False)
@@ -1637,6 +1644,7 @@ ADJACENCY = {
     "R49": ("U14", "5", 8.0),  "R50": ("U14", "2", 8.0),
     "R51": ("U14", "3", 8.0),
     "C76": ("R50", "1", 12.0), "C77": ("R48", "1", 8.0),   #in parallel with them
+    "C100": ("U1", "32", 2.0), "C101": ("U1", "28", 5.0),  #ADC reservoirs: I right above its pin, Q past the junction via
     "C98": ("R51", "1", 1.5), "C99": ("R49", "1", 1.5),     #under R51, beside R49
     "R52": ("U14", "8", 12.0),                #VREF divider: a DC reference, 1 uF at
     "R53": ("R52", "2", 3.0),                 #the far end makes distance irrelevant
@@ -1761,7 +1769,7 @@ PASSIVE_LCSC = {
     #C17/C18, the VBAT bulk caps
     ("10u",  F_C0805): "C15850",  ("10u",  F_C1206): "C13585",
     ("1u",   F_C0805): "C28323",  ("22u",  F_C1206): "C12891",  ("47u",  F_C1206): "C96123",  ("100u", F_C1206): "C883598",
-    ("0R",   F_R0402): "C17168",  ("100p", F_C0402): "C1546", ("100p", F_C0201): "C62550",
+    ("0R",   F_R0402): "C17168",  ("100p", F_C0402): "C1546", ("100p", F_C0201): "C62550",  ("1n", F_C0201): "C710792",  ("680R", F_R0201): "C473509",
     ("33p",  F_C0402): "C1562",
     ("1n",   F_C0402): "C1523",
     ("100n", F_C0201): "C76939",   #Murata GRM033R61E104KE14D 100nF 25V X5R
@@ -1838,6 +1846,7 @@ RATINGS = {
  "C1562":    ("33p",   50,  "NP0",     "5%",   "0402",  None, None, "[D] LCSC product page (0402CG330J500NT), 2026-10-30"),
  "C1546":    ("100p",  50,  "NP0",     "5%",   "0402",  None, None, "[D] LCSC product page (0402CG101J500NT), 2026-09-11"),
  "C62550":   ("100p",  50,  "NP0",     "5%",   "0201",  None, None, "[L] JLCPCB part API: FH 0201CG101J500NT 100pF 50V C0G 0201, 898540 in stock 2026-10-20"),
+ "C710792":  ("1n",    25,  "C0G",     "2%",   "0201",  -55, 125,  "[L] JLCPCB part API: Murata GRM0335C1E102GA01D 1nF 25V C0G 2% 0201, 19106 in stock 2026-10-31"),
  "C1523":    ("1n",    50,  "X7R",     "10%",  "0402",  None, None, "[D] LCSC product page (0402B102K500NT), 2026-09-11"),
  "C76939":   ("100n",  25,  "X5R",     "10%",  "0201",  -55,  85, "[L] JLCPCB part API: GRM033R61E104KE14D 100nF 25V X5R 0201, 2026-10-07"),
 }
