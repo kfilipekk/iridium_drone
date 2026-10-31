@@ -282,10 +282,10 @@ PREREQUISITES = [
              "Do NOT commit a panelised .kicad_pcb: the board files stay exactly as "
              "verified, so nothing has to be re-checked."),
 
-    dict(id="bench.u8", cls=BENCH, bound="87 C worst case against 125 C - 38 C of margin",
+    dict(id="bench.u8", cls=BENCH, bound="86 C worst case against 125 C - 39 C of margin",
          claim="U8's junction temperature under load",
          why="BOUND. The fitted LMR33630A RNX carries ONE theta_JA (72.5 C/W) rather than "
-             "the old part's JEDEC-EVM bracket, so 87 C is the corner and not the top of "
+             "the old part's JEDEC-EVM bracket, so 86 C is the corner and not the top of "
              "a range. U8 was swapped for exactly this and the swap is already on the "
              "board; a reading can confirm it and cannot un-fit it.",
          refresh="runbook T3 (docs/navcore-runbook.tex Part 9)"),
@@ -298,7 +298,7 @@ PREREQUISITES = [
              "then carries forward every flight.",
          refresh="runbook T3a (docs/navcore-runbook.tex Part 10)"),
     dict(id="bench.u20", cls=BENCH,
-         bound="104 C worst case against 125 C - 21 C of margin (check_circuit.py thermal)",
+         bound="100 C worst case against 125 C - 25 C of margin (check_circuit.py thermal)",
          claim="U20's junction temperature at the worst payload mission",
          why="BOUND. U20 is the same LMR33630A RNX as U8, carrying the payload rail's "
              "worst mission (design.RAIL_5V_PAYLOAD); the figure is the single-theta_JA "
