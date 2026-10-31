@@ -1430,7 +1430,7 @@ net("+5V_BIAS_SW", "U24.6", "R62.1", "U25.3")
 #the switch's own bypass at IN and at OUT (DS41186, Power Supply Considerations)
 CAP("C95", "100n"); NETS["+5V"].append("C95.1"); NETS["GND"].append("C95.2")
 CAP("C96", "100n"); NETS["+5V_BIAS_SW"].append("C96.1"); NETS["GND"].append("C96.2")
-RES("R59", "10k"); NETS["+5V"].append("R59.1")
+RES("R59", "10k"); NETS["+3V3"].append("R59.1")   #to +3V3, so PC5 never sees 5 V before VDD is up
 RES("R60", "10k"); NETS["+3V3"].append("R60.1")
 RES("R61", "210k"); NETS["GND"].append("R61.2")
 
@@ -2004,7 +2004,9 @@ CAP_DC_BIAS_DERATE = {
 
 #buses allowed pull-ups on two rails, and why
 PULLUP_RAIL_EXCUSES = {
-    "I2C2": "[A] R11 on +3V3A, R12 on +3V3: Rev D layout anomaly tolerated because both are 3.3 V LDO rails; fixed in Rev E (T2.2)",
+    "I2C2": "[M] R11 on +3V3A, R12 on +3V3: both are 3.3 V rails off the same +5V; R12 is boxed in under U1 "
+            "(no legal +3V3A via within reach on either side, rev E layout search), and with the "
+            "+3V3A LDO up before the +3V3 rail no pull-up back-powers a sensor",
 }
 
 
