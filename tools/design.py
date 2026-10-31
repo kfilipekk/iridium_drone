@@ -1650,7 +1650,10 @@ ADJACENCY = {
     "R4": ("U8", "9", 3.0), "R5": ("U8", "9", 3.0),
     "L2": ("U8", "12", 3.0), "C22": ("U8", "12", 5.0), "C23": ("U8", "12", 5.0),
     #payload 5V buck (U20 TI LMR33630A VQFN-12)
-    "C66": ("U20", "2", 1.5), "C68": ("U20", "4", 3.0),
+    #C66 sits across the pin 10/11 VIN/PGND pair. The pin 1/2 pair has no cap of its own:
+    #rev E searched both sides for a 0402 within 1.5 mm and found none, so it leans on C66
+    #through the VIN copper and on C18 (10u) through the VBAT pour
+    "C66": ("U20", "10", 1.5), "C68": ("U20", "4", 3.0),
     "C79": ("U20", "5", 2.5),
     "R42": ("U20", "7", 2.5), "R43": ("U20", "7", 2.5),
     "R40": ("U20", "9", 3.0), "R41": ("U20", "9", 3.0),
