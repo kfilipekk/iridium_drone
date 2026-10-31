@@ -187,17 +187,19 @@ PREREQUISITES = [
              "copper, and this board is between them. No desk calculation narrows it; "
              "T3a measures it. U19 logs the board beside U9 every flight in the meantime."),
     dict(id="adv.buck_cout", cls=ADVISORY, tool="check_circuit.py electrical",
-         why="TI Table 9-2 recommends 4 x 22 uF (88 uF) at 400 kHz / 5 V; the Rev D respin "
-             "fits 2 x 47 uF 1206 (Samsung CL31A476MPHNNNE, 94 uF rated, ~50 uF effective at 5.0 V bias), "
-             "exceeding Table 9-2 recommended capacity and Eq. 6 transient floor."),
+         why="TI Table 9-2 recommends 4 x 22 uF (88 uF) at 400 kHz / 5 V. U20 fits 2 x 47 uF "
+             "1206 (C96123, ~49 uF at 5 V bias). U8 fits one 100 uF 1206 (C883598) ahead of U31, "
+             "35 uF at 5 V on an assumed 35% derate, against the 26 uF Eq. 6 floor; the T1 load "
+             "step confirms it or not."),
     dict(id="adv.j2_contact", cls=ADVISORY, tool="check_circuit.py electrical",
          why="J2 (JST-SH 8P) carries all board power through one contact rated 1.0 A [D]; "
              "design.NET_CURRENT['VBAT_IN'] is 1.2 A. Measured lander flight draw is ~0.66 A at 4S "
-             "and ~0.9 A at low 3S; full payload load on 3S must be avoided until Rev E battery pads."),
+             "and ~0.9 A at low 3S; full payload load on 3S must be avoided. Rev E tried battery "
+             "solder pads and dropped them: no room for a proper pair at the input."),
     dict(id="adv.i2c2_pullups", cls=ADVISORY, tool="check_circuit.py electrical",
-         why="I2C2 pull-ups sit on different 3.3 V rails (R11 on +3V3A, R12 on +3V3); "
-             "tolerated in Rev D as both rails are 3.3 V LDO outputs with matched enable, "
-             "scheduled for cleanup in Rev E (T2.2)."),
+         why="I2C2 pull-ups sit on different 3.3 V rails (R11 on +3V3A, R12 on +3V3). Kept "
+             "in Rev E: R12 is boxed in under U1 with no legal +3V3A via in reach, and both "
+             "rails come off the same +5V (design.PULLUP_RAIL_EXCUSES)."),
     dict(id="fab.padlabels", cls=GATED, check="pad silkscreen labels",
          claim="every solder pad and test point carries its function (design.PAD_LABELS) on "
                "the silkscreen, where check.py silk_owner reads it as that pad's - or is named "

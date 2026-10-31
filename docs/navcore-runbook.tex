@@ -69,7 +69,7 @@
 
 \begin{tabular}{@{}ll@{}}
 \toprule
-Board & 46.5 $\times$ 47.2 mm, 6-layer, STM32H743VIT6, Revision D \\
+Board & 46.5 $\times$ 47.2 mm, 6-layer, STM32H743VIT6, Revision E \\
 Gate verdict & \good{READY TO ORDER} --- every gated prerequisite proven (the gate prints the count) \\
 Hardware verdict & \flag{NOT READY TO FLY} --- 6 items need hardware, none of which can change what is ordered \\
 Toolchain & KiCad 9.0.8, ArduPilot Copter-4.7.0, Python 3 + pcbnew \\
@@ -488,9 +488,9 @@ the list this way: the grommet, \file{BATT\_AMP\_PERVLT} and the \file{J2} pin o
 are not deleted --- \file{check\_order.py bench\_bounds} still prints each with its evidence, and a
 reconciliation step refuses if this list and the manifest ever disagree.
 \item \textbf{BOUND} --- the design-side corner is already under the limit and the
-measurement \emph{confirms} it. \file{U8}: 87\,\degC{} against 125\,\degC{}. \file{U9}:
-104\,\degC{} on good copper against 150\,\degC{}, on a board \file{thermal\_vias.py}
-measures at 7443\,mm\textsuperscript{2} of plane. The grommet: the \emph{metal} M3 head clears
+measurement \emph{confirms} it. \file{U8}: 86\,\degC{} against 125\,\degC{}. \file{U9}:
+82\,\degC{} peak on good copper against 125\,\degC{} (104\,\degC{} on minimal copper), on a
+board \file{thermal\_vias.py} measures at 7443\,mm\textsuperscript{2} of plane. The grommet: the \emph{metal} M3 head clears
 copper at every hole by $+$0.08\,mm, and the flange is always the wider of the two, so a wider
 grommet adds only silicone bearing on mask.
 \item \textbf{PARAM} --- the result is a \emph{firmware constant}: \file{FLOW\_ORIENT\_YAW}.
@@ -805,7 +805,9 @@ ground and pin 2 to battery $+$. A pin-swap with VBAT will destroy motor signal 
 
 \flag{\file{J2} carries all board power through one JST-SH contact rated 1 A.} Expected draw
 is about 0.66 A at 4S for the lander mission and about 0.9 A at a 3S pack's low end. On 3S,
-do not run the payload rail near its full budget.
+do not run the payload rail near its full budget. There are no battery solder pads to bypass
+it: Rev E tried them and took them out again, because there is no room for a proper pad pair
+at the input (Section~\ref{sec:reve}).
 
 \textbf{Servos on \file{J17} and \file{J23}.} Each is a male 1$\times$3 right-angle header in the
 standard JR order: signal (orange, yellow or white) on pin 1, power in the middle (pin 2),
@@ -1045,12 +1047,14 @@ below.
 \midrule
 1.1 & current at power-on & \textbf{$<$ 80 mA} & something is shorted: kill it and inspect
 \file{U8}, \file{U20} and the bulk caps \\
-1.2 & \file{+5V} rail & \textbf{5.02 V} $\pm$0.2 & \file{U8} LMR33630ARNXR, \file{L2}, divider \file{R6}/\file{R7} \\
+1.2 & \file{+5V\_BUCK} (\file{C22}) & \textbf{5.02 V} $\pm$0.2 & \file{U8} LMR33630ARNXR, \file{L2}, divider \file{R6}/\file{R7} \\
+1.2a & \file{+5V} rail (\file{C23}) & within 0.1 V below 1.2 & \file{U31} LM66100. If 1.2 is good and this is dead, \file{U31} is fitted backwards or not soldered \\
 1.3 & \file{+3V3} rail & 3.3 V $\pm$0.1 & \file{U9} TLV75733P \\
 1.4 & \file{+3V3A} rail & 3.3 V $\pm$0.1 & \file{U10} TLV75533 \\
 1.5 & \file{+5V\_PAYLOAD} rail (\file{J22.1}) & \textbf{5.02 V} $\pm$0.2, on at power-on & \file{U20} LMR33630ARNXR, \file{L5}, divider \file{R42}/\file{R43}; if dead, \file{Q3} is holding \file{U20}'s EN low --- check \file{R45} \\
 1.6 & \file{+3V3\_CAN} rail & 3.3 V $\pm$0.1 & \file{U21} XC6206, fed from \file{+5V\_PAYLOAD} \\
 1.7 & antenna feed, \file{J12} centre pin, nothing attached & about 5 V & \file{U24} (enabled by \file{R59}'s pull-up), \file{R62}, \file{L6}. Meter only --- never short it \\
+1.8 & USB only, no supply on \file{VBAT}: \file{J2.2} & near 0 V (tens of mV) & \file{U31} not blocking: check its orientation and that pin 3 (CE) is on \file{+5V}. 4.2--4.4 V here is the Rev D back-feed \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -1058,13 +1062,18 @@ below.
 Raise the limit to 500 mA only once every rail is correct.
 
 \textbf{Then load both bucks.} A regulator on the edge of stability reads a perfect 5.02 V
-at no load. In the Rev D respin, each buck is fitted with 2 $\times$ 47\,\textmu F 1206 capacitors (\file{C22}/\file{C23} for \file{+5V}, \file{C69}/\file{C70} for \file{+5V\_PAYLOAD}, using Samsung CL31A476MPHNNNE, LCSC C96123, 94\,\textmu F rated, $\sim$50\,\textmu F effective under 5\,V DC bias), exceeding TI Table 9-2's recommended 88\,\textmu F baseline right from fab without requiring rework. Check them under load: Raise the limit
+at no load. \file{U20} has 2 $\times$ 47\,\textmu F 1206 on \file{+5V\_PAYLOAD} (\file{C69}/\file{C70},
+C96123, about 49\,\textmu F left at 5\,V bias). \file{U8} has one 100\,\textmu F 1206 (\file{C22},
+C883598) on \file{+5V\_BUCK}, ahead of \file{U31}; \file{C23} (47\,\textmu F) sits after
+\file{U31} on \file{+5V}. \file{C22}'s 35\,\textmu F at 5\,V is an \emph{assumed} 35\,\% derate
+(no maker curve was read), against the 26\,\textmu F that TI's Eq.~6 asks for. This load step is
+what confirms it. Raise the limit
 to 2 A. Put a 5\,$\Omega$, 10 W resistor across \file{J22} pins 1 and 2 (1 A from
 \file{+5V\_PAYLOAD}, through a GH 3P pigtail) and a 10\,$\Omega$, 5 W one across \file{J9}
 pins 1 and 4 (0.5 A from \file{+5V}, through a GH 4P pigtail). Both rails must stay 4.9--5.1 V, and \file{L2}, \file{L5}, \file{U8} and
 \file{U20} must not whine or get too hot to touch within a minute. With a scope, connecting
 the load should give one dip that settles within about 100\,\textmu s, not a ring or a
-steady oscillation.
+steady oscillation. Put the probe on \file{C22} for \file{U8}, not on \file{+5V}: \file{U8}'s loop closes ahead of \file{U31}.
 
 \begin{quote}
 \textbf{If a rail is dead with a correct supply, look at \file{R46} before the buck.} It is
@@ -1079,14 +1088,14 @@ than a series diode. Use the XT60 keying and check twice.
 \end{quote}
 
 \begin{quote}
-\textbf{USB powers the logic, not the whole board, and back-feeds the ESC lead.} \file{D\_USB}
-feeds VBUS into the +5\,V rail at about 4.7\,V, which runs both 3.3\,V rails, the MCU and the
-sensors --- enough to configure and flash it. The payload rail stays off (its buck needs about
-6.6\,V). However, with USB in and no battery, +5\,V back-feeds \file{VBAT} through \file{U8}'s
-high-side body diode and the conducting \file{Q4}. About 4.2--4.4\,V appears on \file{J2.2}
-and charges the ESC's bulk capacitor through \file{D\_USB}. Unplug the ESC lead (or have the
-battery connected) before plugging in USB. Never leave a live XT60 lying about. Do the first
-power-up (this Part) on \file{VBAT} regardless.
+\textbf{USB powers the logic, not the whole board.} \file{D\_USB} feeds VBUS into the +5\,V
+rail at about 4.7\,V, which runs both 3.3\,V rails, the MCU and the sensors --- enough to
+configure and flash it. The payload rail stays off (its buck needs about 6.6\,V). Up to Rev D,
+USB with no battery also back-fed \file{VBAT} through \file{U8}'s high-side body diode and put
+4.2--4.4\,V on \file{J2.2}. Rev E puts \file{U31}, an LM66100 ideal diode, between \file{U8}
+and \file{+5V}; with \file{+5V} above its input it stays off and blocks, so \file{J2.2} should
+read close to 0\,V with USB alone. Check that once (T1, row 1.8) before trusting it. Never leave
+a live XT60 lying about. Do the first power-up (this Part) on \file{VBAT} regardless.
 \end{quote}
 
 \begin{quote}
@@ -1200,10 +1209,12 @@ board arms out of the box. Do not enable a sensor you have not fitted.
 \toprule
 \textbf{Part} & \textbf{Why it matters} & \textbf{Status} \\
 \midrule
-\file{U9} (3.3 V LDO) & \textbf{linear} regulator dropping 1.7 V in SOT-23-5 with no thermal
-pad, carrying the MCU, flash and microSD & junction \textbf{104--157\degC} against a
-\textbf{150\degC} limit. It has thermal shutdown --- being wrong means the 3.3 V rail
-switching off in flight, not smoke \\
+\file{U9} (3.3 V LDO) & \textbf{linear} regulator dropping 1.7 V (TLV75733P, DYD, exposed pad
+to GND), carrying the MCU, flash and microSD: 534 mW continuous, 688 mW peak & junction
+\textbf{72--82\degC} on good copper, 89--104\degC{} on minimal copper, against a
+\textbf{125\degC} recommended max --- 43\degC{} of margin at the good-copper peak. Kept as an
+LDO in Rev E (Section~\ref{sec:reve}). It has thermal shutdown --- being wrong means the
+3.3 V rail switching off in flight, not smoke \\
 \file{U8} (+5 V buck) & \textbf{16.8 V $\rightarrow$ 5 V at 0.74 A} through a TI
 LMR33630ARNXR (VQFN-12), swapped in place 2026-09-20, sandwiched between a 60 A ESC and a
 battery & junction \textbf{70--87\degC} against a \textbf{125\degC} \emph{recommended} max
@@ -1746,24 +1757,102 @@ are on this list only because they are properties of parts somebody else manufac
 both are silenced by owning the M3 assortment and a multimeter.
 \end{enumerate}
 
-\subsection{15.5 Design-level inefficiencies and Rev E roadmap}
+\subsection{15.5 Rev E: what changed, what was kept, and what is left}
+\label{sec:reve}
 
-These do not affect this order. Tier 2 respin changes (\file{U21} on \file{+5V}, \file{R27} DNP, and \file{C52} to 33\,pF) and high-priority Tier 3 quick fixes (bidirectional TVS \file{D1} SMBJ22CA, and 2 $\times$ 47\,\textmu F buck output capacitance \file{C22}/\file{C23}/\file{C69}/\file{C70} per TI Table 9-2) have been integrated into Rev D. The remaining architectural improvements are scheduled for Rev E:
+Rev E is the commits on \file{rev-e-tier3} on top of \file{8f40cd5}, Rev D before its battery-pad commits. Each change and each
+decision not to change something is recorded where the next person will look first: the
+comment beside the part in \file{tools/design.py}. This section is the summary.
+
+\textbf{Changed.}
+
+\begin{center}
+\begin{tabular}{@{}P{0.18\textwidth}P{0.72\textwidth}@{}}
+\toprule
+\textbf{Part} & \textbf{Change, and why} \\
+\midrule
+\file{U31}, \file{C22}, \file{C23} & \file{U31}, a TI LM66100 ideal diode (C2869734, SC-70-6),
+now sits between \file{U8}'s output (\file{+5V\_BUCK}) and \file{+5V}, under \file{L2}. With
+USB in and no pack, \file{+5V} used to run back through \file{L2} and \file{U8}'s high-side
+body diode onto \file{VBAT}, through \file{Q4}, and out of \file{J2.2} to the ESC at
+4.2--4.4\,V. \file{CE} is tied to \file{VOUT} (SLVSEZ8A 8.3.2), so it blocks whenever
+\file{+5V} is above its input. \file{U8}'s divider senses \file{+5V\_BUCK}, ahead of the diode,
+so its loop does not see \file{U31}'s resistance. \file{C22} became one 100\,\textmu F 1206
+(C883598) on \file{+5V\_BUCK}; \file{C23} (47\,\textmu F) stays on \file{+5V} after the diode.
+\file{U31} carries the whole \file{+5V} budget, 1.04\,A against its 1.5\,A rating, and drops
+about 80\,mV there (79\,m$\Omega$ typical at 5\,V) \\
+\file{R59} & \file{BIAS\_EN} pull-up moved from \file{+5V} to \file{+3V3}, so \file{PC5} never
+sees 5\,V before the MCU's VDD is up \\
+\file{R62} & now a Vishay RCS0402 anti-surge 2.2\,$\Omega$ (C1881139), 200\,mW, in the same
+0402 land. A resistive fault on the coax that sits just under \file{U24}'s 155\,mA limit puts
+53\,mW in \file{R62}: 85\,\% of the old 62.5\,mW part, 26\,\% of this one \\
+\file{C52} & the DC block moved from beside \file{J12} to \file{U13} pin~4 (RFIN). \file{RFIN}
+went from 10.71\,mm to 1.41\,mm; \file{ANT\_IN}, which carries the antenna's +5\,V, now runs
+the fenced corridor down to \file{C52} (9.83 to 18.91\,mm). Total copper \file{J12} to
+\file{U13} is 20.32\,mm against 20.54\,mm, all on F.Cu over In1, no signal vias. What changed
+is that the bias stops at \file{C52} pad~1 and only DC-free \file{RFIN} comes near the tuner's
+pins. A diagonal route would save 2.6\,mm (about 0.03\,dB) and needs five other nets moved
+round the stack-hole keepout; not worth it \\
+\file{C66} & the \file{U20} input-decoupling rule now measures \file{C66} to the pin it
+actually decouples: it sits across the pin~10/11 \file{VIN}/\file{PGND} pair, 1.25 and
+1.29\,mm from them. See below for pins 1/2 \\
+\file{R76}/\file{C100}, \file{R77}/\file{C101} & 680\,$\Omega$ in series and 1\,nF C0G to ground at
+each ADC pin (\file{PC4} pin~32 for I, \file{PA4} pin~28 for Q), after the \file{U14} stage. The
+new pole is at 234\,kHz; on top of the 159\,kHz \file{R50}/\file{C76} pole a signal 1\,MHz off
+tune folds back about 29\,dB down instead of about 16\,dB. The 1\,nF is also the ADC's charge
+reservoir. \file{C100} is 1.6\,mm from pin~32; \file{C101} sits on the back, 4.8\,mm from
+pin~28 (about 10\,mm of copper through two vias), the nearest legal spot. I no longer runs
+under \file{U1}: it reaches pin~32 from the top edge. \file{TP9}/\file{TP10} now probe the
+amplifier outputs, ahead of the resistors \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\flag{\file{C22}'s capacitance is an assumption.} No maker DC-bias curve was read for the
+Murata GRM31CR61A107MEA8L. The 47\,\textmu F C96123 keeps 52\,\% at 5\,V, and a 100\,\textmu F
+in the same case runs a thinner dielectric, so \file{design.py} takes 35\,\%: 35\,\textmu F
+against TI's Eq.~6 floor of 26\,\textmu F. Rev D's two 47\,\textmu F gave \file{U8} about
+49\,\textmu F. The T1 load step (Part~7, probe on \file{C22}) is what confirms it; a ring
+there means the derate was optimistic.
+
+\textbf{Looked at, and kept as it was.}
 
 \begin{itemize}
-\item \textbf{Battery solder pads (VBAT/GND):} Add dedicated heavy solder pads (18--20 AWG) on the board perimeter so total board current does not ride through a single 1.0\,A JST-SH contact on \file{J2}.
-\item \textbf{Synchronous buck for 3.3\,V logic:} Replace \file{U9} (TLV75733P LDO) with a miniature high-frequency synchronous buck converter (e.g. TI TPS62825, 2.25\,MHz). Increases conversion efficiency from 66\% to $>92\%$, eliminates $\sim$0.5\,W heating and closes the \file{U9} thermal risk item.
-\item \textbf{Relocate D1 after Q4:} In Rev D, bidirectional TVS \file{D1} (SMBJ22CA) protects against overvoltage without shorting on reversed polarity. Moving \file{D1} after \file{Q4} in Rev E provides further isolation of clamp currents.
-\item \textbf{Block USB back-feed into VBAT:} Add an ideal diode controller or blocking P-FET between \file{U8}'s buck output and the \file{+5V} system bus, preventing $\sim$4.2\,V leakage onto \file{VBAT} and the ESC lead when USB is plugged in without a battery.
-\item \textbf{Active 2nd-order baseband filter:} Replace the 1st-order passive RC anti-aliasing filter on the MAX2112 I/Q outputs with an active 2nd-order Multiple Feedback (MFB) low-pass stage and buffer \file{BB\_VREF} to prevent reference droop during dual ADC sampling.
-\item \textbf{RF layout and tuner matching:} Place \file{C52} (33\,pF C0G) immediately adjacent to \file{U13.2} (RFIN), shorten the 13.6\,mm RF run, and define standard 50\,$\Omega$ coplanar waveguide geometry for the JLCPCB 6-layer stackup.
-\item \textbf{Antenna bias resistor R62 to 0603:} Upsize \file{R62} from 0402 (62.5\,mW) to 0603 (100\,mW) for extended survivability under antenna short-circuit faults.
-\item \textbf{IMU hardware EXTI interrupts:} Route IMU1 INT1 and IMU2 INT1 to dedicated STM32 EXTI pins (and route CLKIN) for hardware sensor synchronization and interrupt-driven FIFO capture.
-\item \textbf{Buck input decoupling proximity:} Relocate \file{U20} input caps within 1.5\,mm and \file{C17}/\file{C19} beside \file{U8} (output bulk capacitance was already resolved in Rev D via 2 $\times$ 47\,\textmu F).
-\item \textbf{Pull-up rail alignment:} Route \file{R12.1} (I2C2\_SDA) to \file{+3V3A} matching \file{R11}, and \file{R59} (BIAS\_EN) to \file{+3V3}.
-\item \textbf{Interactive HTML BOM:} Integrate \file{InteractiveHtmlBom} into \file{fab.py} to generate \file{reference/ibom.html} in the release package for bench probing.
-\item \textbf{In4 rail fragmentation:} Rationalize plane polygons on In4.Cu during respin.
+\item \textbf{Battery solder pads.} \file{P171}/\file{P172} were added on \file{VBAT\_IN} and
+\file{GND} and then reverted: there is no room at the input for a pad pair that takes
+18--20\,AWG properly. Board power stays on \file{J2}, one JST-SH contact rated 1\,A against
+1.2\,A of design current (\file{adv.j2\_contact}). The 3S payload limit in Part~5 stands.
+\item \textbf{\file{U9} stays an LDO.} \file{check\_circuit.py thermal} puts it at 82\,\degC{}
+peak on good copper and 104\,\degC{} on minimal copper, against 125\,\degC{}: 43\,\degC{} of
+margin at the good-copper end. A buck would save about half a watt but add a switching node
+about 10\,mm from the I/Q lines into the ADC and 21\,mm from \file{U13}. The margin does not
+need buying back at that price. \file{U19} keeps logging it every flight.
+\item \textbf{\file{R12} stays on \file{+3V3}.} It is boxed in under \file{U1}, and a layout
+search on both sides found no legal \file{+3V3A} via in reach. Both rails are 3.3\,V off the
+same \file{+5V}, and \file{+3V3A} comes up before \file{+3V3}, so no pull-up back-powers a
+sensor. The reason is in \file{design.PULLUP\_RAIL\_EXCUSES}.
+\item \textbf{\file{U20} pins 1/2 have no cap of their own.} Both sides were searched for an
+0402 spot within 1.5\,mm of the pin~1/2 \file{PGND}/\file{VIN} pair and none exists. That pair
+leans on \file{C66} through the \file{VIN} copper (3.05\,mm to pin~2) and on \file{C18}
+(10\,\textmu F) through the \file{VBAT} pour. Recorded in the \file{ADJACENCY} comment.
+\item \textbf{IMU interrupt pins stay unrouted.} ArduPilot's Invensense v3 driver reads both
+IMUs by polling the FIFO over SPI, and \file{hwdef.dat} maps no DRDY pin. Routing INT1 would
+buy nothing the firmware uses.
 \end{itemize}
+
+\textbf{Still on the list.}
+
+\begin{itemize}
+\item \textbf{Move \file{D1} after \file{Q4}}, so the TVS clamps on the protected side.
+\file{D1} is still on \file{VBAT\_IN}.
+\item \textbf{\file{C17}/\file{C19} beside \file{U8}.} \file{C18} is 3.97\,mm from
+\file{U8.2} against 3.0\,mm, one of the standing \file{check\_board.py placement} violations.
+\item \textbf{Interactive HTML BOM} from \file{fab.py}, for bench probing.
+\item \textbf{In4 rail fragmentation:} rationalise the In4.Cu power polygons at the next respin.
+\end{itemize}
+
+\file{check\_board.py placement} went from 26 adjacency violations to 24 with these changes:
+\file{C52} and \file{C66} came off the list. The rest are advisory (\file{adv.decoupling}).
 
 % =============================================================================
 \section{Part 16 --- What only the outside world can settle}

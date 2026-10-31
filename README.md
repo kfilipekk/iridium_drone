@@ -117,7 +117,8 @@ I made this project to explore:
 ## Future Plans
 
 - Bench-test the Iridium receive chain with the HC610 antenna
-- Rev E: a third IMU, 6S input and a 9-12 V video rail
+- Rev E: an ideal diode on the 5 V rail so USB alone no longer back-feeds the battery lead, the DC block at the tuner pin and a second anti-alias pole at the ADC
+- Later: a third IMU, 6S input and a 9-12 V video rail
 
 <div align="center">
 
