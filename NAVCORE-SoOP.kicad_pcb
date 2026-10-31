@@ -18973,7 +18973,7 @@
 			(uuid "3acfbc06-d1ad-4aed-bfe3-2989001f9fc7")
 		)
 		(fp_line
-			(start -0.95 0.95)
+			(start -0.95 0.605001)
 			(end -0.95 -0.95)
 			(stroke
 				(width 0.12)
@@ -18994,7 +18994,7 @@
 		)
 		(fp_line
 			(start 0.95 0.95)
-			(end -0.95 0.95)
+			(end -0.245 0.95)
 			(stroke
 				(width 0.12)
 				(type solid)
@@ -19043,7 +19043,7 @@
 			(uuid "2f056cb5-2954-4437-a828-72fe0dde1bb0")
 		)
 		(fp_text user "S6"
-			(at -0.01 1.99 90)
+			(at -1.145 1.805001 90)
 			(layer "F.SilkS")
 			(uuid "15b68d07-31ef-4a2d-bf47-9417f9fcea21")
 			(effects
