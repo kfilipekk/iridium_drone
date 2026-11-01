@@ -201,6 +201,7 @@ Surface finish & ENIG & 0201s, LGA-14s and a DSBGA want a flat finish \\
 Min track / spacing & \textbf{0.1016 mm (4 mil)} & should be free tier \\
 Min via / drill & \textbf{0.45 mm / 0.20 mm} & \\
 Impedance control & No & USB is a plain pair; the RF run follows the antenna's 28 dB LNA, so a mismatch costs under 0.1 dB \\
+Specify stackup & \textbf{No} & JLC's default is fine for the RF line; a named stackup costs USD 100 (below) \\
 Via covering & \textbf{Epoxy Filled \& Capped} & free on 6 layers; no via sits in a pad \\
 Stencil & not needed & everything machine-placed but Section~\ref{sec:solder} \\
 Mark on PCB & \textbf{Remove Mark} & no JLC marker on the board; small fee \\
@@ -210,6 +211,17 @@ Mark on PCB & \textbf{Remove Mark} & no JLC marker on the board; small fee \\
 
 The 1 oz line is not cosmetic: \flag{every current-capacity figure in
 \file{check\_mech.py build} assumes it}, and 0.5 oz halves each trace's rating.
+
+\textbf{The stackup is a USD 100 question, and the answer is no.} The 1.6\,GHz line from
+\file{J12} to \file{U13} is 0.21\,mm grounded coplanar over the In1 plane, so its impedance
+depends on the outer prepreg. Naming a thin-prepreg stackup (JLC061611-3313B, 0.092\,mm) puts it
+at 47\,$\Omega$; JLC's default (7628, 0.203\,mm) puts it at 67\,$\Omega$. Against the
+50\,$\Omega$ coax that is a return loss of 31\,dB against 17\,dB, and a mismatch loss of
+0.004\,dB against 0.09\,dB. The 0.09\,dB sits behind the HC610's 28\,dB LNA, into an
+\file{RFIN} that is 75\,$\Omega$ anyway, and is far below anything a Doppler fix can see.
+Naming the stackup added USD 100.49 to a USD 508 order (about 20\,\%) to buy that 0.09\,dB, so
+the order leaves it unspecified. The figures come from the grounded-coplanar model behind
+\file{tools/readiness.py}'s impedance note.
 
 \subsection{Quantity, and the tier decision}
 

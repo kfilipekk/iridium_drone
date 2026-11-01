@@ -26,10 +26,11 @@ FABRICATION
                                         the design rules drifted
   Min via / drill   0.45 / 0.20 mm
   Impedance control No
-  Stackup           JLC's standard 6-layer 1.6 mm (JLC06161H-3313 or -2116): the
-                                  1.6 GHz antenna line is 0.21 mm on a 0.1-0.12 mm
-                                  outer prepreg. Ignore the stackup inside the gerber
-                                  job file; it is KiCad's default, not the order.
+  Specify stackup   No         <- a named stackup costs about USD 100. JLC's default
+                                  (7628, 0.2 mm outer prepreg) puts the 0.21 mm
+                                  antenna line at 67 ohm instead of 47 ohm on 3313:
+                                  0.09 dB of mismatch loss behind a 28 dB LNA. Ignore
+                                  the stackup in the gerber job file; it is KiCad's.
   Via covering      Epoxy Filled & Capped   <- free on 6-layer boards and seals every
                                                via; @@VIAS_IN_PADS@@ vias sit inside SMD
                                                pads, so no joint depends on it

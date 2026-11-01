@@ -265,10 +265,10 @@ PREREQUISITES = [
          claim="leave impedance control OFF",
          why="none is needed. USB is a plain differential pair. The 1.62 GHz J12 -> U13 "
              "line is drawn as 50 ohm grounded coplanar on F.Cu over the solid In1 ground "
-             "(0.21 mm track, 0.2 mm gap): 45-55 ohm across JLC's 6-layer prepregs "
-             "(0.10-0.12 mm, er 4.1-4.2), into an RFIN that is 75 ohm anyway, so the uncontrolled tolerance costs a fraction of "
-             "a dB behind the HC610's 28 dB of gain. Ordering impedance control would not "
-             "change the drawn geometry."),
+             "(0.21 mm track, 0.2 mm gap): 47 ohm on a named 0.092 mm 3313 prepreg, 67 ohm on "
+             "JLC's default 0.203 mm 7628. Into a 75 ohm RFIN behind the HC610's 28 dB of gain "
+             "even the default costs 0.09 dB of mismatch loss, so neither impedance control nor "
+             "the USD 100 named stackup is worth ordering; neither would change the drawn geometry."),
     dict(id="act.quantity", cls=ORDER_ACTION, sheet=r"5 bare PCBs, 2 assembled(.|\n)*BOTH sides",
          claim="5 bare PCBs / 2 assembled, BOTH sides",
          why="5 is the multilayer minimum and 2 the SMT minimum; both sides are populated "
