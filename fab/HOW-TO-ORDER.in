@@ -26,6 +26,10 @@ FABRICATION
                                         the design rules drifted
   Min via / drill   0.45 / 0.20 mm
   Impedance control No
+  Stackup           JLC's standard 6-layer 1.6 mm (JLC06161H-3313 or -2116): the
+                                  1.6 GHz antenna line is 0.21 mm on a 0.1-0.12 mm
+                                  outer prepreg. Ignore the stackup inside the gerber
+                                  job file; it is KiCad's default, not the order.
   Via covering      Epoxy Filled & Capped   <- free on 6-layer boards and seals every
                                                via; @@VIAS_IN_PADS@@ vias sit inside SMD
                                                pads, so no joint depends on it
@@ -48,6 +52,10 @@ ASSEMBLY
                     CPL is fitted to JLCPCB's own footprint for that LCSC part
                     (kicad-tools fab.py orientation). A part that still shows turned
                     is a real finding - report it rather than just rotating it.
+                    Look hardest at the parts a preview most often gets wrong:
+                    pin 1 of U1, U2, U3, U13 and U31; ball A1 of U19 (a 1.5 x 1.0 mm
+                    DSBGA that fits either way round); the cathode marks of D1, D2,
+                    D3, D8 and D10.
 
   Variants, if you want them instead of the default:
     *-economic.csv  U3 (second IMU) left off for hand-fitting. That is the ONLY
