@@ -156,7 +156,7 @@ void AP_SoOP::ant_update(double t)
     _ant.cfg.feed_enabled = !_ant_feed_off;
     _ant_ma = _ant_adc ? soop_ant_ma(_ant_adc->voltage_average(), HAL_SOOP_ANT_SENSE_OHM,
                                      HAL_SOOP_ANT_GAIN) : 0.0f;
-    const bool fault = hal.gpio->read(HAL_SOOP_ANT_FAULT_GPIO) == 0;     //fault# is low
+    const bool fault = hal.gpio->read(HAL_SOOP_ANT_FAULT_GPIO) == 0;     //FAULT# is low
     hal.gpio->write(HAL_SOOP_ANT_EN_GPIO, soop_ant_step(&_ant, t, _ant_ma, fault));
     if (_ant.state != _ant_reported) {
         _ant_reported = _ant.state;

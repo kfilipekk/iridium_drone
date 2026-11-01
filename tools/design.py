@@ -564,7 +564,7 @@ FLOW = dict(
                      "a flow source is fitted.",
     src="[M] drift table computed from a = g*sin(theta); [M] flow_only p95 446 m in sitl/")
 
-#the CAMERA interface, and the work it still needs
+#the CAMERA interface, and the work it still NEEDS
 CAMERA_IFACE = dict(
     connector="J7 FPC-22P-0.5mm, 4-lane MIPI CSI",
     pwdn_gpio="gpio3 RK_PC6 (CAMERAB_PDN_L, J7 pin 18)",
@@ -1433,7 +1433,7 @@ add("U24", "jlc_parts:AP22653W6-7", "jlc:SOT-23-6_L2.9-W1.6-P0.95-LS2.8-BR",
 NETS["+5V"].append("U24.1")
 NETS["GND"].append("U24.2")
 net("BIAS_EN", "U24.3", "U1.PC5", "R59.2")      #EN, active high: MCU PC5, pulled up
-net("BIAS_FAULT", "U24.4", "U1.PD10", "R60.2")  #fault#, open drain: MCU PD10, pulled up to +3V3
+net("BIAS_FAULT", "U24.4", "U1.PD10", "R60.2")  #FAULT#, open drain: MCU PD10, pulled up to +3V3
 net("BIAS_ILIM", "U24.5", "R61.1")
 net("+5V_BIAS_SW", "U24.6", "R62.1", "U25.3")
 #the switch's own bypass at IN and at OUT (DS41186, Power Supply Considerations)

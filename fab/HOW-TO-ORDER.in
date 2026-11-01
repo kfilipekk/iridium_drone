@@ -1,0 +1,78 @@
+NAVCORE-SoOP - JLCPCB order, from a phone
+=========================================
+Upload gerbers.zip as the PCB. Do NOT unzip it first.
+
+FABRICATION
+  Layers            6          <- if the preview shows 4, STOP. The power planes
+                                  are missing and the board will not work.
+  Dimensions        @@SIZE@@   (JLC reads it from the gerbers; it should agree)
+  Delivery format   Panel by JLCPCB, 1 x 1, edge rails on all 4 sides, 12 mm
+                                  <- about 70.5 x 71.2 mm, over JLC's 70 x 70 mm
+                                  assembly minimum. NEVER 2 x 2: the servo headers
+                                  hang 6.3 mm off the south edge (MMCX 2.2 mm north,
+                                  microSD 1.3 mm west) and would sit over the next
+                                  board; over a rail they are harmless. If only two
+                                  rails are offered, 2 columns x 1 row with top and
+                                  bottom rails. Do NOT upload a panel of your own.
+  Depanel           No         <- the servo headers overhang the rail's cut line;
+                                  snap the rails off by hand, away from the parts
+  Thickness         1.6 mm
+  Outer copper      1 oz       <- 0.5 oz halves every trace's current rating and
+                                  invalidates kicad-tools irdrop.py check
+  Inner copper      1 oz       <- the default 0.5 oz puts the VBAT plane on In4 at
+                                  its current limit; irdrop.py check assumes 1 oz
+  Surface finish    ENIG       <- 0402s and LGA parts want a flat finish
+  Min track/space   4 mil (0.1016 mm)   should be free tier; an upcharge means
+                                        the design rules drifted
+  Min via / drill   0.45 / 0.20 mm
+  Impedance control No
+  Specify stackup   No         <- a named stackup costs about USD 100. JLC's default
+                                  (7628, 0.2 mm outer prepreg) puts the 0.21 mm
+                                  antenna line at 67 ohm instead of 47 ohm on 3313:
+                                  0.09 dB of mismatch loss behind a 28 dB LNA. Ignore
+                                  the stackup in the gerber job file; it is KiCad's.
+  Via covering      Epoxy Filled & Capped   <- free on 6-layer boards and seals every
+                                               via; @@VIAS_IN_PADS@@ vias sit inside SMD
+                                               pads, so no joint depends on it
+  Mark on PCB       "Remove Mark" (no order number). The silkscreen carries no
+                    JLCJLCJLCJLC marker, so any other choice prints JLC's number
+                    wherever it fits - possibly across a label. JLC may charge a
+                    small fee for this; it is shown in the quote.
+
+ASSEMBLY
+  PCBA type         Standard   <- both sides populated, LGA IMUs; the parts list
+                                  and the readiness manifest assume it
+  Quantity          5 bare PCBs, 2 assembled  (5 is the multilayer minimum,
+                    2 the SMT minimum; the 3 spare bare boards are the practice
+                    pieces and cost almost nothing). With a 1 x 1 panel, panels
+                    and boards are the same count.
+  Side              BOTH sides are populated - @@SIDES@@. Two stencils.
+  BOM               BOM-NAVCORE-SoOP.csv
+  CPL               CPL-NAVCORE-SoOP.csv
+  Placement preview Nothing should need turning. Every rotation and centre in the
+                    CPL is fitted to JLCPCB's own footprint for that LCSC part
+                    (kicad-tools fab.py orientation). A part that still shows turned
+                    is a real finding - report it rather than just rotating it.
+                    Look hardest at the parts a preview most often gets wrong:
+                    pin 1 of U1, U2, U3, U13 and U31; ball A1 of U19 (a 1.5 x 1.0 mm
+                    DSBGA that fits either way round); the cathode marks of D1, D2,
+                    D3, D8 and D10.
+
+  Variants, if you want them instead of the default:
+    *-economic.csv  U3 (second IMU) left off for hand-fitting. That is the ONLY
+                    difference from the default pair.
+
+BEFORE YOU PAY - the things no offline check can confirm
+  - Accept JLCPCB's free DFM review. It is the only thing that checks pad LAND
+    SIZE and paste apertures; kicad-tools check.py footprints verifies pad count,
+    package family and pitch, but not those.
+  - Confirm the quote says 1 oz outer AND 1 oz inner copper.
+  - ABSENT BY DESIGN, read straight out of the BOM in this bundle (ref + value):
+@@DNP@@
+    The placement preview must agree with that list exactly: a part on it that is
+    placed, or a part that is placed and is not on it, means the wrong BOM went up.
+  - SOLE SOURCE, from the dated stock snapshot in this repo. Confirm them in the
+    quote tool and buy spares if the count looks tight:
+      @@STOCK@@
+    (MAX2112 is the tuner - nothing else in JLC's library covers 1616-1626.5 MHz
+    with quadrature baseband output.)
